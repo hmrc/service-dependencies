@@ -35,7 +35,7 @@ class GithubSpec
     override def resolveTag(version: String) = version
   }
 
-  "Finding play-frontend version for a service" should {
+  "Finding artifact version for a service" should {
 
     "queries github based on service name organisation by looking in plugins.sbt first" in {
       val githubService = new TestGithub ("sbt-plugin")

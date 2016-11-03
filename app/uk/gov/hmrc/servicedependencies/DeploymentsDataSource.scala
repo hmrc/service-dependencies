@@ -35,7 +35,7 @@ class DeploymentsDataSource(releasesConfig: ReleasesConfig) {
     val releasesHost = releasesConfig.releasesServiceUrl
     Logger.info(s"Fetching list of running services from $releasesHost")
 
-    for {
+    val results = for {
       qaReleases <- HttpClient.get[List[Deployment]](s"$releasesHost/env/qa")
       stagingReleases <- HttpClient.get[List[Deployment]](s"$releasesHost/env/staging")
       prodReleases <- HttpClient.get[List[Deployment]](s"$releasesHost/env/prod")
@@ -43,6 +43,9 @@ class DeploymentsDataSource(releasesConfig: ReleasesConfig) {
       qaReleases.map(release => release.an -> release.ver).toMap,
       stagingReleases.map(release => release.an -> release.ver).toMap,
       prodReleases.map(release => release.an -> release.ver).toMap).toList
+
+    results.onSuccess { case s => Logger.info(s"Found ${s.length} running services") }
+    results
   }
 
   private def join(qaReleases: Map[String, String], stagingReleases: Map[String, String], prodReleases: Map[String, String]) = {

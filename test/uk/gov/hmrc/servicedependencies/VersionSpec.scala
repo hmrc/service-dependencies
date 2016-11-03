@@ -2,7 +2,7 @@ package uk.gov.hmrc.servicedependencies
 
 import org.scalatest.{FreeSpec, MustMatchers}
 
-class PlayFrontendVersionSpec
+class VersionSpec
   extends FreeSpec
   with MustMatchers {
 

@@ -27,17 +27,10 @@ case class EnvironmentDependency(serviceVersion: String, artifactVersion: String
 case class ServiceDependencies(name: String, environments: Map[String, EnvironmentDependency])
 
 class DependenciesDataSource(val releasesConnector: DeploymentsDataSource, val githubs: Seq[Github]) {
-
-  def getDependencies: Future[Seq[ServiceDependencies]] = {
+  def getDependencies: Future[Seq[ServiceDependencies]] =
     for {
       services <- releasesConnector.listOfRunningServices()
-    } yield createRowsWithGithubData(services)
-  }
-
-  def createRowsWithGithubData(listOfServices: List[Service]): Seq[ServiceDependencies] = {
-    Logger.info(s"Fetching play-frontend versions from github for ${listOfServices.length} services")
-    listOfServices.map(serviceVersions)
-  }
+    } yield services.map(serviceVersions)
 
   private def serviceVersions(service: Service): ServiceDependencies = {
     val environmentVersions = Map("qa" -> service.qaVersion, "staging" -> service.stagingVersion, "prod" -> service.prodVersion)
@@ -52,7 +45,7 @@ class DependenciesDataSource(val releasesConnector: DeploymentsDataSource, val g
         .map { case (x, y) => x -> new EnvironmentDependency(y.get, versions(y)) })
   }
 
-  def searchGithubsForArtifact(serviceName: String, version: Option[String]): Option[Version] = {
+  private def searchGithubsForArtifact(serviceName: String, version: Option[String]): Option[Version] = {
     githubs.foreach(x => x.findArtifactVersion(serviceName, version) match {
       case Some(v) => return Some(v)
       case _ =>
@@ -62,7 +55,6 @@ class DependenciesDataSource(val releasesConnector: DeploymentsDataSource, val g
 }
 
 class CachingDependenciesDataSource(akkaSystem: ActorSystem, cacheConfig: CacheConfig, dataSource: () => Future[Seq[ServiceDependencies]]) {
-
   private var cachedData: Option[Seq[ServiceDependencies]] = None
   private val initialPromise = Promise[Seq[ServiceDependencies]]()
 
