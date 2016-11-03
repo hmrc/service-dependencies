@@ -1,0 +1,667 @@
+[
+  {
+    "an": "nostalgic",
+    "env": "qa-left",
+    "ver": "0.23.0"
+  },
+  {
+    "an": "tamc-pre-reg-frontend",
+    "env": "qa-left",
+    "ver": "1.1.0"
+  },
+  {
+    "an": "sitr-frontend",
+    "env": "qa-left",
+    "ver": "0.2.4"
+  },
+  {
+    "an": "demo-frontend",
+    "env": "qa-left",
+    "ver": "0.7.0"
+  },
+  {
+    "an": "citizen-assurance-frontend",
+    "env": "qa-left",
+    "ver": "0.2.1"
+  },
+  {
+    "an": "passcode",
+    "env": "qa-right",
+    "ver": "1.4.0"
+  },
+  {
+    "an": "tender",
+    "env": "qa-left",
+    "ver": "26012015"
+  },
+  {
+    "an": "lbmanager",
+    "env": "qa-left",
+    "ver": "0.0.2"
+  },
+  {
+    "an": "notification",
+    "env": "qa-right",
+    "ver": "5.11.0"
+  },
+  {
+    "an": "charities-stubs",
+    "env": "qa-right",
+    "ver": "2.0.0"
+  },
+  {
+    "an": "allowances",
+    "env": "qa-right",
+    "ver": "0.1.0"
+  },
+  {
+    "an": "reconciliation",
+    "env": "qa-right",
+    "ver": "1.4.0"
+  },
+  {
+    "an": "dfs-dms-sub-orch-stubs",
+    "env": "qa-right",
+    "ver": "1.3.0"
+  },
+  {
+    "an": "payroll",
+    "env": "qa-right",
+    "ver": "0.1.3"
+  },
+  {
+    "an": "gg-submit",
+    "env": "qa-left",
+    "ver": "0.1.1"
+  },
+  {
+    "an": "kalbirs-app",
+    "env": "qa-left",
+    "ver": "1.0.0"
+  },
+  {
+    "an": "awrs-stubs",
+    "env": "qa-right",
+    "ver": "0.1.0-preview"
+  },
+  {
+    "an": "charities",
+    "env": "qa-right",
+    "ver": "2.1.0"
+  },
+  {
+    "an": "paye-frontend",
+    "env": "qa-left",
+    "ver": "8.3.0"
+  },
+  {
+    "an": "payroll-frontend",
+    "env": "qa-left",
+    "ver": "0.1.3"
+  },
+  {
+    "an": "dtxe-adapter",
+    "env": "qa-left",
+    "ver": "0.7.0"
+  },
+  {
+    "an": "tax-credits-submissions",
+    "env": "qa-right",
+    "ver": "1.1.0"
+  },
+  {
+    "an": "auth",
+    "env": "qa-right",
+    "ver": "4.42.0"
+  },
+  {
+    "an": "tamc",
+    "env": "qa-right",
+    "ver": "1.1.0"
+  },
+  {
+    "an": "cc-email-capture",
+    "env": "qa-right",
+    "ver": "0.6.0"
+  },
+  {
+    "an": "tax-summaries-frontend",
+    "env": "qa-left",
+    "ver": "0.9.0"
+  },
+  {
+    "an": "audit-sweep-right",
+    "env": "qa-right",
+    "ver": "1.6.0"
+  },
+  {
+    "an": "poison-password",
+    "env": "qa-right",
+    "ver": "0.7.1"
+  },
+  {
+    "an": "dfs-store",
+    "env": "qa-right",
+    "ver": "2.2.6"
+  },
+  {
+    "an": "dfs-dms-sub-orch",
+    "env": "qa-right",
+    "ver": "1.8.9"
+  },
+  {
+    "an": "citizen-auth-frontend",
+    "env": "qa-left",
+    "ver": "2.2.0"
+  },
+  {
+    "an": "awrs-frontend",
+    "env": "qa-left",
+    "ver": "0.1.0-preview"
+  },
+  {
+    "an": "tai-frontend",
+    "env": "qa-left",
+    "ver": "3.2.0"
+  },
+  {
+    "an": "tcs-frontend",
+    "env": "qa-left",
+    "ver": "3.19.0"
+  },
+  {
+    "an": "ers-backend",
+    "env": "qa-right",
+    "ver": "1.0.41"
+  },
+  {
+    "an": "tamc-frontend",
+    "env": "qa-left",
+    "ver": "1.7.0"
+  },
+  {
+    "an": "test-jon",
+    "env": "qa-left",
+    "ver": "0.0.7"
+  },
+  {
+    "an": "preferences",
+    "env": "qa-right",
+    "ver": "5.15.0"
+  },
+  {
+    "an": "nisp",
+    "env": "qa-right",
+    "ver": "1.0.5"
+  },
+  {
+    "an": "nisp-frontend",
+    "env": "qa-left",
+    "ver": "1.0.7"
+  },
+  {
+    "an": "company-auth-frontend",
+    "env": "qa-left",
+    "ver": "2.37.1"
+  },
+  {
+    "an": "ers-checking-frontend",
+    "env": "qa-left",
+    "ver": "1.0.33"
+  },
+  {
+    "an": "poison-password-adapter",
+    "env": "qa-left",
+    "ver": "0.1.0"
+  },
+  {
+    "an": "dfs-frontend",
+    "env": "qa-left",
+    "ver": "2.0.0"
+  },
+  {
+    "an": "dk5",
+    "env": "qa-left",
+    "ver": "1.0.0"
+  },
+  {
+    "an": "charities-frontend",
+    "env": "qa-left",
+    "ver": "5.1.0"
+  },
+  {
+    "an": "sa-message-renderer",
+    "env": "qa-right",
+    "ver": "1.10.0"
+  },
+  {
+    "an": "stats-collector",
+    "env": "qa-left",
+    "ver": "2.4.0"
+  },
+  {
+    "an": "ct",
+    "env": "qa-right",
+    "ver": "4.7.0"
+  },
+  {
+    "an": "authenticator",
+    "env": "qa-left",
+    "ver": "1.8.0"
+  },
+  {
+    "an": "dtxe",
+    "env": "qa-left",
+    "ver": "0.15.0"
+  },
+  {
+    "an": "captain",
+    "env": "qa-left",
+    "ver": "0.0.18"
+  },
+  {
+    "an": "worldpay-downloader",
+    "env": "qa-left",
+    "ver": "1.33.0"
+  },
+  {
+    "an": "ers-frontend",
+    "env": "qa-left",
+    "ver": "1.0.92"
+  },
+  {
+    "an": "tcs",
+    "env": "qa-right",
+    "ver": "2.32.0"
+  },
+  {
+    "an": "worldpay-stubs",
+    "env": "qa-left",
+    "ver": "1.38.0"
+  },
+  {
+    "an": "tamc-pre-reg",
+    "env": "qa-right",
+    "ver": "1.6.1"
+  },
+  {
+    "an": "fandf",
+    "env": "qa-right",
+    "ver": "0.7.0"
+  },
+  {
+    "an": "ei",
+    "env": "qa-right",
+    "ver": "1.1.0"
+  },
+  {
+    "an": "citizen-details",
+    "env": "qa-right",
+    "ver": "1.2.0"
+  },
+  {
+    "an": "heritage",
+    "env": "qa-right",
+    "ver": "1.1.0"
+  },
+  {
+    "an": "txm-config",
+    "env": "qa-right",
+    "ver": "0.5.0"
+  },
+  {
+    "an": "heritage-admin-frontend",
+    "env": "qa-right",
+    "ver": "1.1.0"
+  },
+  {
+    "an": "benefits",
+    "env": "qa-right",
+    "ver": "1.0.0"
+  },
+  {
+    "an": "cc-frontend",
+    "env": "qa-left",
+    "ver": "0.11.0"
+  },
+  {
+    "an": "citizen-identity-verification",
+    "env": "qa-right",
+    "ver": "0.5.0"
+  },
+  {
+    "an": "email",
+    "env": "qa-left",
+    "ver": "5.47.0"
+  },
+  {
+    "an": "message-frontend",
+    "env": "qa-left",
+    "ver": "2.4.0"
+  },
+  {
+    "an": "preferences-frontend",
+    "env": "qa-left",
+    "ver": "3.13.0"
+  },
+  {
+    "an": "captain-right",
+    "env": "qa-right",
+    "ver": "0.0.18"
+  },
+  {
+    "an": "ei-frontend",
+    "env": "qa-left",
+    "ver": "2.0.18"
+  },
+  {
+    "an": "enrolment",
+    "env": "qa-right",
+    "ver": "0.1.0"
+  },
+  {
+    "an": "myapp-frontend",
+    "env": "qa-left",
+    "ver": "0.0.11"
+  },
+  {
+    "an": "pbik-frontend",
+    "env": "qa-left",
+    "ver": "1.8.6"
+  },
+  {
+    "an": "cato-filing",
+    "env": "qa-right",
+    "ver": "7.1.0"
+  },
+  {
+    "an": "matching",
+    "env": "qa-right",
+    "ver": "6.13.0"
+  },
+  {
+    "an": "contact-frontend",
+    "env": "qa-left",
+    "ver": "2.26.0"
+  },
+  {
+    "an": "txm-scoring",
+    "env": "qa-right",
+    "ver": "0.1.0"
+  },
+  {
+    "an": "hmrc-deskpro",
+    "env": "qa-left",
+    "ver": "4.14.0"
+  },
+  {
+    "an": "myapp2-frontend",
+    "env": "qa-left",
+    "ver": "0.0.2"
+  },
+  {
+    "an": "key-store",
+    "env": "qa-left",
+    "ver": "4.4.0"
+  },
+  {
+    "an": "tai",
+    "env": "qa-right",
+    "ver": "2.4.0"
+  },
+  {
+    "an": "cato-frontend",
+    "env": "qa-left",
+    "ver": "6.1.0"
+  },
+  {
+    "an": "audit-sweep",
+    "env": "qa-right",
+    "ver": "1.3.0"
+  },
+  {
+    "an": "cato-stubs",
+    "env": "qa-right",
+    "ver": "1.15.0"
+  },
+  {
+    "an": "aem-author",
+    "env": "qa-left",
+    "ver": "2.0.0-beta-2"
+  },
+  {
+    "an": "dk3",
+    "env": "qa-left",
+    "ver": "3.0.0"
+  },
+  {
+    "an": "tax-summaries-agent",
+    "env": "qa-right",
+    "ver": "0.3.1"
+  },
+  {
+    "an": "agent-frontend",
+    "env": "qa-left",
+    "ver": "1.12.0"
+  },
+  {
+    "an": "matching-adapter",
+    "env": "qa-left",
+    "ver": "0.7.0"
+  },
+  {
+    "an": "sa",
+    "env": "qa-right",
+    "ver": "4.2.0"
+  },
+  {
+    "an": "aem-publisher",
+    "env": "qa-left",
+    "ver": "tarmk-2.0"
+  },
+  {
+    "an": "pbik",
+    "env": "qa-right",
+    "ver": "1.5.2"
+  },
+  {
+    "an": "save4later",
+    "env": "qa-right",
+    "ver": "0.5.0"
+  },
+  {
+    "an": "dtxe-validator",
+    "env": "qa-left",
+    "ver": "0.3.2"
+  },
+  {
+    "an": "business-tax-account-degraded",
+    "env": "qa-left",
+    "ver": "1.6.0"
+  },
+  {
+    "an": "fandf-service-catalogue",
+    "env": "qa-right",
+    "ver": "1.2.1"
+  },
+  {
+    "an": "government-gateway",
+    "env": "qa-left",
+    "ver": "4.17.0"
+  },
+  {
+    "an": "payments-frontend",
+    "env": "qa-left",
+    "ver": "0.139.0"
+  },
+  {
+    "an": "rcs-stubs",
+    "env": "qa-right",
+    "ver": "1.4.0"
+  },
+  {
+    "an": "hodstubs",
+    "env": "qa-right",
+    "ver": "3.15.0"
+  },
+  {
+    "an": "sa-lnp-frontend",
+    "env": "qa-left",
+    "ver": "0.6.0"
+  },
+  {
+    "an": "help-frontend",
+    "env": "qa-left",
+    "ver": "1.19.0"
+  },
+  {
+    "an": "ntc-stubs",
+    "env": "qa-right",
+    "ver": "2.0.0"
+  },
+  {
+    "an": "verification-frontend",
+    "env": "qa-left",
+    "ver": "0.7.0"
+  },
+  {
+    "an": "allowances-frontend",
+    "env": "qa-left",
+    "ver": "0.2.0"
+  },
+  {
+    "an": "statutory-print",
+    "env": "qa-right",
+    "ver": "1.2.0"
+  },
+  {
+    "an": "epaye",
+    "env": "qa-right",
+    "ver": "4.9.0"
+  },
+  {
+    "an": "whitelist-campaign-frontend",
+    "env": "qa-right",
+    "ver": "0.12.0"
+  },
+  {
+    "an": "paye",
+    "env": "qa-right",
+    "ver": "9.2.0"
+  },
+  {
+    "an": "business-tax-account",
+    "env": "qa-left",
+    "ver": "3.62.0"
+  },
+  {
+    "an": "vat",
+    "env": "qa-right",
+    "ver": "4.3.0"
+  },
+  {
+    "an": "delegation",
+    "env": "qa-left",
+    "ver": "0.3.0"
+  },
+  {
+    "an": "hodsapi",
+    "env": "qa-right",
+    "ver": "2.7.0"
+  },
+  {
+    "an": "ntc",
+    "env": "qa-right",
+    "ver": "3.20.0"
+  },
+  {
+    "an": "message",
+    "env": "qa-right",
+    "ver": "2.29.0"
+  },
+  {
+    "an": "ei-review-reports",
+    "env": "qa-left",
+    "ver": "0.0.5"
+  },
+  {
+    "an": "benefits-frontend",
+    "env": "qa-left",
+    "ver": "1.1.0"
+  },
+  {
+    "an": "saml",
+    "env": "qa-right",
+    "ver": "4.3.0"
+  },
+  {
+    "an": "pertax-frontend",
+    "env": "qa-left",
+    "ver": "1.0.1"
+  },
+  {
+    "an": "sa-lnp",
+    "env": "qa-right",
+    "ver": "0.8.0"
+  },
+  {
+    "an": "attorney",
+    "env": "qa-right",
+    "ver": "0.8.0"
+  },
+  {
+    "an": "ecstatic",
+    "env": "qa-left",
+    "ver": "0.0.5"
+  },
+  {
+    "an": "agent-paye",
+    "env": "qa-right",
+    "ver": "1.9.0"
+  },
+  {
+    "an": "dfs",
+    "env": "qa-left",
+    "ver": "1.1.10"
+  },
+  {
+    "an": "awrs",
+    "env": "qa-right",
+    "ver": "0.1.0-preview"
+  },
+  {
+    "an": "paye-tax-summaries-support-frontend",
+    "env": "qa-left",
+    "ver": "2.5.0"
+  },
+  {
+    "an": "heritage-frontend",
+    "env": "qa-left",
+    "ver": "1.1.0"
+  },
+  {
+    "an": "cato-submit",
+    "env": "qa-left",
+    "ver": "3.0.0"
+  },
+  {
+    "an": "tax-summaries",
+    "env": "qa-right",
+    "ver": "0.4.0"
+  },
+  {
+    "an": "frontend-assets",
+    "env": "qa-left",
+    "ver": "1.8.0"
+  },
+  {
+    "an": "fandf-frontend",
+    "env": "qa-left",
+    "ver": "0.8.0"
+  },
+  {
+    "an": "datastream",
+    "env": "qa-right",
+    "ver": "5.4.0"
+  }
+]

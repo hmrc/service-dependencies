@@ -1,0 +1,677 @@
+[
+  {
+    "an": "sad",
+    "env": "staging-right",
+    "ver": "2.5.1"
+  },
+  {
+    "an": "nostalgic",
+    "env": "staging-right",
+    "ver": "3.10.0"
+  },
+  {
+    "an": "authenticator",
+    "env": "staging-left",
+    "ver": "1.8.0"
+  },
+  {
+    "an": "distracted",
+    "env": "staging-right",
+    "ver": "3.11.0"
+  },
+  {
+    "an": "fandf-service-catalogue",
+    "env": "staging-right",
+    "ver": "1.2.1"
+  },
+  {
+    "an": "naughty",
+    "env": "staging-right",
+    "ver": "4.1.0"
+  },
+  {
+    "an": "reconciliation",
+    "env": "staging-right",
+    "ver": "1.3.0"
+  },
+  {
+    "an": "docktor",
+    "env": "staging-left",
+    "ver": "0.0.14"
+  },
+  {
+    "an": "pensive",
+    "env": "staging-right",
+    "ver": "2.5.1"
+  },
+  {
+    "an": "whitelist-campaign-frontend",
+    "env": "staging-right",
+    "ver": "0.12.0"
+  },
+  {
+    "an": "nisp-stubs",
+    "env": "staging-right",
+    "ver": "0.2.0"
+  },
+  {
+    "an": "datastream",
+    "env": "staging-right",
+    "ver": "5.4.0"
+  },
+  {
+    "an": "matching",
+    "env": "staging-right",
+    "ver": "6.13.0"
+  },
+  {
+    "an": "agent-paye",
+    "env": "staging-right",
+    "ver": "1.9.0"
+  },
+  {
+    "an": "ecstatic",
+    "env": "staging-right",
+    "ver": "3.23.0"
+  },
+  {
+    "an": "auth",
+    "env": "staging-right",
+    "ver": "4.42.0"
+  },
+  {
+    "an": "dfs-dms-sub-orch",
+    "env": "staging-right",
+    "ver": "1.8.9"
+  },
+  {
+    "an": "yta-stubs",
+    "env": "staging-right",
+    "ver": "1.20.0"
+  },
+  {
+    "an": "cesa-stub",
+    "env": "staging-right",
+    "ver": "1.9.0"
+  },
+  {
+    "an": "hodsapi",
+    "env": "staging-right",
+    "ver": "2.7.0"
+  },
+  {
+    "an": "agent-frontend",
+    "env": "staging-left",
+    "ver": "1.12.0"
+  },
+  {
+    "an": "ei-review-reports",
+    "env": "staging-left",
+    "ver": "0.0.5"
+  },
+  {
+    "an": "save4later",
+    "env": "staging-right",
+    "ver": "0.5.0"
+  },
+  {
+    "an": "pbik",
+    "env": "staging-right",
+    "ver": "1.5.2"
+  },
+  {
+    "an": "sa",
+    "env": "staging-right",
+    "ver": "4.2.0"
+  },
+  {
+    "an": "aem-publisher",
+    "env": "staging-left",
+    "ver": "tarmk-2.0"
+  },
+  {
+    "an": "pbik-frontend",
+    "env": "staging-left",
+    "ver": "1.8.6"
+  },
+  {
+    "an": "cato-filing",
+    "env": "staging-right",
+    "ver": "6.0.0"
+  },
+  {
+    "an": "compassionate",
+    "env": "staging-right",
+    "ver": "2.5.1"
+  },
+  {
+    "an": "epaye",
+    "env": "staging-right",
+    "ver": "4.9.0"
+  },
+  {
+    "an": "poison-password",
+    "env": "staging-right",
+    "ver": "0.7.1"
+  },
+  {
+    "an": "dfs-store",
+    "env": "staging-right",
+    "ver": "2.2.6"
+  },
+  {
+    "an": "heritage",
+    "env": "staging-right",
+    "ver": "0.4.0"
+  },
+  {
+    "an": "hmrc-deskpro",
+    "env": "staging-left",
+    "ver": "4.14.0"
+  },
+  {
+    "an": "hello-flask2",
+    "env": "staging-left",
+    "ver": "3.5"
+  },
+  {
+    "an": "dfs-dms-sub-orch-stubs",
+    "env": "staging-right",
+    "ver": "1.3.1"
+  },
+  {
+    "an": "lbmanager",
+    "env": "staging-left",
+    "ver": "0.0.2"
+  },
+  {
+    "an": "matching-adapter",
+    "env": "staging-left",
+    "ver": "0.7.0"
+  },
+  {
+    "an": "gg-stubs",
+    "env": "staging-left",
+    "ver": "2.11.0"
+  },
+  {
+    "an": "tax-summaries-frontend",
+    "env": "staging-left",
+    "ver": "0.9.0"
+  },
+  {
+    "an": "audit-sweep-right",
+    "env": "staging-right",
+    "ver": "1.6.0"
+  },
+  {
+    "an": "nisp-stub",
+    "env": "staging-right",
+    "ver": "0.3.0"
+  },
+  {
+    "an": "ers-stubs",
+    "env": "staging-right",
+    "ver": "0.0.2"
+  },
+  {
+    "an": "tamc",
+    "env": "staging-right",
+    "ver": "1.1.0"
+  },
+  {
+    "an": "message-frontend",
+    "env": "staging-left",
+    "ver": "2.4.0"
+  },
+  {
+    "an": "email",
+    "env": "staging-left",
+    "ver": "5.47.0"
+  },
+  {
+    "an": "nisp-frontend",
+    "env": "staging-left",
+    "ver": "1.0.6"
+  },
+  {
+    "an": "nisp",
+    "env": "staging-right",
+    "ver": "1.0.5"
+  },
+  {
+    "an": "tai-frontend",
+    "env": "staging-left",
+    "ver": "3.2.0"
+  },
+  {
+    "an": "tcs-frontend",
+    "env": "staging-left",
+    "ver": "3.18.0"
+  },
+  {
+    "an": "tai-stubs",
+    "env": "staging-right",
+    "ver": "1.2.0"
+  },
+  {
+    "an": "preferences",
+    "env": "staging-right",
+    "ver": "5.14.0"
+  },
+  {
+    "an": "attorney",
+    "env": "staging-right",
+    "ver": "0.8.0"
+  },
+  {
+    "an": "tax-summaries-agent",
+    "env": "staging-right",
+    "ver": "0.3.1"
+  },
+  {
+    "an": "cato-stubs",
+    "env": "staging-right",
+    "ver": "1.21.1"
+  },
+  {
+    "an": "paye-stubs",
+    "env": "staging-right",
+    "ver": "5.3.0"
+  },
+  {
+    "an": "paye",
+    "env": "staging-right",
+    "ver": "9.2.0"
+  },
+  {
+    "an": "saml",
+    "env": "staging-right",
+    "ver": "4.3.0"
+  },
+  {
+    "an": "ers-backend",
+    "env": "staging-right",
+    "ver": "1.0.42"
+  },
+  {
+    "an": "tamc-frontend",
+    "env": "staging-left",
+    "ver": "1.7.0"
+  },
+  {
+    "an": "aem-author",
+    "env": "staging-left",
+    "ver": "1.5"
+  },
+  {
+    "an": "vat",
+    "env": "staging-right",
+    "ver": "4.3.0"
+  },
+  {
+    "an": "business-tax-account",
+    "env": "staging-left",
+    "ver": "3.62.0"
+  },
+  {
+    "an": "matching-stub",
+    "env": "staging-left",
+    "ver": "0.13.0"
+  },
+  {
+    "an": "captain",
+    "env": "staging-left",
+    "ver": "0.0.17"
+  },
+  {
+    "an": "worldpay-downloader",
+    "env": "staging-left",
+    "ver": "1.33.0"
+  },
+  {
+    "an": "ers-frontend",
+    "env": "staging-left",
+    "ver": "1.0.92"
+  },
+  {
+    "an": "frontend-assets",
+    "env": "staging-left",
+    "ver": "1.27.0"
+  },
+  {
+    "an": "fandf-frontend",
+    "env": "staging-left",
+    "ver": "0.8.0"
+  },
+  {
+    "an": "tamc-pre-reg-frontend",
+    "env": "staging-left",
+    "ver": "1.1.0"
+  },
+  {
+    "an": "citizen-auth-frontend",
+    "env": "staging-left",
+    "ver": "2.2.0"
+  },
+  {
+    "an": "tamc-stub",
+    "env": "staging-right",
+    "ver": "0.2.0"
+  },
+  {
+    "an": "poison-password-adapter",
+    "env": "staging-left",
+    "ver": "0.1.0"
+  },
+  {
+    "an": "charities",
+    "env": "staging-right",
+    "ver": "2.0.0"
+  },
+  {
+    "an": "paye-frontend",
+    "env": "staging-left",
+    "ver": "7.5.0"
+  },
+  {
+    "an": "hello-flask",
+    "env": "staging-left",
+    "ver": "3.5"
+  },
+  {
+    "an": "cato-submit",
+    "env": "staging-left",
+    "ver": "2.7.0"
+  },
+  {
+    "an": "rcs-stubs",
+    "env": "staging-right",
+    "ver": "1.6.0"
+  },
+  {
+    "an": "payments-frontend",
+    "env": "staging-left",
+    "ver": "0.138.0"
+  },
+  {
+    "an": "tax-summaries",
+    "env": "staging-right",
+    "ver": "0.4.0"
+  },
+  {
+    "an": "heritage-frontend",
+    "env": "staging-left",
+    "ver": "0.2.0"
+  },
+  {
+    "an": "paye-tax-summaries-support-frontend",
+    "env": "staging-left",
+    "ver": "2.5.0"
+  },
+  {
+    "an": "awrs",
+    "env": "staging-right",
+    "ver": "0.1.0-preview"
+  },
+  {
+    "an": "dfs-frontend",
+    "env": "staging-left",
+    "ver": "2.0.0"
+  },
+  {
+    "an": "preferences-frontend",
+    "env": "staging-left",
+    "ver": "3.11.0"
+  },
+  {
+    "an": "portal-stub-for-ida",
+    "env": "staging-left",
+    "ver": "0.5.0"
+  },
+  {
+    "an": "captain-right",
+    "env": "staging-right",
+    "ver": "0.0.17"
+  },
+  {
+    "an": "cc-frontend",
+    "env": "staging-left",
+    "ver": "0.11.0"
+  },
+  {
+    "an": "citizen-identity-verification",
+    "env": "staging-right",
+    "ver": "0.5.0"
+  },
+  {
+    "an": "stats-collector",
+    "env": "staging-left",
+    "ver": "2.4.0"
+  },
+  {
+    "an": "ct",
+    "env": "staging-right",
+    "ver": "4.7.0"
+  },
+  {
+    "an": "heritage-admin-frontend",
+    "env": "staging-right",
+    "ver": "0.4.0"
+  },
+  {
+    "an": "lbmanager-right",
+    "env": "staging-right",
+    "ver": "0.0.1"
+  },
+  {
+    "an": "delegation",
+    "env": "staging-left",
+    "ver": "0.3.0"
+  },
+  {
+    "an": "awrs-frontend",
+    "env": "staging-left",
+    "ver": "0.1.0-preview"
+  },
+  {
+    "an": "key-store",
+    "env": "staging-left",
+    "ver": "4.4.0"
+  },
+  {
+    "an": "tai",
+    "env": "staging-right",
+    "ver": "2.4.0"
+  },
+  {
+    "an": "cato-frontend",
+    "env": "staging-left",
+    "ver": "5.6.0"
+  },
+  {
+    "an": "audit-sweep",
+    "env": "staging-left",
+    "ver": "1.6.0"
+  },
+  {
+    "an": "business-tax-account-degraded",
+    "env": "staging-left",
+    "ver": "1.6.0"
+  },
+  {
+    "an": "government-gateway",
+    "env": "staging-left",
+    "ver": "4.17.0"
+  },
+  {
+    "an": "pbik-stub",
+    "env": "staging-right",
+    "ver": "0.0.2"
+  },
+  {
+    "an": "mailgun-stub",
+    "env": "staging-left",
+    "ver": "1.7.0"
+  },
+  {
+    "an": "contact-frontend",
+    "env": "staging-left",
+    "ver": "2.25.0"
+  },
+  {
+    "an": "help-frontend",
+    "env": "staging-left",
+    "ver": "1.19.0"
+  },
+  {
+    "an": "ntc-stubs",
+    "env": "staging-left",
+    "ver": "2.0.0"
+  },
+  {
+    "an": "verification-frontend",
+    "env": "staging-left",
+    "ver": "0.7.0"
+  },
+  {
+    "an": "ei",
+    "env": "staging-right",
+    "ver": "1.0.0"
+  },
+  {
+    "an": "tamc-pre-reg",
+    "env": "staging-right",
+    "ver": "1.6.0"
+  },
+  {
+    "an": "fandf",
+    "env": "staging-right",
+    "ver": "0.7.0"
+  },
+  {
+    "an": "tcs",
+    "env": "staging-right",
+    "ver": "2.32.0"
+  },
+  {
+    "an": "worldpay-stubs",
+    "env": "staging-left",
+    "ver": "1.37.0"
+  },
+  {
+    "an": "demo-frontend",
+    "env": "staging-left",
+    "ver": "0.7.0"
+  },
+  {
+    "an": "ei-frontend",
+    "env": "staging-left",
+    "ver": "2.0.10"
+  },
+  {
+    "an": "passcode",
+    "env": "staging-right",
+    "ver": "1.4.0"
+  },
+  {
+    "an": "stupefied",
+    "env": "staging-right",
+    "ver": "3.10.0"
+  },
+  {
+    "an": "dfs",
+    "env": "staging-left",
+    "ver": "1.1.10"
+  },
+  {
+    "an": "sa-message-renderer",
+    "env": "staging-right",
+    "ver": "1.9.0"
+  },
+  {
+    "an": "charities-frontend",
+    "env": "staging-left",
+    "ver": "5.1.0"
+  },
+  {
+    "an": "cc-email-capture",
+    "env": "staging-right",
+    "ver": "0.6.0"
+  },
+  {
+    "an": "statutory-print",
+    "env": "staging-right",
+    "ver": "1.2.0"
+  },
+  {
+    "an": "ers-eoy-return-stub",
+    "env": "staging-right",
+    "ver": "0.0.5"
+  },
+  {
+    "an": "citizen-details",
+    "env": "staging-right",
+    "ver": "1.2.0"
+  },
+  {
+    "an": "company-auth-frontend",
+    "env": "staging-left",
+    "ver": "2.37.1"
+  },
+  {
+    "an": "ers-checking-frontend",
+    "env": "staging-left",
+    "ver": "1.0.33"
+  },
+  {
+    "an": "furious",
+    "env": "staging-right",
+    "ver": "3.8.1"
+  },
+  {
+    "an": "charities-stubs",
+    "env": "staging-left",
+    "ver": "1.0.0"
+  },
+  {
+    "an": "notification",
+    "env": "staging-right",
+    "ver": "5.11.0"
+  },
+  {
+    "an": "tax-summaries-stubs",
+    "env": "staging-right",
+    "ver": "0.1.5"
+  },
+  {
+    "an": "tax-credits-submissions",
+    "env": "staging-right",
+    "ver": "1.0.1"
+  },
+  {
+    "an": "ntc",
+    "env": "staging-right",
+    "ver": "3.20.0"
+  },
+  {
+    "an": "message",
+    "env": "staging-right",
+    "ver": "2.28.0"
+  },
+  {
+    "an": "berserk",
+    "env": "staging-right",
+    "ver": "3.10.0"
+  },
+  {
+    "an": "agent-stubs",
+    "env": "staging-right",
+    "ver": "1.4.0"
+  },
+  {
+    "an": "portal-stub",
+    "env": "staging-left",
+    "ver": "1.17.0"
+  }
+]

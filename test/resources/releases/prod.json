@@ -1,0 +1,432 @@
+[
+  {
+    "an": "demo-frontend",
+    "env": "prod-left-a",
+    "ver": "0.7.0"
+  },
+  {
+    "an": "matching",
+    "env": "prod-right",
+    "ver": "6.13.0"
+  },
+  {
+    "an": "auth",
+    "env": "prod-right",
+    "ver": "4.42.0"
+  },
+  {
+    "an": "tax-credits-submissions",
+    "env": "prod-right",
+    "ver": "1.0.1"
+  },
+  {
+    "an": "statutory-print",
+    "env": "prod-right",
+    "ver": "1.2.0"
+  },
+  {
+    "an": "tamc-pre-reg",
+    "env": "prod-right",
+    "ver": "1.0.0"
+  },
+  {
+    "an": "passcode",
+    "env": "prod-right",
+    "ver": "1.4.0"
+  },
+  {
+    "an": "message",
+    "env": "prod-right",
+    "ver": "2.28.0"
+  },
+  {
+    "an": "hmrc-deskpro",
+    "env": "prod-left-a",
+    "ver": "4.14.0"
+  },
+  {
+    "an": "ntc",
+    "env": "prod-right",
+    "ver": "3.20.0"
+  },
+  {
+    "an": "stats-collector",
+    "env": "prod-left-a",
+    "ver": "2.4.0"
+  },
+  {
+    "an": "audit-sweep",
+    "env": "prod-left-a",
+    "ver": "1.3.0"
+  },
+  {
+    "an": "tai",
+    "env": "prod-right",
+    "ver": "2.4.0"
+  },
+  {
+    "an": "payments-frontend",
+    "env": "prod-left-b",
+    "ver": "0.136.0"
+  },
+  {
+    "an": "tax-summaries",
+    "env": "prod-right",
+    "ver": "0.4.0"
+  },
+  {
+    "an": "ers-checking-frontend",
+    "env": "prod-left-b",
+    "ver": "1.0.33"
+  },
+  {
+    "an": "company-auth-frontend",
+    "env": "prod-left-a",
+    "ver": "2.37.1"
+  },
+  {
+    "an": "preferences-frontend",
+    "env": "prod-left-a",
+    "ver": "3.11.0"
+  },
+  {
+    "an": "citizen-identity-verification",
+    "env": "prod-right",
+    "ver": "0.5.0"
+  },
+  {
+    "an": "message-frontend",
+    "env": "prod-left-a",
+    "ver": "2.4.0"
+  },
+  {
+    "an": "captain-right",
+    "env": "prod-right",
+    "ver": "0.0.18"
+  },
+  {
+    "an": "fandf",
+    "env": "prod-right",
+    "ver": "0.5.0"
+  },
+  {
+    "an": "tcs",
+    "env": "prod-right",
+    "ver": "2.32.0"
+  },
+  {
+    "an": "ei",
+    "env": "prod-right",
+    "ver": "1.0.0"
+  },
+  {
+    "an": "ers-backend",
+    "env": "prod-right",
+    "ver": "1.0.40"
+  },
+  {
+    "an": "sa",
+    "env": "prod-right",
+    "ver": "4.2.0"
+  },
+  {
+    "an": "business-tax-account",
+    "env": "prod-left-a",
+    "ver": "3.62.0"
+  },
+  {
+    "an": "poison-password",
+    "env": "prod-right",
+    "ver": "0.7.1"
+  },
+  {
+    "an": "vat",
+    "env": "prod-right",
+    "ver": "4.3.0"
+  },
+  {
+    "an": "paye",
+    "env": "prod-right",
+    "ver": "9.2.0"
+  },
+  {
+    "an": "email",
+    "env": "prod-left-b",
+    "ver": "5.47.0"
+  },
+  {
+    "an": "nisp",
+    "env": "prod-right",
+    "ver": "1.0.5"
+  },
+  {
+    "an": "datastream",
+    "env": "prod-right",
+    "ver": "5.3.0"
+  },
+  {
+    "an": "saml",
+    "env": "prod-right",
+    "ver": "4.3.0"
+  },
+  {
+    "an": "tamc-frontend",
+    "env": "prod-left-b",
+    "ver": "1.7.0"
+  },
+  {
+    "an": "paye-frontend",
+    "env": "prod-left-a",
+    "ver": "7.5.0"
+  },
+  {
+    "an": "whitelist-campaign-frontend",
+    "env": "prod-right",
+    "ver": "0.12.0"
+  },
+  {
+    "an": "pbik-frontend",
+    "env": "prod-left-a",
+    "ver": "1.8.6"
+  },
+  {
+    "an": "tax-summaries-frontend",
+    "env": "prod-left-a",
+    "ver": "0.9.0"
+  },
+  {
+    "an": "aem-publisher",
+    "env": "prod-left-a",
+    "ver": "1.9"
+  },
+  {
+    "an": "tax-summaries-agent",
+    "env": "prod-right",
+    "ver": "0.3.1"
+  },
+  {
+    "an": "agent-frontend",
+    "env": "prod-left-a",
+    "ver": "1.10.0"
+  },
+  {
+    "an": "key-store",
+    "env": "prod-left-a",
+    "ver": "4.4.0"
+  },
+  {
+    "an": "citizen-details",
+    "env": "prod-right",
+    "ver": "1.2.0"
+  },
+  {
+    "an": "delegation",
+    "env": "prod-left-b",
+    "ver": "0.3.0"
+  },
+  {
+    "an": "pbik",
+    "env": "prod-right",
+    "ver": "1.5.2"
+  },
+  {
+    "an": "cato-frontend",
+    "env": "prod-left-a",
+    "ver": "5.6.0"
+  },
+  {
+    "an": "matching-adapter",
+    "env": "prod-left-a",
+    "ver": "0.7.0"
+  },
+  {
+    "an": "save4later",
+    "env": "prod-right",
+    "ver": "0.5.0"
+  },
+  {
+    "an": "worldpay-downloader",
+    "env": "prod-left-a",
+    "ver": "1.33.0"
+  },
+  {
+    "an": "tai-frontend",
+    "env": "prod-left-b",
+    "ver": "3.2.0"
+  },
+  {
+    "an": "sa-message-renderer",
+    "env": "prod-right",
+    "ver": "1.9.0"
+  },
+  {
+    "an": "charities-frontend",
+    "env": "prod-left-b",
+    "ver": "5.1.0"
+  },
+  {
+    "an": "business-tax-account-degraded",
+    "env": "prod-left-b",
+    "ver": "1.5.0"
+  },
+  {
+    "an": "government-gateway",
+    "env": "prod-left-b",
+    "ver": "4.17.0"
+  },
+  {
+    "an": "preferences",
+    "env": "prod-right",
+    "ver": "5.14.0"
+  },
+  {
+    "an": "nisp-frontend",
+    "env": "prod-left-a",
+    "ver": "1.0.6"
+  },
+  {
+    "an": "tamc-pre-reg-frontend",
+    "env": "prod-left-a",
+    "ver": "1.1.0"
+  },
+  {
+    "an": "citizen-auth-frontend",
+    "env": "prod-left-a",
+    "ver": "2.2.0"
+  },
+  {
+    "an": "tcs-frontend",
+    "env": "prod-left-a",
+    "ver": "3.18.0"
+  },
+  {
+    "an": "charities",
+    "env": "prod-right",
+    "ver": "2.0.0"
+  },
+  {
+    "an": "ct",
+    "env": "prod-right",
+    "ver": "4.7.0"
+  },
+  {
+    "an": "authenticator",
+    "env": "prod-left-b",
+    "ver": "1.8.0"
+  },
+  {
+    "an": "attorney",
+    "env": "prod-right",
+    "ver": "0.8.0"
+  },
+  {
+    "an": "ers-frontend",
+    "env": "prod-left-a",
+    "ver": "1.0.92"
+  },
+  {
+    "an": "fandf-frontend",
+    "env": "prod-left-b",
+    "ver": "0.5.5"
+  },
+  {
+    "an": "frontend-assets",
+    "env": "prod-left-b",
+    "ver": "1.27.0"
+  },
+  {
+    "an": "paye-tax-summaries-support-frontend",
+    "env": "prod-left-a",
+    "ver": "2.5.0"
+  },
+  {
+    "an": "verification-frontend",
+    "env": "prod-left-a",
+    "ver": "0.7.0"
+  },
+  {
+    "an": "help-frontend",
+    "env": "prod-left-a",
+    "ver": "1.19.0"
+  },
+  {
+    "an": "agent-paye",
+    "env": "prod-right",
+    "ver": "1.8.0"
+  },
+  {
+    "an": "dfs",
+    "env": "prod-left-a",
+    "ver": "1.1.10"
+  },
+  {
+    "an": "ei-frontend",
+    "env": "prod-left-a",
+    "ver": "2.0.10"
+  },
+  {
+    "an": "cato-submit",
+    "env": "prod-left-a",
+    "ver": "2.7.0"
+  },
+  {
+    "an": "contact-frontend",
+    "env": "prod-left-a",
+    "ver": "2.25.0"
+  },
+  {
+    "an": "dfs-frontend",
+    "env": "prod-left-a",
+    "ver": "1.9.19"
+  },
+  {
+    "an": "epaye",
+    "env": "prod-right",
+    "ver": "4.9.0"
+  },
+  {
+    "an": "notification",
+    "env": "prod-right",
+    "ver": "5.11.0"
+  },
+  {
+    "an": "dfs-dms-sub-orch",
+    "env": "prod-right",
+    "ver": "1.8.9"
+  },
+  {
+    "an": "captain",
+    "env": "prod-left-b",
+    "ver": "0.0.18"
+  },
+  {
+    "an": "hodsapi",
+    "env": "prod-right",
+    "ver": "2.7.0"
+  },
+  {
+    "an": "audit-sweep-right",
+    "env": "prod-right",
+    "ver": "1.3.0"
+  },
+  {
+    "an": "ei-review-reports",
+    "env": "prod-left-b",
+    "ver": "0.0.5"
+  },
+  {
+    "an": "dfs-store",
+    "env": "prod-right",
+    "ver": "2.2.4"
+  },
+  {
+    "an": "tamc",
+    "env": "prod-right",
+    "ver": "1.1.0"
+  },
+  {
+    "an": "cato-filing",
+    "env": "prod-right",
+    "ver": "6.0.0"
+  }
+]
