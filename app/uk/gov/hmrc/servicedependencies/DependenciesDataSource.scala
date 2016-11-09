@@ -23,7 +23,7 @@ import scala.concurrent.{ExecutionContext, Future, Promise}
 import scala.util.{Failure, Success}
 import scala.concurrent.ExecutionContext.Implicits.global
 
-case class EnvironmentDependency(serviceVersion: String, artifactVersion: String)
+case class EnvironmentDependency(version: String, dependencyVersion: String)
 case class ServiceDependencies(name: String, environments: Map[String, EnvironmentDependency])
 
 class DependenciesDataSource(val releasesConnector: DeploymentsDataSource, val githubs: Seq[Github]) {
