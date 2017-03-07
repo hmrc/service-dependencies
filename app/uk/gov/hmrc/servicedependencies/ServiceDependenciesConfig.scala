@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 HM Revenue & Customs
+ * Copyright 2017 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -33,11 +33,13 @@ trait ReleasesConfig {
 }
 
 class ServiceDependenciesConfig extends CacheConfig with ReleasesConfig {
+
   private val cacheDurationConfigPath = "cache.timeout.duration"
   private val githubOpenConfigKey = "github.open.api"
   private val githubEnterpriseConfigKey = "github.enterprise.api"
   private val releaseServiceUrlKey = "releases.api.url"
   private val targetArtifactKey = "target.artifact"
+  private val teamsAndRepositoriesServiceUrlKey = "teamsandservices.api.url"
 
   private val defaultTimeout = 1 day
 
@@ -54,6 +56,7 @@ class ServiceDependenciesConfig extends CacheConfig with ReleasesConfig {
   }
 
   lazy val releasesServiceUrl = config(s"$releaseServiceUrlKey").get
+  lazy val teamsAndRepositoriesServiceUrl: String = config(teamsAndRepositoriesServiceUrlKey).get
 
   private val gitOpenConfig = (key: String) => config(s"$githubOpenConfigKey.$key")
   private val gitEnterpriseConfig = (key: String) => config(s"$githubEnterpriseConfigKey.$key")
@@ -101,4 +104,3 @@ class ConfigFile(filePath: Path) {
 
   def get(path: String) = kvMap.get(path)
 }
-

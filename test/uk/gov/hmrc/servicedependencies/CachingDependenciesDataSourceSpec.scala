@@ -88,10 +88,10 @@ class CachingDependenciesDataSourceSpec extends WordSpec with BeforeAndAfterAll 
 
         cache.reload()
 
-        promise2.success(Seq(ServiceDependencies("another", Map())))
+        promise2.success(Seq(ServiceDependencies("another", Map(), Seq())))
 
         eventually {
-          cache.getCachedData.futureValue shouldBe Seq(ServiceDependencies("another", Map()))
+          cache.getCachedData.futureValue shouldBe Seq(ServiceDependencies("another", Map(), Seq()))
         }
       }
     }
@@ -119,18 +119,18 @@ class CachingDependenciesDataSourceSpec extends WordSpec with BeforeAndAfterAll 
       }
 
       val cachedData = Iterator(
-        Seq(ServiceDependencies("result1", Map())),
-        Seq(ServiceDependencies("result2", Map())),
-        Seq(ServiceDependencies("result3", Map()))).map(Future.successful)
+        Seq(ServiceDependencies("result1", Map(), Seq())),
+        Seq(ServiceDependencies("result2", Map(), Seq())),
+        Seq(ServiceDependencies("result3", Map(), Seq()))).map(Future.successful)
 
       withCache(() => cachedData.next, testConfig) { cache =>
 
         eventually {
-          cache.getCachedData.futureValue shouldBe Seq(ServiceDependencies("result1", Map()))
+          cache.getCachedData.futureValue shouldBe Seq(ServiceDependencies("result1", Map(), Seq()))
         }
 
         eventually {
-          cache.getCachedData.futureValue shouldBe Seq(ServiceDependencies("result2", Map()))
+          cache.getCachedData.futureValue shouldBe Seq(ServiceDependencies("result2", Map(), Seq()))
         }
       }
     }

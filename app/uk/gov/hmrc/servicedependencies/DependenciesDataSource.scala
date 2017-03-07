@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 HM Revenue & Customs
+ * Copyright 2017 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,15 +24,19 @@ import scala.util.{Failure, Success}
 import scala.concurrent.ExecutionContext.Implicits.global
 
 case class EnvironmentDependency(version: String, dependencyVersion: String)
-case class ServiceDependencies(name: String, environments: Map[String, EnvironmentDependency])
+case class ServiceDependencies(name: String, environments: Map[String, EnvironmentDependency], teamNames: Seq[String])
 
-class DependenciesDataSource(val releasesConnector: DeploymentsDataSource, val githubs: Seq[Github]) {
+class DependenciesDataSource(val releasesConnector: DeploymentsDataSource,
+                             val teamsAndRepositoriesDataSource: TeamsAndRepositoriesDataSource,
+                             val githubs: Seq[Github]) {
+
   def getDependencies: Future[Seq[ServiceDependencies]] =
     for {
       services <- releasesConnector.listOfRunningServices()
-    } yield services.map(serviceVersions)
+      serviceTeams <- teamsAndRepositoriesDataSource.getTeamsForServices()
+    } yield services.map {s => serviceVersions(s, serviceTeams.getOrElse(s.name, Seq()))}
 
-  private def serviceVersions(service: Service): ServiceDependencies = {
+  private def serviceVersions(service: Service, teams: Seq[String]): ServiceDependencies = {
     val environmentVersions = Map("qa" -> service.qaVersion, "staging" -> service.stagingVersion, "prod" -> service.prodVersion)
     val versions = environmentVersions.values.toSeq
       .distinct
@@ -42,7 +46,8 @@ class DependenciesDataSource(val releasesConnector: DeploymentsDataSource, val g
       service.name,
       environmentVersions
         .filter { case (x, y) => y.nonEmpty }
-        .map { case (x, y) => x -> new EnvironmentDependency(y.get, versions(y)) })
+        .map { case (x, y) => x -> new EnvironmentDependency(y.get, versions(y)) },
+      teams)
   }
 
   private def searchGithubsForArtifact(serviceName: String, version: Option[String]): Option[Version] = {

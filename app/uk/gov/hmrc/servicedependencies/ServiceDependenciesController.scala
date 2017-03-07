@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 HM Revenue & Customs
+ * Copyright 2017 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -30,6 +30,7 @@ object ServiceDependenciesController extends ServiceDependenciesController {
 	private val config = new ServiceDependenciesConfig()
 
 	private val releasesConnector = new DeploymentsDataSource(config)
+	private val teamsAndRepositoriesClient = new TeamsAndRepositoriesClient(config.teamsAndRepositoriesServiceUrl)
 
 	private val gitEnterpriseClient = GithubApiClient(config.githubApiEnterpriseConfig.apiUrl, config.githubApiEnterpriseConfig.key)
 	private val gitOpenClient = GithubApiClient(config.githubApiOpenConfig.apiUrl, config.githubApiOpenConfig.key)
@@ -44,7 +45,8 @@ object ServiceDependenciesController extends ServiceDependenciesController {
 		override def resolveTag(version: String) = s"release/$version"
 	}
 
-	private def dataLoader: () => Future[Seq[ServiceDependencies]] = new DependenciesDataSource(releasesConnector, Seq(new GithubEnterprise, new GithubOpen)).getDependencies _
+	private def dataLoader: () => Future[Seq[ServiceDependencies]] =
+		new DependenciesDataSource(releasesConnector, teamsAndRepositoriesClient, Seq(new GithubEnterprise, new GithubOpen)).getDependencies _
 
 	protected val dataSource = new CachingDependenciesDataSource(Akka.system(), config, dataLoader)
 }
