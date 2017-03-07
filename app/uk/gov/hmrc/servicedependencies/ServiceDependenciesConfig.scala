@@ -39,7 +39,7 @@ class ServiceDependenciesConfig extends CacheConfig with ReleasesConfig {
   private val githubEnterpriseConfigKey = "github.enterprise.api"
   private val releaseServiceUrlKey = "releases.api.url"
   private val targetArtifactKey = "target.artifact"
-  private val teamsAndRepositoriesServiceUrlKey = "teamsandservices.api.url"
+  private val teamsAndRepositoriesServiceUrlKey = "teamsandrepositories.api.url"
 
   private val defaultTimeout = 1 day
 
