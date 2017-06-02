@@ -34,7 +34,14 @@ class DependenciesDataSource(val releasesConnector: DeploymentsDataSource,
     for {
       services <- releasesConnector.listOfRunningServices()
       serviceTeams <- teamsAndRepositoriesDataSource.getTeamsForServices()
-    } yield services.map {s => serviceVersions(s, serviceTeams.getOrElse(s.name, Seq()))}
+    } yield
+      services
+        .sortBy(_.name)
+        .map { s =>
+          println(s"Getting dependencies for service: ${s.name}")
+          serviceVersions(s, serviceTeams.getOrElse(s.name, Seq()))
+        }
+
 
   private def serviceVersions(service: Service, teams: Seq[String]): ServiceDependencies = {
     val environmentVersions = Map("qa" -> service.qaVersion, "staging" -> service.stagingVersion, "prod" -> service.prodVersion)
