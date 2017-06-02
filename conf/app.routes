@@ -1,3 +1,4 @@
 # microservice specific routes
 
 GET        /             uk.gov.hmrc.servicedependencies.ServiceDependenciesController.get()
+GET        /reload       uk.gov.hmrc.servicedependencies.ServiceDependenciesController.reloadCache()

@@ -45,7 +45,7 @@ object ServiceDependenciesController extends ServiceDependenciesController {
 		override def resolveTag(version: String) = s"release/$version"
 	}
 
-	private def dataLoader: () => Future[Seq[ServiceDependencies]] =
+	private val dataLoader: () => Future[Seq[ServiceDependencies]] =
 		new DependenciesDataSource(releasesConnector, teamsAndRepositoriesClient, Seq(new GithubEnterprise, new GithubOpen)).getDependencies _
 
 	protected val dataSource = new CachingDependenciesDataSource(Akka.system(), config, dataLoader)
@@ -62,4 +62,10 @@ trait ServiceDependenciesController extends BaseController {
 	def get() = Action.async { implicit request =>
 		dataSource.getCachedData.map { data => Ok(Json.toJson(data)) }
 	}
+
+	def reloadCache() = Action {
+		dataSource.reload()
+		Ok("Cache reload triggered successfully")
+	}
+
 }

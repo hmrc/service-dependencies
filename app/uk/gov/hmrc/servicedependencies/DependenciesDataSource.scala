@@ -82,9 +82,9 @@ class CachingDependenciesDataSource(akkaSystem: ActorSystem, cacheConfig: CacheC
     cachedData.fold(initialPromise.future)(d => Future.successful(d))
   }
 
-  def reload() = {
+  def reload(): Future[Unit] = {
     Logger.info(s"Manual cache reload triggered")
-    dataUpdate()
+    Future(dataUpdate())
   }
 
   Logger.info(s"Initialising cache reload every ${cacheConfig.cacheDuration}")
