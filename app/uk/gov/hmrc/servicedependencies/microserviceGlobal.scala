@@ -40,7 +40,7 @@ object MicroserviceLoggingFilter extends LoggingFilter with MicroserviceFilterSu
 object MicroserviceGlobal extends GlobalSettings
   with GraphiteConfig with RemovingOfTrailingSlashes with JsonErrorHandling with RunMode with MicroserviceFilterSupport {
 
-  lazy val appName = Play.current.configuration.getString("appName").getOrElse("APP NAME NOT SET")
+  lazy val appName = "service-dependencies"
   lazy val loggerDateFormat: Option[String] = Play.current.configuration.getString("logger.json.dateformat")
 
   override def onStart(app: Application) {
