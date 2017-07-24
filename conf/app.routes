@@ -1,4 +1,6 @@
 # microservice specific routes
 
-GET        /             uk.gov.hmrc.servicedependencies.ServiceDependenciesController.get()
-GET        /reload       uk.gov.hmrc.servicedependencies.ServiceDependenciesController.reloadCache()
+GET    /reloadLibraryVersions            uk.gov.hmrc.servicedependencies.ServiceDependenciesController.reloadLibraryVersions()
+GET    /libraryDependencies/:repository  uk.gov.hmrc.servicedependencies.ServiceDependenciesController.getDependencyVersionsForRepository(repository)
+
+GET    /reloadDependencies               uk.gov.hmrc.servicedependencies.ServiceDependenciesController.reloadLibraryDependenciesForAllRepositories()

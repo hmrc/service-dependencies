@@ -16,18 +16,15 @@
 
 package uk.gov.hmrc.servicedependencies
 
-import org.scalatest.{FreeSpec, MustMatchers}
-import uk.gov.hmrc.servicedependencies.model.Version
-import uk.gov.hmrc.servicedependencies.util.PluginsSbtFileVersionParser
+trait Awaitable {
 
-class PluginsSbtFileVersionParserSpec extends FreeSpec with MustMatchers {
+  import scala.concurrent.duration._
+  import scala.concurrent.{Await, Future}
 
-  val targetArtifact = "sbt-plugin"
+  implicit val defaultTimeout = 5 seconds
 
-  "Parses sbt-plugin version in line" in {
-    val fileContents = """addSbtPlugin("com.typesafe.play" % "sbt-plugin" % "2.3.10")}""".stripMargin
+  implicit def extractAwait[A](future: Future[A]) = await[A](future)
 
-    PluginsSbtFileVersionParser.parse(fileContents, targetArtifact) mustBe Some(Version(2, 3, 10))
-  }
+  def await[A](future: Future[A])(implicit timeout: Duration) = Await.result(future, timeout)
 
 }

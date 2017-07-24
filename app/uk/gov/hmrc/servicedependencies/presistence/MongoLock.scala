@@ -14,20 +14,17 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.servicedependencies
+package uk.gov.hmrc.servicedependencies.presistence
 
-import org.scalatest.{FreeSpec, MustMatchers}
-import uk.gov.hmrc.servicedependencies.model.Version
-import uk.gov.hmrc.servicedependencies.util.PluginsSbtFileVersionParser
+import org.joda.time.Duration
+import reactivemongo.api.DB
+import uk.gov.hmrc.lock.{LockKeeper, LockMongoRepository, LockRepository}
 
-class PluginsSbtFileVersionParserSpec extends FreeSpec with MustMatchers {
 
-  val targetArtifact = "sbt-plugin"
+class MongoLock(db: () => DB, lockId_ : String) extends LockKeeper {
+  override val forceLockReleaseAfter: Duration = Duration.standardMinutes(30)
 
-  "Parses sbt-plugin version in line" in {
-    val fileContents = """addSbtPlugin("com.typesafe.play" % "sbt-plugin" % "2.3.10")}""".stripMargin
+  override def repo: LockRepository = LockMongoRepository(db)
 
-    PluginsSbtFileVersionParser.parse(fileContents, targetArtifact) mustBe Some(Version(2, 3, 10))
-  }
-
+  override def lockId: String = lockId_
 }

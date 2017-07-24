@@ -20,6 +20,8 @@ import java.io.File
 import java.nio.file.Path
 
 import play.api.Play
+import play.api.libs.json.Json
+import uk.gov.hmrc.servicedependencies.model.CuratedDependencyConfig
 
 import scala.concurrent.duration._
 import scala.io.Source
@@ -32,24 +34,32 @@ trait ReleasesConfig {
   def releasesServiceUrl: String
 }
 
-class ServiceDependenciesConfig extends CacheConfig with ReleasesConfig {
+class ServiceDependenciesConfig(configPath: String) extends CacheConfig with ReleasesConfig {
 
   private val cacheDurationConfigPath = "cache.timeout.duration"
   private val githubOpenConfigKey = "github.open.api"
   private val githubEnterpriseConfigKey = "github.enterprise.api"
   private val releaseServiceUrlKey = "releases.api.url"
-  private val targetArtifactKey = "target.artifact"
+  private val targetArtifactsKey = "target.artifacts"
   private val teamsAndRepositoriesServiceUrlKey = "teamsandrepositories.api.url"
 
   private val defaultTimeout = 1 day
 
-  lazy val targetArtifact = config(s"$targetArtifactKey").getOrElse("sbt-plugin")
+  lazy val targetArtifact = config(s"$targetArtifactsKey").getOrElse("sbt-plugin")
+
+  lazy val curatedDependencyConfig: CuratedDependencyConfig = {
+    val stream = getClass.getResourceAsStream(configPath)
+    val json = try {  Json.parse(stream) } finally { stream.close() }
+    json.as[CuratedDependencyConfig]
+  }
+
 
   val buildFiles = Seq(
     "project/MicroServiceBuild.scala",
     "project/FrontendBuild.scala",
     "project/StubServiceBuild.scala",
-    "project/HmrcBuild.scala")
+    "project/HmrcBuild.scala"
+  )
 
   def cacheDuration: FiniteDuration = {
     Play.current.configuration.getMilliseconds(cacheDurationConfigPath).map(_.milliseconds).getOrElse(defaultTimeout)
@@ -104,3 +114,8 @@ class ConfigFile(filePath: Path) {
 
   def get(path: String) = kvMap.get(path)
 }
+
+
+
+
+

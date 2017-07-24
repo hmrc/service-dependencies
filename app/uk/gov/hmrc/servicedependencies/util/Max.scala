@@ -14,20 +14,14 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.servicedependencies
+package uk.gov.hmrc.servicedependencies.util
 
-import org.scalatest.{FreeSpec, MustMatchers}
-import uk.gov.hmrc.servicedependencies.model.Version
-import uk.gov.hmrc.servicedependencies.util.PluginsSbtFileVersionParser
+object Max {
 
-class PluginsSbtFileVersionParserSpec extends FreeSpec with MustMatchers {
-
-  val targetArtifact = "sbt-plugin"
-
-  "Parses sbt-plugin version in line" in {
-    val fileContents = """addSbtPlugin("com.typesafe.play" % "sbt-plugin" % "2.3.10")}""".stripMargin
-
-    PluginsSbtFileVersionParser.parse(fileContents, targetArtifact) mustBe Some(Version(2, 3, 10))
+  def maxOf[A](s: Seq[Option[A]])(implicit cmp: Ordering[Option[A]]): Option[A] = {
+    s match {
+      case Nil => None
+      case xs => xs.max
+    }
   }
-
 }

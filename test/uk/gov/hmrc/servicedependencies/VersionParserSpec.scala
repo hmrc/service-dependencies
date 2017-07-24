@@ -17,8 +17,10 @@
 package uk.gov.hmrc.servicedependencies
 
 import org.scalatest.{FreeSpec, MustMatchers}
+import uk.gov.hmrc.servicedependencies.model.Version
+import uk.gov.hmrc.servicedependencies.util.VersionParser
 
-class BuildFileParserSpec extends FreeSpec with MustMatchers {
+class VersionParserSpec extends FreeSpec with MustMatchers {
 
   val targetArtifact = "play-frontend"
 
@@ -31,7 +33,7 @@ class BuildFileParserSpec extends FreeSpec with MustMatchers {
                       |    }.test
                       |  }""".stripMargin
 
-    BuildFileVersionParser.parse(buildFile, targetArtifact) mustBe Some(Version(1, 2, 3))
+    VersionParser.parse(buildFile, targetArtifact) mustBe Some(Version(1, 2, 3))
   }
 
   "Parses play-frontend version in line with scope after" in {
@@ -43,7 +45,7 @@ class BuildFileParserSpec extends FreeSpec with MustMatchers {
                       |    }.test
                       |  }""".stripMargin
 
-    BuildFileVersionParser.parse(buildFile, targetArtifact) mustBe Some(Version(1, 2, 3))
+    VersionParser.parse(buildFile, targetArtifact) mustBe Some(Version(1, 2, 3))
   }
 
   "Parses play-frontend version form variable" in {
@@ -57,7 +59,7 @@ class BuildFileParserSpec extends FreeSpec with MustMatchers {
                       |    }.test
                       |  }""".stripMargin
 
-    BuildFileVersionParser.parse(buildFile, targetArtifact) mustBe Some(Version(1, 2, 3))
+    VersionParser.parse(buildFile, targetArtifact) mustBe Some(Version(1, 2, 3))
   }
 
   "Parses play-frontend version form variable with scope" in {
@@ -71,7 +73,7 @@ class BuildFileParserSpec extends FreeSpec with MustMatchers {
                       |    }.test
                       |  }""".stripMargin
 
-    BuildFileVersionParser.parse(buildFile, targetArtifact) mustBe Some(Version(1, 2, 3))
+    VersionParser.parse(buildFile, targetArtifact) mustBe Some(Version(1, 2, 3))
   }
 
   "Returns None if it cannot find a play-frontend version" in {
@@ -83,6 +85,47 @@ class BuildFileParserSpec extends FreeSpec with MustMatchers {
                       |    }.test
                       |  }""".stripMargin
 
-    BuildFileVersionParser.parse(buildFile, targetArtifact) mustBe None
+    VersionParser.parse(buildFile, targetArtifact) mustBe None
+  }
+
+  "Parses multiple artifacts together" in {
+    val buildFile = """  object Test {
+                      |    def apply() = new TestDependencies {
+                      |      override lazy val test = Seq(
+                      |        "uk.gov.hmrc" %% "play-frontend" % "1.2.3",
+                      |        "uk.gov.hmrc" %% "play-backend" % "3.5.5",
+                      |        "uk.gov.hmrc" %% "play-middle" % "6.8.8"
+                      |      )
+                      |    }.test
+                      |  }""".stripMargin
+
+    VersionParser.parse(buildFile, Seq("play-frontend", "play-backend", "play-middle")) must contain theSameElementsAs Seq(
+      "play-frontend" -> Some(Version(1, 2, 3)), "play-backend" -> Some(Version(3, 5, 5)), "play-middle" -> Some(Version(6, 8, 8))
+    )
+  }
+
+  "Parses multiple artifacts and return None for any dependency not present" in {
+    val buildFile = """  object Test {
+                      |    def apply() = new TestDependencies {
+                      |      override lazy val test = Seq(
+                      |        "uk.gov.hmrc" %% "play-frontend" % "1.2.3",
+                      |        "uk.gov.hmrc" %% "play-backend" % "3.5.5",
+                      |      )
+                      |    }.test
+                      |  }""".stripMargin
+
+    VersionParser.parse(buildFile, Seq("play-frontend", "play-backend", "play-middle")) must contain theSameElementsAs Seq(
+      "play-frontend" -> Some(Version(1, 2, 3)), "play-backend" -> Some(Version(3, 5, 5)), "play-middle" -> None
+    )
+  }
+
+  "Parses release version correctly" in {
+    val tag = "release/1.0.1"
+    VersionParser.parseReleaseVersion("release/", tag) mustBe Some(Version(1, 0, 1))
+  }
+
+  "Parsing an invalid release version returns None" in {
+    val tag = "release/1.0.1"
+    VersionParser.parseReleaseVersion("non-release/", tag) mustBe None
   }
 }

@@ -16,56 +16,59 @@
 
 package uk.gov.hmrc.servicedependencies
 
+import java.util.Date
+
 import play.api.libs.json.Json
-import uk.gov.hmrc.play.microservice.controller.BaseController
 import play.api.mvc._
-import play.libs.Akka
 import uk.gov.hmrc.BlockingIOExecutionContext
-import uk.gov.hmrc.githubclient.GithubApiClient
+import uk.gov.hmrc.play.microservice.controller.BaseController
+import uk.gov.hmrc.servicedependencies.model._
+import uk.gov.hmrc.servicedependencies.service._
 
-import scala.concurrent.Future
-
-object ServiceDependenciesController extends ServiceDependenciesController {
-
-	private val config = new ServiceDependenciesConfig()
-
-	private val releasesConnector = new DeploymentsDataSource(config)
-	private val teamsAndRepositoriesClient = new TeamsAndRepositoriesClient(config.teamsAndRepositoriesServiceUrl)
-
-	private val gitEnterpriseClient = GithubApiClient(config.githubApiEnterpriseConfig.apiUrl, config.githubApiEnterpriseConfig.key)
-	private val gitOpenClient = GithubApiClient(config.githubApiOpenConfig.apiUrl, config.githubApiOpenConfig.key)
-
-	private class GithubOpen() extends Github(config.targetArtifact, config.buildFiles) {
-		override val gh = gitOpenClient
-		override def resolveTag(version: String) = s"v$version"
-	}
-
-	class GithubEnterprise() extends Github(config.targetArtifact, config.buildFiles) {
-		override val gh = gitEnterpriseClient
-		override def resolveTag(version: String) = s"release/$version"
-	}
-
-	private val dataLoader: () => Future[Seq[ServiceDependencies]] =
-		new DependenciesDataSource(releasesConnector, teamsAndRepositoriesClient, Seq(new GithubEnterprise, new GithubOpen)).getDependencies _
-
-	protected val dataSource = new CachingDependenciesDataSource(Akka.system(), config, dataLoader)
-}
 
 trait ServiceDependenciesController extends BaseController {
 	import BlockingIOExecutionContext._
 
-	protected val dataSource: CachingDependenciesDataSource
+  def libraryDependencyDataUpdatingService: LibraryDependencyDataUpdatingService
 
-	implicit val evironmentDependencyWrites = Json.writes[EnvironmentDependency]
+	implicit val environmentDependencyWrites = Json.writes[EnvironmentDependency]
 	implicit val serviceDependenciesWrites = Json.writes[ServiceDependencies]
 
-	def get() = Action.async { implicit request =>
-		dataSource.getCachedData.map { data => Ok(Json.toJson(data)) }
+  def timeStampGenerator: () => Long = new Date().getTime
+
+
+  def getDependencyVersionsForRepository(repositoryName: String) = Action.async {
+		libraryDependencyDataUpdatingService.getDependencyVersionsForRepository(repositoryName)
+      .map(maybeRepositoryDependencies =>
+        maybeRepositoryDependencies.fold(
+          NotFound(s"$repositoryName not found"))(repoDependencies => Ok(Json.toJson(repoDependencies))))
+  }
+
+  def reloadLibraryDependenciesForAllRepositories() = Action {
+    libraryDependencyDataUpdatingService.reloadLibraryDependencyDataForAllRepositories(timeStampGenerator).map(_ => println(s"""${">" * 10} done ${"<" * 10}""")).onFailure{
+			case ex => throw new RuntimeException("reload of dependencies failed", ex)
+		}
+    Ok("Done")
 	}
 
-	def reloadCache() = Action {
-		dataSource.reload()
-		Ok("Cache reload triggered successfully")
+
+  def reloadLibraryVersions() = Action {
+    libraryDependencyDataUpdatingService.reloadLibraryVersions(timeStampGenerator).map(_ => println(s"""${">" * 10} done ${"<" * 10}""")).onFailure{
+			case ex => throw new RuntimeException("reload of libraries failed", ex)
+		}
+    Ok("Done")
 	}
+}
+
+object ServiceDependenciesController extends ServiceDependenciesController {
+
+  override def libraryDependencyDataUpdatingService: LibraryDependencyDataUpdatingService =
+    new DefaultLibraryDependencyDataUpdatingService(config)
+
+
+  protected val config = new ServiceDependenciesConfig("/dependency-versions-config.json")
+
 
 }
+
+

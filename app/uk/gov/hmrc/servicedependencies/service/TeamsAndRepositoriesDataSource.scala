@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.servicedependencies
+package uk.gov.hmrc.servicedependencies.service
 
 import uk.gov.hmrc.HttpClient
 
@@ -23,9 +23,11 @@ import scala.concurrent.Future
 trait TeamsAndRepositoriesDataSource {
   def getTeamsForRepository(repositoryName: String): Future[Seq[String]]
   def getTeamsForServices(): Future[Map[String, Seq[String]]]
+  def getAllRepositories(): Future[Seq[String]]
 }
 
 class TeamsAndRepositoriesClient(teamsAndRepositoriesApiBase: String) extends TeamsAndRepositoriesDataSource {
+
   def getTeamsForRepository(repositoryName: String): Future[Seq[String]] =
     HttpClient.getWithParsing[List[String]](s"$teamsAndRepositoriesApiBase/repositories/$repositoryName"){json =>
       (json \ "teamNames").as[List[String]]
@@ -35,4 +37,9 @@ class TeamsAndRepositoriesClient(teamsAndRepositoriesApiBase: String) extends Te
     HttpClient.getWithParsing[Map[String, Seq[String]]](s"$teamsAndRepositoriesApiBase/services?teamDetails=true") { json =>
       json.as[Map[String, Seq[String]]]
     }
+
+  def getAllRepositories(): Future[Seq[String]] =
+    HttpClient.getWithParsing[Seq[String]](s"$teamsAndRepositoriesApiBase/repositories") { json =>
+    (json \\ "name").map(_.as[String])// this is the json: http://catalogue.tax.service.gov.uk/api/repositories
+  }
 }

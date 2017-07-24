@@ -14,20 +14,18 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.servicedependencies
+package uk.gov.hmrc.servicedependencies.model
 
-import org.scalatest.{FreeSpec, MustMatchers}
-import uk.gov.hmrc.servicedependencies.model.Version
-import uk.gov.hmrc.servicedependencies.util.PluginsSbtFileVersionParser
+import org.scalatest.{FunSpec, Matchers, OptionValues}
+import uk.gov.hmrc.servicedependencies.ServiceDependenciesConfig
 
-class PluginsSbtFileVersionParserSpec extends FreeSpec with MustMatchers {
+class DependencyConfigLoaderSpec extends FunSpec with Matchers with OptionValues {
 
-  val targetArtifact = "sbt-plugin"
-
-  "Parses sbt-plugin version in line" in {
-    val fileContents = """addSbtPlugin("com.typesafe.play" % "sbt-plugin" % "2.3.10")}""".stripMargin
-
-    PluginsSbtFileVersionParser.parse(fileContents, targetArtifact) mustBe Some(Version(2, 3, 10))
+  describe("config loader") {
+    it("should load the config") {
+      val configLoader = new ServiceDependenciesConfig("/config/test-config.json")
+      configLoader.curatedDependencyConfig shouldBe CuratedDependencyConfig(List(), List("lib1", "lib2"), Other(sbt = "0.13.11"))
+    }
   }
 
 }

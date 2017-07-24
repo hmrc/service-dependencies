@@ -20,6 +20,7 @@ import com.github.tomakehurst.wiremock.client.WireMock._
 import org.scalatest.concurrent.{IntegrationPatience, ScalaFutures}
 import org.scalatest.{BeforeAndAfterAll, FreeSpec, MustMatchers}
 import org.scalatestplus.play.OneAppPerSuite
+import uk.gov.hmrc.servicedependencies.service.TeamsAndRepositoriesClient
 
 class TeamsAndRepositoriesDataSourceSpec
   extends FreeSpec
@@ -33,7 +34,9 @@ class TeamsAndRepositoriesDataSourceSpec
 
   override protected def beforeAll(): Unit = {
     wireMock.start()
+
     stubRepositories("test-repo")
+    stubAllRepositories()
     stubServices()
   }
 
@@ -43,6 +46,15 @@ class TeamsAndRepositoriesDataSourceSpec
         aResponse()
           .withStatus(200)
           .withBody(loadFileAsString(s"/teams-and-repositories/repository.json"))))
+  }
+
+  private def stubAllRepositories() = {
+
+    wireMock.stub(get(urlEqualTo(s"/repositories"))
+      .willReturn(
+        aResponse()
+          .withStatus(200)
+          .withBody(loadFileAsString(s"/teams-and-repositories/repositories.json"))))
   }
 
   private def stubServices() = {
@@ -78,6 +90,15 @@ class TeamsAndRepositoriesDataSourceSpec
       teams mustBe Map(
         "test-repo" -> Seq("PlatOps", "WebOps"),
         "another-repo" -> Seq("PlatOps"))
+    }
+  }
+
+  "Retrieving a list of all repositories" - {
+    "correctly parse json response" in {
+      val services = new TeamsAndRepositoriesClient(wireMock.host())
+
+      val repositories = services.getAllRepositories().futureValue
+      repositories mustBe Seq("test-repo", "another-repo")
     }
   }
 

@@ -14,11 +14,12 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.servicedependencies
+package uk.gov.hmrc.servicedependencies.service
 
 import play.api.Logger
 import play.api.libs.json.Json
 import uk.gov.hmrc.HttpClient
+import uk.gov.hmrc.servicedependencies.ReleasesConfig
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
@@ -48,7 +49,7 @@ class DeploymentsDataSource(releasesConfig: ReleasesConfig) {
     results
   }
 
-  private def join(qaReleases: Map[String, String], stagingReleases: Map[String, String], prodReleases: Map[String, String]) = {
+  private def join(qaReleases: Map[String, String], stagingReleases: Map[String, String], prodReleases: Map[String, String]): Set[Service] = {
     val services: Set[String] = qaReleases.keySet ++ stagingReleases.keySet ++ prodReleases.keySet
     services.map {
       case service => Service(service, qaReleases.get(service), stagingReleases.get(service), prodReleases.get(service))

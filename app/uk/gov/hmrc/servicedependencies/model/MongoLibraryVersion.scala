@@ -14,27 +14,21 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.servicedependencies
+package uk.gov.hmrc.servicedependencies.model
 
-case class Version(major: Int, minor: Int, patch: Int) {
-  def <(other: Version) = {
-    if (major == other.major)
-      if (minor == other.minor)
-        patch < other.patch
-      else
-        minor < other.minor
-    else
-      major < other.major
-  }
+import java.util.Date
 
-  override def toString: String = s"$major.$minor.$patch"
+import play.api.libs.json.Json
+
+case class MongoLibraryVersion(libraryName: String, version: Version, updateDate: Long = new Date().getTime)
+object MongoLibraryVersion {
+  implicit val format = Json.format[MongoLibraryVersion]
 }
 
-object Version {
-  def parse(s: String) = {
-    val split = s.split("\\.")
-    Version(Integer.parseInt(split(0)),
-    Integer.parseInt(split(1)),
-    Integer.parseInt(split(2)))
-  }
+
+case class LibraryVersion(libraryName: String, version: Version)
+object LibraryVersion {
+  implicit val format = Json.format[LibraryVersion]
+
+  def apply(libraryVersion: MongoLibraryVersion): LibraryVersion = LibraryVersion(libraryVersion.libraryName, libraryVersion.version)
 }

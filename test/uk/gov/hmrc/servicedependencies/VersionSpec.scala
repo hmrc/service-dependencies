@@ -17,6 +17,7 @@
 package uk.gov.hmrc.servicedependencies
 
 import org.scalatest.{FreeSpec, MustMatchers}
+import uk.gov.hmrc.servicedependencies.model.Version
 
 class VersionSpec
   extends FreeSpec

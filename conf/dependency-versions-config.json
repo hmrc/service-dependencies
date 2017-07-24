@@ -1,0 +1,21 @@
+{
+  "sbtPlugins": [],
+  "libraries": [
+    "frontend-bootstrap",
+    "play-config",
+    "microservice-bootstrap",
+    "play-auth",
+    "play-authorisation",
+    "play-authorised-frontend",
+    "play-auditing",
+    "play-filters",
+    "play-partials",
+    "http-caching-client",
+    "agent-kenshoo-monitoring"
+  ],
+  "other": {
+    "sbt":"0.13.11",
+    "someOtherLib": "13.9.1"
+  }
+
+}

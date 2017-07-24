@@ -1,0 +1,11 @@
+{
+  "sbtPlugins": [],
+  "libraries": [
+    "lib1",
+    "lib2"
+  ],
+  "other": {
+    "sbt": "0.13.11",
+    "someOtherLib": "13.9.1"
+  }
+}

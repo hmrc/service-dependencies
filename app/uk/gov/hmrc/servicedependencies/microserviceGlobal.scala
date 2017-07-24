@@ -21,6 +21,7 @@ import com.typesafe.config.Config
 import net.ceedubs.ficus.Ficus._
 import org.slf4j.MDC
 import play.api._
+import play.api.inject.ApplicationLifecycle
 import play.api.mvc._
 import uk.gov.hmrc.play.config.{ControllerConfig, RunMode}
 import uk.gov.hmrc.play.filters.{MicroserviceFilterSupport, _}
@@ -28,6 +29,10 @@ import uk.gov.hmrc.play.graphite.GraphiteConfig
 import uk.gov.hmrc.play.http.logging.filters.LoggingFilter
 import uk.gov.hmrc.play.microservice.bootstrap.JsonErrorHandling
 import uk.gov.hmrc.play.microservice.bootstrap.Routing.RemovingOfTrailingSlashes
+import uk.gov.hmrc.servicedependencies.service.UpdateScheduler
+import scala.concurrent.ExecutionContext.Implicits.global
+
+import scala.concurrent.Future
 
 object ControllerConfiguration extends ControllerConfig {
   lazy val controllerConfigs = Play.current.configuration.underlying.as[Config]("controllers")
@@ -43,12 +48,46 @@ object MicroserviceGlobal extends GlobalSettings
   lazy val appName = "service-dependencies"
   lazy val loggerDateFormat: Option[String] = Play.current.configuration.getString("logger.json.dateformat")
 
+  val repositoryDependenciesReloadIntervalKey = "dependency.reload.intervalminutes"
+  val libraryReloadIntervalKey = "library.reload.intervalminutes"
+
+
   override def onStart(app: Application) {
     Logger.info(s"Starting microservice : $appName : in mode : ${app.mode}")
     MDC.put("appName", appName)
     loggerDateFormat.foreach(str => MDC.put("logger.json.dateformat", str))
     super.onStart(app)
+
+    scheduleRepositoryDependencyDataReloadSchedule(app)
+    scheduleLibraryVersionDataReloadSchedule(app)
   }
+
+  import scala.concurrent.duration._
+
+  private def scheduleRepositoryDependencyDataReloadSchedule(app: Application) = {
+    val maybeReloadInterval = app.configuration.getInt(repositoryDependenciesReloadIntervalKey)
+
+    maybeReloadInterval.fold {
+      Logger.warn(s"$repositoryDependenciesReloadIntervalKey is missing. reload will be disabled")
+    } { reloadInterval =>
+      Logger.warn(s"repositoryDependenciesReloadInterval set to $reloadInterval minutes")
+      val cancellable = UpdateScheduler.startUpdatingLibraryDependencyData(reloadInterval minutes)
+      app.injector.instanceOf[ApplicationLifecycle].addStopHook(() => Future(cancellable.cancel()))
+    }
+  }
+
+  private def scheduleLibraryVersionDataReloadSchedule(app: Application) = {
+    val maybeReloadInterval = app.configuration.getInt(libraryReloadIntervalKey)
+
+    maybeReloadInterval.fold {
+      Logger.warn(s"$libraryReloadIntervalKey is missing. reload will be disabled")
+    } { reloadInterval =>
+      Logger.warn(s"libraryReloadIntervalKey set to $reloadInterval minutes")
+      val cancellable = UpdateScheduler.startUpdatingLibraryData(reloadInterval minutes)
+      app.injector.instanceOf[ApplicationLifecycle].addStopHook(() => Future(cancellable.cancel()))
+    }
+  }
+
 
   protected lazy val microserviceFilters: Seq[EssentialFilter] = Seq(
     Some(Play.current.injector.instanceOf[MetricsFilter]),

@@ -14,21 +14,36 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.servicedependencies
+package uk.gov.hmrc.servicedependencies.util
 
-object BuildFileVersionParser {
+import uk.gov.hmrc.servicedependencies.model.Version
 
-  def parse(file: String, artifact: String): Option[Version] = {
+object VersionParser {
+
+  def parse(fileContent: String, artifacts: Seq[String]): Map[String, Option[Version]] = {
+    artifacts.map(artifact => artifact -> parse(fileContent, artifact)).toMap
+  }
+
+  def parseReleaseVersion(tagPrefix: String, tag: String): Option[Version] = {
+    val tagRegex = ("^" + tagPrefix + """(\d+\.\d+\.\d+)$""").r.unanchored
+    tag match {
+      case tagRegex(version) => Some(Version.parse(version.replaceAll("\"", "")))
+      case _ => None
+    }
+  }
+
+  def parse(fileContent: String, artifact: String): Option[Version] = {
 
     val stringVersion = ("\"" + artifact + "\"" + """\s*%\s*("\d+\.\d+\.\d+")""").r.unanchored
     val variableVersion = ("\"" + artifact + "\"" + """\s*%\s*(\w*)""").r.unanchored
 
-    file match {
+    fileContent match {
       case stringVersion(version) => Some(Version.parse(version.replaceAll("\"", "")))
-      case variableVersion(variable) => extractVersionInVariable(file, variable)
+      case variableVersion(variable) => extractVersionInVariable(fileContent, variable)
       case _ => None
     }
   }
+
 
   private def extractVersionInVariable(file: String, variable: String): Option[Version] = {
     val variableRegex = (variable + """\s*=\s*("\d+\.\d+\.\d+")""").r.unanchored
@@ -41,10 +56,10 @@ object BuildFileVersionParser {
 
 object PluginsSbtFileVersionParser {
 
-  def parse(file: String, artifact: String): Option[Version] = {
+  def parse(fileContent: String, artifact: String): Option[Version] = {
     val stringVersion = (s""".*"$artifact""" + """"\s*%\s*"(\d+\.\d+\.\d+)".*""").r.unanchored
 
-    file match {
+    fileContent match {
       case stringVersion(version) => Some(Version.parse(version))
       case _ => None
     }

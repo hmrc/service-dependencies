@@ -16,24 +16,28 @@
 
 package uk.gov.hmrc.servicedependencies
 
-import org.eclipse.egit.github.core.{IRepositoryIdProvider, RepositoryContents}
-import org.scalatest.mock.MockitoSugar
-import org.scalatest.{Matchers, WordSpec}
+import java.util.Date
 
-import org.mockito.Mockito.when
+import org.eclipse.egit.github.core.client.{GitHubClient, RequestException}
+import org.eclipse.egit.github.core.{IRepositoryIdProvider, RepositoryContents, RequestError}
 import org.mockito.ArgumentMatchers._
+import org.mockito.Mockito
+import org.mockito.Mockito.when
 import org.mockito.invocation.InvocationOnMock
 import org.mockito.stubbing.Answer
+import org.scalatest.mock.MockitoSugar
+import org.scalatest.{Matchers, OptionValues, WordSpec}
+import uk.gov.hmrc.githubclient.{ExtendedContentsService, GhRepoRelease, GithubApiClient, ReleaseService}
+import uk.gov.hmrc.servicedependencies.model.Version
 
 import scala.collection.JavaConverters._
 import scala.collection.mutable
 
-import uk.gov.hmrc.githubclient.{ExtendedContentsService, GithubApiClient}
-
 class GithubSpec
   extends WordSpec
   with Matchers
-  with MockitoSugar {
+    with MockitoSugar
+    with OptionValues {
 
   val wireMock = new WireMockConfig(8081)
 
@@ -44,22 +48,26 @@ class GithubSpec
   private val repoName = "citizen-auth-frontend"
   private val version = "2.2.0"
 
-  private class TestGithub(artifact: String = "play-frontend", buildFilePaths: Seq[String] = Seq(firstBuildFile))
-    extends Github(artifact, buildFilePaths) {
+  val artifact: String = "play-frontend"
 
+  private class TestGithub(buildFilePaths: Seq[String] = Seq(firstBuildFile))
+    extends Github(buildFilePaths) {
+    override val tagPrefix = ""
     override val gh = mock[GithubApiClient]
-    override def resolveTag(version: String) = version
+
+    override def resolveTag(version: String) = s"$tagPrefix$version"
+
   }
 
   "Finding artifact version for a service" should {
 
     "queries github based on service name organisation by looking in plugins.sbt first" in {
-      val githubService = new TestGithub ("sbt-plugin")
+      val githubService = new TestGithub()
       val stub = attachRepoVersionContentsStub(githubService.gh, repoName, version)
 
       stub.respond(pluginsSbtFile, loadFileAsString("/github/contents_plugins_sbt_file_with_sbt_plugin.json"))
 
-      githubService.findArtifactVersion(repoName, Some(version)) shouldBe Some(Version(2, 3, 10))
+      githubService.findArtifactVersion(repoName, "sbt-plugin", Some(version)) shouldBe Some(Version(2, 3, 10))
     }
 
     "returns version number from build file if artifact name does not match in plugins.sbt" in {
@@ -69,7 +77,7 @@ class GithubSpec
       stub.respond(pluginsSbtFile, loadFileAsString("/github/contents_plugins_sbt_file_with_sbt_plugin.json"))
       stub.respond(firstBuildFile, loadFileAsString("/github/contents_build_file_with_play_frontend.json"))
 
-      githubService.findArtifactVersion(repoName, Some(version)) shouldBe Some(Version(10, 2, 0))
+      githubService.findArtifactVersion(repoName, artifact, Some(version)) shouldBe Some(Version(10, 2, 0))
     }
 
     "returns version number from build file if plugins.sbt is not found" in {
@@ -78,7 +86,7 @@ class GithubSpec
 
       stub.respond(firstBuildFile, loadFileAsString("/github/contents_build_file_with_play_frontend.json"))
 
-      githubService.findArtifactVersion(repoName, Some(version)) shouldBe Some(Version(10, 2, 0))
+      githubService.findArtifactVersion(repoName, artifact, Some(version)) shouldBe Some(Version(10, 2, 0))
     }
 
     "returns version number from second build file if artifact name does not match first build file" in {
@@ -88,7 +96,7 @@ class GithubSpec
       stub.respond(firstBuildFile, loadFileAsString("/github/contents_build_file_without_play_frontend.json"))
       stub.respond(secondBuildFile, loadFileAsString("/github/contents_build_file_with_play_frontend.json"))
 
-      githubService.findArtifactVersion(repoName, Some(version)) shouldBe Some(Version(10, 2, 0))
+      githubService.findArtifactVersion(repoName, artifact, Some(version)) shouldBe Some(Version(10, 2, 0))
     }
 
     "returns version number from second build file if first build file is not found" in {
@@ -97,7 +105,7 @@ class GithubSpec
       val stub = attachRepoVersionContentsStub(githubService.gh, repoName, version)
       stub.respond(secondBuildFile, loadFileAsString("/github/contents_build_file_with_play_frontend.json"))
 
-      githubService.findArtifactVersion(repoName, Some(version)) shouldBe Some(Version(10, 2, 0))
+      githubService.findArtifactVersion(repoName, artifact, Some(version)) shouldBe Some(Version(10, 2, 0))
     }
 
     "returns None when no build files match the given artifact" in {
@@ -107,7 +115,7 @@ class GithubSpec
       stub.respond(firstBuildFile, loadFileAsString("/github/contents_build_file_without_play_frontend.json"))
       stub.respond(secondBuildFile, loadFileAsString("/github/contents_build_file_without_play_frontend.json"))
 
-      githubService.findArtifactVersion(repoName, Some(version)) shouldBe None
+      githubService.findArtifactVersion(repoName, artifact, Some(version)) shouldBe None
     }
 
     "returns None when service does not contain any of the build files specified" in {
@@ -115,7 +123,7 @@ class GithubSpec
 
       attachRepoVersionContentsStub(githubService.gh, repoName, version)
 
-      githubService.findArtifactVersion("project-without-build-file", Some("2.3.4")) shouldBe None
+      githubService.findArtifactVersion("project-without-build-file", artifact, Some("2.3.4")) shouldBe None
     }
 
     "returns None when version passed in is None" in {
@@ -123,7 +131,93 @@ class GithubSpec
 
       attachRepoVersionContentsStub(githubService.gh, repoName, version)
 
-      githubService.findArtifactVersion("tamc-pre-reg-frontend", None) shouldBe None
+      githubService.findArtifactVersion("tamc-pre-reg-frontend", artifact, None) shouldBe None
+    }
+  }
+
+  "Finding multiple artifacts versions for a repository" should {
+    val githubService = new TestGithub()
+    val stub = attachRepoContentsStub(githubService.gh, repoName)
+    stub.respond(firstBuildFile, loadFileAsString("/github/contents_build_file_with_play_frontend.json"))
+
+    "queries github based on repository name by looking in plugins.sbt first" in {
+      pending
+      val githubServiceForTestingPlugins = new TestGithub()
+      val stub = attachRepoContentsStub(githubServiceForTestingPlugins.gh, repoName)
+
+      stub.respond(pluginsSbtFile, loadFileAsString("/github/contents_plugins_sbt_file_with_sbt_plugin.json"))
+
+      githubServiceForTestingPlugins.findVersionsForMultipleArtifacts(repoName, Seq("sbt-plugin", "sbt-auto-build")) shouldBe
+        Map("sbt-plugin" -> Some(Version(2, 3, 10)), "sbt-auto-build" -> Some(Version(1,3,0)))
+    }
+
+    "return artifacts versions correctly for a repository's build file" in {
+      githubService.findVersionsForMultipleArtifacts(repoName, Seq("play-ui", "play-health")) shouldBe Map("play-ui" -> Some(Version(1, 3, 0)), "play-health" -> Some(Version(0, 5, 0)))
+    }
+
+    "return None for artifacts that don't appear in the build file for a repository" in {
+      githubService.findVersionsForMultipleArtifacts(repoName, Seq("play-ui", "non-existing")) shouldBe Map("play-ui" -> Some(Version(1, 3, 0)), "non-existing" -> None)
+    }
+
+    "return empty map if no artifacts passed in" in {
+      githubService.findVersionsForMultipleArtifacts(repoName, Seq.empty[String]) shouldBe Map.empty[String, Option[Version]]
+    }
+  }
+
+  "Finding latest library version" should {
+    val github = new TestGithub() {
+      override val tagPrefix = "release/"
+    }
+    val repoName = "some-cool-library"
+
+    val mockedReleaseService = mock[ReleaseService]
+    when(github.gh.releaseService).thenReturn(mockedReleaseService)
+
+    "get the latest released library version correctly" in {
+      when(mockedReleaseService.getReleases("HMRC", repoName)).thenReturn(
+        List(GhRepoRelease(123, "release/1.10.1", new Date()),
+          GhRepoRelease(123, "release/1.10.100", new Date()),
+          GhRepoRelease(123, "release/2.10.19", new Date()),
+          GhRepoRelease(123, "release/4.10.19", new Date()),
+          GhRepoRelease(123, "release/4.10.2", new Date())))
+
+      github.findLatestLibraryVersion(repoName).value shouldBe Version(4, 10, 19)
+    }
+
+    "ignore the tags that are not valid releases" in {
+     
+      when(mockedReleaseService.getReleases("HMRC", repoName)).thenReturn(
+        List(GhRepoRelease(123, "not-release/1.10.1", new Date()),
+          GhRepoRelease(123, "release/2.10.19", new Date()),
+          GhRepoRelease(123, "release/3.10.19", new Date()),
+          GhRepoRelease(123, "not-release/4.10.3", new Date())))
+
+      github.findLatestLibraryVersion(repoName).value shouldBe Version(3, 10, 19)
+    }
+
+    "handle RequestException(Not Found) case gracefully" in {
+      object ReleaseServiceStub extends ReleaseService(mock[GitHubClient]) {
+        override def getReleases(org: String, repoName: String): List[GhRepoRelease] =
+          throw new RequestException(new RequestError, 404)
+
+      }
+
+      when(github.gh.releaseService).thenReturn(ReleaseServiceStub)
+
+
+      github.findLatestLibraryVersion(repoName) shouldBe None
+    }
+
+    "other exceptions should not be handled gracefully" in {
+      object ReleaseServiceStub extends ReleaseService(mock[GitHubClient]) {
+        override def getReleases(org: String, repoName: String): List[GhRepoRelease] =
+          throw new RequestException(new RequestError, 500)
+      }
+
+      when(github.gh.releaseService).thenReturn(ReleaseServiceStub)
+
+
+      a [RequestException] should be thrownBy github.findLatestLibraryVersion(repoName)
     }
   }
 
@@ -190,4 +284,65 @@ class GithubSpec
       }
     }
   }
+
+  case class GetContentsArgs2(idProvider: IRepositoryIdProvider, filePath: String)
+
+  class RepoContentsStub(repoName: String) {
+    val responses = mutable.Queue[PartialFunction[(String, String), java.util.List[RepositoryContents]]]()
+
+    def respond(filePath: String, content: String) = {
+      responses.enqueue({
+        case args if args == (s"HMRC/$repoName", filePath) =>
+          List(new RepositoryContents().setContent(content)).asJava
+      })
+    }
+
+    val answer = buildAnswer2(GetContentsArgs2.apply _) { a =>
+      val x = asTuple(a)
+      responses.collectFirst {
+        case f if
+        f.isDefinedAt(x) =>
+          f(x)
+      }.getOrElse(List[RepositoryContents]().asJava)
+    }
+
+    private def asTuple(args: GetContentsArgs2): (String, String) =
+      (args.idProvider.generateId(), args.filePath)
+  }
+
+
+
+  private def attachRepoContentsStub(gh: GithubApiClient, repoName: String) = {
+    val mockContentsService = mock[ExtendedContentsService]
+    when(gh.contentsService).thenReturn(mockContentsService)
+
+    val stub = new RepoContentsStub(repoName)
+    when(mockContentsService.getContents(any(), any())).thenAnswer(stub.answer)
+
+    stub
+  }
+
+
+  // NB -> This is a workaround for a bug in Mockito whereby a test file can't contain more than one captor of the same type
+  def buildAnswer2[A, B, ARGS, RESULT](function: (A, B) => ARGS)(result: ARGS => RESULT) = {
+    new Answer[RESULT] {
+      override def answer(invocationOnMock: InvocationOnMock): RESULT = {
+        val rawArgs = invocationOnMock.getArguments
+
+        val stage1 = convert(rawArgs) {
+          function.curried
+        }
+        val stage2 = convert(rawArgs.tail) {
+          stage1
+        }
+
+        result(stage2)
+      }
+
+      def convert[I, O](args: Seq[AnyRef])(fn: I => O): O = {
+        fn(args.head.asInstanceOf[I])
+      }
+    }
+  }
+
 }
