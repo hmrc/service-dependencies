@@ -22,7 +22,7 @@ import play.libs.Akka
 import play.modules.reactivemongo.MongoDbConnection
 import uk.gov.hmrc.servicedependencies.ServiceDependenciesController
 
-import scala.concurrent.ExecutionContext.Implicits.global
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import scala.concurrent.duration.{FiniteDuration, _}
 
 

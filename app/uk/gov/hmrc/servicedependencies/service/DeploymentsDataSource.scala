@@ -21,7 +21,7 @@ import play.api.libs.json.Json
 import uk.gov.hmrc.HttpClient
 import uk.gov.hmrc.servicedependencies.ReleasesConfig
 
-import scala.concurrent.ExecutionContext.Implicits.global
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import scala.concurrent.Future
 
 case class Service(name: String, qaVersion: Option[String], stagingVersion: Option[String], prodVersion: Option[String])

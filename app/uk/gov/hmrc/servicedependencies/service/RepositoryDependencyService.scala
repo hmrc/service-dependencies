@@ -19,7 +19,7 @@ package uk.gov.hmrc.servicedependencies.service
 import uk.gov.hmrc.servicedependencies.model.{LibraryVersion, MongoLibraryVersion, RepositoryDependencies, RepositoryLibraryDependencies}
 
 import scala.concurrent.Future
-import scala.concurrent.ExecutionContext.Implicits.global
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 trait RepositoryDependencyService {
   def getDependencyVersionsForRepository(repositoryName: String): Future[Option[RepositoryDependencies]]

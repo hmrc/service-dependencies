@@ -1,0 +1,77 @@
+import play.core.PlayVersion
+import sbt._
+
+object FrontendBuild extends Build with MicroService {
+
+  import com.typesafe.sbt.web.SbtWeb
+  import play.PlayImport.PlayKeys._
+  import scala.util.Properties._
+
+  val appName = "citizen-auth-frontend"
+  val appVersion = envOrElse("CITIZEN_FRONTEND_VERSION", "999-SNAPSHOT")
+
+  override lazy val appDependencies: Seq[ModuleID] = AppDependencies()
+
+  override lazy val plugins : Seq[Plugins] = Seq(play.PlayScala, SbtWeb)
+
+  microservice
+    .settings(routesImport ++= Seq("uk.gov.hmrc.play.binders.QueryBinders._", "uk.gov.hmrc.domain._"))
+}
+
+private object AppDependencies {
+  import play.PlayImport._
+
+  private val playHealth = "0.7.0"
+  private val httpCachingClient = "2.5.0"
+
+  val compile = Seq(
+    filters,
+    "com.codahale.metrics" % "metrics-graphite" % "3.0.2",
+    "uk.gov.hmrc" %% "govuk-template" % "2.6.0",
+    "uk.gov.hmrc" %% "url-builder" % "0.3.0",
+    "uk.gov.hmrc" %% "frontend-bootstrap" % "0.5.1",
+    "uk.gov.hmrc" %% "play-partials" % "1.3.0",
+    "uk.gov.hmrc" %% "play-authorised-frontend" % "1.2.0",
+    "uk.gov.hmrc" %% "play-config" % "1.0.0",
+    "uk.gov.hmrc" %% "play-json-logger" % "1.0.0",
+    "uk.gov.hmrc" %% "play-health" % playHealth,
+    "uk.gov.hmrc" %% "key-store-client" % "0.7.1",
+    "uk.gov.hmrc" %% "http-caching-client" % httpCachingClient,
+    "uk.gov.hmrc" %% "play-ui" % "1.8.1"
+  )
+
+  trait TestDependencies {
+    lazy val scope: String = "test"
+    lazy val test : Seq[ModuleID] = ???
+  }
+
+  object Test {
+    def apply() = new TestDependencies {
+      override lazy val test = Seq(
+        "org.scalatest" %% "scalatest" % "2.2.2" % scope,
+        "org.pegdown" % "pegdown" % "1.4.2" % scope,
+        "org.jsoup" % "jsoup" % "1.7.3" % scope,
+        "org.mockito" % "mockito-all" % "1.9.5" % scope,
+        "uk.gov.hmrc" %% "hmrctest" % "0.4.0" % scope
+      )
+    }.test
+
+  }
+
+  object IntegrationTest {
+    def apply() = new TestDependencies {
+
+      override lazy val scope: String = "it"
+
+      override lazy val test = Seq(
+        "org.scalatest" %% "scalatest" % "2.2.1" % scope,
+        "org.pegdown" % "pegdown" % "1.4.2" % scope,
+        "uk.gov.hmrc" %% "hmrctest" % "0.3.0" % scope,
+        "com.typesafe.play" %% "play-test" % PlayVersion.current % scope
+      )
+    }.test
+  }
+
+  def apply() = compile ++ Test() ++ IntegrationTest()
+
+}

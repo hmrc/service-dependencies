@@ -23,7 +23,7 @@ import uk.gov.hmrc.servicedependencies.model.{LibraryVersion, MongoLibraryVersio
 import uk.gov.hmrc.servicedependencies.presistence._
 import uk.gov.hmrc.servicedependencies.{Github, ServiceDependenciesConfig}
 
-import scala.concurrent.ExecutionContext.Implicits.global
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import scala.concurrent.Future
 
 trait LibraryDependencyDataUpdatingService {

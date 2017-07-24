@@ -24,7 +24,8 @@ import uk.gov.hmrc.mongo.ReactiveRepository
 import uk.gov.hmrc.servicedependencies.util.FutureHelpers.withTimerAndCounter
 import uk.gov.hmrc.servicedependencies.model._
 
-import scala.concurrent.ExecutionContext.Implicits.global
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
+
 import scala.concurrent.{ExecutionContext, Future}
 
 
@@ -43,14 +44,18 @@ class MongoLibraryVersionRepository(mongo: () => DB)
     domainFormat = MongoLibraryVersion.format) with LibraryVersionRepository {
 
 
-  override def ensureIndexes(implicit ec: ExecutionContext): Future[Seq[Boolean]] =
+  override def ensureIndexes(implicit ec: ExecutionContext = defaultContext): Future[Seq[Boolean]] =
+    localEnsureIndexes
+
+  private def localEnsureIndexes =
     Future.sequence(
       Seq(
-        collection.indexesManager.ensure(Index(Seq("libraryName" -> IndexType.Hashed), name = Some("libraryNameIdx"), unique = true))
+        collection.indexesManager(defaultContext).ensure(Index(Seq("libraryName" -> IndexType.Hashed), name = Some("libraryNameIdx"), unique = true))
       )
     )
 
   override def  update(libraryVersion: MongoLibraryVersion): Future[MongoLibraryVersion] = {
+
 
     logger.info(s"writing $libraryVersion")
     withTimerAndCounter("mongo.update") {

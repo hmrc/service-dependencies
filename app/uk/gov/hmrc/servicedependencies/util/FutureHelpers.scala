@@ -18,9 +18,9 @@ package uk.gov.hmrc.servicedependencies.util
 
 import com.kenshoo.play.metrics.{Metrics, MetricsImpl}
 import play.api.Play
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
-import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.Future
 import scala.util.{Failure, Success}
 
 
@@ -80,7 +80,7 @@ object FutureHelpers {
   }
 
   implicit class FutureIterable[A](futureList: Future[Iterable[A]]) {
-    def flatMap[B](fn: A => Future[Iterable[B]])(implicit ec: ExecutionContext) = {
+    def flatMap[B](fn: A => Future[Iterable[B]]) = {
       futureList.flatMap { list =>
         val listOfFutures = list.map { li =>
           fn(li)
@@ -90,13 +90,13 @@ object FutureHelpers {
       }.map(_.flatten)
     }
 
-    def map[B](fn: A => B)(implicit ec: ExecutionContext): Future[Iterable[B]] = {
+    def map[B](fn: A => B): Future[Iterable[B]] = {
       futureList.map(_.map {
         fn
       })
     }
 
-    def filter[B](fn: A => Boolean)(implicit ec: ExecutionContext): Future[Iterable[A]] =
+    def filter[B](fn: A => Boolean): Future[Iterable[A]] =
       futureList.map(_.filter(fn))
   }
 

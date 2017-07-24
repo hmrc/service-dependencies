@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.servicedependencies
 
-import java.util.Date
+import java.util.{Base64, Date}
 
 import org.eclipse.egit.github.core.client.{GitHubClient, RequestException}
 import org.eclipse.egit.github.core.{IRepositoryIdProvider, RepositoryContents, RequestError}
@@ -65,7 +65,7 @@ class GithubSpec
       val githubService = new TestGithub()
       val stub = attachRepoVersionContentsStub(githubService.gh, repoName, version)
 
-      stub.respond(pluginsSbtFile, loadFileAsString("/github/contents_plugins_sbt_file_with_sbt_plugin.json"))
+      stub.respond(pluginsSbtFile, loadFileAsBase64String("/github/contents_plugins_sbt_file_with_sbt_plugin.sbt.txt"))
 
       githubService.findArtifactVersion(repoName, "sbt-plugin", Some(version)) shouldBe Some(Version(2, 3, 10))
     }
@@ -74,8 +74,8 @@ class GithubSpec
       val githubService = new TestGithub()
       val stub = attachRepoVersionContentsStub(githubService.gh, repoName, version)
 
-      stub.respond(pluginsSbtFile, loadFileAsString("/github/contents_plugins_sbt_file_with_sbt_plugin.json"))
-      stub.respond(firstBuildFile, loadFileAsString("/github/contents_build_file_with_play_frontend.json"))
+      stub.respond(pluginsSbtFile, loadFileAsBase64String("/github/contents_plugins_sbt_file_with_sbt_plugin.sbt.txt"))
+      stub.respond(firstBuildFile, loadFileAsBase64String("/github/contents_build_file_with_play_frontend.sbt.txt"))
 
       githubService.findArtifactVersion(repoName, artifact, Some(version)) shouldBe Some(Version(10, 2, 0))
     }
@@ -84,7 +84,7 @@ class GithubSpec
       val githubService = new TestGithub()
       val stub = attachRepoVersionContentsStub(githubService.gh, repoName, version)
 
-      stub.respond(firstBuildFile, loadFileAsString("/github/contents_build_file_with_play_frontend.json"))
+      stub.respond(firstBuildFile, loadFileAsBase64String("/github/contents_build_file_with_play_frontend.sbt.txt"))
 
       githubService.findArtifactVersion(repoName, artifact, Some(version)) shouldBe Some(Version(10, 2, 0))
     }
@@ -93,8 +93,8 @@ class GithubSpec
       val githubService = new TestGithub(buildFilePaths = Seq(firstBuildFile, secondBuildFile))
 
       val stub = attachRepoVersionContentsStub(githubService.gh, repoName, version)
-      stub.respond(firstBuildFile, loadFileAsString("/github/contents_build_file_without_play_frontend.json"))
-      stub.respond(secondBuildFile, loadFileAsString("/github/contents_build_file_with_play_frontend.json"))
+      stub.respond(firstBuildFile, loadFileAsBase64String("/github/contents_build_file_without_play_frontend.sbt.txt"))
+      stub.respond(secondBuildFile, loadFileAsBase64String("/github/contents_build_file_with_play_frontend.sbt.txt"))
 
       githubService.findArtifactVersion(repoName, artifact, Some(version)) shouldBe Some(Version(10, 2, 0))
     }
@@ -103,7 +103,7 @@ class GithubSpec
       val githubService = new TestGithub(buildFilePaths = Seq(firstBuildFile, secondBuildFile))
 
       val stub = attachRepoVersionContentsStub(githubService.gh, repoName, version)
-      stub.respond(secondBuildFile, loadFileAsString("/github/contents_build_file_with_play_frontend.json"))
+      stub.respond(secondBuildFile, loadFileAsBase64String("/github/contents_build_file_with_play_frontend.sbt.txt"))
 
       githubService.findArtifactVersion(repoName, artifact, Some(version)) shouldBe Some(Version(10, 2, 0))
     }
@@ -112,8 +112,8 @@ class GithubSpec
       val githubService = new TestGithub(buildFilePaths = Seq(firstBuildFile, secondBuildFile))
 
       val stub = attachRepoVersionContentsStub(githubService.gh, repoName, version)
-      stub.respond(firstBuildFile, loadFileAsString("/github/contents_build_file_without_play_frontend.json"))
-      stub.respond(secondBuildFile, loadFileAsString("/github/contents_build_file_without_play_frontend.json"))
+      stub.respond(firstBuildFile, loadFileAsBase64String("/github/contents_build_file_without_play_frontend.sbt.txt"))
+      stub.respond(secondBuildFile, loadFileAsBase64String("/github/contents_build_file_without_play_frontend.sbt.txt"))
 
       githubService.findArtifactVersion(repoName, artifact, Some(version)) shouldBe None
     }
@@ -138,14 +138,14 @@ class GithubSpec
   "Finding multiple artifacts versions for a repository" should {
     val githubService = new TestGithub()
     val stub = attachRepoContentsStub(githubService.gh, repoName)
-    stub.respond(firstBuildFile, loadFileAsString("/github/contents_build_file_with_play_frontend.json"))
+    stub.respond(firstBuildFile, loadFileAsBase64String("/github/contents_build_file_with_play_frontend.sbt.txt"))
 
     "queries github based on repository name by looking in plugins.sbt first" in {
       pending
       val githubServiceForTestingPlugins = new TestGithub()
       val stub = attachRepoContentsStub(githubServiceForTestingPlugins.gh, repoName)
 
-      stub.respond(pluginsSbtFile, loadFileAsString("/github/contents_plugins_sbt_file_with_sbt_plugin.json"))
+      stub.respond(pluginsSbtFile, loadFileAsBase64String("/github/contents_plugins_sbt_file_with_sbt_plugin.sbt.txt"))
 
       githubServiceForTestingPlugins.findVersionsForMultipleArtifacts(repoName, Seq("sbt-plugin", "sbt-auto-build")) shouldBe
         Map("sbt-plugin" -> Some(Version(2, 3, 10)), "sbt-auto-build" -> Some(Version(1,3,0)))
@@ -258,6 +258,10 @@ class GithubSpec
 
   private def loadFileAsString(filename: String): String = {
     scala.io.Source.fromInputStream(getClass.getResourceAsStream(filename)).mkString
+  }
+
+  private def loadFileAsBase64String(filename: String): String = {
+    Base64.getEncoder.withoutPadding().encodeToString(loadFileAsString(filename).getBytes())
   }
 
   // NB -> This is a workaround for a bug in Mockito whereby a test file can't contain more than one captor of the same type
