@@ -19,18 +19,18 @@ package uk.gov.hmrc.servicedependencies.service
 import org.mockito.ArgumentMatchers.any
 import org.mockito.Mockito._
 import org.scalatest.mock.MockitoSugar
-import org.scalatest.{BeforeAndAfterEach, FunSpec, Matchers}
+import org.scalatest.{BeforeAndAfterEach, FunSpec, Matchers, OptionValues}
 import org.scalatestplus.play.OneAppPerSuite
 import reactivemongo.api.DB
 import uk.gov.hmrc.githubclient.GithubApiClient
 import uk.gov.hmrc.mongo.Awaiting
-import uk.gov.hmrc.servicedependencies.ServiceDependenciesConfig
-import uk.gov.hmrc.servicedependencies.model.{LibraryVersion, MongoLibraryVersion, RepositoryLibraryDependencies, Version}
+import uk.gov.hmrc.servicedependencies.{LibraryDependencyState, RepositoryDependencies, ServiceDependenciesConfig}
+import uk.gov.hmrc.servicedependencies.model._
 import uk.gov.hmrc.servicedependencies.presistence.{LibraryVersionRepository, MongoLock, RepositoryLibraryDependenciesRepository}
 
 import scala.concurrent.{ExecutionContext, Future}
 
-class LibraryDependencyDataUpdatingServiceSpec extends FunSpec with MockitoSugar with Matchers with OneAppPerSuite with BeforeAndAfterEach with Awaiting {
+class LibraryDependencyDataUpdatingServiceSpec extends FunSpec with MockitoSugar with Matchers with OneAppPerSuite with BeforeAndAfterEach with Awaiting with OptionValues {
 
   val staticTimeStampGenerator: () => Long = () => 11000l
 
@@ -94,6 +94,90 @@ class LibraryDependencyDataUpdatingServiceSpec extends FunSpec with MockitoSugar
 
   }
 
+  describe("getDependencyVersionsForRepository") {
+    it("should return the current and latest dependency versions for a repository") {
+      val underTest = new TestLibraryDependencyDataUpdatingService(noLockTestMongoLockBuilder)
+
+      val libraryDependencies = Seq(
+        LibraryDependency("lib1", Version(1, 0, 0)),
+        LibraryDependency("lib2", Version(2, 0, 0))
+      )
+      val repositoryName = "repoXYZ"
+
+      when(underTest.repositoryLibraryDependenciesRepository.getForRepository(any()))
+        .thenReturn(Future.successful(Some(RepositoryLibraryDependencies(repositoryName, libraryDependencies))))
+
+      val referenceLibraryVersions = Seq(
+        MongoLibraryVersion("lib1", Version(1, 1, 0)),
+        MongoLibraryVersion("lib2", Version(2, 1, 0))
+      )
+      when(underTest.libraryVersionRepository.getAllDependencyEntries)
+        .thenReturn(Future.successful(referenceLibraryVersions))
+
+
+      val maybeDependencies = await(underTest.getDependencyVersionsForRepository(repositoryName))
+
+      verify(underTest.repositoryLibraryDependenciesRepository, times(1)).getForRepository(repositoryName)
+
+      maybeDependencies.value shouldBe RepositoryDependencies(repositoryName,
+        Seq(
+          LibraryDependencyState("lib1", Version(1, 0, 0), Some(Version(1, 1, 0))),
+          LibraryDependencyState("lib2", Version(2, 0, 0), Some(Version(2, 1, 0)))
+        )
+      )
+
+    }
+
+    it("test for none") {
+      val underTest = new TestLibraryDependencyDataUpdatingService(noLockTestMongoLockBuilder)
+
+      val repositoryName = "repoXYZ"
+
+      when(underTest.repositoryLibraryDependenciesRepository.getForRepository(any()))
+        .thenReturn(Future.successful(None))
+
+      when(underTest.libraryVersionRepository.getAllDependencyEntries)
+        .thenReturn(Future.successful(Nil))
+
+
+      val maybeDependencies = await(underTest.getDependencyVersionsForRepository(repositoryName))
+
+      verify(underTest.repositoryLibraryDependenciesRepository, times(1)).getForRepository(repositoryName)
+
+      maybeDependencies shouldBe None
+
+    }
+
+    it("test for non existing latest") {
+      val underTest = new TestLibraryDependencyDataUpdatingService(noLockTestMongoLockBuilder)
+
+      val libraryDependencies = Seq(
+        LibraryDependency("lib1", Version(1, 0, 0)),
+        LibraryDependency("lib2", Version(2, 0, 0))
+      )
+      val repositoryName = "repoXYZ"
+
+      when(underTest.repositoryLibraryDependenciesRepository.getForRepository(any()))
+        .thenReturn(Future.successful(Some(RepositoryLibraryDependencies(repositoryName, libraryDependencies))))
+
+      when(underTest.libraryVersionRepository.getAllDependencyEntries)
+        .thenReturn(Future.successful(Nil))
+
+
+      val maybeDependencies = await(underTest.getDependencyVersionsForRepository(repositoryName))
+
+      verify(underTest.repositoryLibraryDependenciesRepository, times(1)).getForRepository(repositoryName)
+
+      maybeDependencies.value shouldBe RepositoryDependencies(repositoryName,
+        Seq(
+          LibraryDependencyState("lib1", Version(1, 0, 0), None),
+          LibraryDependencyState("lib2", Version(2, 0, 0), None)
+        )
+      )
+
+    }
+    
+  }
 
 
   def noLockTestMongoLockBuilder(lockId: String) = new MongoLock(() => mock[DB], lockId) {

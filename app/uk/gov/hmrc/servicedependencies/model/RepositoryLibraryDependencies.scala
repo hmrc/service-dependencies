@@ -31,10 +31,3 @@ object RepositoryLibraryDependencies {
 }
 
 
-/** this gets returned to the clients */
-case class RepositoryDependencies(repositoryName: String,
-                                  libraryDependencies: Seq[LibraryDependency],
-                                  referenceLibraryVersions: Seq[LibraryVersion])
-object RepositoryDependencies {
-  implicit val format = Json.format[RepositoryDependencies]
-}

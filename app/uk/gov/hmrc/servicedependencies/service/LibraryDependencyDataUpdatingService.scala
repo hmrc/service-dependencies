@@ -17,13 +17,12 @@
 package uk.gov.hmrc.servicedependencies.service
 
 import org.slf4j.LoggerFactory
-import play.modules.reactivemongo.MongoDbConnection
-import uk.gov.hmrc.githubclient.GithubApiClient
-import uk.gov.hmrc.servicedependencies.model.{LibraryVersion, MongoLibraryVersion, RepositoryDependencies, RepositoryLibraryDependencies}
-import uk.gov.hmrc.servicedependencies.presistence._
-import uk.gov.hmrc.servicedependencies.{Github, ServiceDependenciesConfig}
-
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
+import play.modules.reactivemongo.MongoDbConnection
+import uk.gov.hmrc.servicedependencies.{LibraryDependencyState, RepositoryDependencies, ServiceDependenciesConfig}
+import uk.gov.hmrc.servicedependencies.model.{LibraryVersion, MongoLibraryVersion, RepositoryLibraryDependencies}
+import uk.gov.hmrc.servicedependencies.presistence._
+
 import scala.concurrent.Future
 
 trait LibraryDependencyDataUpdatingService {
@@ -93,5 +92,5 @@ class DefaultLibraryDependencyDataUpdatingService(override val config: ServiceDe
       dependencies <- repositoryLibraryDependenciesRepository.getForRepository(repositoryName)
       references <- libraryVersionRepository.getAllDependencyEntries
     } yield
-      dependencies.map(dep => RepositoryDependencies(repositoryName, dep.libraryDependencies, references.map(LibraryVersion(_))))
+      dependencies.map(dep => RepositoryDependencies(repositoryName, dep.libraryDependencies.map(d => LibraryDependencyState(d.libraryName, d.currentVersion, references.find(mlv => mlv.libraryName == d.libraryName).map(_.version)))))
 }

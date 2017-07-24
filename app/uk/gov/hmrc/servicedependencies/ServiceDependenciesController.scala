@@ -26,7 +26,18 @@ import uk.gov.hmrc.servicedependencies.model._
 import uk.gov.hmrc.servicedependencies.service._
 
 
+case class LibraryDependencyState(libraryName: String, currentVersion:Version, latestVersion: Option[Version])
+
+case class RepositoryDependencies(repositoryName: String,
+                                  libraryDependenciesState: Seq[LibraryDependencyState])
+object RepositoryDependencies {
+  implicit val ldsf = Json.format[LibraryDependencyState]
+  implicit val format = Json.format[RepositoryDependencies]
+}
+
+
 trait ServiceDependenciesController extends BaseController {
+
 	import BlockingIOExecutionContext._
 
   def libraryDependencyDataUpdatingService: LibraryDependencyDataUpdatingService
