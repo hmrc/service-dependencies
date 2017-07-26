@@ -22,7 +22,7 @@ import org.eclipse.egit.github.core.{RepositoryContents, RequestError}
 import org.eclipse.egit.github.core.client.RequestException
 import org.mockito.ArgumentMatchers.any
 import org.mockito.Mockito.{times, verify, when}
-import org.scalatest.concurrent.ScalaFutures
+import org.scalatest.concurrent.{IntegrationPatience, ScalaFutures}
 import org.scalatest.mock.MockitoSugar
 import org.scalatest.{FreeSpec, Matchers}
 import uk.gov.hmrc.githubclient.{ExtendedContentsService, GithubApiClient}
@@ -33,7 +33,7 @@ import scala.collection.JavaConverters.seqAsJavaListConverter
 import scala.collection.mutable.ListBuffer
 import scala.concurrent.Future
 
-class DependenciesDataSourceSpec extends FreeSpec with Matchers with ScalaFutures with MockitoSugar with Awaitable {
+class DependenciesDataSourceSpec extends FreeSpec with Matchers with ScalaFutures with MockitoSugar with IntegrationPatience {
 
   type FindVersionsForMultipleArtifactsF = (String, Seq[String]) => Map[String, Option[Version]]
 
@@ -102,7 +102,7 @@ class DependenciesDataSourceSpec extends FreeSpec with Matchers with ScalaFuture
 
     val underTest = prepareUnderTestClass(Seq(githubStub1, githubStub2), Seq("repo1", "repo2", "repo3"))
 
-    val results = await(underTest.getDependencies("play-frontend"))
+    val results = underTest.getDependencies("play-frontend").futureValue
 
     results should contain(
       ServiceDependencies("service1", Map(
@@ -126,7 +126,7 @@ class DependenciesDataSourceSpec extends FreeSpec with Matchers with ScalaFuture
   "Handle a service that has no team mapings or no longer exists in the catalogue" in {
 
     val dataSource = prepareUnderTestClass(Seq(githubStub1, githubStub2), Seq("repo1", "repo2", "repo3"))
-    val results = await(dataSource.getDependencies("play-frontend"))
+    val results = dataSource.getDependencies("play-frontend").futureValue
 
     results should contain(
       ServiceDependencies("missing-in-action", Map(
@@ -162,7 +162,7 @@ class DependenciesDataSourceSpec extends FreeSpec with Matchers with ScalaFuture
 //      val persisterF = mock[RepositoryLibraryDependencies => Future[RepositoryLibraryDependencies]]
 //      when(persisterF.apply(any())).thenReturn(Future.successful(mock[RepositoryLibraryDependencies]))
 
-      val results = await(dataSource.getDependenciesForAllRepositories(curatedListOfLibraries, () => 1234l, Nil, (x) => Future.successful(x)))
+      val results = dataSource.getDependenciesForAllRepositories(curatedListOfLibraries, () => 1234l, Nil, (x) => Future.successful(x)).futureValue
 
       results.size shouldBe 3
       results.map(_.repositoryName) should contain theSameElementsAs Seq("repo1", "repo2", "repo3")
@@ -215,7 +215,7 @@ class DependenciesDataSourceSpec extends FreeSpec with Matchers with ScalaFuture
 
 
 
-      val results = await(dataSource.getDependenciesForAllRepositories(curatedListOfLibraries, () => 1234l, Nil, x => Future.successful(x)))
+      val results = dataSource.getDependenciesForAllRepositories(curatedListOfLibraries, () => 1234l, Nil, x => Future.successful(x)).futureValue
 
       results should contain theSameElementsAs List(
         RepositoryLibraryDependencies("repo1", List(LibraryDependency("library1", Version(1, 0, 0)), LibraryDependency("library2", Version(2, 0, 0)), LibraryDependency("library3", Version(3, 0, 0))), 1234),
@@ -244,7 +244,7 @@ class DependenciesDataSourceSpec extends FreeSpec with Matchers with ScalaFuture
       when(mockedExtendedContentsServiceForOpen.getContents(any(), any())).thenReturn(List(new RepositoryContents().setContent(base64(openContents))).asJava)
       when(mockedExtendedContentsServiceForEnterprise.getContents(any(), any())).thenReturn(List(new RepositoryContents().setContent(base64(enterpriseContents))).asJava)
 
-      val results = await(dataSource.getDependenciesForAllRepositories(curatedListOfLibraries, () => 1234l, Nil, (x) => Future.successful(x)))
+      val results = dataSource.getDependenciesForAllRepositories(curatedListOfLibraries, () => 1234l, Nil, (x) => Future.successful(x)).futureValue
 
       results should contain theSameElementsAs List(
         RepositoryLibraryDependencies("repo1", List(LibraryDependency("library1", Version(1, 0, 0)), LibraryDependency("library3", Version(3, 0, 0))), 1234),
@@ -276,11 +276,11 @@ class DependenciesDataSourceSpec extends FreeSpec with Matchers with ScalaFuture
 
       val dataSource = prepareUnderTestClass(Seq(githubStubWithRateLimitException), Seq("repo1", "repo2", "repo3", "repo4"))
 
-      await(dataSource.getDependenciesForAllRepositories(
+      dataSource.getDependenciesForAllRepositories(
         artifacts = curatedListOfLibraries,
         timeStampGenerator = () => 1234l,
         currentDependencyEntries = Nil,
-        persisterF = rlp => Future.successful(rlp)))
+        persisterF = rlp => Future.successful(rlp)).futureValue
 
 
       callCount shouldBe 2
@@ -303,11 +303,11 @@ class DependenciesDataSourceSpec extends FreeSpec with Matchers with ScalaFuture
       )
 
 
-      await(dataSource.getDependenciesForAllRepositories(
+      dataSource.getDependenciesForAllRepositories(
         artifacts = curatedListOfLibraries,
         timeStampGenerator = () => 1234l,
         currentDependencyEntries = dependenciesAlreadyInDb,
-        persisterF = persisterF))
+        persisterF = persisterF).futureValue
 
       callsToPersisterF.size shouldBe 4
       callsToPersisterF.toList(0).repositoryName shouldBe "repo2"
@@ -330,11 +330,11 @@ class DependenciesDataSourceSpec extends FreeSpec with Matchers with ScalaFuture
       )
 
 
-      await(dataSource.getDependenciesForAllRepositories(
+      dataSource.getDependenciesForAllRepositories(
         artifacts = curatedListOfLibraries,
         timeStampGenerator = () => 1234l,
         currentDependencyEntries = dependenciesAlreadyInDb,
-        persisterF = persisterF))
+        persisterF = persisterF).futureValue
 
       callsToPersisterF.size shouldBe 4
       callsToPersisterF.toList(2).repositoryName shouldBe "repo3"
