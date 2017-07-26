@@ -156,20 +156,26 @@ class DependenciesDataSourceSpec extends FreeSpec with Matchers with ScalaFuture
 
     val curatedListOfLibraries = Seq("library1", "library2", "library3")
 
-    "should get the dependencies for each repository" in {
+    val timestampF: () => Long = () => 1234l
+
+    "should persist the dependencies for each repository" in {
 
       val dataSource = prepareUnderTestClass(Seq(githubStubForMultiArtifacts), Seq("repo1", "repo2", "repo3"))
-//      val persisterF = mock[RepositoryLibraryDependencies => Future[RepositoryLibraryDependencies]]
-//      when(persisterF.apply(any())).thenReturn(Future.successful(mock[RepositoryLibraryDependencies]))
 
-      val results = dataSource.getDependenciesForAllRepositories(curatedListOfLibraries, () => 1234l, Nil, (x) => Future.successful(x)).futureValue
+      var callsToPersisterF = ListBuffer.empty[RepositoryLibraryDependencies]
+      val persisterF:RepositoryLibraryDependencies => Future[RepositoryLibraryDependencies] = { repositoryLibraryDependencies =>
+        callsToPersisterF += repositoryLibraryDependencies
+        Future.successful(repositoryLibraryDependencies)
+      }
 
-      results.size shouldBe 3
-      results.map(_.repositoryName) should contain theSameElementsAs Seq("repo1", "repo2", "repo3")
 
-      getLibDependencies(results, "repo1") should contain theSameElementsAs Seq(LibraryDependency("library1", Version(1, 0, 1)))
-      getLibDependencies(results, "repo2") should contain theSameElementsAs Seq(LibraryDependency("library1", Version(1, 0, 2)), LibraryDependency("library2", Version(2, 0, 3)))
-      getLibDependencies(results, "repo3") should contain theSameElementsAs Seq(LibraryDependency("library1", Version(1, 0, 3)), LibraryDependency("library3", Version(3, 0, 4)))
+      dataSource.persistDependenciesForAllRepositories(curatedListOfLibraries, timestampF, Nil, persisterF).futureValue
+
+      callsToPersisterF.size shouldBe 3
+
+      getLibDependencies(callsToPersisterF, "repo1") should contain theSameElementsAs Seq(LibraryDependency("library1", Version(1, 0, 1)))
+      getLibDependencies(callsToPersisterF, "repo2") should contain theSameElementsAs Seq(LibraryDependency("library1", Version(1, 0, 2)), LibraryDependency("library2", Version(2, 0, 3)))
+      getLibDependencies(callsToPersisterF, "repo3") should contain theSameElementsAs Seq(LibraryDependency("library1", Version(1, 0, 3)), LibraryDependency("library3", Version(3, 0, 4)))
 
 
     }
@@ -213,11 +219,15 @@ class DependenciesDataSourceSpec extends FreeSpec with Matchers with ScalaFuture
       when(mockedExtendedContentsServiceForOpen.getContents(any(), any())).thenReturn(List(new RepositoryContents().setContent(base64(openContents))).asJava)
       when(mockedExtendedContentsServiceForEnterprise.getContents(any(), any())).thenReturn(List(new RepositoryContents().setContent(base64(enterpriseContents))).asJava)
 
+      var callsToPersisterF = ListBuffer.empty[RepositoryLibraryDependencies]
+      val persisterF:RepositoryLibraryDependencies => Future[RepositoryLibraryDependencies] = { repositoryLibraryDependencies =>
+        callsToPersisterF += repositoryLibraryDependencies
+        Future.successful(repositoryLibraryDependencies)
+      }
 
+      dataSource.persistDependenciesForAllRepositories(curatedListOfLibraries, timestampF, Nil, persisterF).futureValue
 
-      val results = dataSource.getDependenciesForAllRepositories(curatedListOfLibraries, () => 1234l, Nil, x => Future.successful(x)).futureValue
-
-      results should contain theSameElementsAs List(
+      callsToPersisterF should contain theSameElementsAs List(
         RepositoryLibraryDependencies("repo1", List(LibraryDependency("library1", Version(1, 0, 0)), LibraryDependency("library2", Version(2, 0, 0)), LibraryDependency("library3", Version(3, 0, 0))), 1234),
         RepositoryLibraryDependencies("repo2", List(LibraryDependency("library1", Version(1, 0, 0)), LibraryDependency("library2", Version(2, 0, 0)), LibraryDependency("library3", Version(3, 0, 0))), 1234),
         RepositoryLibraryDependencies("repo3", List(LibraryDependency("library1", Version(1, 0, 0)), LibraryDependency("library2", Version(2, 0, 0)), LibraryDependency("library3", Version(3, 0, 0))), 1234)
@@ -244,9 +254,16 @@ class DependenciesDataSourceSpec extends FreeSpec with Matchers with ScalaFuture
       when(mockedExtendedContentsServiceForOpen.getContents(any(), any())).thenReturn(List(new RepositoryContents().setContent(base64(openContents))).asJava)
       when(mockedExtendedContentsServiceForEnterprise.getContents(any(), any())).thenReturn(List(new RepositoryContents().setContent(base64(enterpriseContents))).asJava)
 
-      val results = dataSource.getDependenciesForAllRepositories(curatedListOfLibraries, () => 1234l, Nil, (x) => Future.successful(x)).futureValue
+      var callsToPersisterF = ListBuffer.empty[RepositoryLibraryDependencies]
+      val persisterF:RepositoryLibraryDependencies => Future[RepositoryLibraryDependencies] = { repositoryLibraryDependencies =>
+        callsToPersisterF += repositoryLibraryDependencies
+        Future.successful(repositoryLibraryDependencies)
+      }
 
-      results should contain theSameElementsAs List(
+
+      dataSource.persistDependenciesForAllRepositories(curatedListOfLibraries, timestampF, Nil, persisterF).futureValue
+
+      callsToPersisterF should contain theSameElementsAs List(
         RepositoryLibraryDependencies("repo1", List(LibraryDependency("library1", Version(1, 0, 0)), LibraryDependency("library3", Version(3, 0, 0))), 1234),
         RepositoryLibraryDependencies("repo2", List(LibraryDependency("library1", Version(1, 0, 0)), LibraryDependency("library3", Version(3, 0, 0))), 1234),
         RepositoryLibraryDependencies("repo3", List(LibraryDependency("library1", Version(1, 0, 0)), LibraryDependency("library3", Version(3, 0, 0))), 1234)
@@ -276,9 +293,9 @@ class DependenciesDataSourceSpec extends FreeSpec with Matchers with ScalaFuture
 
       val dataSource = prepareUnderTestClass(Seq(githubStubWithRateLimitException), Seq("repo1", "repo2", "repo3", "repo4"))
 
-      dataSource.getDependenciesForAllRepositories(
+      dataSource.persistDependenciesForAllRepositories(
         artifacts = curatedListOfLibraries,
-        timeStampGenerator = () => 1234l,
+        timeStampGenerator = timestampF,
         currentDependencyEntries = Nil,
         persisterF = rlp => Future.successful(rlp)).futureValue
 
@@ -303,9 +320,9 @@ class DependenciesDataSourceSpec extends FreeSpec with Matchers with ScalaFuture
       )
 
 
-      dataSource.getDependenciesForAllRepositories(
+      dataSource.persistDependenciesForAllRepositories(
         artifacts = curatedListOfLibraries,
-        timeStampGenerator = () => 1234l,
+        timeStampGenerator = timestampF,
         currentDependencyEntries = dependenciesAlreadyInDb,
         persisterF = persisterF).futureValue
 
@@ -318,6 +335,7 @@ class DependenciesDataSourceSpec extends FreeSpec with Matchers with ScalaFuture
       var callsToPersisterF = ListBuffer.empty[RepositoryLibraryDependencies]
 
       val dataSource = prepareUnderTestClass(Seq(githubStubForMultiArtifacts), Seq("repo1", "repo2", "repo3", "repo4"))
+
       val persisterF:RepositoryLibraryDependencies => Future[RepositoryLibraryDependencies] = { repositoryLibraryDependencies =>
         callsToPersisterF += repositoryLibraryDependencies
         Future.successful(repositoryLibraryDependencies)
@@ -330,9 +348,9 @@ class DependenciesDataSourceSpec extends FreeSpec with Matchers with ScalaFuture
       )
 
 
-      dataSource.getDependenciesForAllRepositories(
+      dataSource.persistDependenciesForAllRepositories(
         artifacts = curatedListOfLibraries,
-        timeStampGenerator = () => 1234l,
+        timeStampGenerator = timestampF,
         currentDependencyEntries = dependenciesAlreadyInDb,
         persisterF = persisterF).futureValue
 

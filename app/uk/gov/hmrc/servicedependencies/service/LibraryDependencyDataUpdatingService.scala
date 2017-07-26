@@ -70,7 +70,7 @@ class DefaultLibraryDependencyDataUpdatingService(override val config: ServiceDe
     runMongoUpdate(repositoryDependencyMongoLock) {
       for {
         currentDependencyEntries <- repositoryLibraryDependenciesRepository.getAllDependencyEntries
-        libraryDependencies <- dependenciesDataSource.getDependenciesForAllRepositories(curatedLibraries, timeStampGenerator, currentDependencyEntries, repositoryLibraryDependenciesRepository.update)
+        libraryDependencies <- dependenciesDataSource.persistDependenciesForAllRepositories(curatedLibraries, timeStampGenerator, currentDependencyEntries, repositoryLibraryDependenciesRepository.update)
 //        updatedLibraryDependencies <- Future.sequence(libraryDependencies.map(repositoryLibraryDependenciesRepository.update))
       } yield libraryDependencies
 

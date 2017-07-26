@@ -64,23 +64,6 @@ class LibraryDependencyDataUpdatingServiceSpec extends FunSpec with MockitoSugar
 
   describe("reloadLibraryDependencyDataForAllRepositories") {
 
-
-    //!@TODO do we need this test now that the persisting happens on the inside?
-//    it("should call the dependency update function") {
-//      val underTest = new TestLibraryDependencyDataUpdatingService(noLockTestMongoLockBuilder)
-//
-//      when(underTest.mockedDependenciesDataSource.getDependenciesForAllRepositories(any(), any()))
-//        .thenReturn(Future.successful(Seq(RepositoryLibraryDependencies("repo123", Nil, staticTimeStampGenerator()))))
-//
-//      when(underTest.mockedRepositoryLibraryDependenciesRepository.update(any())).thenReturn(Future.successful(RepositoryLibraryDependencies("repo123", Nil, staticTimeStampGenerator())))
-//
-//      await(underTest.reloadLibraryDependencyDataForAllRepositories(staticTimeStampGenerator))
-//
-//      verify(underTest.mockedRepositoryLibraryDependenciesRepository, times(1)).update(RepositoryLibraryDependencies("repo123", Nil, staticTimeStampGenerator()))
-//
-//      verifyZeroInteractions(underTest.mockedLibraryVersionRepository)
-//    }
-
     it("should not call the dependency update function if the mongo is locked") {
       val underTest = new TestLibraryDependencyDataUpdatingService(denyingTestMongoLockBuilder)
 

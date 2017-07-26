@@ -91,11 +91,11 @@ class DependenciesDataSource(val releasesConnector: DeploymentsDataSource,
   val initialDuration: Double = 100
 
 
-  //!@ TODO rename this as it now updates/inserts to mongo
-  def getDependenciesForAllRepositories(artifacts: Seq[String],
-                                        timeStampGenerator: () => Long,
-                                        currentDependencyEntries: Seq[RepositoryLibraryDependencies],
-                                        persisterF: (RepositoryLibraryDependencies) => Future[RepositoryLibraryDependencies]): Future[Seq[RepositoryLibraryDependencies]] = {
+
+  def persistDependenciesForAllRepositories(artifacts: Seq[String],
+                                            timeStampGenerator: () => Long,
+                                            currentDependencyEntries: Seq[RepositoryLibraryDependencies],
+                                            persisterF: (RepositoryLibraryDependencies) => Future[RepositoryLibraryDependencies]): Future[Seq[RepositoryLibraryDependencies]] = {
 
     val eventualAllRepos: Future[Seq[String]] = teamsAndRepositoriesDataSource.getAllRepositories()
 
