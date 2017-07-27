@@ -112,7 +112,7 @@ class DependenciesDataSource(val releasesConnector: DeploymentsDataSource,
     logger.info("persistDependenciesForAllRepositories: 3")
 
 
-    @tailrec
+//    @tailrec
     def recurse(remainingRepos: Seq[String], acc: Seq[RepositoryLibraryDependencies]): Seq[RepositoryLibraryDependencies] = {
       try {
         remainingRepos match {
