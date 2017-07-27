@@ -148,7 +148,14 @@ class DependenciesDataSource(val releasesConnector: DeploymentsDataSource,
 
     }
 
-    orderedRepos.map(r => recurse(r.toList, Nil)).andThen{ case s => logger.info("finished ordering"); s}
+    orderedRepos.map(r => recurse(r.toList, Nil)).andThen{ case s =>
+      s match {
+        case Failure(x) => logger.error("Bang!", x)
+        case Success(g) =>
+          logger.info(s"finished ordering with ${g.mkString(", ")}")
+      }
+      s
+    }
 
   }
 
