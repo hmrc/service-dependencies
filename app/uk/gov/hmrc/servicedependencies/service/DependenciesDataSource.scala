@@ -114,33 +114,41 @@ class DependenciesDataSource(val releasesConnector: DeploymentsDataSource,
 
     @tailrec
     def recurse(remainingRepos: Seq[String], acc: Seq[RepositoryLibraryDependencies]): Seq[RepositoryLibraryDependencies] = {
-      remainingRepos match {
-        case repoName :: xs =>
-          logger.info(s"getting dependencies for: $repoName")
-          val errorOrLibraryDependencies = getLibraryDependencies(repoName, artifacts)
+      try {
+        remainingRepos match {
+          case repoName :: xs =>
+            logger.info(s"getting dependencies for: $repoName")
+            val errorOrLibraryDependencies = getLibraryDependencies(repoName, artifacts)
 
-          if(errorOrLibraryDependencies.isLeft && errorOrLibraryDependencies.left.get.isInstanceOf[RequestException]) {
-            // error, short circuit
-            logger.error("terminating current run because ===>", errorOrLibraryDependencies.left.get)
+            if (errorOrLibraryDependencies.isLeft && errorOrLibraryDependencies.left.get.isInstanceOf[RequestException]) {
+              // error, short circuit
+              logger.error("terminating current run because ===>", errorOrLibraryDependencies.left.get)
+              acc
+            } else {
+              logger.info("persistDependenciesForAllRepositories: 6")
+
+              val repositoryLibraryDependencies = RepositoryLibraryDependencies(repoName, errorOrLibraryDependencies.right.get, timeStampGenerator())
+              persisterF(repositoryLibraryDependencies)
+              recurse(xs, acc :+ repositoryLibraryDependencies)
+            }
+
+          case Nil =>
+            logger.info("persistDependenciesForAllRepositories: 5 (got a Nil!!)")
             acc
-          } else {
-            logger.info("persistDependenciesForAllRepositories: 6")
-
-            val repositoryLibraryDependencies = RepositoryLibraryDependencies(repoName, errorOrLibraryDependencies.right.get, timeStampGenerator())
-            persisterF(repositoryLibraryDependencies)
-            recurse(xs, acc :+ repositoryLibraryDependencies)
-          }
-
-        case Nil =>
-          logger.info("persistDependenciesForAllRepositories: 5 (got a Nil!!)")
-          acc
+        }
+      } catch {
+        case ex: Throwable => logger.error("Booom!", ex)
+          throw ex
       }
 
     }
 
-    logger.info("persistDependenciesForAllRepositories: 4")
+    orderedRepos.map { s =>
+      logger.info(s"persistDependenciesForAllRepositories: 4: ${s.mkString(",")}")
 
-    orderedRepos.map(r => recurse(r.toList, Nil))
+    }
+
+    orderedRepos.map(r => recurse(r.toList, Nil)).andThen{ case s => logger.info("finished ordering"); s}
 
   }
 
