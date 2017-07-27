@@ -33,6 +33,9 @@ trait LibraryDependencyDataUpdatingService {
   def reloadLibraryVersions(timeStampGenerator:() => Long): Future[Seq[MongoLibraryVersion]]
   def reloadLibraryDependencyDataForAllRepositories(timeStampGenerator:() => Long): Future[Seq[RepositoryLibraryDependencies]]
 
+  def getAllCuratedLibraries(): Future[Seq[MongoLibraryVersion]]
+  def getAllRepositoriesDependencies(): Future[Seq[RepositoryLibraryDependencies]]
+
   def getDependencyVersionsForRepository(repositoryName: String): Future[Option[RepositoryDependencies]]
 
   lazy val releasesConnector = new DeploymentsDataSource(config)
@@ -69,9 +72,8 @@ class DefaultLibraryDependencyDataUpdatingService(override val config: ServiceDe
   override def reloadLibraryDependencyDataForAllRepositories(timeStampGenerator:() => Long): Future[Seq[RepositoryLibraryDependencies]] =
     runMongoUpdate(repositoryDependencyMongoLock) {
       for {
-        currentDependencyEntries <- repositoryLibraryDependenciesRepository.getAllDependencyEntries
+        currentDependencyEntries <- repositoryLibraryDependenciesRepository.getAllEntries
         libraryDependencies <- dependenciesDataSource.persistDependenciesForAllRepositories(curatedLibraries, timeStampGenerator, currentDependencyEntries, repositoryLibraryDependenciesRepository.update)
-//        updatedLibraryDependencies <- Future.sequence(libraryDependencies.map(repositoryLibraryDependenciesRepository.update))
       } yield libraryDependencies
 
     }
@@ -90,7 +92,13 @@ class DefaultLibraryDependencyDataUpdatingService(override val config: ServiceDe
   override def getDependencyVersionsForRepository(repositoryName: String): Future[Option[RepositoryDependencies]] =
     for {
       dependencies <- repositoryLibraryDependenciesRepository.getForRepository(repositoryName)
-      references <- libraryVersionRepository.getAllDependencyEntries
+      references <- libraryVersionRepository.getAllEntries
     } yield
       dependencies.map(dep => RepositoryDependencies(repositoryName, dep.libraryDependencies.map(d => LibraryDependencyState(d.libraryName, d.currentVersion, references.find(mlv => mlv.libraryName == d.libraryName).map(_.version)))))
+
+  override def getAllCuratedLibraries(): Future[Seq[MongoLibraryVersion]] =
+    libraryVersionRepository.getAllEntries
+
+  override def getAllRepositoriesDependencies(): Future[Seq[RepositoryLibraryDependencies]] =
+    repositoryLibraryDependenciesRepository.getAllEntries
 }

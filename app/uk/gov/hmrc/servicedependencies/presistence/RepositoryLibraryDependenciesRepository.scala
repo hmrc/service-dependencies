@@ -34,7 +34,7 @@ trait RepositoryLibraryDependenciesRepository {
   def update(repositoryLibraryDependencies: RepositoryLibraryDependencies): Future[RepositoryLibraryDependencies]
 
   def getForRepository(repositoryName: String): Future[Option[RepositoryLibraryDependencies]]
-  def getAllDependencyEntries: Future[List[RepositoryLibraryDependencies]]
+  def getAllEntries: Future[List[RepositoryLibraryDependencies]]
   def clearAllData: Future[Boolean]
 }
 
@@ -80,7 +80,7 @@ class MongoRepositoryLibraryDependenciesRepository(mongo: () => DB)
 
   }
 
-  override def getAllDependencyEntries: Future[List[RepositoryLibraryDependencies]] = findAll()
+  override def getAllEntries: Future[List[RepositoryLibraryDependencies]] = findAll()
 
   override def clearAllData: Future[Boolean] = super.removeAll().map(!_.hasErrors)
 

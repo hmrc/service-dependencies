@@ -59,7 +59,7 @@ class MongoLibraryVersionRepositorySpec extends UnitSpec with LoneElement with M
       val libraryVersion = MongoLibraryVersion("some-library", Version(1, 0, 2))
       await(mongoLibraryVersions.update(libraryVersion))
 
-      await(mongoLibraryVersions.getAllDependencyEntries) shouldBe Seq(libraryVersion)
+      await(mongoLibraryVersions.getAllEntries) shouldBe Seq(libraryVersion)
     }
 
     "updates correctly (based on library name)" in {
@@ -70,7 +70,7 @@ class MongoLibraryVersionRepositorySpec extends UnitSpec with LoneElement with M
 
       await(mongoLibraryVersions.update(newLibraryVersion))
 
-      await(mongoLibraryVersions.getAllDependencyEntries) shouldBe Seq(newLibraryVersion)
+      await(mongoLibraryVersions.getAllEntries) shouldBe Seq(newLibraryVersion)
     }
   }
 
@@ -80,11 +80,11 @@ class MongoLibraryVersionRepositorySpec extends UnitSpec with LoneElement with M
       val libraryVersion = MongoLibraryVersion("some-library", Version(1, 0, 2))
       await(mongoLibraryVersions.update(libraryVersion))
 
-      await(mongoLibraryVersions.getAllDependencyEntries) should have size 1
+      await(mongoLibraryVersions.getAllEntries) should have size 1
 
       await(mongoLibraryVersions.clearAllData)
 
-      await(mongoLibraryVersions.getAllDependencyEntries) shouldBe Nil
+      await(mongoLibraryVersions.getAllEntries) shouldBe Nil
     }
   }
 }

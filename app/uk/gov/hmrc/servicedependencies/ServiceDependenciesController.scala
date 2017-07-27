@@ -69,6 +69,18 @@ trait ServiceDependenciesController extends BaseController {
 		}
     Ok("Done")
 	}
+
+
+  def libraries() = Action.async {
+
+    libraryDependencyDataUpdatingService.getAllCuratedLibraries().map(versions => Ok(Json.toJson(versions)))
+  }
+
+  def dependencies() = Action.async {
+
+    libraryDependencyDataUpdatingService.getAllRepositoriesDependencies().map(dependencies => Ok(Json.toJson(dependencies)))
+  }
+
 }
 
 object ServiceDependenciesController extends ServiceDependenciesController {
@@ -78,8 +90,6 @@ object ServiceDependenciesController extends ServiceDependenciesController {
 
 
   protected val config = new ServiceDependenciesConfig("/dependency-versions-config.json")
-
-
 }
 
 

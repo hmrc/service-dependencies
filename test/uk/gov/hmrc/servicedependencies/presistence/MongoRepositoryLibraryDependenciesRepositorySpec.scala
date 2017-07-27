@@ -57,7 +57,7 @@ class MongoRepositoryLibraryDependenciesRepositorySpec extends UnitSpec with Lon
       val repositoryLibraryDependencies = RepositoryLibraryDependencies("some-repo", Seq(LibraryDependency("some-lib", Version(1, 0, 2))))
       await(mongoRepositoryLibraryDependenciesRepository.update(repositoryLibraryDependencies))
 
-      await(mongoRepositoryLibraryDependenciesRepository.getAllDependencyEntries) shouldBe Seq(repositoryLibraryDependencies)
+      await(mongoRepositoryLibraryDependenciesRepository.getAllEntries) shouldBe Seq(repositoryLibraryDependencies)
     }
 
     "updates correctly (based on repository name)" in {
@@ -68,7 +68,7 @@ class MongoRepositoryLibraryDependenciesRepositorySpec extends UnitSpec with Lon
 
       await(mongoRepositoryLibraryDependenciesRepository.update(newRepositoryLibraryDependencies))
 
-      await(mongoRepositoryLibraryDependenciesRepository.getAllDependencyEntries) shouldBe Seq(newRepositoryLibraryDependencies)
+      await(mongoRepositoryLibraryDependenciesRepository.getAllEntries) shouldBe Seq(newRepositoryLibraryDependencies)
     }
   }
 
@@ -92,11 +92,11 @@ class MongoRepositoryLibraryDependenciesRepositorySpec extends UnitSpec with Lon
 
       await(mongoRepositoryLibraryDependenciesRepository.update(repositoryLibraryDependencies))
 
-      await(mongoRepositoryLibraryDependenciesRepository.getAllDependencyEntries) should have size 1
+      await(mongoRepositoryLibraryDependenciesRepository.getAllEntries) should have size 1
 
       await(mongoRepositoryLibraryDependenciesRepository.clearAllData)
 
-      await(mongoRepositoryLibraryDependenciesRepository.getAllDependencyEntries) shouldBe Nil
+      await(mongoRepositoryLibraryDependenciesRepository.getAllEntries) shouldBe Nil
     }
   }
 }

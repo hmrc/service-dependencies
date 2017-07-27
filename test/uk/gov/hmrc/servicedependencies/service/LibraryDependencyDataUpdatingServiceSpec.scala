@@ -94,7 +94,7 @@ class LibraryDependencyDataUpdatingServiceSpec extends FunSpec with MockitoSugar
         MongoLibraryVersion("lib1", Version(1, 1, 0)),
         MongoLibraryVersion("lib2", Version(2, 1, 0))
       )
-      when(underTest.libraryVersionRepository.getAllDependencyEntries)
+      when(underTest.libraryVersionRepository.getAllEntries)
         .thenReturn(Future.successful(referenceLibraryVersions))
 
 
@@ -119,7 +119,7 @@ class LibraryDependencyDataUpdatingServiceSpec extends FunSpec with MockitoSugar
       when(underTest.repositoryLibraryDependenciesRepository.getForRepository(any()))
         .thenReturn(Future.successful(None))
 
-      when(underTest.libraryVersionRepository.getAllDependencyEntries)
+      when(underTest.libraryVersionRepository.getAllEntries)
         .thenReturn(Future.successful(Nil))
 
 
@@ -143,7 +143,7 @@ class LibraryDependencyDataUpdatingServiceSpec extends FunSpec with MockitoSugar
       when(underTest.repositoryLibraryDependenciesRepository.getForRepository(any()))
         .thenReturn(Future.successful(Some(RepositoryLibraryDependencies(repositoryName, libraryDependencies))))
 
-      when(underTest.libraryVersionRepository.getAllDependencyEntries)
+      when(underTest.libraryVersionRepository.getAllEntries)
         .thenReturn(Future.successful(Nil))
 
 

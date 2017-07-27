@@ -14,86 +14,111 @@
  * limitations under the License.
  */
 
-//package uk.gov.hmrc.servicedependencies
-//
-//import org.mockito.ArgumentMatchers.any
-//import org.mockito.Mockito
-//import org.mockito.Mockito.when
-//import org.scalatest.concurrent.ScalaFutures
-//import org.scalatest.mock.MockitoSugar
-//import org.scalatest.{BeforeAndAfterEach, FreeSpec, FunSpec, Matchers}
-//import org.scalatestplus.play.OneServerPerSuite
-//import play.api.inject.guice.GuiceApplicationBuilder
-//import play.api.test.FakeRequest
-//import reactivemongo.api.DB
-//import uk.gov.hmrc.githubclient.{ExtendedContentsService, GithubApiClient}
-//import uk.gov.hmrc.servicedependencies.model.{MongoLibraryVersion, RepositoryLibraryDependencies}
-//import uk.gov.hmrc.servicedependencies.presistence.MongoLock
-//import uk.gov.hmrc.servicedependencies.service._
-//
-//import scala.concurrent.{ExecutionContext, Future}
-//
-//class ServiceDependenciesControllerSpec extends FreeSpec with BeforeAndAfterEach with OneServerPerSuite with Matchers with MockitoSugar with ScalaFutures {
-//
-//  implicit override lazy val app = new GuiceApplicationBuilder().configure (
-//
-//    "play.ws.ssl.loose.acceptAnyCertificate" -> true,
-//    "play.http.requestHandler" -> "play.api.http.DefaultHttpRequestHandler").build()
-//
-//
-//  "a" - {
-//    "should b" in new Setup {
-//      override def func: () => Future[Seq[RepositoryLibraryDependencies]] = TestServiceDependenciesImpl.repositoryLibraryDependencyDataLoaderUpdater
-//
-//      TestServiceDependenciesImpl.reloadLibraryDependenciesForAllRepositories().apply(FakeRequest())
-//
-//    }
-//
-//  }
-//
-//  trait Setup {
-//    val mockedGithubEnterpriseClient = mock[GithubApiClient]
-//    val mockedGithubOpenClient = mock[GithubApiClient]
-//
-//    def func: () => Future[Seq[RepositoryLibraryDependencies]] = { () =>
-//      println("Doing things......")
-//      Future.successful(Seq(RepositoryLibraryDependencies("repoX", Nil)))
-//    }//mock[() => Future[Seq[RepositoryLibraryDependencies]]]
-//
-//    object TestMongoLock extends MongoLock(mock[() => DB], "") {
-//      override def tryLock[T](body: => Future[T])(implicit ec: ExecutionContext): Future[Option[T]] = {
-//        body.map(Some(_))
-//      }
-//    }
-//
-//    val stringBuilder: String => MongoLock = _ => TestMongoLock
-//
-//    val libraryName = "lib-verbs"
-//    object TestServiceDependenciesImpl extends ServiceDependenciesController {
-//      override lazy protected val dataSource: CachingDependenciesDataSource = ???
-//
-//      override def libraryDependencyDataUpdatingService: LibraryDependencyDataUpdatingService =
-//        new DefaultLibraryDependencyDataUpdatingService(mock[() => Future[Seq[MongoLibraryVersion]]], repositoryLibraryDependencyDataLoaderUpdater, stringBuilder) {
-//
-//        }
-//
-//      override def repositoryDependencyService: RepositoryDependencyService = ???
-//
-//
-//      override lazy protected val curatedLibraries: List[String] = List(libraryName)
-//      override val githubOpen = mock[GithubOpen]
-//      override val githubEnterprise = mock[GithubEnterprise]
-//      override lazy val dependenciesDataSource = mock[DependenciesDataSource]
-//      override lazy protected val gitEnterpriseClient: GithubApiClient = mockedGithubEnterpriseClient
-//      override lazy protected val gitOpenClient: GithubApiClient = mockedGithubOpenClient
-//      override lazy protected val releasesConnector: DeploymentsDataSource = ???
-//      override lazy protected val teamsAndRepositoriesClient: TeamsAndRepositoriesClient = ???
-//      override lazy protected val config: ServiceDependenciesConfig = mock[ServiceDependenciesConfig]
-//    }
-//
-//    val mockedGithubOpen = TestServiceDependenciesImpl.githubOpen
-//    val mockedGithubEnterprise = TestServiceDependenciesImpl.githubEnterprise
-//
-//
-//  }
-//}
+package uk.gov.hmrc.servicedependencies
+
+import org.mockito.ArgumentMatchers.any
+import org.mockito.Mockito
+import org.mockito.Mockito.when
+import org.scalatest._
+import org.scalatest.concurrent.{IntegrationPatience, ScalaFutures}
+import org.scalatest.mock.MockitoSugar
+import org.scalatestplus.play.OneServerPerSuite
+import play.api.inject.guice.GuiceApplicationBuilder
+import play.api.test.FakeRequest
+import play.api.test.Helpers._
+import uk.gov.hmrc.servicedependencies.model.{MongoLibraryVersion, RepositoryLibraryDependencies, Version}
+import uk.gov.hmrc.servicedependencies.service._
+
+import scala.concurrent.Future
+
+class ServiceDependenciesControllerSpec extends FreeSpec with BeforeAndAfterEach with OneServerPerSuite with Matchers with MockitoSugar with ScalaFutures with IntegrationPatience with OptionValues{
+
+  "getDependencyVersionsForRepository" - {
+    "should get dependency versions for a repository using the service" in new Setup {
+      val mockedLibraryDependencyDataUpdatingService = mock[LibraryDependencyDataUpdatingService]
+      val repoName = "repo1"
+      val repositoryDependencies = RepositoryDependencies(repoName, Nil)
+
+      when(mockedLibraryDependencyDataUpdatingService.getDependencyVersionsForRepository(any()))
+        .thenReturn(Future.successful(Some(repositoryDependencies)))
+
+      val result = makeServiceDependenciesImpl(mockedLibraryDependencyDataUpdatingService).getDependencyVersionsForRepository(repoName).apply(FakeRequest())
+      val maybeRepositoryDependencies = contentAsJson(result).asOpt[RepositoryDependencies]
+
+      maybeRepositoryDependencies.value shouldBe repositoryDependencies
+      Mockito.verify(mockedLibraryDependencyDataUpdatingService).getDependencyVersionsForRepository(repoName)
+    }
+
+  }
+
+  "reloadLibraryDependenciesForAllRepositories" - {
+    "should call the reloadLibraryDependencyDataForAllRepositories on the service" in new Setup {
+      val mockedLibraryDependencyDataUpdatingService = mock[LibraryDependencyDataUpdatingService]
+      val repoName = "repo1"
+
+
+      when(mockedLibraryDependencyDataUpdatingService.reloadLibraryDependencyDataForAllRepositories(any()))
+        .thenReturn(Future.successful(Seq.empty[RepositoryLibraryDependencies]))
+
+      val controller = makeServiceDependenciesImpl(mockedLibraryDependencyDataUpdatingService)
+      controller.reloadLibraryDependenciesForAllRepositories().apply(FakeRequest())
+
+      Mockito.verify(mockedLibraryDependencyDataUpdatingService).reloadLibraryDependencyDataForAllRepositories(controller.timeStampGenerator)
+    }
+
+  }
+
+  "get libraries" - {
+    "should get all the curated libraries using the service" in new Setup {
+      val mockedLibraryDependencyDataUpdatingService = mock[LibraryDependencyDataUpdatingService]
+      val libraryVersions = Seq(
+        MongoLibraryVersion("lib1", Version(1, 0, 0), 1234l),
+        MongoLibraryVersion("lib2", Version(2, 0, 0), 1234l),
+        MongoLibraryVersion("lib3", Version(3, 0, 0), 1234l)
+      )
+      when(mockedLibraryDependencyDataUpdatingService.getAllCuratedLibraries()).thenReturn(Future.successful(
+        libraryVersions
+      ))
+
+      val result = makeServiceDependenciesImpl(mockedLibraryDependencyDataUpdatingService).libraries().apply(FakeRequest())
+      val mongoLibraryVersions = contentAsJson(result).as[Seq[MongoLibraryVersion]]
+
+      mongoLibraryVersions.size shouldBe 3
+      mongoLibraryVersions should contain theSameElementsAs(libraryVersions)
+    }
+
+  }
+
+  "get dependencies" - {
+    "should get all dependencies using the service" in new Setup {
+      val mockedLibraryDependencyDataUpdatingService = mock[LibraryDependencyDataUpdatingService]
+      val libraryDependencies = Seq(
+        RepositoryLibraryDependencies("repo1", Nil, 1234l),
+        RepositoryLibraryDependencies("repo2", Nil, 1234l),
+        RepositoryLibraryDependencies("repo3", Nil, 1234l)
+      )
+      when(mockedLibraryDependencyDataUpdatingService.getAllRepositoriesDependencies()).thenReturn(Future.successful(
+        libraryDependencies
+      ))
+
+      val result = makeServiceDependenciesImpl(mockedLibraryDependencyDataUpdatingService).dependencies().apply(FakeRequest())
+      val repositoryLibraryDependencies = contentAsJson(result).as[Seq[RepositoryLibraryDependencies]]
+
+      repositoryLibraryDependencies.size shouldBe 3
+      repositoryLibraryDependencies should contain theSameElementsAs(libraryDependencies)
+    }
+
+  }
+
+  trait Setup {
+
+    def makeServiceDependenciesImpl(libraryDependencyUpdatingService: LibraryDependencyDataUpdatingService) =
+      new ServiceDependenciesController {
+        override def libraryDependencyDataUpdatingService: LibraryDependencyDataUpdatingService = libraryDependencyUpdatingService
+
+        override val timeStampGenerator = () => 12345l
+      }
+  }
+  
+
+}

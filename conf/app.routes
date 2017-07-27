@@ -4,3 +4,6 @@ GET    /reloadLibraryVersions            uk.gov.hmrc.servicedependencies.Service
 GET    /dependencies/:repository         uk.gov.hmrc.servicedependencies.ServiceDependenciesController.getDependencyVersionsForRepository(repository)
 
 GET    /reloadDependencies               uk.gov.hmrc.servicedependencies.ServiceDependenciesController.reloadLibraryDependenciesForAllRepositories()
+
+GET    /libraries                        uk.gov.hmrc.servicedependencies.ServiceDependenciesController.libraries()
+GET    /dependencies                        uk.gov.hmrc.servicedependencies.ServiceDependenciesController.dependencies()

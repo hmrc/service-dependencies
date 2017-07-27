@@ -33,7 +33,7 @@ import scala.concurrent.{ExecutionContext, Future}
 trait LibraryVersionRepository {
 
   def update(libraryVersion: MongoLibraryVersion): Future[MongoLibraryVersion]
-  def getAllDependencyEntries: Future[Seq[MongoLibraryVersion]]
+  def getAllEntries: Future[Seq[MongoLibraryVersion]]
   def clearAllData: Future[Boolean]
 }
 
@@ -68,7 +68,7 @@ class MongoLibraryVersionRepository(mongo: () => DB)
     }
   }
 
-  override def getAllDependencyEntries: Future[Seq[MongoLibraryVersion]] = findAll()
+  override def getAllEntries: Future[Seq[MongoLibraryVersion]] = findAll()
 
   override def clearAllData: Future[Boolean] = super.removeAll().map(!_.hasErrors)
 }
