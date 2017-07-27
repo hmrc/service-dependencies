@@ -80,7 +80,11 @@ class MongoRepositoryLibraryDependenciesRepository(mongo: () => DB)
 
   }
 
-  override def getAllEntries: Future[List[RepositoryLibraryDependencies]] = findAll()
+  override def getAllEntries: Future[List[RepositoryLibraryDependencies]] = {
+    logger.info("retrieving getAll current dependencies")
+    findAll()
+  }
+
 
   override def clearAllData: Future[Boolean] = super.removeAll().map(!_.hasErrors)
 

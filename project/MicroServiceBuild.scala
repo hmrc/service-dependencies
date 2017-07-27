@@ -4,7 +4,7 @@ import uk.gov.hmrc.sbtdistributables.SbtDistributablesPlugin
 import uk.gov.hmrc.versioning.SbtGitVersioning
 
 object MicroServiceBuild extends Build with MicroService {
-  val appName = "service-dependencies"
+  override val appName = "service-dependencies"
   override lazy val appDependencies: Seq[ModuleID] = AppDependencies()
 }
 

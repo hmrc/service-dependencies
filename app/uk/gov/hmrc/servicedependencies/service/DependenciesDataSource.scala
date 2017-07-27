@@ -97,13 +97,20 @@ class DependenciesDataSource(val releasesConnector: DeploymentsDataSource,
                                             currentDependencyEntries: Seq[RepositoryLibraryDependencies],
                                             persisterF: (RepositoryLibraryDependencies) => Future[RepositoryLibraryDependencies]): Future[Seq[RepositoryLibraryDependencies]] = {
 
+    logger.info("persistDependenciesForAllRepositories: 1")
+
     val eventualAllRepos: Future[Seq[String]] = teamsAndRepositoriesDataSource.getAllRepositories()
+
+    logger.info("persistDependenciesForAllRepositories: 2")
 
     val orderedRepos: Future[Seq[String]] = eventualAllRepos.map { repos =>
       val updatedLastOrdered = currentDependencyEntries.sortBy(_.updateDate).map(_.repositoryName)
       val newRepos = repos.filterNot(r => currentDependencyEntries.exists(_.repositoryName == r))
       newRepos ++ updatedLastOrdered
     }
+
+    logger.info("persistDependenciesForAllRepositories: 3")
+
 
     @tailrec
     def recurse(remainingRepos: Seq[String], acc: Seq[RepositoryLibraryDependencies]): Seq[RepositoryLibraryDependencies] = {
@@ -117,15 +124,21 @@ class DependenciesDataSource(val releasesConnector: DeploymentsDataSource,
             logger.error("terminating current run because ===>", errorOrLibraryDependencies.left.get)
             acc
           } else {
+            logger.info("persistDependenciesForAllRepositories: 6")
+
             val repositoryLibraryDependencies = RepositoryLibraryDependencies(repoName, errorOrLibraryDependencies.right.get, timeStampGenerator())
             persisterF(repositoryLibraryDependencies)
             recurse(xs, acc :+ repositoryLibraryDependencies)
           }
 
-        case Nil => acc
+        case Nil =>
+          logger.info("persistDependenciesForAllRepositories: 5 (got a Nil!!)")
+          acc
       }
 
     }
+
+    logger.info("persistDependenciesForAllRepositories: 4")
 
     orderedRepos.map(r => recurse(r.toList, Nil))
 
