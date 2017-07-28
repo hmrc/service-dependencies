@@ -41,7 +41,7 @@ class TeamsAndRepositoriesDataSourceSpec
   }
 
   private def stubRepositories(repositoryName: String) = {
-    wireMock.stub(get(urlEqualTo(s"/repositories/$repositoryName"))
+    wireMock.stub(get(urlEqualTo(s"/api/repositories/$repositoryName"))
       .willReturn(
         aResponse()
           .withStatus(200)
@@ -50,7 +50,7 @@ class TeamsAndRepositoriesDataSourceSpec
 
   private def stubAllRepositories() = {
 
-    wireMock.stub(get(urlEqualTo(s"/repositories"))
+    wireMock.stub(get(urlEqualTo(s"/api/repositories"))
       .willReturn(
         aResponse()
           .withStatus(200)
@@ -58,7 +58,7 @@ class TeamsAndRepositoriesDataSourceSpec
   }
 
   private def stubServices() = {
-    wireMock.stub(get(urlEqualTo(s"/services?teamDetails=true"))
+    wireMock.stub(get(urlEqualTo(s"/api/services?teamDetails=true"))
       .willReturn(
         aResponse()
           .withStatus(200)

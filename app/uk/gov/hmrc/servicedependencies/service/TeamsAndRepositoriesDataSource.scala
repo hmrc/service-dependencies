@@ -29,17 +29,17 @@ trait TeamsAndRepositoriesDataSource {
 class TeamsAndRepositoriesClient(teamsAndRepositoriesApiBase: String) extends TeamsAndRepositoriesDataSource {
 
   def getTeamsForRepository(repositoryName: String): Future[Seq[String]] =
-    HttpClient.getWithParsing[List[String]](s"$teamsAndRepositoriesApiBase/repositories/$repositoryName"){json =>
+    HttpClient.getWithParsing[List[String]](s"$teamsAndRepositoriesApiBase/api/repositories/$repositoryName"){json =>
       (json \ "teamNames").as[List[String]]
     }
 
   def getTeamsForServices(): Future[Map[String, Seq[String]]] =
-    HttpClient.getWithParsing[Map[String, Seq[String]]](s"$teamsAndRepositoriesApiBase/services?teamDetails=true") { json =>
+    HttpClient.getWithParsing[Map[String, Seq[String]]](s"$teamsAndRepositoriesApiBase/api/services?teamDetails=true") { json =>
       json.as[Map[String, Seq[String]]]
     }
 
   def getAllRepositories(): Future[Seq[String]] =
-    HttpClient.getWithParsing[Seq[String]](s"$teamsAndRepositoriesApiBase/repositories") { json =>
+    HttpClient.getWithParsing[Seq[String]](s"$teamsAndRepositoriesApiBase/api/repositories") { json =>
     (json \\ "name").map(_.as[String])// this is the json: http://catalogue.tax.service.gov.uk/api/repositories
   }
 }

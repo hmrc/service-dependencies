@@ -120,7 +120,8 @@ class DependenciesDataSource(val releasesConnector: DeploymentsDataSource,
             logger.info(s"getting dependencies for: $repoName")
             val errorOrLibraryDependencies = getLibraryDependencies(repoName, artifacts)
 
-            if (errorOrLibraryDependencies.isLeft && errorOrLibraryDependencies.left.get.isInstanceOf[RequestException]) {
+//!@            if (errorOrLibraryDependencies.isLeft && errorOrLibraryDependencies.left.get.isInstanceOf[RequestException]) {
+            if (errorOrLibraryDependencies.isLeft) {
               // error, short circuit
               logger.error("terminating current run because ===>", errorOrLibraryDependencies.left.get)
               acc

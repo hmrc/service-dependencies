@@ -21,6 +21,7 @@ import java.nio.file.Path
 
 import play.api.Play
 import play.api.libs.json.Json
+import uk.gov.hmrc.play.config.ServicesConfig
 import uk.gov.hmrc.servicedependencies.model.CuratedDependencyConfig
 
 import scala.concurrent.duration._
@@ -34,18 +35,18 @@ trait ReleasesConfig {
   def releasesServiceUrl: String
 }
 
-class ServiceDependenciesConfig(configPath: String) extends CacheConfig with ReleasesConfig {
+class ServiceDependenciesConfig(configPath: String) extends CacheConfig with ReleasesConfig with ServicesConfig {
 
   private val cacheDurationConfigPath = "cache.timeout.duration"
   private val githubOpenConfigKey = "github.open.api"
   private val githubEnterpriseConfigKey = "github.enterprise.api"
   private val releaseServiceUrlKey = "releases.api.url"
   private val targetArtifactsKey = "target.artifacts"
-  private val teamsAndRepositoriesServiceUrlKey = "teamsandrepositories.api.url"
+//  private val teamsAndRepositoriesServiceUrlKey = "teamsandrepositories.api.url"
 
   private val defaultTimeout = 1 day
 
-  lazy val targetArtifact = config(s"$targetArtifactsKey").getOrElse("sbt-plugin")
+  lazy val targetArtifact = optionalConfig(s"$targetArtifactsKey").getOrElse("sbt-plugin")
 
   lazy val curatedDependencyConfig: CuratedDependencyConfig = {
     val stream = getClass.getResourceAsStream(configPath)
@@ -65,16 +66,16 @@ class ServiceDependenciesConfig(configPath: String) extends CacheConfig with Rel
     Play.current.configuration.getMilliseconds(cacheDurationConfigPath).map(_.milliseconds).getOrElse(defaultTimeout)
   }
 
-  lazy val releasesServiceUrl = config(s"$releaseServiceUrlKey").get
-  lazy val teamsAndRepositoriesServiceUrl: String = config(teamsAndRepositoriesServiceUrlKey).get
+  lazy val releasesServiceUrl = optionalConfig(s"$releaseServiceUrlKey").get
+  lazy val teamsAndRepositoriesServiceUrl: String = baseUrl("teams-and-repositories")//optionalConfig(teamsAndRepositoriesServiceUrlKey).get
 
-  private val gitOpenConfig = (key: String) => config(s"$githubOpenConfigKey.$key")
-  private val gitEnterpriseConfig = (key: String) => config(s"$githubEnterpriseConfigKey.$key")
+  private val gitOpenConfig = (key: String) => optionalConfig(s"$githubOpenConfigKey.$key")
+  private val gitEnterpriseConfig = (key: String) => optionalConfig(s"$githubEnterpriseConfigKey.$key")
 
   lazy val githubApiOpenConfig = option(gitOpenConfig).getOrElse(GitApiConfig.fromFile(s"${System.getProperty("user.home")}/.github/.credentials"))
   lazy val githubApiEnterpriseConfig = option(gitEnterpriseConfig).getOrElse(GitApiConfig.fromFile(s"${System.getProperty("user.home")}/.github/.githubenterprise"))
 
-  private def config(path: String) = Play.current.configuration.getString(s"$path")
+  private def optionalConfig(path: String) = Play.current.configuration.getString(s"$path")
   private def option(config: String => Option[String]): Option[GitApiConfig] =
     for {
       host <- config("host")
