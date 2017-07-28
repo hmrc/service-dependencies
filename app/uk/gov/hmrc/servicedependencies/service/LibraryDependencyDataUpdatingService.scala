@@ -26,8 +26,6 @@ import uk.gov.hmrc.servicedependencies.presistence._
 import scala.concurrent.Future
 
 trait LibraryDependencyDataUpdatingService {
-  def boom = throw new RuntimeException("Booom!!!!!!")
-
 
   def repositoryDependencyMongoLock: MongoLock
   def libraryMongoLock: MongoLock
@@ -83,9 +81,7 @@ class DefaultLibraryDependencyDataUpdatingService(override val config: ServiceDe
   private def runMongoUpdate[T](mongoLock: MongoLock)(f: => Future[T]) =
     mongoLock.tryLock {
       logger.info(s"Starting mongo update")
-      val x = f
-      logger.info(s"1")
-      x
+      f
     } map {
       _.getOrElse(throw new RuntimeException(s"Mongo is locked for ${mongoLock.lockId}"))
     } map { r =>

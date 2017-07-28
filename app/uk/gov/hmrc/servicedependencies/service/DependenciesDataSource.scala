@@ -37,9 +37,7 @@ class DependenciesDataSource(val releasesConnector: DeploymentsDataSource,
                              val teamsAndRepositoriesDataSource: TeamsAndRepositoriesDataSource,
                              val config: ServiceDependenciesConfig) {
 
-
   lazy val logger = LoggerFactory.getLogger(this.getClass)
-
 
   lazy val gitEnterpriseClient: GithubApiClient = GithubApiClient(config.githubApiEnterpriseConfig.apiUrl, config.githubApiEnterpriseConfig.key)
   lazy val gitOpenClient: GithubApiClient = GithubApiClient(config.githubApiOpenConfig.apiUrl, config.githubApiOpenConfig.key)
@@ -97,11 +95,7 @@ class DependenciesDataSource(val releasesConnector: DeploymentsDataSource,
                                             currentDependencyEntries: Seq[RepositoryLibraryDependencies],
                                             persisterF: (RepositoryLibraryDependencies) => Future[RepositoryLibraryDependencies]): Future[Seq[RepositoryLibraryDependencies]] = {
 
-    logger.info("persistDependenciesForAllRepositories: 1")
-
     val eventualAllRepos: Future[Seq[String]] = teamsAndRepositoriesDataSource.getAllRepositories()
-
-    logger.info("persistDependenciesForAllRepositories: 2")
 
     val orderedRepos: Future[Seq[String]] = eventualAllRepos.map { repos =>
       val updatedLastOrdered = currentDependencyEntries.sortBy(_.updateDate).map(_.repositoryName)
@@ -109,49 +103,33 @@ class DependenciesDataSource(val releasesConnector: DeploymentsDataSource,
       newRepos ++ updatedLastOrdered
     }
 
-    logger.info("persistDependenciesForAllRepositories: 3")
 
-
-//    @tailrec
+    @tailrec
     def recurse(remainingRepos: Seq[String], acc: Seq[RepositoryLibraryDependencies]): Seq[RepositoryLibraryDependencies] = {
-      try {
+
         remainingRepos match {
           case repoName :: xs =>
             logger.info(s"getting dependencies for: $repoName")
             val errorOrLibraryDependencies = getLibraryDependencies(repoName, artifacts)
 
-//!@            if (errorOrLibraryDependencies.isLeft && errorOrLibraryDependencies.left.get.isInstanceOf[RequestException]) {
             if (errorOrLibraryDependencies.isLeft) {
               // error, short circuit
               logger.error("terminating current run because ===>", errorOrLibraryDependencies.left.get)
               acc
             } else {
-              logger.info("persistDependenciesForAllRepositories: 6")
-
               val repositoryLibraryDependencies = RepositoryLibraryDependencies(repoName, errorOrLibraryDependencies.right.get, timeStampGenerator())
               persisterF(repositoryLibraryDependencies)
               recurse(xs, acc :+ repositoryLibraryDependencies)
             }
 
           case Nil =>
-            logger.info("persistDependenciesForAllRepositories: 5 (got a Nil!!)")
             acc
         }
-      } catch {
-        case ex: Throwable => logger.error("Booom!", ex)
-          throw ex
-      }
-
-    }
-
-    orderedRepos.map { s =>
-      logger.info(s"persistDependenciesForAllRepositories: 4: ${s.mkString(",")}")
-
     }
 
     orderedRepos.map(r => recurse(r.toList, Nil)).andThen{ case s =>
       s match {
-        case Failure(x) => logger.error("Bang!", x)
+        case Failure(x) => logger.error("Error!", x)
         case Success(g) =>
           logger.info(s"finished ordering with ${g.mkString(", ")}")
       }
@@ -159,43 +137,6 @@ class DependenciesDataSource(val releasesConnector: DeploymentsDataSource,
     }
 
   }
-
-
-  ////  def getDependenciesForAllRepositories(artifacts: Seq[String], timeStampGenerator:() => Long): Future[Seq[RepositoryLibraryDependencies]] = {
-//  def getDependenciesForAllRepositories(artifacts: List[String], timeStampGenerator: () => Long, currentDependencyEntries: Seq[RepositoryLibraryDependencies]): Future[Seq[Future[RepositoryLibraryDependencies]]] = {
-//
-//    val eventualAllRepos = teamsAndRepositoriesDataSource.getAllRepositories()
-//
-//    val orderedRepos: Future[Seq[String]] = eventualAllRepos.map { repos =>
-//      val updatedLastOrdered = currentDependencyEntries.sortBy(_.updateDate).reverse.map(_.repositoryName)
-//      val newRepos = repos.filterNot(r => currentDependencyEntries.exists(_.repositoryName == r))
-//      newRepos ++ updatedLastOrdered
-//    }
-//
-//    println("-" * 100)
-//    println(orderedRepos)
-//    println("^" * 100)
-//
-//    orderedRepos.map { repos =>
-////        Future.sequence {
-//          repos//.filter(_ == "catalogue-frontend")
-////            .sorted
-////            .take(10)
-////            .par
-//            .map { repoName =>
-//            exponentialRetry(retries, initialDuration) {
-//              logger.info(s"Getting dependencies for repository: $repoName")
-//              for {
-//                libraryDependencies <- Future(getLibraryDependencies(repoName, artifacts))
-//                dependencies: RepositoryLibraryDependencies = RepositoryLibraryDependencies(repoName, libraryDependencies, timeStampGenerator())
-//
-//              } yield dependencies
-//            }
-//          }
-////        }
-//    }
-//    ???
-//  }
 
 
   import cats.syntax.either._
