@@ -26,6 +26,8 @@ import uk.gov.hmrc.servicedependencies.presistence._
 import scala.concurrent.Future
 
 trait LibraryDependencyDataUpdatingService {
+  def boom = throw new RuntimeException("Booom!!!!!!")
+
 
   def repositoryDependencyMongoLock: MongoLock
   def libraryMongoLock: MongoLock

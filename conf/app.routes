@@ -7,3 +7,5 @@ GET    /reloadDependencies               uk.gov.hmrc.servicedependencies.Service
 
 GET    /libraries                        uk.gov.hmrc.servicedependencies.ServiceDependenciesController.libraries()
 GET    /dependencies                        uk.gov.hmrc.servicedependencies.ServiceDependenciesController.dependencies()
+
+GET /boom    uk.gov.hmrc.servicedependencies.ServiceDependenciesController.boom()

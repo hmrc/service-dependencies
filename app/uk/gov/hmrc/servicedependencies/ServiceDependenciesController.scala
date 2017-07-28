@@ -90,6 +90,15 @@ object ServiceDependenciesController extends ServiceDependenciesController {
 
 
   protected val config = new ServiceDependenciesConfig("/dependency-versions-config.json")
+
+  def boom() = Action {
+
+    if(true)
+      libraryDependencyDataUpdatingService.boom
+
+    Ok
+
+  }
 }
 
 
