@@ -27,7 +27,7 @@ import org.mockito.invocation.InvocationOnMock
 import org.mockito.stubbing.Answer
 import org.scalatest.mock.MockitoSugar
 import org.scalatest.{Matchers, OptionValues, WordSpec}
-import uk.gov.hmrc.githubclient.{ExtendedContentsService, GhRepoRelease, GithubApiClient, ReleaseService}
+import uk.gov.hmrc.githubclient._
 import uk.gov.hmrc.servicedependencies.model.Version
 
 import scala.collection.JavaConverters._
@@ -174,30 +174,30 @@ class GithubSpec
     when(github.gh.releaseService).thenReturn(mockedReleaseService)
 
     "get the latest released library version correctly" in {
-      when(mockedReleaseService.getReleases("HMRC", repoName)).thenReturn(
-        List(GhRepoRelease(123, "release/1.10.1", new Date()),
-          GhRepoRelease(123, "release/1.10.100", new Date()),
-          GhRepoRelease(123, "release/2.10.19", new Date()),
-          GhRepoRelease(123, "release/4.10.19", new Date()),
-          GhRepoRelease(123, "release/4.10.2", new Date())))
+      when(mockedReleaseService.getTags("HMRC", repoName)).thenReturn(
+        List(GhRepoTag( "release/1.10.1"),
+          GhRepoTag( "release/1.10.100"),
+          GhRepoTag( "release/2.10.19"),
+          GhRepoTag( "release/4.10.19"),
+          GhRepoTag( "release/4.10.2")))
 
       github.findLatestLibraryVersion(repoName).value shouldBe Version(4, 10, 19)
     }
 
     "ignore the tags that are not valid releases" in {
      
-      when(mockedReleaseService.getReleases("HMRC", repoName)).thenReturn(
-        List(GhRepoRelease(123, "not-release/1.10.1", new Date()),
-          GhRepoRelease(123, "release/2.10.19", new Date()),
-          GhRepoRelease(123, "release/3.10.19", new Date()),
-          GhRepoRelease(123, "not-release/4.10.3", new Date())))
+      when(mockedReleaseService.getTags("HMRC", repoName)).thenReturn(
+        List(GhRepoTag("not-release/1.10.1"),
+          GhRepoTag("release/2.10.19"),
+          GhRepoTag("release/3.10.19"),
+          GhRepoTag("not-release/4.10.3")))
 
       github.findLatestLibraryVersion(repoName).value shouldBe Version(3, 10, 19)
     }
 
     "handle RequestException(Not Found) case gracefully" in {
       object ReleaseServiceStub extends ReleaseService(mock[GitHubClient]) {
-        override def getReleases(org: String, repoName: String): List[GhRepoRelease] =
+        override def getTags(org: String, repoName: String): List[GhRepoTag] =
           throw new RequestException(new RequestError, 404)
 
       }
@@ -210,7 +210,7 @@ class GithubSpec
 
     "other exceptions should not be handled gracefully" in {
       object ReleaseServiceStub extends ReleaseService(mock[GitHubClient]) {
-        override def getReleases(org: String, repoName: String): List[GhRepoRelease] =
+        override def getTags(org: String, repoName: String): List[GhRepoTag] =
           throw new RequestException(new RequestError, 500)
       }
 

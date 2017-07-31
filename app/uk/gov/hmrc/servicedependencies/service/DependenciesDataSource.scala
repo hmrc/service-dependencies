@@ -67,7 +67,7 @@ class DependenciesDataSource(val releasesConnector: DeploymentsDataSource,
     libraries.map(lib =>
       lib -> getLatestLibraryVersion(lib)
     ).map {
-      case (lib, version) => LibraryVersion(lib, version.getOrElse(Version.empty))
+      case (lib, version) => LibraryVersion(lib, version)
     }
   }
 
@@ -199,7 +199,7 @@ class CachingDependenciesDataSource(akkaSystem: ActorSystem, cacheConfig: CacheC
 
   import ExecutionContext.Implicits._
 
-  //!@ this makes it run on start up. change this
+  // this used to make it run on start up. changed this so that it's run by a sche
   // dataUpdate()
 
   def getCachedData: Future[Seq[ServiceDependencies]] = {

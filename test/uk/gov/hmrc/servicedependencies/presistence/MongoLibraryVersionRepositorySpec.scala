@@ -56,7 +56,7 @@ class MongoLibraryVersionRepositorySpec extends UnitSpec with LoneElement with M
   "update" should {
     "inserts correctly" in {
 
-      val libraryVersion = MongoLibraryVersion("some-library", Version(1, 0, 2))
+      val libraryVersion = MongoLibraryVersion("some-library", Some(Version(1, 0, 2)))
       await(mongoLibraryVersions.update(libraryVersion))
 
       await(mongoLibraryVersions.getAllEntries) shouldBe Seq(libraryVersion)
@@ -64,8 +64,8 @@ class MongoLibraryVersionRepositorySpec extends UnitSpec with LoneElement with M
 
     "updates correctly (based on library name)" in {
 
-      val libraryVersion = MongoLibraryVersion("some-library", Version(1, 0, 2))
-      val newLibraryVersion = libraryVersion.copy(version = Version(1, 0, 5))
+      val libraryVersion = MongoLibraryVersion("some-library", Some(Version(1, 0, 2)))
+      val newLibraryVersion = libraryVersion.copy(version = Some(Version(1, 0, 5)))
       await(mongoLibraryVersions.update(libraryVersion))
 
       await(mongoLibraryVersions.update(newLibraryVersion))
@@ -77,7 +77,7 @@ class MongoLibraryVersionRepositorySpec extends UnitSpec with LoneElement with M
   "clearAllDependencyEntries" should {
     "deletes everything" in {
 
-      val libraryVersion = MongoLibraryVersion("some-library", Version(1, 0, 2))
+      val libraryVersion = MongoLibraryVersion("some-library", Some(Version(1, 0, 2)))
       await(mongoLibraryVersions.update(libraryVersion))
 
       await(mongoLibraryVersions.getAllEntries) should have size 1

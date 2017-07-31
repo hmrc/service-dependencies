@@ -20,7 +20,7 @@ private object AppDependencies {
   private val hmrcTestVersion = "2.3.0"
   private val scalaTestVersion = "2.2.6"
   private val pegdownVersion = "1.6.0"
-  private val githubClientVersion = "1.13.0"
+  private val githubClientVersion = "1.14.0"
   private val mockitoVersion = "2.2.6"
   private val wireMockVersion = "1.55"
   private val scalaTestPlusPlayVersion = "1.5.1"

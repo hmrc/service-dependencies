@@ -20,15 +20,15 @@ import java.util.Date
 
 import play.api.libs.json.Json
 
-case class MongoLibraryVersion(libraryName: String, version: Version, updateDate: Long = new Date().getTime)
+case class MongoLibraryVersion(libraryName: String, version: Option[Version], updateDate: Long = new Date().getTime)
 object MongoLibraryVersion {
   implicit val format = Json.format[MongoLibraryVersion]
 }
 
 
-case class LibraryVersion(libraryName: String, version: Version)
+case class LibraryVersion(libraryName: String, version: Option[Version])
 object LibraryVersion {
   implicit val format = Json.format[LibraryVersion]
 
-  def apply(libraryVersion: MongoLibraryVersion): LibraryVersion = LibraryVersion(libraryVersion.libraryName, libraryVersion.version)
+  def apply(mongoLibraryVersion: MongoLibraryVersion): LibraryVersion = LibraryVersion(mongoLibraryVersion.libraryName, mongoLibraryVersion.version)
 }

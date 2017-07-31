@@ -368,7 +368,7 @@ class DependenciesDataSourceSpec extends FreeSpec with Matchers with ScalaFuture
       Map("library1" -> Version(1,0,0), "library2" -> Version(2,0,0), "library3" -> Version(3,0,0)))
 
 
-    def extractLibVersion(results: Seq[LibraryVersion], lib:String): Version =
+    def extractLibVersion(results: Seq[LibraryVersion], lib:String): Option[Version] =
       results.filter(_.libraryName == lib).head.version
 
     "should get the latest library version" in {
@@ -382,9 +382,9 @@ class DependenciesDataSourceSpec extends FreeSpec with Matchers with ScalaFuture
       // 3 is for "library1", "library2" and "library3"
       results.size shouldBe 3
 
-      extractLibVersion(results, "library1") shouldBe Version(1,0,0)
-      extractLibVersion(results, "library2") shouldBe Version(2,0,0)
-      extractLibVersion(results, "library3") shouldBe Version(3,0,0)
+      extractLibVersion(results, "library1") shouldBe Some(Version(1,0,0))
+      extractLibVersion(results, "library2") shouldBe Some(Version(2,0,0))
+      extractLibVersion(results, "library3") shouldBe Some(Version(3,0,0))
 
     }
 

@@ -42,10 +42,10 @@ class LibraryDependencyDataUpdatingServiceSpec extends FunSpec with MockitoSugar
 
       val underTest = new TestLibraryDependencyDataUpdatingService(noLockTestMongoLockBuilder)
       when(underTest.dependenciesDataSource.getLatestLibrariesVersions(any()))
-        .thenReturn(Seq(LibraryVersion("libYY", Version(1, 1, 1))))
+        .thenReturn(Seq(LibraryVersion("libYY", Some(Version(1, 1, 1)))))
       underTest.reloadLibraryVersions(staticTimeStampGenerator)
 
-      verify(underTest.mockedLibraryVersionRepository, times(1)).update(MongoLibraryVersion("libYY", Version(1, 1, 1), staticTimeStampGenerator()))
+      verify(underTest.mockedLibraryVersionRepository, times(1)).update(MongoLibraryVersion("libYY", Some(Version(1, 1, 1)), staticTimeStampGenerator()))
       verifyZeroInteractions(underTest.mockedRepositoryLibraryDependenciesRepository)
     }
 
@@ -91,8 +91,8 @@ class LibraryDependencyDataUpdatingServiceSpec extends FunSpec with MockitoSugar
         .thenReturn(Future.successful(Some(RepositoryLibraryDependencies(repositoryName, libraryDependencies))))
 
       val referenceLibraryVersions = Seq(
-        MongoLibraryVersion("lib1", Version(1, 1, 0)),
-        MongoLibraryVersion("lib2", Version(2, 1, 0))
+        MongoLibraryVersion("lib1", Some(Version(1, 1, 0))),
+        MongoLibraryVersion("lib2", Some(Version(2, 1, 0)))
       )
       when(underTest.libraryVersionRepository.getAllEntries)
         .thenReturn(Future.successful(referenceLibraryVersions))

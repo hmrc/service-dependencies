@@ -58,9 +58,9 @@ abstract class Github(buildFilePaths: Seq[String]) {
 
   def findLatestLibraryVersion(libraryName: String): Option[Version] = {
 
-    val allVersions = Try(gh.releaseService.getReleases(org, libraryName).map(_.tagName)).recover {
+    val allVersions = Try(gh.releaseService.getTags(org, libraryName).map(_.name)).recover {
       case ex: RequestException if ex.getStatus == 404 =>
-        logger.info(s"Library $libraryName not present")
+        logger.info(s"Library $libraryName not found")
         Nil
     }.get
 

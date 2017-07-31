@@ -28,7 +28,7 @@
      "play-url-binders",
      "reactive-circuit-breaker",
      "reactivemongo-json",
-     "reactivemono-test",
+     "reactivemongo-test",
      "scala-webdriver",
      "tax-year",
      "time",

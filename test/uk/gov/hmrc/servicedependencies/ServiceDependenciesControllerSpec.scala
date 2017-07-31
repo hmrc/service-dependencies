@@ -72,9 +72,9 @@ class ServiceDependenciesControllerSpec extends FreeSpec with BeforeAndAfterEach
     "should get all the curated libraries using the service" in new Setup {
       val mockedLibraryDependencyDataUpdatingService = mock[LibraryDependencyDataUpdatingService]
       val libraryVersions = Seq(
-        MongoLibraryVersion("lib1", Version(1, 0, 0), 1234l),
-        MongoLibraryVersion("lib2", Version(2, 0, 0), 1234l),
-        MongoLibraryVersion("lib3", Version(3, 0, 0), 1234l)
+        MongoLibraryVersion("lib1", Some(Version(1, 0, 0)), 1234l),
+        MongoLibraryVersion("lib2", Some(Version(2, 0, 0)), 1234l),
+        MongoLibraryVersion("lib3", Some(Version(3, 0, 0)), 1234l)
       )
       when(mockedLibraryDependencyDataUpdatingService.getAllCuratedLibraries()).thenReturn(Future.successful(
         libraryVersions

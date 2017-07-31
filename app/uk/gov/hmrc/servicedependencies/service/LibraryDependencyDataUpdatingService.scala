@@ -65,7 +65,10 @@ class DefaultLibraryDependencyDataUpdatingService(override val config: ServiceDe
   override def reloadLibraryVersions(timeStampGenerator:() => Long): Future[Seq[MongoLibraryVersion]] = {
     runMongoUpdate(libraryMongoLock) {
       val latestLibraryVersions = dependenciesDataSource.getLatestLibrariesVersions(curatedLibraries)
-      Future.sequence(latestLibraryVersions.map(x => libraryVersionRepository.update(MongoLibraryVersion(x.libraryName, x.version, timeStampGenerator()))))
+
+      Future.sequence(latestLibraryVersions.map { x =>
+        libraryVersionRepository.update(MongoLibraryVersion(x.libraryName, x.version, timeStampGenerator()))
+      })
     }
   }
 
@@ -94,7 +97,7 @@ class DefaultLibraryDependencyDataUpdatingService(override val config: ServiceDe
       dependencies <- repositoryLibraryDependenciesRepository.getForRepository(repositoryName)
       references <- libraryVersionRepository.getAllEntries
     } yield
-      dependencies.map(dep => RepositoryDependencies(repositoryName, dep.libraryDependencies.map(d => LibraryDependencyState(d.libraryName, d.currentVersion, references.find(mlv => mlv.libraryName == d.libraryName).map(_.version)))))
+      dependencies.map(dep => RepositoryDependencies(repositoryName, dep.libraryDependencies.map(d => LibraryDependencyState(d.libraryName, d.currentVersion, references.find(mlv => mlv.libraryName == d.libraryName).flatMap(_.version)))))
 
   override def getAllCuratedLibraries(): Future[Seq[MongoLibraryVersion]] =
     libraryVersionRepository.getAllEntries
