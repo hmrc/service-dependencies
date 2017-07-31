@@ -38,7 +38,6 @@ abstract class Scheduler {
   def akkaSystem: ActorSystem
   def libraryDependencyDataUpdatingService: LibraryDependencyDataUpdatingService
 
-
   private val timeStampGenerator = ServiceDependenciesController.timeStampGenerator
 
   def startUpdatingLibraryDependencyData(interval: FiniteDuration): Cancellable = {
