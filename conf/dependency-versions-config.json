@@ -1,5 +1,15 @@
 {
-  "sbtPlugins": [],
+  "sbtPlugins": [
+     {
+        "name": "sbt-auto-build",
+        "org": "uk.gov.hmrc"
+     },
+     {
+        "name": "sbt-plugin",
+        "org": "com.typesafe.play",
+        "version": "1.4.0"
+     }
+  ],
   "libraries": [
      "domain",
      "frontend-bootstrap",

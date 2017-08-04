@@ -1,5 +1,15 @@
 {
-  "sbtPlugins": [],
+  "sbtPlugins": [
+    {
+      "org": "uk.gov.hmrc",
+      "name": "internal-plugin"
+    },
+    {
+      "org": "com.example.external",
+      "name": "external-plugin",
+      "version": "1.4.0"
+    }
+  ],
   "libraries": [
     "lib1",
     "lib2"

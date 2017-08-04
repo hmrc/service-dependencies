@@ -42,7 +42,5 @@ object Version {
     Integer.parseInt(split(2)))
   }
 
-  val empty = Version(0,0,0)
-
   implicit val ord = Ordering.by(unapply)
 }
