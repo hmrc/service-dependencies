@@ -31,7 +31,7 @@ object CuratedDependencyConfig {
   implicit val configReader = Json.reads[CuratedDependencyConfig]
 }
 
-case class SbtPlugins(org: String, name: String, version: Option[String]) {
+case class SbtPlugins(org: String, name: String, version: Option[Version]) {
   def isInternal() = org == "uk.gov.hmrc"
 
 }

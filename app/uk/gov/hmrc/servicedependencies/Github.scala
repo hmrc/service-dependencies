@@ -38,6 +38,7 @@ abstract class Github(buildFilePaths: Seq[String]) {
 
   def findVersionsForMultipleArtifacts(repoName: String, artifacts: Seq[String]): Map[String, Option[Version]] = {
 
+    // ToDo: Finish searching sbt versions for multiple artifacts
 //    val result = searchPluginSbtFileForMultipleArtifacts(repoName, artifacts)
 ////
 //    if (result.nonEmpty)
