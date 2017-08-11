@@ -97,7 +97,7 @@ class DependenciesDataSource(val releasesConnector: DeploymentsDataSource,
                                             currentDependencyEntries: Seq[MongoRepositoryDependencies],
                                             persisterF: (MongoRepositoryDependencies) => Future[MongoRepositoryDependencies]): Future[Seq[MongoRepositoryDependencies]] = {
 
-    val eventualAllRepos: Future[Seq[String]] = teamsAndRepositoriesDataSource.getAllRepositories()
+    val eventualAllRepos: Future[Seq[String]] = teamsAndRepositoriesDataSource.getAllRepositories().map(rs => rs.take(10))
 
     val orderedRepos: Future[Seq[String]] = eventualAllRepos.map { repos =>
       val updatedLastOrdered = currentDependencyEntries.sortBy(_.updateDate).map(_.repositoryName)
@@ -119,7 +119,7 @@ class DependenciesDataSource(val releasesConnector: DeploymentsDataSource,
               logger.error("terminating current run because ===>", errorOrDependencies.left.get)
               acc
             } else {
-              errorOrDependencies.right.get.fold(Seq.empty[MongoRepositoryDependencies]) { (x: DependenciesFromGitHub) =>
+              errorOrDependencies.right.get.fold(getLibDependencies(xs, acc)) { (x: DependenciesFromGitHub) =>
                 val repositoryLibraryDependencies = MongoRepositoryDependencies(repoName, x.libraries, x.sbtPlugins, timeStampGenerator())
                 persisterF(repositoryLibraryDependencies)
                 getLibDependencies(xs, acc :+ repositoryLibraryDependencies)
