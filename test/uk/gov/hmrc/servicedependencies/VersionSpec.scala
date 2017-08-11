@@ -54,4 +54,8 @@ class VersionSpec
   "Can be printed to strings" in {
     Version(1,2,3).toString mustBe "1.2.3"
   }
+
+  "apply should parse" in {
+    Version("1.2.3") mustBe Version(1,2,3)
+  }
 }

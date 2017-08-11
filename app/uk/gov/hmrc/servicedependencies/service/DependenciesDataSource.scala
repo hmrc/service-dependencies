@@ -92,12 +92,13 @@ class DependenciesDataSource(val releasesConnector: DeploymentsDataSource,
 
 
 
+  //!@ add tests for plugins
   def persistDependenciesForAllRepositories(curatedDependencyConfig: CuratedDependencyConfig,
                                             timeStampGenerator: () => Long,
                                             currentDependencyEntries: Seq[MongoRepositoryDependencies],
                                             persisterF: (MongoRepositoryDependencies) => Future[MongoRepositoryDependencies]): Future[Seq[MongoRepositoryDependencies]] = {
 
-    val eventualAllRepos: Future[Seq[String]] = teamsAndRepositoriesDataSource.getAllRepositories().map(rs => rs.take(10))
+    val eventualAllRepos: Future[Seq[String]] = teamsAndRepositoriesDataSource.getAllRepositories().map(rs => rs.take(100))
 
     val orderedRepos: Future[Seq[String]] = eventualAllRepos.map { repos =>
       val updatedLastOrdered = currentDependencyEntries.sortBy(_.updateDate).map(_.repositoryName)
@@ -106,7 +107,7 @@ class DependenciesDataSource(val releasesConnector: DeploymentsDataSource,
     }
 
 
-//!@    @tailrec
+    @tailrec
     def getLibDependencies(remainingRepos: Seq[String], acc: Seq[MongoRepositoryDependencies]): Seq[MongoRepositoryDependencies] = {
 
         remainingRepos match {
@@ -119,11 +120,15 @@ class DependenciesDataSource(val releasesConnector: DeploymentsDataSource,
               logger.error("terminating current run because ===>", errorOrDependencies.left.get)
               acc
             } else {
-              errorOrDependencies.right.get.fold(getLibDependencies(xs, acc)) { (x: DependenciesFromGitHub) =>
-                val repositoryLibraryDependencies = MongoRepositoryDependencies(repoName, x.libraries, x.sbtPlugins, timeStampGenerator())
-                persisterF(repositoryLibraryDependencies)
-                getLibDependencies(xs, acc :+ repositoryLibraryDependencies)
+              errorOrDependencies.right.get match {
+                case None =>
+                  getLibDependencies(xs, acc)
+                case Some(dependencies) =>
+                  val repositoryLibraryDependencies = MongoRepositoryDependencies(repoName, dependencies.libraries, dependencies.sbtPlugins, timeStampGenerator())
+                  persisterF(repositoryLibraryDependencies)
+                  getLibDependencies(xs, acc :+ repositoryLibraryDependencies)
               }
+
             }
 
           case Nil =>

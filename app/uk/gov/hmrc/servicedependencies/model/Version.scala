@@ -38,6 +38,7 @@ case class Version(major: Int, minor: Int, patch: Int) {
 object Version {
   implicit val format = Json.format[Version]
 
+
   def apply(version: String): Version =
     parse(version)
 

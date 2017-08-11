@@ -37,6 +37,7 @@ abstract class Github(buildFilePaths: Seq[String]) {
 
   lazy val logger = LoggerFactory.getLogger(this.getClass)
 
+  //!@ test the new bits (both sbt and libs being populated)
   def findVersionsForMultipleArtifacts(repoName: String, curatedDependencyConfig: CuratedDependencyConfig): GithubSearchResults = {
 
     GithubSearchResults(

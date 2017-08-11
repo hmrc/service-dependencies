@@ -63,6 +63,7 @@ class DefaultLibraryDependencyDataUpdatingService(override val config: ServiceDe
 
   lazy val curatedDependencyConfig = config.curatedDependencyConfig
 
+  //!@ test the new plugin addition
   override def reloadLibraryVersions(timeStampGenerator:() => Long): Future[Seq[MongoLibraryVersion]] = {
     runMongoUpdate(libraryMongoLock) {
       val latestLibraryVersions = dependenciesDataSource.getLatestLibrariesVersions(curatedDependencyConfig.libraries)

@@ -26,7 +26,6 @@ case class Other(sbt: String)
 case class CuratedDependencyConfig(sbtPlugins: Seq[SbtPluginConfig],
                                    libraries: Seq[String],
                                    other: Other)
-
 object CuratedDependencyConfig {
   implicit val otherReader = Json.reads[Other]
 
