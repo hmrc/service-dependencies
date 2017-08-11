@@ -18,14 +18,16 @@ package uk.gov.hmrc.servicedependencies
 
 import java.util.Base64
 
-import org.eclipse.egit.github.core.{RepositoryContents, RequestError}
 import org.eclipse.egit.github.core.client.RequestException
+import org.eclipse.egit.github.core.{RepositoryContents, RequestError}
 import org.mockito.ArgumentMatchers.any
-import org.mockito.Mockito.{times, verify, when}
+import org.mockito.Mockito.when
 import org.scalatest.concurrent.{IntegrationPatience, ScalaFutures}
 import org.scalatest.mock.MockitoSugar
 import org.scalatest.{FreeSpec, Matchers}
 import uk.gov.hmrc.githubclient.{ExtendedContentsService, GithubApiClient}
+import uk.gov.hmrc.servicedependencies.config._
+import uk.gov.hmrc.servicedependencies.config.model.{CuratedDependencyConfig, Other}
 import uk.gov.hmrc.servicedependencies.model._
 import uk.gov.hmrc.servicedependencies.service._
 
@@ -35,7 +37,8 @@ import scala.concurrent.Future
 
 class DependenciesDataSourceSpec extends FreeSpec with Matchers with ScalaFutures with MockitoSugar with IntegrationPatience {
 
-  type FindVersionsForMultipleArtifactsF = (String, Seq[String]) => Map[String, Option[Version]]
+//  type FindVersionsForMultipleArtifactsF = (String, Seq[String]) => Map[String, Option[Version]]
+  type FindVersionsForMultipleArtifactsF = (String, Seq[String]) => GithubSearchResults
 
   val servicesStub = new DeploymentsDataSource(new ReleasesConfig { override def releasesServiceUrl: String = ""}) {
     override def listOfRunningServices(): Future[List[Service]] = {
@@ -75,9 +78,13 @@ class DependenciesDataSourceSpec extends FreeSpec with Matchers with ScalaFuture
       }
     }
 
-    override def findVersionsForMultipleArtifacts(repoName: String, artifacts: Seq[String]): Map[String, Option[Version]] = {
-      findVersionsForMultipleArtifactsF.get.apply(repoName, artifacts)
-    }
+
+//    override def findVersionsForMultipleArtifacts(repoName: String, curatedDependencyConfig: CuratedDependencyConfig): Map[String, Option[Version]] = {
+//      findVersionsForMultipleArtifactsF.get.apply(repoName, curatedDependencyConfig.libraries)
+//    }
+
+    override def findVersionsForMultipleArtifacts(repoName: String, curatedDependencyConfig: CuratedDependencyConfig): GithubSearchResults =
+      findVersionsForMultipleArtifactsF.get.apply(repoName, curatedDependencyConfig.libraries)
 
     override def findLatestLibraryVersion(libraryName: String): Option[Version] = {
        libVersions.get(libraryName)
@@ -136,25 +143,26 @@ class DependenciesDataSourceSpec extends FreeSpec with Matchers with ScalaFuture
 
   "getDependenciesForAllRepositories" - {
 
-    val lookupTable = Map(
-      "repo1" -> Map("library1" -> Some(Version(1, 0, 1))),
-      "repo2" -> Map("library1" -> Some(Version(1, 0, 2)), "library2" -> Some(Version(2, 0, 3))),
-      "repo3" -> Map("library1" -> Some(Version(1, 0, 3)), "library3" -> Some(Version(3, 0, 4))),
-      "repo4" -> Map("library1" -> Some(Version(1, 0, 3)), "library3" -> Some(Version(3, 0, 4)))
-    )
+    def lookupTable(repo: String) = repo match {
+      case "repo1" => GithubSearchResults(Map.empty, Map("library1" -> Some(Version(1, 0, 1))))
+      case "repo2" => GithubSearchResults(Map.empty, Map("library1" -> Some(Version(1, 0, 2)), "library2" -> Some(Version(2, 0, 3))))
+      case "repo3" => GithubSearchResults(Map.empty, Map("library1" -> Some(Version(1, 0, 3)), "library3" -> Some(Version(3, 0, 4))))
+      case "repo4" => GithubSearchResults(Map.empty, Map("library1" -> Some(Version(1, 0, 3)), "library3" -> Some(Version(3, 0, 4))))
+      case _ => throw new RuntimeException(s"No entry in lookup function for repoName: $repo")
+    }
 
-    def findVersionsForMultipleArtifactsF(repoName: String, artifacts: Seq[String]): Map[String, Option[Version]] = {
+    def findVersionsForMultipleArtifactsF(repoName: String, artifacts: Seq[String]): GithubSearchResults = {
       println(s"repoName $repoName artifacts: $artifacts")
-      lookupTable.getOrElse(repoName, throw new RuntimeException(s"No entry in lookup table for repoName: $repoName"))
+      lookupTable(repoName)
     }
 
     val githubStubForMultiArtifacts = new GithubStub(Map(), Some(findVersionsForMultipleArtifactsF))
 
 
-    def getLibDependencies(results: Seq[RepositoryLibraryDependencies], repo: String) =
+    def getLibDependencies(results: Seq[MongoRepositoryDependencies], repo: String) =
       results.filter(_.repositoryName == repo).head.libraryDependencies
 
-    val curatedListOfLibraries = Seq("library1", "library2", "library3")
+    val curatedDependencyConfig = CuratedDependencyConfig(Nil, Seq("library1", "library2", "library3"), Other(""))
 
     val timestampF: () => Long = () => 1234l
 
@@ -162,14 +170,14 @@ class DependenciesDataSourceSpec extends FreeSpec with Matchers with ScalaFuture
 
       val dataSource = prepareUnderTestClass(Seq(githubStubForMultiArtifacts), Seq("repo1", "repo2", "repo3"))
 
-      var callsToPersisterF = ListBuffer.empty[RepositoryLibraryDependencies]
-      val persisterF:RepositoryLibraryDependencies => Future[RepositoryLibraryDependencies] = { repositoryLibraryDependencies =>
+      var callsToPersisterF = ListBuffer.empty[MongoRepositoryDependencies]
+      val persisterF: MongoRepositoryDependencies => Future[MongoRepositoryDependencies] = { repositoryLibraryDependencies =>
         callsToPersisterF += repositoryLibraryDependencies
         Future.successful(repositoryLibraryDependencies)
       }
 
 
-      dataSource.persistDependenciesForAllRepositories(curatedListOfLibraries, timestampF, Nil, persisterF).futureValue
+      dataSource.persistDependenciesForAllRepositories(curatedDependencyConfig, timestampF, Nil, persisterF).futureValue
 
       callsToPersisterF.size shouldBe 3
 
@@ -219,18 +227,18 @@ class DependenciesDataSourceSpec extends FreeSpec with Matchers with ScalaFuture
       when(mockedExtendedContentsServiceForOpen.getContents(any(), any())).thenReturn(List(new RepositoryContents().setContent(base64(openContents))).asJava)
       when(mockedExtendedContentsServiceForEnterprise.getContents(any(), any())).thenReturn(List(new RepositoryContents().setContent(base64(enterpriseContents))).asJava)
 
-      var callsToPersisterF = ListBuffer.empty[RepositoryLibraryDependencies]
-      val persisterF:RepositoryLibraryDependencies => Future[RepositoryLibraryDependencies] = { repositoryLibraryDependencies =>
+      var callsToPersisterF = ListBuffer.empty[MongoRepositoryDependencies]
+      val persisterF:MongoRepositoryDependencies => Future[MongoRepositoryDependencies] = { repositoryLibraryDependencies =>
         callsToPersisterF += repositoryLibraryDependencies
         Future.successful(repositoryLibraryDependencies)
       }
 
-      dataSource.persistDependenciesForAllRepositories(curatedListOfLibraries, timestampF, Nil, persisterF).futureValue
+      dataSource.persistDependenciesForAllRepositories(curatedDependencyConfig, timestampF, Nil, persisterF).futureValue
 
-      callsToPersisterF should contain theSameElementsAs List(
-        RepositoryLibraryDependencies("repo1", List(LibraryDependency("library1", Version(1, 0, 0)), LibraryDependency("library2", Version(2, 0, 0)), LibraryDependency("library3", Version(3, 0, 0))), 1234),
-        RepositoryLibraryDependencies("repo2", List(LibraryDependency("library1", Version(1, 0, 0)), LibraryDependency("library2", Version(2, 0, 0)), LibraryDependency("library3", Version(3, 0, 0))), 1234),
-        RepositoryLibraryDependencies("repo3", List(LibraryDependency("library1", Version(1, 0, 0)), LibraryDependency("library2", Version(2, 0, 0)), LibraryDependency("library3", Version(3, 0, 0))), 1234)
+      callsToPersisterF should contain theSameElementsAs Seq(
+        MongoRepositoryDependencies("repo1", Seq(LibraryDependency("library1", Version(1, 0, 0)), LibraryDependency("library2", Version(2, 0, 0)), LibraryDependency("library3", Version(3, 0, 0))), Nil, 1234),
+        MongoRepositoryDependencies("repo2", Seq(LibraryDependency("library1", Version(1, 0, 0)), LibraryDependency("library2", Version(2, 0, 0)), LibraryDependency("library3", Version(3, 0, 0))), Nil, 1234),
+        MongoRepositoryDependencies("repo3", Seq(LibraryDependency("library1", Version(1, 0, 0)), LibraryDependency("library2", Version(2, 0, 0)), LibraryDependency("library3", Version(3, 0, 0))), Nil, 1234)
       )
     }
 
@@ -254,19 +262,19 @@ class DependenciesDataSourceSpec extends FreeSpec with Matchers with ScalaFuture
       when(mockedExtendedContentsServiceForOpen.getContents(any(), any())).thenReturn(List(new RepositoryContents().setContent(base64(openContents))).asJava)
       when(mockedExtendedContentsServiceForEnterprise.getContents(any(), any())).thenReturn(List(new RepositoryContents().setContent(base64(enterpriseContents))).asJava)
 
-      var callsToPersisterF = ListBuffer.empty[RepositoryLibraryDependencies]
-      val persisterF:RepositoryLibraryDependencies => Future[RepositoryLibraryDependencies] = { repositoryLibraryDependencies =>
+      var callsToPersisterF = ListBuffer.empty[MongoRepositoryDependencies]
+      val persisterF:MongoRepositoryDependencies => Future[MongoRepositoryDependencies] = { repositoryLibraryDependencies =>
         callsToPersisterF += repositoryLibraryDependencies
         Future.successful(repositoryLibraryDependencies)
       }
 
 
-      dataSource.persistDependenciesForAllRepositories(curatedListOfLibraries, timestampF, Nil, persisterF).futureValue
+      dataSource.persistDependenciesForAllRepositories(curatedDependencyConfig, timestampF, Nil, persisterF).futureValue
 
       callsToPersisterF should contain theSameElementsAs List(
-        RepositoryLibraryDependencies("repo1", List(LibraryDependency("library1", Version(1, 0, 0)), LibraryDependency("library3", Version(3, 0, 0))), 1234),
-        RepositoryLibraryDependencies("repo2", List(LibraryDependency("library1", Version(1, 0, 0)), LibraryDependency("library3", Version(3, 0, 0))), 1234),
-        RepositoryLibraryDependencies("repo3", List(LibraryDependency("library1", Version(1, 0, 0)), LibraryDependency("library3", Version(3, 0, 0))), 1234)
+        MongoRepositoryDependencies("repo1", List(LibraryDependency("library1", Version(1, 0, 0)), LibraryDependency("library3", Version(3, 0, 0))), Nil, 1234),
+        MongoRepositoryDependencies("repo2", List(LibraryDependency("library1", Version(1, 0, 0)), LibraryDependency("library3", Version(3, 0, 0))), Nil, 1234),
+        MongoRepositoryDependencies("repo3", List(LibraryDependency("library1", Version(1, 0, 0)), LibraryDependency("library3", Version(3, 0, 0))), Nil, 1234)
       )
     }
 
@@ -275,7 +283,7 @@ class DependenciesDataSourceSpec extends FreeSpec with Matchers with ScalaFuture
 
       var callCount = 0
 
-      def findVersionsF_withRateLimitException(repoName: String, artifacts: Seq[String]): Map[String, Option[Version]] = {
+      def findVersionsF_withRateLimitException(repoName: String, artifacts: Seq[String]): GithubSearchResults = {
         if(callCount >= 2) {
           val requestError = mock[RequestError]
           when(requestError.getMessage).thenReturn("rate limit exceeded")
@@ -285,7 +293,7 @@ class DependenciesDataSourceSpec extends FreeSpec with Matchers with ScalaFuture
         callCount += 1
 
         println(s"repoName $repoName artifacts: $artifacts")
-        lookupTable.getOrElse(repoName, throw new RuntimeException(s"No entry in lookup table for repoName: $repoName"))
+        lookupTable(repoName)
       }
 
 
@@ -294,7 +302,7 @@ class DependenciesDataSourceSpec extends FreeSpec with Matchers with ScalaFuture
       val dataSource = prepareUnderTestClass(Seq(githubStubWithRateLimitException), Seq("repo1", "repo2", "repo3", "repo4"))
 
       dataSource.persistDependenciesForAllRepositories(
-        artifacts = curatedListOfLibraries,
+        curatedDependencyConfig = curatedDependencyConfig,
         timeStampGenerator = timestampF,
         currentDependencyEntries = Nil,
         persisterF = rlp => Future.successful(rlp)).futureValue
@@ -305,23 +313,23 @@ class DependenciesDataSourceSpec extends FreeSpec with Matchers with ScalaFuture
 
     "should get the new repos (non existing in db) first" in {
 
-      var callsToPersisterF = ListBuffer.empty[RepositoryLibraryDependencies]
+      var callsToPersisterF = ListBuffer.empty[MongoRepositoryDependencies]
 
       val dataSource = prepareUnderTestClass(Seq(githubStubForMultiArtifacts), Seq("repo1", "repo2", "repo3", "repo4"))
-      val persisterF:RepositoryLibraryDependencies => Future[RepositoryLibraryDependencies] = { repositoryLibraryDependencies =>
+      val persisterF:MongoRepositoryDependencies => Future[MongoRepositoryDependencies] = { repositoryLibraryDependencies =>
         callsToPersisterF += repositoryLibraryDependencies
         Future.successful(repositoryLibraryDependencies)
       }
 
 
       val dependenciesAlreadyInDb = Seq(
-        RepositoryLibraryDependencies("repo1", Nil),
-        RepositoryLibraryDependencies("repo3", Nil)
+        MongoRepositoryDependencies("repo1",Nil, Nil),
+        MongoRepositoryDependencies("repo3",Nil, Nil)
       )
 
 
       dataSource.persistDependenciesForAllRepositories(
-        artifacts = curatedListOfLibraries,
+        curatedDependencyConfig = curatedDependencyConfig,
         timeStampGenerator = timestampF,
         currentDependencyEntries = dependenciesAlreadyInDb,
         persisterF = persisterF).futureValue
@@ -332,24 +340,24 @@ class DependenciesDataSourceSpec extends FreeSpec with Matchers with ScalaFuture
     }
 
     "should get the oldest updated repos next" in {
-      var callsToPersisterF = ListBuffer.empty[RepositoryLibraryDependencies]
+      var callsToPersisterF = ListBuffer.empty[MongoRepositoryDependencies]
 
       val dataSource = prepareUnderTestClass(Seq(githubStubForMultiArtifacts), Seq("repo1", "repo2", "repo3", "repo4"))
 
-      val persisterF:RepositoryLibraryDependencies => Future[RepositoryLibraryDependencies] = { repositoryLibraryDependencies =>
+      val persisterF:MongoRepositoryDependencies => Future[MongoRepositoryDependencies] = { repositoryLibraryDependencies =>
         callsToPersisterF += repositoryLibraryDependencies
         Future.successful(repositoryLibraryDependencies)
       }
 
 
       val dependenciesAlreadyInDb = Seq(
-        RepositoryLibraryDependencies("repo1", Nil, 20000l),
-        RepositoryLibraryDependencies("repo3", Nil, 10000l) // <-- oldest record should get updated first
+        MongoRepositoryDependencies("repo1", Nil, Nil, 20000l),
+        MongoRepositoryDependencies("repo3", Nil, Nil, 10000l) // <-- oldest record should get updated first
       )
 
 
       dataSource.persistDependenciesForAllRepositories(
-        artifacts = curatedListOfLibraries,
+        curatedDependencyConfig = curatedDependencyConfig,
         timeStampGenerator = timestampF,
         currentDependencyEntries = dependenciesAlreadyInDb,
         persisterF = persisterF).futureValue

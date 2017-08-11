@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.servicedependencies
+package uk.gov.hmrc.servicedependencies.config
 
 import java.io.File
 import java.nio.file.Path
@@ -22,7 +22,7 @@ import java.nio.file.Path
 import play.api.Play
 import play.api.libs.json.Json
 import uk.gov.hmrc.play.config.ServicesConfig
-import uk.gov.hmrc.servicedependencies.model.CuratedDependencyConfig
+import uk.gov.hmrc.servicedependencies.config.model.CuratedDependencyConfig
 
 import scala.concurrent.duration._
 import scala.io.Source

@@ -31,18 +31,18 @@ import scala.concurrent.{ExecutionContext, Future}
 
 
 trait RepositoryLibraryDependenciesRepository {
-  def update(repositoryLibraryDependencies: RepositoryLibraryDependencies): Future[RepositoryLibraryDependencies]
+  def update(repositoryLibraryDependencies: MongoRepositoryDependencies): Future[MongoRepositoryDependencies]
 
-  def getForRepository(repositoryName: String): Future[Option[RepositoryLibraryDependencies]]
-  def getAllEntries: Future[List[RepositoryLibraryDependencies]]
+  def getForRepository(repositoryName: String): Future[Option[MongoRepositoryDependencies]]
+  def getAllEntries: Future[List[MongoRepositoryDependencies]]
   def clearAllData: Future[Boolean]
 }
 
 class MongoRepositoryLibraryDependenciesRepository(mongo: () => DB)
-  extends ReactiveRepository[RepositoryLibraryDependencies, BSONObjectID](
+  extends ReactiveRepository[MongoRepositoryDependencies, BSONObjectID](
     collectionName = "repositoryLibraryDependencies",
     mongo = mongo,
-    domainFormat = RepositoryLibraryDependencies.format) with RepositoryLibraryDependenciesRepository {
+    domainFormat = MongoRepositoryDependencies.format) with RepositoryLibraryDependenciesRepository {
 
   override def ensureIndexes(implicit ec: ExecutionContext): Future[Seq[Boolean]] = localEnsureIndexes
 
@@ -55,7 +55,7 @@ class MongoRepositoryLibraryDependenciesRepository(mongo: () => DB)
     )
   }
 
-  override def update(repositoryLibraryDependencies: RepositoryLibraryDependencies): Future[RepositoryLibraryDependencies] = {
+  override def update(repositoryLibraryDependencies: MongoRepositoryDependencies): Future[MongoRepositoryDependencies] = {
 
     logger.info(s"writing to mongo: $repositoryLibraryDependencies")
 
@@ -70,7 +70,7 @@ class MongoRepositoryLibraryDependenciesRepository(mongo: () => DB)
   }
 
 
-  override def getForRepository(repositoryName: String): Future[Option[RepositoryLibraryDependencies]] = {
+  override def getForRepository(repositoryName: String): Future[Option[MongoRepositoryDependencies]] = {
     withTimerAndCounter("mongo.read") {
       find("repositoryName" -> BSONDocument("$eq" -> repositoryName)) map {
         case data if data.size > 1 => throw new RuntimeException(s"There should only be '1' record per repository! for $repositoryName there are ${data.size}")
@@ -80,7 +80,7 @@ class MongoRepositoryLibraryDependenciesRepository(mongo: () => DB)
 
   }
 
-  override def getAllEntries: Future[List[RepositoryLibraryDependencies]] = {
+  override def getAllEntries: Future[List[MongoRepositoryDependencies]] = {
     logger.info("retrieving getAll current dependencies")
     findAll()
   }

@@ -16,15 +16,20 @@
 
 package uk.gov.hmrc.servicedependencies.model
 
-import org.scalatest.{FreeSpec, Matchers}
+import java.util.Date
 
-class SbtPluginsSpec extends FreeSpec with Matchers {
+import play.api.libs.json.Json
 
-  "SbtPlugins" - {
-    "should correctly identify internal repositories" in {
-      SbtPlugins("uk.gov.hmrc", "something", None).isInternal() shouldBe true
-      SbtPlugins("uk.gov.homeoffice", "something", None).isInternal() shouldBe false
-    }
-  }
+//case class SbtPlugin(pluginName: String, currentVersion:Version)
+//
+//object SbtPlugin {
+//  implicit val format = Json.format[SbtPlugin]
+//}
+//
+//case class RepositorySbtPluginDependencies(repositoryName: String, sbtPlugin: Seq[SbtPlugin], updateDate: Long = new Date().getTime)
+//
+//object RepositorySbtPluginDependencies {
+//  implicit val format = Json.format[RepositorySbtPluginDependencies]
+//}
 
-}
+

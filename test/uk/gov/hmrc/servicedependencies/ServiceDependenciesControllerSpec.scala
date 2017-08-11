@@ -26,7 +26,7 @@ import org.scalatestplus.play.OneServerPerSuite
 import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
-import uk.gov.hmrc.servicedependencies.model.{MongoLibraryVersion, RepositoryLibraryDependencies, Version}
+import uk.gov.hmrc.servicedependencies.model.{MongoLibraryVersion, MongoRepositoryDependencies, Version}
 import uk.gov.hmrc.servicedependencies.service._
 
 import scala.concurrent.Future
@@ -58,7 +58,7 @@ class ServiceDependenciesControllerSpec extends FreeSpec with BeforeAndAfterEach
 
 
       when(mockedLibraryDependencyDataUpdatingService.reloadLibraryDependencyDataForAllRepositories(any()))
-        .thenReturn(Future.successful(Seq.empty[RepositoryLibraryDependencies]))
+        .thenReturn(Future.successful(Seq.empty[MongoRepositoryDependencies]))
 
       val controller = makeServiceDependenciesImpl(mockedLibraryDependencyDataUpdatingService)
       controller.reloadLibraryDependenciesForAllRepositories().apply(FakeRequest())
@@ -93,16 +93,16 @@ class ServiceDependenciesControllerSpec extends FreeSpec with BeforeAndAfterEach
     "should get all dependencies using the service" in new Setup {
       val mockedLibraryDependencyDataUpdatingService = mock[LibraryDependencyDataUpdatingService]
       val libraryDependencies = Seq(
-        RepositoryLibraryDependencies("repo1", Nil, 1234l),
-        RepositoryLibraryDependencies("repo2", Nil, 1234l),
-        RepositoryLibraryDependencies("repo3", Nil, 1234l)
+        MongoRepositoryDependencies("repo1", Nil, Nil, 1234l),
+        MongoRepositoryDependencies("repo2", Nil, Nil, 1234l),
+        MongoRepositoryDependencies("repo3", Nil, Nil, 1234l)
       )
       when(mockedLibraryDependencyDataUpdatingService.getAllRepositoriesDependencies()).thenReturn(Future.successful(
         libraryDependencies
       ))
 
       val result = makeServiceDependenciesImpl(mockedLibraryDependencyDataUpdatingService).dependencies().apply(FakeRequest())
-      val repositoryLibraryDependencies = contentAsJson(result).as[Seq[RepositoryLibraryDependencies]]
+      val repositoryLibraryDependencies = contentAsJson(result).as[Seq[MongoRepositoryDependencies]]
 
       repositoryLibraryDependencies.size shouldBe 3
       repositoryLibraryDependencies should contain theSameElementsAs(libraryDependencies)

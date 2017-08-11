@@ -24,7 +24,9 @@ import org.scalatestplus.play.OneAppPerSuite
 import reactivemongo.api.DB
 import uk.gov.hmrc.githubclient.GithubApiClient
 import uk.gov.hmrc.mongo.Awaiting
-import uk.gov.hmrc.servicedependencies.{LibraryDependencyState, RepositoryDependencies, ServiceDependenciesConfig}
+import uk.gov.hmrc.servicedependencies.config.model.{CuratedDependencyConfig, Other}
+import uk.gov.hmrc.servicedependencies.config.{ServiceDependenciesConfig}
+import uk.gov.hmrc.servicedependencies.{LibraryDependencyState, RepositoryDependencies}
 import uk.gov.hmrc.servicedependencies.model._
 import uk.gov.hmrc.servicedependencies.presistence.{LibraryVersionRepository, MongoLock, RepositoryLibraryDependenciesRepository}
 
@@ -88,7 +90,7 @@ class LibraryDependencyDataUpdatingServiceSpec extends FunSpec with MockitoSugar
       val repositoryName = "repoXYZ"
 
       when(underTest.repositoryLibraryDependenciesRepository.getForRepository(any()))
-        .thenReturn(Future.successful(Some(RepositoryLibraryDependencies(repositoryName, libraryDependencies))))
+        .thenReturn(Future.successful(Some(MongoRepositoryDependencies(repositoryName, libraryDependencies, Nil))))
 
       val referenceLibraryVersions = Seq(
         MongoLibraryVersion("lib1", Some(Version(1, 1, 0))),
@@ -141,7 +143,7 @@ class LibraryDependencyDataUpdatingServiceSpec extends FunSpec with MockitoSugar
       val repositoryName = "repoXYZ"
 
       when(underTest.repositoryLibraryDependenciesRepository.getForRepository(any()))
-        .thenReturn(Future.successful(Some(RepositoryLibraryDependencies(repositoryName, libraryDependencies))))
+        .thenReturn(Future.successful(Some(MongoRepositoryDependencies(repositoryName, libraryDependencies, Nil))))
 
       when(underTest.libraryVersionRepository.getAllEntries)
         .thenReturn(Future.successful(Nil))
@@ -174,7 +176,8 @@ class LibraryDependencyDataUpdatingServiceSpec extends FunSpec with MockitoSugar
     override val libraryMongoLock = testMongoLockBuilder("libraryMongoLock")
     override val repositoryDependencyMongoLock = testMongoLockBuilder("repositoryDependencyMongoLock")
 
-    override lazy val curatedLibraries: List[String] = List("LibX1", "LibX2")
+
+    override lazy val curatedDependencyConfig = CuratedDependencyConfig(Nil, List("LibX1", "LibX2"), Other(""))
 
     override lazy val repositoryLibraryDependenciesRepository = mockedRepositoryLibraryDependenciesRepository
     override lazy val libraryVersionRepository = mockedLibraryVersionRepository

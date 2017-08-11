@@ -24,10 +24,23 @@ case class LibraryDependency(libraryName: String, currentVersion:Version)
 object LibraryDependency {
   implicit val format = Json.format[LibraryDependency]
 }
-case class RepositoryLibraryDependencies(repositoryName: String, libraryDependencies: Seq[LibraryDependency], updateDate: Long = new Date().getTime)
-object RepositoryLibraryDependencies {
 
-  implicit val format = Json.format[RepositoryLibraryDependencies]
+
+case class SbtPluginDependency(pluginName: String, currentVersion:Version)
+
+object SbtPluginDependency {
+  implicit val format = Json.format[SbtPluginDependency]
 }
+
+
+case class MongoRepositoryDependencies(repositoryName: String,
+                                       libraryDependencies: Seq[LibraryDependency],
+                                       sbtPluginDependencies: Seq[SbtPluginDependency],
+                                       updateDate: Long = new Date().getTime)
+object MongoRepositoryDependencies {
+
+  implicit val format = Json.format[MongoRepositoryDependencies]
+}
+
 
 

@@ -21,6 +21,7 @@ import java.util.concurrent.TimeUnit
 import akka.actor.ActorSystem
 import org.scalatest.concurrent.{Eventually, ScalaFutures}
 import org.scalatest.{BeforeAndAfterAll, Matchers, WordSpec}
+import uk.gov.hmrc.servicedependencies.config.CacheConfig
 import uk.gov.hmrc.servicedependencies.model.ServiceDependencies
 import uk.gov.hmrc.servicedependencies.service.CachingDependenciesDataSource
 

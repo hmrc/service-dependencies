@@ -21,7 +21,8 @@ import org.eclipse.egit.github.core.client.RequestException
 import org.eclipse.egit.github.core.{IRepositoryIdProvider, RepositoryContents}
 import org.slf4j.LoggerFactory
 import uk.gov.hmrc.githubclient.GithubApiClient
-import uk.gov.hmrc.servicedependencies.model.Version
+import uk.gov.hmrc.servicedependencies.config.model.{CuratedDependencyConfig, SbtPluginConfig}
+import uk.gov.hmrc.servicedependencies.model.{GithubSearchResults, SbtPluginDependency, Version}
 import uk.gov.hmrc.servicedependencies.util.{Max, VersionParser}
 
 import scala.annotation.tailrec
@@ -36,15 +37,12 @@ abstract class Github(buildFilePaths: Seq[String]) {
 
   lazy val logger = LoggerFactory.getLogger(this.getClass)
 
-  def findVersionsForMultipleArtifacts(repoName: String, artifacts: Seq[String]): Map[String, Option[Version]] = {
+  def findVersionsForMultipleArtifacts(repoName: String, curatedDependencyConfig: CuratedDependencyConfig): GithubSearchResults = {
 
-    // ToDo: Finish searching sbt versions for multiple artifacts
-//    val result = searchPluginSbtFileForMultipleArtifacts(repoName, artifacts)
-////
-//    if (result.nonEmpty)
-//     result
-//    else
-       searchBuildFilesForMultipleArtifacts(repoName, artifacts)
+    GithubSearchResults(
+      sbtPlugins = searchPluginSbtFileForMultipleArtifacts(repoName, curatedDependencyConfig.sbtPlugins),
+      libraries = searchBuildFilesForMultipleArtifacts(repoName, curatedDependencyConfig.libraries)
+    )
   }
 
   def findArtifactVersion(serviceName: String, artifact: String, versionOption: Option[String]): Option[Version] = {
@@ -109,8 +107,8 @@ abstract class Github(buildFilePaths: Seq[String]) {
     searchRemainingBuildFiles(buildFilePaths)
   }
 
-  private def searchPluginSbtFileForMultipleArtifacts(serviceName: String, artifacts: Seq[String]) =
-    performSearchForMultipleArtifacts(serviceName, "project/plugins.sbt", parseFileForMultipleArtifacts(_, artifacts))
+  private def searchPluginSbtFileForMultipleArtifacts(serviceName: String, sbtPluginConfigs: Seq[SbtPluginConfig]): Map[String, Option[Version]] =
+    performSearchForMultipleArtifacts(serviceName, "project/plugins.sbt", parseFileForMultipleArtifacts(_, sbtPluginConfigs.map(_.name)))
 
   private def parseFileForMultipleArtifacts(response: RepositoryContents, artifacts: Seq[String]): Map[String, Option[Version]] = {
     VersionParser.parse(parseFileContents(response), artifacts)

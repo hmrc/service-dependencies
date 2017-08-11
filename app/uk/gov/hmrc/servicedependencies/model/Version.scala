@@ -16,7 +16,10 @@
 
 package uk.gov.hmrc.servicedependencies.model
 
-import play.api.libs.json.Json
+import play.api.libs.json.{JsPath, Json, Reads}
+
+import play.api.libs.functional.syntax._
+
 
 case class Version(major: Int, minor: Int, patch: Int) {
   def <(other: Version) = {
@@ -34,6 +37,9 @@ case class Version(major: Int, minor: Int, patch: Int) {
 
 object Version {
   implicit val format = Json.format[Version]
+
+  def apply(version: String): Version =
+    parse(version)
 
   def parse(s: String) = {
     val split = s.split("\\.")

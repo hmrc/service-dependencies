@@ -16,22 +16,8 @@
 
 package uk.gov.hmrc.servicedependencies.model
 
-import play.api.libs.json.Json
 
-
-case class Other(sbt: String)
-
-case class CuratedDependencyConfig(sbtPlugins: List[SbtPlugins],
-                                   libraries: List[String],
-                                   other: Other)
-
-object CuratedDependencyConfig {
-  implicit val otherReader = Json.reads[Other]
-  implicit val pluginsReader = Json.reads[SbtPlugins]
-  implicit val configReader = Json.reads[CuratedDependencyConfig]
-}
-
-case class SbtPlugins(org: String, name: String, version: Option[Version]) {
-  def isInternal() = org == "uk.gov.hmrc"
+case class GithubSearchResults(sbtPlugins: Map[String, Option[Version]], libraries: Map[String, Option[Version]]) {
+  def isEmpty = sbtPlugins.isEmpty && libraries.isEmpty
 
 }

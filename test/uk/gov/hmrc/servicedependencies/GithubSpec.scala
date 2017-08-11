@@ -28,7 +28,9 @@ import org.mockito.stubbing.Answer
 import org.scalatest.mock.MockitoSugar
 import org.scalatest.{Matchers, OptionValues, WordSpec}
 import uk.gov.hmrc.githubclient._
-import uk.gov.hmrc.servicedependencies.model.Version
+import uk.gov.hmrc.servicedependencies.config.model.{CuratedDependencyConfig, Other, SbtPluginConfig}
+
+import uk.gov.hmrc.servicedependencies.model.{SbtPluginDependency, Version}
 
 import scala.collection.JavaConverters._
 import scala.collection.mutable
@@ -140,27 +142,33 @@ class GithubSpec
     val stub = attachRepoContentsStub(githubService.gh, repoName)
     stub.respond(firstBuildFile, loadFileAsBase64String("/github/contents_build_file_with_play_frontend.sbt.txt"))
 
-    "queries github based on repository name by looking in plugins.sbt first" in {
-      pending
+    "queries github's repository for plugins by looking in plugins.sbt" in {
+
       val githubServiceForTestingPlugins = new TestGithub()
       val stub = attachRepoContentsStub(githubServiceForTestingPlugins.gh, repoName)
 
       stub.respond(pluginsSbtFile, loadFileAsBase64String("/github/contents_plugins_sbt_file_with_sbt_plugin.sbt.txt"))
 
-      githubServiceForTestingPlugins.findVersionsForMultipleArtifacts(repoName, Seq("sbt-plugin", "sbt-auto-build")) shouldBe
+      githubServiceForTestingPlugins.findVersionsForMultipleArtifacts(repoName, CuratedDependencyConfig(Seq(
+        SbtPluginConfig("bla", "sbt-plugin", None),
+        SbtPluginConfig("bla", "sbt-auto-build", None)
+      ), Nil, Other(""))).sbtPlugins shouldBe
         Map("sbt-plugin" -> Some(Version(2, 3, 10)), "sbt-auto-build" -> Some(Version(1,3,0)))
     }
 
     "return artifacts versions correctly for a repository's build file" in {
-      githubService.findVersionsForMultipleArtifacts(repoName, Seq("play-ui", "play-health")) shouldBe Map("play-ui" -> Some(Version(1, 3, 0)), "play-health" -> Some(Version(0, 5, 0)))
+      githubService.findVersionsForMultipleArtifacts(repoName, CuratedDependencyConfig(Nil, Seq("play-ui", "play-health"), Other(""))).libraries shouldBe
+        Map("play-ui" -> Some(Version(1, 3, 0)), "play-health" -> Some(Version(0, 5, 0)))
     }
 
     "return None for artifacts that don't appear in the build file for a repository" in {
-      githubService.findVersionsForMultipleArtifacts(repoName, Seq("play-ui", "non-existing")) shouldBe Map("play-ui" -> Some(Version(1, 3, 0)), "non-existing" -> None)
+      githubService.findVersionsForMultipleArtifacts(repoName, CuratedDependencyConfig(Nil, Seq("play-ui", "non-existing"), Other(""))).libraries shouldBe
+        Map("play-ui" -> Some(Version(1, 3, 0)), "non-existing" -> None)
     }
 
     "return empty map if no artifacts passed in" in {
-      githubService.findVersionsForMultipleArtifacts(repoName, Seq.empty[String]) shouldBe Map.empty[String, Option[Version]]
+      githubService.findVersionsForMultipleArtifacts(repoName, CuratedDependencyConfig(Nil, Seq.empty[String], Other(""))).libraries shouldBe
+        Map.empty[String, Option[Version]]
     }
   }
 

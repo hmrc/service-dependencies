@@ -19,8 +19,9 @@ package uk.gov.hmrc.servicedependencies.service
 import org.slf4j.LoggerFactory
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.modules.reactivemongo.MongoDbConnection
-import uk.gov.hmrc.servicedependencies.{LibraryDependencyState, RepositoryDependencies, ServiceDependenciesConfig}
-import uk.gov.hmrc.servicedependencies.model.{LibraryVersion, MongoLibraryVersion, RepositoryLibraryDependencies}
+import uk.gov.hmrc.servicedependencies.config.ServiceDependenciesConfig
+import uk.gov.hmrc.servicedependencies.{LibraryDependencyState, RepositoryDependencies}
+import uk.gov.hmrc.servicedependencies.model.{LibraryVersion, MongoLibraryVersion, MongoRepositoryDependencies}
 import uk.gov.hmrc.servicedependencies.presistence._
 
 import scala.concurrent.Future
@@ -31,10 +32,10 @@ trait LibraryDependencyDataUpdatingService {
   def libraryMongoLock: MongoLock
 
   def reloadLibraryVersions(timeStampGenerator:() => Long): Future[Seq[MongoLibraryVersion]]
-  def reloadLibraryDependencyDataForAllRepositories(timeStampGenerator:() => Long): Future[Seq[RepositoryLibraryDependencies]]
+  def reloadLibraryDependencyDataForAllRepositories(timeStampGenerator:() => Long): Future[Seq[MongoRepositoryDependencies]]
 
   def getAllCuratedLibraries(): Future[Seq[MongoLibraryVersion]]
-  def getAllRepositoriesDependencies(): Future[Seq[RepositoryLibraryDependencies]]
+  def getAllRepositoriesDependencies(): Future[Seq[MongoRepositoryDependencies]]
 
   def getDependencyVersionsForRepository(repositoryName: String): Future[Option[RepositoryDependencies]]
 
@@ -60,11 +61,11 @@ class DefaultLibraryDependencyDataUpdatingService(override val config: ServiceDe
 
   override def libraryMongoLock: MongoLock = new MongoLock(db, "libraries-data-reload-job")
 
-  lazy val curatedLibraries = config.curatedDependencyConfig.libraries
+  lazy val curatedDependencyConfig = config.curatedDependencyConfig
 
   override def reloadLibraryVersions(timeStampGenerator:() => Long): Future[Seq[MongoLibraryVersion]] = {
     runMongoUpdate(libraryMongoLock) {
-      val latestLibraryVersions = dependenciesDataSource.getLatestLibrariesVersions(curatedLibraries)
+      val latestLibraryVersions = dependenciesDataSource.getLatestLibrariesVersions(curatedDependencyConfig.libraries)
 
       Future.sequence(latestLibraryVersions.map { x =>
         libraryVersionRepository.update(MongoLibraryVersion(x.libraryName, x.version, timeStampGenerator()))
@@ -72,11 +73,11 @@ class DefaultLibraryDependencyDataUpdatingService(override val config: ServiceDe
     }
   }
 
-  override def reloadLibraryDependencyDataForAllRepositories(timeStampGenerator:() => Long): Future[Seq[RepositoryLibraryDependencies]] =
+  override def reloadLibraryDependencyDataForAllRepositories(timeStampGenerator:() => Long): Future[Seq[MongoRepositoryDependencies]] =
     runMongoUpdate(repositoryDependencyMongoLock) {
       for {
         currentDependencyEntries <- repositoryLibraryDependenciesRepository.getAllEntries
-        libraryDependencies <- dependenciesDataSource.persistDependenciesForAllRepositories(curatedLibraries, timeStampGenerator, currentDependencyEntries, repositoryLibraryDependenciesRepository.update)
+        libraryDependencies <- dependenciesDataSource.persistDependenciesForAllRepositories(curatedDependencyConfig, timeStampGenerator, currentDependencyEntries, repositoryLibraryDependenciesRepository.update)
       } yield libraryDependencies
 
     }
@@ -102,6 +103,6 @@ class DefaultLibraryDependencyDataUpdatingService(override val config: ServiceDe
   override def getAllCuratedLibraries(): Future[Seq[MongoLibraryVersion]] =
     libraryVersionRepository.getAllEntries
 
-  override def getAllRepositoriesDependencies(): Future[Seq[RepositoryLibraryDependencies]] =
+  override def getAllRepositoriesDependencies(): Future[Seq[MongoRepositoryDependencies]] =
     repositoryLibraryDependenciesRepository.getAllEntries
 }

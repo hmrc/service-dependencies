@@ -17,17 +17,19 @@
 package uk.gov.hmrc.servicedependencies.service
 
 import akka.actor.ActorSystem
-import org.eclipse.egit.github.core.client.RequestException
+import cats.data.OptionT
 import org.slf4j.LoggerFactory
 import play.api.Logger
 import uk.gov.hmrc.githubclient.GithubApiClient
-import uk.gov.hmrc.servicedependencies.util.RetryStrategy.exponentialRetry
 import uk.gov.hmrc.servicedependencies._
 import uk.gov.hmrc.servicedependencies.model._
 import uk.gov.hmrc.servicedependencies.util.Max
 
 import scala.annotation.tailrec
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
+import uk.gov.hmrc.servicedependencies.config.model.CuratedDependencyConfig
+import uk.gov.hmrc.servicedependencies.config.{CacheConfig, ServiceDependenciesConfig}
+
 import scala.concurrent.{ExecutionContext, Future, Promise}
 import scala.util.{Failure, Success, Try}
 
@@ -90,10 +92,10 @@ class DependenciesDataSource(val releasesConnector: DeploymentsDataSource,
 
 
 
-  def persistDependenciesForAllRepositories(artifacts: Seq[String],
+  def persistDependenciesForAllRepositories(curatedDependencyConfig: CuratedDependencyConfig,
                                             timeStampGenerator: () => Long,
-                                            currentDependencyEntries: Seq[RepositoryLibraryDependencies],
-                                            persisterF: (RepositoryLibraryDependencies) => Future[RepositoryLibraryDependencies]): Future[Seq[RepositoryLibraryDependencies]] = {
+                                            currentDependencyEntries: Seq[MongoRepositoryDependencies],
+                                            persisterF: (MongoRepositoryDependencies) => Future[MongoRepositoryDependencies]): Future[Seq[MongoRepositoryDependencies]] = {
 
     val eventualAllRepos: Future[Seq[String]] = teamsAndRepositoriesDataSource.getAllRepositories()
 
@@ -104,22 +106,24 @@ class DependenciesDataSource(val releasesConnector: DeploymentsDataSource,
     }
 
 
-    @tailrec
-    def recurse(remainingRepos: Seq[String], acc: Seq[RepositoryLibraryDependencies]): Seq[RepositoryLibraryDependencies] = {
+//!@    @tailrec
+    def getLibDependencies(remainingRepos: Seq[String], acc: Seq[MongoRepositoryDependencies]): Seq[MongoRepositoryDependencies] = {
 
         remainingRepos match {
           case repoName :: xs =>
             logger.info(s"getting dependencies for: $repoName")
-            val errorOrLibraryDependencies = getLibraryDependencies(repoName, artifacts)
+            val errorOrDependencies: Either[Throwable, Option[DependenciesFromGitHub]] = getDependenciesFromGitHub(repoName, curatedDependencyConfig)
 
-            if (errorOrLibraryDependencies.isLeft) {
+            if (errorOrDependencies.isLeft) {
               // error, short circuit
-              logger.error("terminating current run because ===>", errorOrLibraryDependencies.left.get)
+              logger.error("terminating current run because ===>", errorOrDependencies.left.get)
               acc
             } else {
-              val repositoryLibraryDependencies = RepositoryLibraryDependencies(repoName, errorOrLibraryDependencies.right.get, timeStampGenerator())
-              persisterF(repositoryLibraryDependencies)
-              recurse(xs, acc :+ repositoryLibraryDependencies)
+              errorOrDependencies.right.get.fold(Seq.empty[MongoRepositoryDependencies]) { (x: DependenciesFromGitHub) =>
+                val repositoryLibraryDependencies = MongoRepositoryDependencies(repoName, x.libraries, x.sbtPlugins, timeStampGenerator())
+                persisterF(repositoryLibraryDependencies)
+                getLibDependencies(xs, acc :+ repositoryLibraryDependencies)
+              }
             }
 
           case Nil =>
@@ -127,7 +131,7 @@ class DependenciesDataSource(val releasesConnector: DeploymentsDataSource,
         }
     }
 
-    orderedRepos.map(r => recurse(r.toList, Nil)).andThen{ case s =>
+    orderedRepos.map(r => getLibDependencies(r.toList, Nil)).andThen{ case s =>
       s match {
         case Failure(x) => logger.error("Error!", x)
         case Success(g) =>
@@ -139,16 +143,39 @@ class DependenciesDataSource(val releasesConnector: DeploymentsDataSource,
   }
 
 
+  case class DependenciesFromGitHub(libraries: Seq[LibraryDependency], sbtPlugins: Seq[SbtPluginDependency])
+
   import cats.syntax.either._
-  private def getLibraryDependencies(repoName: String, artifacts: Seq[String]): Either[Throwable, Seq[LibraryDependency]] = {
+  private def getDependenciesFromGitHub(repoName: String, curatedDependencyConfig: CuratedDependencyConfig): Either[Throwable, Option[DependenciesFromGitHub]] = {
+    def getLibraryDependencies(githubSearchResults: GithubSearchResults) = githubSearchResults.libraries.foldLeft(Seq.empty[LibraryDependency]) {
+      case (acc, (library, mayBeVersion)) =>
+        mayBeVersion.fold(acc)(currentVersion => acc :+ LibraryDependency(library, currentVersion))
+    }
+
+    def getPluginDependencies(githubSearchResults: GithubSearchResults) = githubSearchResults.sbtPlugins.foldLeft(Seq.empty[SbtPluginDependency]) {
+      case (acc, (plugin, mayBeVersion)) =>
+        mayBeVersion.fold(acc)(currentVersion => acc :+ SbtPluginDependency(plugin, currentVersion))
+    }
+
     Either.catchNonFatal {
-      val currentDependencyVersions: Map[String, Option[Version]] = searchGithubsForArtifacts(repoName, artifacts)
-      currentDependencyVersions.foldLeft(Seq.empty[LibraryDependency]) {
-        case (acc, (library, mayBeVersion)) =>
-          mayBeVersion.fold(acc)(currentVersion => acc :+ LibraryDependency(library, currentVersion))
+      val currentDependencyAndPluginVersions: Option[GithubSearchResults] = searchGithubsForArtifacts(repoName, curatedDependencyConfig)
+      currentDependencyAndPluginVersions.map { vs =>
+        DependenciesFromGitHub(getLibraryDependencies(vs), getPluginDependencies(vs))
       }
     }
   }
+
+
+//  import cats.syntax.either._
+//  private def getLibraryDependenciesFromGithubOld(repoName: String, curatedDependencyConfig: CuratedDependencyConfig): Either[Throwable, Seq[LibraryDependency]] = {
+//    Either.catchNonFatal {
+//      val currentDependencyVersions: Map[String, Option[Version]] = searchGithubsForArtifacts(repoName, curatedDependencyConfig)
+//      currentDependencyVersions.foldLeft(Seq.empty[LibraryDependency]) {
+//        case (acc, (library, mayBeVersion)) =>
+//          mayBeVersion.fold(acc)(currentVersion => acc :+ LibraryDependency(library, currentVersion))
+//      }
+//    }
+//  }
 
   private def serviceVersions(service: Service, artifact:String, teams: Seq[String]): ServiceDependencies = {
     val environmentVersions = Map("qa" -> service.qaVersion, "staging" -> service.stagingVersion, "prod" -> service.prodVersion)
@@ -172,17 +199,17 @@ class DependenciesDataSource(val releasesConnector: DeploymentsDataSource,
     None
   }
 
-  private def searchGithubsForArtifacts(repositoryName: String, artifacts:Seq[String]): Map[String, Option[Version]] = {
+  private def searchGithubsForArtifacts(repositoryName: String, curatedDependencyConfig: CuratedDependencyConfig): Option[GithubSearchResults] = {
     @tailrec
-    def searchRemainingGitHubs(remainingGithubs: Seq[Github]): Map[String, Option[Version]] = {
+    def searchRemainingGitHubs(remainingGithubs: Seq[Github]): Option[GithubSearchResults] = {
       remainingGithubs match {
         case github :: xs =>
-          val versionsMap = github.findVersionsForMultipleArtifacts(repositoryName, artifacts)
+          val versionsMap = github.findVersionsForMultipleArtifacts(repositoryName, curatedDependencyConfig)
           if(versionsMap.isEmpty)
             searchRemainingGitHubs(xs)
           else
-            versionsMap
-        case Nil => Map.empty
+            Some(versionsMap)
+        case Nil => None
       }
     }
 

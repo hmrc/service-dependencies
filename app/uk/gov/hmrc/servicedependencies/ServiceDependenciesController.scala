@@ -22,6 +22,7 @@ import play.api.libs.json.Json
 import play.api.mvc._
 import uk.gov.hmrc.BlockingIOExecutionContext
 import uk.gov.hmrc.play.microservice.controller.BaseController
+import uk.gov.hmrc.servicedependencies.config.ServiceDependenciesConfig
 import uk.gov.hmrc.servicedependencies.model._
 import uk.gov.hmrc.servicedependencies.service._
 
@@ -34,7 +35,6 @@ object RepositoryDependencies {
   implicit val ldsf = Json.format[LibraryDependencyState]
   implicit val format = Json.format[RepositoryDependencies]
 }
-
 
 trait ServiceDependenciesController extends BaseController {
 
