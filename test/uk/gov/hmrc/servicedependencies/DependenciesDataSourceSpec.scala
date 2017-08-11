@@ -144,9 +144,14 @@ class DependenciesDataSourceSpec extends FreeSpec with Matchers with ScalaFuture
   "getDependenciesForAllRepositories" - {
 
     def lookupTable(repo: String) = repo match {
-      case "repo1" => GithubSearchResults(Map.empty, Map("library1" -> Some(Version(1, 0, 1))))
-      case "repo2" => GithubSearchResults(Map.empty, Map("library1" -> Some(Version(1, 0, 2)), "library2" -> Some(Version(2, 0, 3))))
-      case "repo3" => GithubSearchResults(Map.empty, Map("library1" -> Some(Version(1, 0, 3)), "library3" -> Some(Version(3, 0, 4))))
+      case "repo1" => GithubSearchResults(Map("plugin1" -> Some(Version(100, 0, 1))), Map("library1" -> Some(Version(1, 0, 1))))
+      case "repo2" => GithubSearchResults(
+        Map("plugin1" -> Some(Version(100, 0, 2)), "plugin2" -> Some(Version(200, 0, 3))),
+        Map("library1" -> Some(Version(1, 0, 2)), "library2" -> Some(Version(2, 0, 3)))
+      )
+      case "repo3" => GithubSearchResults(
+        Map("plugin1" -> Some(Version(100, 0, 3)), "plugin3" -> Some(Version(300, 0, 4))),
+        Map("library1" -> Some(Version(1, 0, 3)), "library3" -> Some(Version(3, 0, 4))))
       case "repo4" => GithubSearchResults(Map.empty, Map("library1" -> Some(Version(1, 0, 3)), "library3" -> Some(Version(3, 0, 4))))
       case _ => throw new RuntimeException(s"No entry in lookup function for repoName: $repo")
     }
@@ -159,8 +164,11 @@ class DependenciesDataSourceSpec extends FreeSpec with Matchers with ScalaFuture
     val githubStubForMultiArtifacts = new GithubStub(Map(), Some(findVersionsForMultipleArtifactsF))
 
 
-    def getLibDependencies(results: Seq[MongoRepositoryDependencies], repo: String) =
+    def getLibDependencies(results: Seq[MongoRepositoryDependencies], repo: String): Seq[LibraryDependency] =
       results.filter(_.repositoryName == repo).head.libraryDependencies
+
+    def getDependencies(results: Seq[MongoRepositoryDependencies], repo: String): MongoRepositoryDependencies =
+      results.filter(_.repositoryName == repo).head
 
     val curatedDependencyConfig = CuratedDependencyConfig(Nil, Seq("library1", "library2", "library3"), Other(""))
 
@@ -168,7 +176,7 @@ class DependenciesDataSourceSpec extends FreeSpec with Matchers with ScalaFuture
 
     "should persist the dependencies for each repository" in {
 
-      val dataSource = prepareUnderTestClass(Seq(githubStubForMultiArtifacts), Seq("repo1", "repo2", "repo3"))
+      val dependenciesDataSource = prepareUnderTestClass(Seq(githubStubForMultiArtifacts), Seq("repo1", "repo2", "repo3"))
 
       var callsToPersisterF = ListBuffer.empty[MongoRepositoryDependencies]
       val persisterF: MongoRepositoryDependencies => Future[MongoRepositoryDependencies] = { repositoryLibraryDependencies =>
@@ -177,13 +185,17 @@ class DependenciesDataSourceSpec extends FreeSpec with Matchers with ScalaFuture
       }
 
 
-      dataSource.persistDependenciesForAllRepositories(curatedDependencyConfig, timestampF, Nil, persisterF).futureValue
+      dependenciesDataSource.persistDependenciesForAllRepositories(curatedDependencyConfig, timestampF, Nil, persisterF).futureValue
 
       callsToPersisterF.size shouldBe 3
 
-      getLibDependencies(callsToPersisterF, "repo1") should contain theSameElementsAs Seq(LibraryDependency("library1", Version(1, 0, 1)))
-      getLibDependencies(callsToPersisterF, "repo2") should contain theSameElementsAs Seq(LibraryDependency("library1", Version(1, 0, 2)), LibraryDependency("library2", Version(2, 0, 3)))
-      getLibDependencies(callsToPersisterF, "repo3") should contain theSameElementsAs Seq(LibraryDependency("library1", Version(1, 0, 3)), LibraryDependency("library3", Version(3, 0, 4)))
+      getDependencies(callsToPersisterF, "repo1").libraryDependencies should contain theSameElementsAs Seq(LibraryDependency("library1", Version(1, 0, 1)))
+      getDependencies(callsToPersisterF, "repo2").libraryDependencies should contain theSameElementsAs Seq(LibraryDependency("library1", Version(1, 0, 2)), LibraryDependency("library2", Version(2, 0, 3)))
+      getDependencies(callsToPersisterF, "repo3").libraryDependencies should contain theSameElementsAs Seq(LibraryDependency("library1", Version(1, 0, 3)), LibraryDependency("library3", Version(3, 0, 4)))
+
+      getDependencies(callsToPersisterF, "repo1").sbtPluginDependencies should contain theSameElementsAs Seq(SbtPluginDependency("plugin1", Version(100, 0, 1)))
+      getDependencies(callsToPersisterF, "repo2").sbtPluginDependencies should contain theSameElementsAs Seq(SbtPluginDependency("plugin1", Version(100, 0, 2)), SbtPluginDependency("plugin2", Version(200, 0, 3)))
+      getDependencies(callsToPersisterF, "repo3").sbtPluginDependencies should contain theSameElementsAs Seq(SbtPluginDependency("plugin1", Version(100, 0, 3)), SbtPluginDependency("plugin3", Version(300, 0, 4)))
 
 
     }
@@ -398,7 +410,7 @@ class DependenciesDataSourceSpec extends FreeSpec with Matchers with ScalaFuture
 
   }
 
-  private def prepareUnderTestClass(stubbedGithubs: Seq[Github], repositories: Seq[String]) = {
+  private def prepareUnderTestClass(stubbedGithubs: Seq[Github], repositories: Seq[String]): DependenciesDataSource = {
     val mockedDependenciesConfig: ServiceDependenciesConfig = getMockedConfig()
 
     val dependenciesDataSource = new DependenciesDataSource(servicesStub, teamsAndRepositoriesStub(repositories), mockedDependenciesConfig) {
