@@ -57,13 +57,13 @@ class ServiceDependenciesControllerSpec extends FreeSpec with BeforeAndAfterEach
       val repoName = "repo1"
 
 
-      when(mockedLibraryDependencyDataUpdatingService.reloadLibraryDependencyDataForAllRepositories(any()))
+      when(mockedLibraryDependencyDataUpdatingService.reloadDependenciesDataForAllRepositories(any()))
         .thenReturn(Future.successful(Seq.empty[MongoRepositoryDependencies]))
 
       val controller = makeServiceDependenciesImpl(mockedLibraryDependencyDataUpdatingService)
       controller.reloadLibraryDependenciesForAllRepositories().apply(FakeRequest())
 
-      Mockito.verify(mockedLibraryDependencyDataUpdatingService).reloadLibraryDependencyDataForAllRepositories(controller.timeStampGenerator)
+      Mockito.verify(mockedLibraryDependencyDataUpdatingService).reloadDependenciesDataForAllRepositories(controller.timeStampGenerator)
     }
 
   }

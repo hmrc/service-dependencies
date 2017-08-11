@@ -16,23 +16,23 @@
 
 package uk.gov.hmrc.servicedependencies.service
 
-import org.mockito.ArgumentMatchers.any
+import org.mockito.ArgumentMatchers.{any, eq => eqTo}
 import org.mockito.Mockito._
+import org.scalatest.concurrent.{IntegrationPatience, ScalaFutures}
 import org.scalatest.mock.MockitoSugar
 import org.scalatest.{BeforeAndAfterEach, FunSpec, Matchers, OptionValues}
 import org.scalatestplus.play.OneAppPerSuite
 import reactivemongo.api.DB
-import uk.gov.hmrc.githubclient.GithubApiClient
 import uk.gov.hmrc.mongo.Awaiting
 import uk.gov.hmrc.servicedependencies.config.model.{CuratedDependencyConfig, Other}
-import uk.gov.hmrc.servicedependencies.config.{ServiceDependenciesConfig}
+import uk.gov.hmrc.servicedependencies.config.ServiceDependenciesConfig
 import uk.gov.hmrc.servicedependencies.{LibraryDependencyState, RepositoryDependencies}
 import uk.gov.hmrc.servicedependencies.model._
 import uk.gov.hmrc.servicedependencies.presistence.{LibraryVersionRepository, MongoLock, RepositoryLibraryDependenciesRepository}
 
 import scala.concurrent.{ExecutionContext, Future}
 
-class LibraryDependencyDataUpdatingServiceSpec extends FunSpec with MockitoSugar with Matchers with OneAppPerSuite with BeforeAndAfterEach with Awaiting with OptionValues {
+class LibraryDependencyDataUpdatingServiceSpec extends FunSpec with MockitoSugar with Matchers with OneAppPerSuite with BeforeAndAfterEach with Awaiting with OptionValues with ScalaFutures with IntegrationPatience{
 
   val staticTimeStampGenerator: () => Long = () => 11000l
 
@@ -66,10 +66,24 @@ class LibraryDependencyDataUpdatingServiceSpec extends FunSpec with MockitoSugar
 
   describe("reloadLibraryDependencyDataForAllRepositories") {
 
+    it("should call the dependency update function to persist the dependencies") {
+      val underTest = new TestLibraryDependencyDataUpdatingService(noLockTestMongoLockBuilder)
+
+      val mongoRepositoryDependencies = Seq(MongoRepositoryDependencies("repoXyz", Nil, Nil))
+
+      when(underTest.mockedRepositoryLibraryDependenciesRepository.getAllEntries).thenReturn(Future.successful(mongoRepositoryDependencies))
+      when(underTest.dependenciesDataSource.persistDependenciesForAllRepositories(any(), any(), any(), any())).thenReturn(Future.successful(mongoRepositoryDependencies))
+
+      underTest.reloadDependenciesDataForAllRepositories(staticTimeStampGenerator).futureValue shouldBe mongoRepositoryDependencies
+
+      //!@ TODO: how do we verify the persister function being called (last param)?
+      verify(underTest.dependenciesDataSource, times(1)).persistDependenciesForAllRepositories(eqTo(underTest.curatedDependencyConfig), any(), eqTo(mongoRepositoryDependencies), any())
+    }
+
     it("should not call the dependency update function if the mongo is locked") {
       val underTest = new TestLibraryDependencyDataUpdatingService(denyingTestMongoLockBuilder)
 
-      a[RuntimeException] should be thrownBy underTest.reloadLibraryDependencyDataForAllRepositories(staticTimeStampGenerator)
+      a[RuntimeException] should be thrownBy underTest.reloadDependenciesDataForAllRepositories(staticTimeStampGenerator)
 
       verifyZeroInteractions(underTest.mockedRepositoryLibraryDependenciesRepository)
 

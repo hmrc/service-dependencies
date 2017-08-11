@@ -56,7 +56,7 @@ trait ServiceDependenciesController extends BaseController {
   }
 
   def reloadLibraryDependenciesForAllRepositories() = Action {
-    libraryDependencyDataUpdatingService.reloadLibraryDependencyDataForAllRepositories(timeStampGenerator).map(_ => println(s"""${">" * 10} done ${"<" * 10}""")).onFailure{
+    libraryDependencyDataUpdatingService.reloadDependenciesDataForAllRepositories(timeStampGenerator).map(_ => println(s"""${">" * 10} done ${"<" * 10}""")).onFailure{
 			case ex => throw new RuntimeException("reload of dependencies failed", ex)
 		}
     Ok("Done")

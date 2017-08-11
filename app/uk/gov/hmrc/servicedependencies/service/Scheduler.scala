@@ -44,7 +44,7 @@ abstract class Scheduler {
     Logger.info(s"Initialising libraryDependencyDataReloader update every $interval")
 
     val scheduler = akkaSystem.scheduler.schedule(100 milliseconds, interval) {
-      libraryDependencyDataUpdatingService.reloadLibraryDependencyDataForAllRepositories(timeStampGenerator)
+      libraryDependencyDataUpdatingService.reloadDependenciesDataForAllRepositories(timeStampGenerator)
     }
 
     scheduler

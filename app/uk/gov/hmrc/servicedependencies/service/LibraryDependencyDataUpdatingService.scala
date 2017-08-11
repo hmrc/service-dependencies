@@ -32,7 +32,7 @@ trait LibraryDependencyDataUpdatingService {
   def libraryMongoLock: MongoLock
 
   def reloadLibraryVersions(timeStampGenerator:() => Long): Future[Seq[MongoLibraryVersion]]
-  def reloadLibraryDependencyDataForAllRepositories(timeStampGenerator:() => Long): Future[Seq[MongoRepositoryDependencies]]
+  def reloadDependenciesDataForAllRepositories(timeStampGenerator:() => Long): Future[Seq[MongoRepositoryDependencies]]
 
   def getAllCuratedLibraries(): Future[Seq[MongoLibraryVersion]]
   def getAllRepositoriesDependencies(): Future[Seq[MongoRepositoryDependencies]]
@@ -63,7 +63,8 @@ class DefaultLibraryDependencyDataUpdatingService(override val config: ServiceDe
 
   lazy val curatedDependencyConfig = config.curatedDependencyConfig
 
-  //!@ test the new plugin addition
+  //!@TODO PLATOPS-1036 add a reloadSbtPluginVersions function
+
   override def reloadLibraryVersions(timeStampGenerator:() => Long): Future[Seq[MongoLibraryVersion]] = {
     runMongoUpdate(libraryMongoLock) {
       val latestLibraryVersions = dependenciesDataSource.getLatestLibrariesVersions(curatedDependencyConfig.libraries)
@@ -74,7 +75,7 @@ class DefaultLibraryDependencyDataUpdatingService(override val config: ServiceDe
     }
   }
 
-  override def reloadLibraryDependencyDataForAllRepositories(timeStampGenerator:() => Long): Future[Seq[MongoRepositoryDependencies]] =
+  override def reloadDependenciesDataForAllRepositories(timeStampGenerator:() => Long): Future[Seq[MongoRepositoryDependencies]] = {
     runMongoUpdate(repositoryDependencyMongoLock) {
       for {
         currentDependencyEntries <- repositoryLibraryDependenciesRepository.getAllEntries
@@ -82,7 +83,7 @@ class DefaultLibraryDependencyDataUpdatingService(override val config: ServiceDe
       } yield libraryDependencies
 
     }
-
+}
   private def runMongoUpdate[T](mongoLock: MongoLock)(f: => Future[T]) =
     mongoLock.tryLock {
       logger.info(s"Starting mongo update")
@@ -90,7 +91,7 @@ class DefaultLibraryDependencyDataUpdatingService(override val config: ServiceDe
     } map {
       _.getOrElse(throw new RuntimeException(s"Mongo is locked for ${mongoLock.lockId}"))
     } map { r =>
-      logger.info(s"mongo update completed")
+      logger.info("mongo update completed")
       r
     }
 

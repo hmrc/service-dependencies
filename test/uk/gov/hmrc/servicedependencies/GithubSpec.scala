@@ -156,6 +156,28 @@ class GithubSpec
         Map("sbt-plugin" -> Some(Version(2, 3, 10)), "sbt-auto-build" -> Some(Version(1,3,0)))
     }
 
+    "queries github's repository for plugins and libraries" in {
+
+      val githubServiceForTestingPlugins = new TestGithub()
+      val stub = attachRepoContentsStub(githubServiceForTestingPlugins.gh, repoName)
+
+      stub.respond(pluginsSbtFile, loadFileAsBase64String("/github/contents_plugins_sbt_file_with_sbt_plugin.sbt.txt"))
+      stub.respond(firstBuildFile, loadFileAsBase64String("/github/contents_build_file_with_play_frontend.sbt.txt"))
+
+
+      val results = githubServiceForTestingPlugins.findVersionsForMultipleArtifacts(repoName,
+        CuratedDependencyConfig(Seq(
+          SbtPluginConfig("bla", "sbt-plugin", None),
+          SbtPluginConfig("bla", "sbt-auto-build", None)
+        ), Seq(
+          "play-ui",
+          "play-health"
+        ), Other("")))
+
+      results.sbtPlugins shouldBe Map("sbt-plugin" -> Some(Version(2, 3, 10)), "sbt-auto-build" -> Some(Version(1,3,0)))
+      results.libraries shouldBe Map("play-ui" -> Some(Version(1, 3, 0)),  "play-health" -> Some(Version("0.5.0")))
+    }
+
     "return artifacts versions correctly for a repository's build file" in {
       githubService.findVersionsForMultipleArtifacts(repoName, CuratedDependencyConfig(Nil, Seq("play-ui", "play-health"), Other(""))).libraries shouldBe
         Map("play-ui" -> Some(Version(1, 3, 0)), "play-health" -> Some(Version(0, 5, 0)))
