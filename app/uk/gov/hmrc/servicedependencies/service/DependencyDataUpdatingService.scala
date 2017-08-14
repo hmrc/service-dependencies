@@ -20,8 +20,9 @@ import org.slf4j.LoggerFactory
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.modules.reactivemongo.MongoDbConnection
 import uk.gov.hmrc.servicedependencies.config.ServiceDependenciesConfig
+import uk.gov.hmrc.servicedependencies.config.model.SbtPluginConfig
 import uk.gov.hmrc.servicedependencies.{LibraryDependencyState, RepositoryDependencies, SbtPluginDependencyState}
-import uk.gov.hmrc.servicedependencies.model.{LibraryVersion, MongoLibraryVersion, MongoRepositoryDependencies, MongoSbtPluginVersion}
+import uk.gov.hmrc.servicedependencies.model._
 import uk.gov.hmrc.servicedependencies.presistence._
 
 import scala.concurrent.Future
@@ -108,8 +109,29 @@ class DefaultDependencyDataUpdatingService(override val config: ServiceDependenc
       r
     }
 
-  //!@ test the sbt plugin stuff
-  override def getDependencyVersionsForRepository(repositoryName: String): Future[Option[RepositoryDependencies]] =
+  def getSbtPluginDependencyState(repositoryDependencies: MongoRepositoryDependencies, sbtPluginReferences: Seq[MongoSbtPluginVersion]) = {
+
+    repositoryDependencies.sbtPluginDependencies.map { sbtPluginDependency =>
+
+      val mayBeExternalSbtPlugin = curatedDependencyConfig.sbtPlugins
+          .find(pluginConfig => pluginConfig.name == sbtPluginDependency.sbtPluginName && pluginConfig.isExternal())
+
+      val latestVersion = mayBeExternalSbtPlugin.map(_.version.getOrElse(throw new RuntimeException(s"External sbt plugin ($mayBeExternalSbtPlugin) must specify the (latest) version")))
+          .orElse(sbtPluginReferences.find(mlv => mlv.sbtPluginName == sbtPluginDependency.sbtPluginName).flatMap(_.version))
+
+      SbtPluginDependencyState(
+        sbtPluginDependency.sbtPluginName,
+        sbtPluginDependency.currentVersion,
+        latestVersion
+      )
+    }
+
+  }
+
+
+  override def getDependencyVersionsForRepository(repositoryName: String): Future[Option[RepositoryDependencies]] = {
+
+
     for {
       dependencies <- repositoryLibraryDependenciesRepository.getForRepository(repositoryName)
       libraryReferences <- libraryVersionRepository.getAllEntries
@@ -119,9 +141,10 @@ class DefaultDependencyDataUpdatingService(override val config: ServiceDependenc
         RepositoryDependencies(
           repositoryName,
           dep.libraryDependencies.map(d => LibraryDependencyState(d.libraryName, d.currentVersion, libraryReferences.find(mlv => mlv.libraryName == d.libraryName).flatMap(_.version))),
-          dep.sbtPluginDependencies.map(d => SbtPluginDependencyState(d.sbtPluginName, d.currentVersion, sbtPluginReferences.find(mlv => mlv.sbtPluginName == d.sbtPluginName).flatMap(_.version)))
+          getSbtPluginDependencyState(dep, sbtPluginReferences)
         )
       }
+  }
 
   override def getAllCuratedLibraries(): Future[Seq[MongoLibraryVersion]] =
     libraryVersionRepository.getAllEntries

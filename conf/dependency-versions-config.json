@@ -7,7 +7,7 @@
      {
         "name": "sbt-plugin",
         "org": "com.typesafe.play",
-        "version": "1.4.0"
+        "version": "2.6.11"
      }
   ],
   "libraries": [

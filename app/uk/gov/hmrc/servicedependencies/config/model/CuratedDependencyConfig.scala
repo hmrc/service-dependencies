@@ -40,6 +40,7 @@ object CuratedDependencyConfig {
 
 //!@ rename
 case class SbtPluginConfig(org: String, name: String, version: Option[Version]) {
-  def isInternal() = org == "uk.gov.hmrc"
+  def isInternal() = version.isEmpty
+  def isExternal() = !isInternal()
 
 }
