@@ -108,7 +108,7 @@ class DependenciesDataSource(val releasesConnector: DeploymentsDataSource,
                                             currentDependencyEntries: Seq[MongoRepositoryDependencies],
                                             persisterF: (MongoRepositoryDependencies) => Future[MongoRepositoryDependencies]): Future[Seq[MongoRepositoryDependencies]] = {
 
-    val eventualAllRepos: Future[Seq[String]] = teamsAndRepositoriesDataSource.getAllRepositories().map(rs => rs.take(100))
+    val eventualAllRepos: Future[Seq[String]] = teamsAndRepositoriesDataSource.getAllRepositories()
 
     val orderedRepos: Future[Seq[String]] = eventualAllRepos.map { repos =>
       val updatedLastOrdered = currentDependencyEntries.sortBy(_.updateDate).map(_.repositoryName)

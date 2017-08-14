@@ -73,6 +73,13 @@ trait ServiceDependenciesController extends BaseController {
     Ok("Done")
 	}
 
+  def reloadSbtPluginVersions() = Action {
+    dependencyDataUpdatingService.reloadSbtPluginVersions(timeStampGenerator).map(_ => println(s"""${">" * 10} done ${"<" * 10}""")).onFailure{
+			case ex => throw new RuntimeException("reload of sbt plugins failed", ex)
+		}
+    Ok("Done")
+	}
+
 
   def libraries() = Action.async {
 
