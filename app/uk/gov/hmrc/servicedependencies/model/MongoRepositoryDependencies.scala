@@ -26,7 +26,7 @@ object LibraryDependency {
 }
 
 
-case class SbtPluginDependency(pluginName: String, currentVersion:Version)
+case class SbtPluginDependency(sbtPluginName: String, currentVersion:Version)
 
 object SbtPluginDependency {
   implicit val format = Json.format[SbtPluginDependency]

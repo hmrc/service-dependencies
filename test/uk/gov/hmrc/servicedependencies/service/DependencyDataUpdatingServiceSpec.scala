@@ -26,7 +26,7 @@ import reactivemongo.api.DB
 import uk.gov.hmrc.mongo.Awaiting
 import uk.gov.hmrc.servicedependencies.config.model.{CuratedDependencyConfig, Other, SbtPluginConfig}
 import uk.gov.hmrc.servicedependencies.config.ServiceDependenciesConfig
-import uk.gov.hmrc.servicedependencies.{LibraryDependencyState, RepositoryDependencies}
+import uk.gov.hmrc.servicedependencies.{LibraryDependencyState, RepositoryDependencies, SbtPluginDependencyState}
 import uk.gov.hmrc.servicedependencies.model._
 import uk.gov.hmrc.servicedependencies.presistence.{LibraryVersionRepository, MongoLock, RepositoryLibraryDependenciesRepository, SbtPluginVersionRepository}
 
@@ -126,7 +126,7 @@ class DependencyDataUpdatingServiceSpec extends FunSpec with MockitoSugar with M
   }
 
   describe("getDependencyVersionsForRepository") {
-    it("should return the current and latest dependency versions for a repository") {
+    it("should return the current and latest library dependency versions for a repository") {
       val underTest = new TestDependencyDataUpdatingService(noLockTestMongoLockBuilder)
 
       val libraryDependencies = Seq(
@@ -146,6 +146,10 @@ class DependencyDataUpdatingServiceSpec extends FunSpec with MockitoSugar with M
         .thenReturn(Future.successful(referenceLibraryVersions))
 
 
+      when(underTest.sbtPluginVersionRepository.getAllEntries)
+        .thenReturn(Future.successful(Nil))
+
+
       val maybeDependencies = await(underTest.getDependencyVersionsForRepository(repositoryName))
 
       verify(underTest.repositoryLibraryDependenciesRepository, times(1)).getForRepository(repositoryName)
@@ -154,6 +158,43 @@ class DependencyDataUpdatingServiceSpec extends FunSpec with MockitoSugar with M
         Seq(
           LibraryDependencyState("lib1", Version(1, 0, 0), Some(Version(1, 1, 0))),
           LibraryDependencyState("lib2", Version(2, 0, 0), Some(Version(2, 1, 0)))
+        ), Nil
+      )
+
+    }
+
+    it("should return the current and latest plugin dependency versions for a repository") {
+      val underTest = new TestDependencyDataUpdatingService(noLockTestMongoLockBuilder)
+
+      val sbtPluginDependencies = Seq(
+        SbtPluginDependency("plugin1", Version(1, 0, 0)),
+        SbtPluginDependency("plugin2", Version(2, 0, 0))
+      )
+      val repositoryName = "repoXYZ"
+
+      when(underTest.repositoryLibraryDependenciesRepository.getForRepository(any()))
+        .thenReturn(Future.successful(Some(MongoRepositoryDependencies(repositoryName, Nil, sbtPluginDependencies))))
+
+      val referenceSbtPluginVersions = Seq(
+        MongoSbtPluginVersion("plugin1", Some(Version(3, 1, 0))),
+        MongoSbtPluginVersion("plugin2", Some(Version(4, 1, 0)))
+      )
+
+      when(underTest.sbtPluginVersionRepository.getAllEntries)
+        .thenReturn(Future.successful(referenceSbtPluginVersions))
+
+      when(underTest.libraryVersionRepository.getAllEntries)
+        .thenReturn(Future.successful(Nil))
+
+      val maybeDependencies = await(underTest.getDependencyVersionsForRepository(repositoryName))
+
+      verify(underTest.repositoryLibraryDependenciesRepository, times(1)).getForRepository(repositoryName)
+
+      maybeDependencies.value shouldBe RepositoryDependencies(repositoryName,
+        Nil,
+        Seq(
+          SbtPluginDependencyState("plugin1", Version(1, 0, 0), Some(Version(3, 1, 0))),
+          SbtPluginDependencyState("plugin2", Version(2, 0, 0), Some(Version(4, 1, 0)))
         )
       )
 
@@ -170,12 +211,15 @@ class DependencyDataUpdatingServiceSpec extends FunSpec with MockitoSugar with M
       when(underTest.libraryVersionRepository.getAllEntries)
         .thenReturn(Future.successful(Nil))
 
+      when(underTest.sbtPluginVersionRepository.getAllEntries)
+        .thenReturn(Future.successful(Nil))
+
 
       val maybeDependencies = await(underTest.getDependencyVersionsForRepository(repositoryName))
 
       verify(underTest.repositoryLibraryDependenciesRepository, times(1)).getForRepository(repositoryName)
 
-      maybeDependencies shouldBe None
+      maybeDependencies shouldBe None                             
 
     }
 
@@ -194,6 +238,10 @@ class DependencyDataUpdatingServiceSpec extends FunSpec with MockitoSugar with M
       when(underTest.libraryVersionRepository.getAllEntries)
         .thenReturn(Future.successful(Nil))
 
+      when(underTest.sbtPluginVersionRepository.getAllEntries)
+        .thenReturn(Future.successful(Nil))
+
+
 
       val maybeDependencies = await(underTest.getDependencyVersionsForRepository(repositoryName))
 
@@ -203,7 +251,7 @@ class DependencyDataUpdatingServiceSpec extends FunSpec with MockitoSugar with M
         Seq(
           LibraryDependencyState("lib1", Version(1, 0, 0), None),
           LibraryDependencyState("lib2", Version(2, 0, 0), None)
-        )
+        ), Nil
       )
 
     }

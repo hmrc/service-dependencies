@@ -28,11 +28,14 @@ import uk.gov.hmrc.servicedependencies.service._
 
 
 case class LibraryDependencyState(libraryName: String, currentVersion:Version, latestVersion: Option[Version])
+case class SbtPluginDependencyState(sbtPluginName: String, currentVersion:Version, latestVersion: Option[Version])
 
 case class RepositoryDependencies(repositoryName: String,
-                                  libraryDependenciesState: Seq[LibraryDependencyState])
+                                  libraryDependenciesState: Seq[LibraryDependencyState],
+                                  sbtPluginsDependenciesState: Seq[SbtPluginDependencyState])
 object RepositoryDependencies {
   implicit val ldsf = Json.format[LibraryDependencyState]
+  implicit val spdsf = Json.format[SbtPluginDependencyState]
   implicit val format = Json.format[RepositoryDependencies]
 }
 

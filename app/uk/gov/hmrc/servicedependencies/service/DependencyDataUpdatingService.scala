@@ -20,7 +20,7 @@ import org.slf4j.LoggerFactory
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.modules.reactivemongo.MongoDbConnection
 import uk.gov.hmrc.servicedependencies.config.ServiceDependenciesConfig
-import uk.gov.hmrc.servicedependencies.{LibraryDependencyState, RepositoryDependencies}
+import uk.gov.hmrc.servicedependencies.{LibraryDependencyState, RepositoryDependencies, SbtPluginDependencyState}
 import uk.gov.hmrc.servicedependencies.model.{LibraryVersion, MongoLibraryVersion, MongoRepositoryDependencies, MongoSbtPluginVersion}
 import uk.gov.hmrc.servicedependencies.presistence._
 
@@ -108,12 +108,20 @@ class DefaultDependencyDataUpdatingService(override val config: ServiceDependenc
       r
     }
 
+  //!@ test the sbt plugin stuff
   override def getDependencyVersionsForRepository(repositoryName: String): Future[Option[RepositoryDependencies]] =
     for {
       dependencies <- repositoryLibraryDependenciesRepository.getForRepository(repositoryName)
-      references <- libraryVersionRepository.getAllEntries
+      libraryReferences <- libraryVersionRepository.getAllEntries
+      sbtPluginReferences <- sbtPluginVersionRepository.getAllEntries
     } yield
-      dependencies.map(dep => RepositoryDependencies(repositoryName, dep.libraryDependencies.map(d => LibraryDependencyState(d.libraryName, d.currentVersion, references.find(mlv => mlv.libraryName == d.libraryName).flatMap(_.version)))))
+      dependencies.map { dep =>
+        RepositoryDependencies(
+          repositoryName,
+          dep.libraryDependencies.map(d => LibraryDependencyState(d.libraryName, d.currentVersion, libraryReferences.find(mlv => mlv.libraryName == d.libraryName).flatMap(_.version))),
+          dep.sbtPluginDependencies.map(d => SbtPluginDependencyState(d.sbtPluginName, d.currentVersion, sbtPluginReferences.find(mlv => mlv.sbtPluginName == d.sbtPluginName).flatMap(_.version)))
+        )
+      }
 
   override def getAllCuratedLibraries(): Future[Seq[MongoLibraryVersion]] =
     libraryVersionRepository.getAllEntries
