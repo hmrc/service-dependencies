@@ -27,7 +27,7 @@ import uk.gov.hmrc.servicedependencies.util.Max
 
 import scala.annotation.tailrec
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import uk.gov.hmrc.servicedependencies.config.model.CuratedDependencyConfig
+import uk.gov.hmrc.servicedependencies.config.model.{CuratedDependencyConfig, SbtPluginConfig}
 import uk.gov.hmrc.servicedependencies.config.{CacheConfig, ServiceDependenciesConfig}
 
 import scala.concurrent.{ExecutionContext, Future, Promise}
@@ -61,10 +61,23 @@ class DependenciesDataSource(val releasesConnector: DeploymentsDataSource,
   protected[servicedependencies] lazy val githubs = Seq(githubOpen, githubEnterprise)
 
 
+  def getLatestSbtPluginVersions(sbtPlugins: Seq[SbtPluginConfig]): Seq[SbtPluginVersion] = {
+
+    def getLatestSbtPluginVersion(sbtPluginConfig: SbtPluginConfig): Option[Version] =
+      Max.maxOf(githubs.map(gh => gh.findLatestVersion(sbtPluginConfig.name)))
+
+    sbtPlugins.map(sbtPluginConfig =>
+      sbtPluginConfig -> getLatestSbtPluginVersion(sbtPluginConfig)
+    ).map {
+      case (sbtPluginConfig, version) => SbtPluginVersion(sbtPluginConfig.name, version)
+    }
+    
+  }
+
   def getLatestLibrariesVersions(libraries: Seq[String]): Seq[LibraryVersion] = {
 
     def getLatestLibraryVersion(lib: String): Option[Version] =
-      Max.maxOf(githubs.map(gh => gh.findLatestLibraryVersion(lib)))
+      Max.maxOf(githubs.map(gh => gh.findLatestVersion(lib)))
 
     libraries.map(lib =>
       lib -> getLatestLibraryVersion(lib)

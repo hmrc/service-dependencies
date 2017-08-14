@@ -21,16 +21,18 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.modules.reactivemongo.MongoDbConnection
 import uk.gov.hmrc.servicedependencies.config.ServiceDependenciesConfig
 import uk.gov.hmrc.servicedependencies.{LibraryDependencyState, RepositoryDependencies}
-import uk.gov.hmrc.servicedependencies.model.{LibraryVersion, MongoLibraryVersion, MongoRepositoryDependencies}
+import uk.gov.hmrc.servicedependencies.model.{LibraryVersion, MongoLibraryVersion, MongoRepositoryDependencies, MongoSbtPluginVersion}
 import uk.gov.hmrc.servicedependencies.presistence._
 
 import scala.concurrent.Future
 
-trait LibraryDependencyDataUpdatingService {
+trait DependencyDataUpdatingService {
 
   def repositoryDependencyMongoLock: MongoLock
   def libraryMongoLock: MongoLock
+  def sbtPluginMongoLock: MongoLock
 
+  def reloadSbtPluginVersions(timeStampGenerator:() => Long): Future[Seq[MongoSbtPluginVersion]]
   def reloadLibraryVersions(timeStampGenerator:() => Long): Future[Seq[MongoLibraryVersion]]
   def reloadDependenciesDataForAllRepositories(timeStampGenerator:() => Long): Future[Seq[MongoRepositoryDependencies]]
 
@@ -49,21 +51,32 @@ trait LibraryDependencyDataUpdatingService {
 }
 
 
-class DefaultLibraryDependencyDataUpdatingService(override val config: ServiceDependenciesConfig)
-  extends LibraryDependencyDataUpdatingService with MongoDbConnection {
+class DefaultDependencyDataUpdatingService(override val config: ServiceDependenciesConfig)
+  extends DependencyDataUpdatingService with MongoDbConnection {
 
   lazy val logger = LoggerFactory.getLogger(this.getClass)
 
   lazy val repositoryLibraryDependenciesRepository: RepositoryLibraryDependenciesRepository = new MongoRepositoryLibraryDependenciesRepository(db)
   lazy val libraryVersionRepository: LibraryVersionRepository = new MongoLibraryVersionRepository(db)
+  lazy val sbtPluginVersionRepository: SbtPluginVersionRepository = new MongoSbtPluginVersionRepository(db)
 
   override def repositoryDependencyMongoLock: MongoLock = new MongoLock(db, "repository-dependencies-data-reload-job")
 
   override def libraryMongoLock: MongoLock = new MongoLock(db, "libraries-data-reload-job")
+  override def sbtPluginMongoLock: MongoLock = new MongoLock(db, "sbt-plugin-data-reload-job")
 
   lazy val curatedDependencyConfig = config.curatedDependencyConfig
 
-  //!@TODO PLATOPS-1036 add a reloadSbtPluginVersions function
+  override def reloadSbtPluginVersions(timeStampGenerator:() => Long): Future[Seq[MongoSbtPluginVersion]] = {
+    runMongoUpdate(sbtPluginMongoLock) {
+      val sbtPluginVersions = dependenciesDataSource.getLatestSbtPluginVersions(curatedDependencyConfig.sbtPlugins)
+
+      Future.sequence(sbtPluginVersions.map { x =>
+        sbtPluginVersionRepository.update(MongoSbtPluginVersion(x.sbtPluginName, x.version, timeStampGenerator()))
+      })
+    }
+  }
+
 
   override def reloadLibraryVersions(timeStampGenerator:() => Long): Future[Seq[MongoLibraryVersion]] = {
     runMongoUpdate(libraryMongoLock) {

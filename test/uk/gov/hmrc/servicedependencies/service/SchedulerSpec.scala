@@ -46,10 +46,10 @@ class SchedulerSpec extends FunSpec
 
     override def akkaSystem: ActorSystem = Akka.system()
 
-    override def libraryDependencyDataUpdatingService: LibraryDependencyDataUpdatingService = {
+    override def dependencyDataUpdatingService: DependencyDataUpdatingService = {
       count += 1
 
-      mock[LibraryDependencyDataUpdatingService]
+      mock[DependencyDataUpdatingService]
     }
 
     override def getCallCount: Int = count
@@ -69,6 +69,15 @@ class SchedulerSpec extends FunSpec
     it("should schedule reloadLibraryDependencyDataForAllRepositories based on configured interval") {
       val scheduler = schedulerF
       scheduler.startUpdatingLibraryDependencyData(100 milliseconds)
+      Thread.sleep(1000)
+
+      scheduler.getCallCount should be > 8
+      scheduler.getCallCount should be < 11
+    }
+
+    it("should schedule reloadSbtPluginVersionData For AllRepositories based on configured interval") {
+      val scheduler = schedulerF
+      scheduler.startUpdatingSbtPluingVersionData(100 milliseconds)
       Thread.sleep(1000)
 
       scheduler.getCallCount should be > 8

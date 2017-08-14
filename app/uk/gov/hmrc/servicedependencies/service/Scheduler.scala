@@ -36,7 +36,7 @@ trait DefaultSchedulerDependencies extends MongoDbConnection  {
 
 abstract class Scheduler {
   def akkaSystem: ActorSystem
-  def libraryDependencyDataUpdatingService: LibraryDependencyDataUpdatingService
+  def dependencyDataUpdatingService: DependencyDataUpdatingService
 
   private val timeStampGenerator = ServiceDependenciesController.timeStampGenerator
 
@@ -44,7 +44,7 @@ abstract class Scheduler {
     Logger.info(s"Initialising libraryDependencyDataReloader update every $interval")
 
     val scheduler = akkaSystem.scheduler.schedule(100 milliseconds, interval) {
-      libraryDependencyDataUpdatingService.reloadDependenciesDataForAllRepositories(timeStampGenerator)
+      dependencyDataUpdatingService.reloadDependenciesDataForAllRepositories(timeStampGenerator)
     }
 
     scheduler
@@ -54,7 +54,17 @@ abstract class Scheduler {
     Logger.info(s"Initialising libraryDataReloader update every $interval")
 
     val scheduler = akkaSystem.scheduler.schedule(100 milliseconds, interval) {
-      libraryDependencyDataUpdatingService.reloadLibraryVersions(timeStampGenerator)
+      dependencyDataUpdatingService.reloadLibraryVersions(timeStampGenerator)
+    }
+
+    scheduler
+  }
+
+  def startUpdatingSbtPluingVersionData(interval: FiniteDuration): Cancellable = {
+    Logger.info(s"Initialising SbtPluginDataReloader update every $interval")
+
+    val scheduler = akkaSystem.scheduler.schedule(100 milliseconds, interval) {
+      dependencyDataUpdatingService.reloadSbtPluginVersions(timeStampGenerator)
     }
 
     scheduler
@@ -64,6 +74,6 @@ abstract class Scheduler {
 
 
 object UpdateScheduler extends Scheduler with DefaultSchedulerDependencies {
-  override def libraryDependencyDataUpdatingService = ServiceDependenciesController.libraryDependencyDataUpdatingService 
+  override def dependencyDataUpdatingService = ServiceDependenciesController.dependencyDataUpdatingService
 }
 

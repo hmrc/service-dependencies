@@ -198,7 +198,7 @@ class GithubSpec
     val github = new TestGithub() {
       override val tagPrefix = "release/"
     }
-    val repoName = "some-cool-library"
+    val repoName = "some-cool-repo"
 
     val mockedReleaseService = mock[ReleaseService]
     when(github.gh.releaseService).thenReturn(mockedReleaseService)
@@ -211,7 +211,7 @@ class GithubSpec
           GhRepoTag( "release/4.10.19"),
           GhRepoTag( "release/4.10.2")))
 
-      github.findLatestLibraryVersion(repoName).value shouldBe Version(4, 10, 19)
+      github.findLatestVersion(repoName).value shouldBe Version(4, 10, 19)
     }
 
     "ignore the tags that are not valid releases" in {
@@ -222,7 +222,7 @@ class GithubSpec
           GhRepoTag("release/3.10.19"),
           GhRepoTag("not-release/4.10.3")))
 
-      github.findLatestLibraryVersion(repoName).value shouldBe Version(3, 10, 19)
+      github.findLatestVersion(repoName).value shouldBe Version(3, 10, 19)
     }
 
     "handle RequestException(Not Found) case gracefully" in {
@@ -235,7 +235,7 @@ class GithubSpec
       when(github.gh.releaseService).thenReturn(ReleaseServiceStub)
 
 
-      github.findLatestLibraryVersion(repoName) shouldBe None
+      github.findLatestVersion(repoName) shouldBe None
     }
 
     "other exceptions should not be handled gracefully" in {
@@ -247,9 +247,10 @@ class GithubSpec
       when(github.gh.releaseService).thenReturn(ReleaseServiceStub)
 
 
-      a [RequestException] should be thrownBy github.findLatestLibraryVersion(repoName)
+      a [RequestException] should be thrownBy github.findLatestVersion(repoName)
     }
   }
+
 
   case class GetContentsArgs(idProvider: IRepositoryIdProvider, filePath: String, ref: String)
 

@@ -27,7 +27,7 @@ import org.scalatest.mock.MockitoSugar
 import org.scalatest.{FreeSpec, Matchers}
 import uk.gov.hmrc.githubclient.{ExtendedContentsService, GithubApiClient}
 import uk.gov.hmrc.servicedependencies.config._
-import uk.gov.hmrc.servicedependencies.config.model.{CuratedDependencyConfig, Other}
+import uk.gov.hmrc.servicedependencies.config.model.{CuratedDependencyConfig, Other, SbtPluginConfig}
 import uk.gov.hmrc.servicedependencies.model._
 import uk.gov.hmrc.servicedependencies.service._
 
@@ -59,9 +59,9 @@ class DependenciesDataSourceSpec extends FreeSpec with Matchers with ScalaFuture
 
 
   class GithubStub(
-                    val map: Map[String, Option[String]],
+                    val lookupMap: Map[String, Option[String]],
                     val findVersionsForMultipleArtifactsF: Option[FindVersionsForMultipleArtifactsF] = None,
-                    val libVersions: Map[String, Version] = Map.empty
+                    val repositoryAndVersions: Map[String, Version] = Map.empty
                   ) extends Github(Seq()) {
 
     override val gh = null
@@ -72,23 +72,20 @@ class DependenciesDataSourceSpec extends FreeSpec with Matchers with ScalaFuture
     override def findArtifactVersion(serviceName: String, artifact: String, versionOption: Option[String]): Option[Version] = {
       versionOption match {
         case Some(version) =>
-          map.get(s"$serviceName-$version").map(version =>
+          lookupMap.get(s"$serviceName-$version").map(version =>
            version.map(Version.parse)).getOrElse(None)
         case None => None
       }
     }
 
 
-//    override def findVersionsForMultipleArtifacts(repoName: String, curatedDependencyConfig: CuratedDependencyConfig): Map[String, Option[Version]] = {
-//      findVersionsForMultipleArtifactsF.get.apply(repoName, curatedDependencyConfig.libraries)
-//    }
-
     override def findVersionsForMultipleArtifacts(repoName: String, curatedDependencyConfig: CuratedDependencyConfig): GithubSearchResults =
       findVersionsForMultipleArtifactsF.get.apply(repoName, curatedDependencyConfig.libraries)
 
-    override def findLatestLibraryVersion(libraryName: String): Option[Version] = {
-       libVersions.get(libraryName)
+    override def findLatestVersion(repoName: String): Option[Version] = {
+      repositoryAndVersions.get(repoName)
     }
+
   }
 
   val githubStub1 = new GithubStub(Map(
@@ -398,13 +395,48 @@ class DependenciesDataSourceSpec extends FreeSpec with Matchers with ScalaFuture
 
       val results = dataSource.getLatestLibrariesVersions(curatedListOfLibraries)
 
-      println(results)
       // 3 is for "library1", "library2" and "library3"
       results.size shouldBe 3
 
       extractLibVersion(results, "library1") shouldBe Some(Version(1,0,0))
       extractLibVersion(results, "library2") shouldBe Some(Version(2,0,0))
       extractLibVersion(results, "library3") shouldBe Some(Version(3,0,0))
+
+    }
+
+  }
+
+  "getLatestSbtPluginVersions" - {
+    val githubStubForSbtpluginVersions = new GithubStub(
+      lookupMap = Map(),
+      findVersionsForMultipleArtifactsF = None,
+      repositoryAndVersions = Map(
+        "sbtplugin1" -> Version(1, 0, 0),
+        "sbtplugin2" -> Version(2, 0, 0),
+        "sbtplugin3" -> Version(3, 0, 0))
+    )
+
+
+    def extractSbtPluginVersion(results: Seq[SbtPluginVersion], lib:String): Option[Version] =
+      results.filter(_.sbtPluginName == lib).head.version
+
+    "should get the latest sbt plugin version" in {
+      val curatedListOfSbtPluginConfigs = Seq(
+        SbtPluginConfig("org",  "sbtplugin1", Some(Version(1,2,3))),
+        SbtPluginConfig("org",  "sbtplugin2", Some(Version(1,2,3))),
+        SbtPluginConfig("org",  "sbtplugin3", Some(Version(1,2,3)))
+      )
+
+      val dataSource = prepareUnderTestClass(Seq(githubStubForSbtpluginVersions), Seq("repo1", "repo2", "repo3"))
+
+      val results = dataSource.getLatestSbtPluginVersions(curatedListOfSbtPluginConfigs)
+
+      // 3 is for "sbtplugin1", "sbtplugin2" and "sbtplugin3"
+      results.size shouldBe 3
+
+      extractSbtPluginVersion(results, "sbtplugin1") shouldBe Some(Version(1,0,0))
+      extractSbtPluginVersion(results, "sbtplugin2") shouldBe Some(Version(2,0,0))
+      extractSbtPluginVersion(results, "sbtplugin3") shouldBe Some(Version(3,0,0))
 
     }
 

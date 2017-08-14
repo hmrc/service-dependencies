@@ -35,7 +35,7 @@ class ServiceDependenciesControllerSpec extends FreeSpec with BeforeAndAfterEach
 
   "getDependencyVersionsForRepository" - {
     "should get dependency versions for a repository using the service" in new Setup {
-      val mockedLibraryDependencyDataUpdatingService = mock[LibraryDependencyDataUpdatingService]
+      val mockedLibraryDependencyDataUpdatingService = mock[DependencyDataUpdatingService]
       val repoName = "repo1"
       val repositoryDependencies = RepositoryDependencies(repoName, Nil)
 
@@ -53,7 +53,7 @@ class ServiceDependenciesControllerSpec extends FreeSpec with BeforeAndAfterEach
 
   "reloadLibraryDependenciesForAllRepositories" - {
     "should call the reloadLibraryDependencyDataForAllRepositories on the service" in new Setup {
-      val mockedLibraryDependencyDataUpdatingService = mock[LibraryDependencyDataUpdatingService]
+      val mockedLibraryDependencyDataUpdatingService = mock[DependencyDataUpdatingService]
       val repoName = "repo1"
 
 
@@ -70,7 +70,7 @@ class ServiceDependenciesControllerSpec extends FreeSpec with BeforeAndAfterEach
 
   "get libraries" - {
     "should get all the curated libraries using the service" in new Setup {
-      val mockedLibraryDependencyDataUpdatingService = mock[LibraryDependencyDataUpdatingService]
+      val mockedLibraryDependencyDataUpdatingService = mock[DependencyDataUpdatingService]
       val libraryVersions = Seq(
         MongoLibraryVersion("lib1", Some(Version(1, 0, 0)), 1234l),
         MongoLibraryVersion("lib2", Some(Version(2, 0, 0)), 1234l),
@@ -91,7 +91,7 @@ class ServiceDependenciesControllerSpec extends FreeSpec with BeforeAndAfterEach
 
   "get dependencies" - {
     "should get all dependencies using the service" in new Setup {
-      val mockedLibraryDependencyDataUpdatingService = mock[LibraryDependencyDataUpdatingService]
+      val mockedLibraryDependencyDataUpdatingService = mock[DependencyDataUpdatingService]
       val libraryDependencies = Seq(
         MongoRepositoryDependencies("repo1", Nil, Nil, 1234l),
         MongoRepositoryDependencies("repo2", Nil, Nil, 1234l),
@@ -112,9 +112,9 @@ class ServiceDependenciesControllerSpec extends FreeSpec with BeforeAndAfterEach
 
   trait Setup {
 
-    def makeServiceDependenciesImpl(libraryDependencyUpdatingService: LibraryDependencyDataUpdatingService) =
+    def makeServiceDependenciesImpl(libraryDependencyUpdatingService: DependencyDataUpdatingService) =
       new ServiceDependenciesController {
-        override def libraryDependencyDataUpdatingService: LibraryDependencyDataUpdatingService = libraryDependencyUpdatingService
+        override def dependencyDataUpdatingService: DependencyDataUpdatingService = libraryDependencyUpdatingService
 
         override val timeStampGenerator = () => 12345l
       }

@@ -51,6 +51,7 @@ object MicroserviceGlobal extends GlobalSettings
 
   val repositoryDependenciesReloadIntervalKey = "dependency.reload.intervalminutes"
   val libraryReloadIntervalKey = "library.reload.intervalminutes"
+  val sbtPluginReloadIntervalKey = "sbtPlugin.reload.intervalminutes"
 
 
   override def onStart(app: Application) {
@@ -61,6 +62,7 @@ object MicroserviceGlobal extends GlobalSettings
 
     scheduleRepositoryDependencyDataReloadSchedule(app)
     scheduleLibraryVersionDataReloadSchedule(app)
+    scheduleSbtPluginVersionDataReloadSchedule(app)
   }
 
   import scala.concurrent.duration._
@@ -85,6 +87,18 @@ object MicroserviceGlobal extends GlobalSettings
     } { reloadInterval =>
       Logger.warn(s"libraryReloadIntervalKey set to $reloadInterval minutes")
       val cancellable = UpdateScheduler.startUpdatingLibraryData(reloadInterval minutes)
+      app.injector.instanceOf[ApplicationLifecycle].addStopHook(() => Future(cancellable.cancel()))
+    }
+  }
+
+  private def scheduleSbtPluginVersionDataReloadSchedule(app: Application) = {
+    val maybeReloadInterval = app.configuration.getInt(sbtPluginReloadIntervalKey)
+
+    maybeReloadInterval.fold {
+      Logger.warn(s"$sbtPluginReloadIntervalKey is missing. reload will be disabled")
+    } { reloadInterval =>
+      Logger.warn(s"sbtPluginReloadIntervalKey set to $reloadInterval minutes")
+      val cancellable = UpdateScheduler.startUpdatingSbtPluingVersionData(reloadInterval minutes)
       app.injector.instanceOf[ApplicationLifecycle].addStopHook(() => Future(cancellable.cancel()))
     }
   }

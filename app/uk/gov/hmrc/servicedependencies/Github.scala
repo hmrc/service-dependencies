@@ -55,18 +55,37 @@ abstract class Github(buildFilePaths: Seq[String]) {
     }
   }
 
-  def findLatestLibraryVersion(libraryName: String): Option[Version] = {
+  ////////////////////////////////////
+  ////////////////////////////////////
+  ////////////////////////////////////
+  ////////////////////////////////////
+  //!@ new -> test me
+  def findLatestVersion(repoName: String): Option[Version] = {
 
-    val allVersions = Try(gh.releaseService.getTags(org, libraryName).map(_.name)).recover {
+    val allVersions = Try(gh.releaseService.getTags(org, repoName).map(_.name)).recover {
       case ex: RequestException if ex.getStatus == 404 =>
-        logger.info(s"Library $libraryName not found")
+        logger.info(s"Repository for $repoName not found")
         Nil
     }.get
 
-    Max.maxOf(allVersions.map { version =>
+    val maybeVersions: Seq[Option[Version]] = allVersions.map { version =>
       VersionParser.parseReleaseVersion(tagPrefix, version)
-    })
+    }
+    Max.maxOf(maybeVersions)
   }
+
+//  def findLatestLibraryVersion(libraryName: String): Option[Version] = {
+//
+//    val allVersions = Try(gh.releaseService.getTags(org, libraryName).map(_.name)).recover {
+//      case ex: RequestException if ex.getStatus == 404 =>
+//        logger.info(s"repository for $libraryName not found")
+//        Nil
+//    }.get
+//
+//    Max.maxOf(allVersions.map { version =>
+//      VersionParser.parseReleaseVersion(tagPrefix, version)
+//    })
+//  }
 
   private def searchBuildFiles(serviceName: String, artifact:String, version: String): Option[Version] = {
     @tailrec

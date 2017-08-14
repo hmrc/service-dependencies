@@ -40,7 +40,7 @@ trait ServiceDependenciesController extends BaseController {
 
 	import BlockingIOExecutionContext._
 
-  def libraryDependencyDataUpdatingService: LibraryDependencyDataUpdatingService
+  def dependencyDataUpdatingService: DependencyDataUpdatingService
 
 	implicit val environmentDependencyWrites = Json.writes[EnvironmentDependency]
 	implicit val serviceDependenciesWrites = Json.writes[ServiceDependencies]
@@ -49,14 +49,14 @@ trait ServiceDependenciesController extends BaseController {
 
 
   def getDependencyVersionsForRepository(repositoryName: String) = Action.async {
-		libraryDependencyDataUpdatingService.getDependencyVersionsForRepository(repositoryName)
+		dependencyDataUpdatingService.getDependencyVersionsForRepository(repositoryName)
       .map(maybeRepositoryDependencies =>
         maybeRepositoryDependencies.fold(
           NotFound(s"$repositoryName not found"))(repoDependencies => Ok(Json.toJson(repoDependencies))))
   }
 
   def reloadLibraryDependenciesForAllRepositories() = Action {
-    libraryDependencyDataUpdatingService.reloadDependenciesDataForAllRepositories(timeStampGenerator).map(_ => println(s"""${">" * 10} done ${"<" * 10}""")).onFailure{
+    dependencyDataUpdatingService.reloadDependenciesDataForAllRepositories(timeStampGenerator).map(_ => println(s"""${">" * 10} done ${"<" * 10}""")).onFailure{
 			case ex => throw new RuntimeException("reload of dependencies failed", ex)
 		}
     Ok("Done")
@@ -64,7 +64,7 @@ trait ServiceDependenciesController extends BaseController {
 
 
   def reloadLibraryVersions() = Action {
-    libraryDependencyDataUpdatingService.reloadLibraryVersions(timeStampGenerator).map(_ => println(s"""${">" * 10} done ${"<" * 10}""")).onFailure{
+    dependencyDataUpdatingService.reloadLibraryVersions(timeStampGenerator).map(_ => println(s"""${">" * 10} done ${"<" * 10}""")).onFailure{
 			case ex => throw new RuntimeException("reload of libraries failed", ex)
 		}
     Ok("Done")
@@ -73,20 +73,20 @@ trait ServiceDependenciesController extends BaseController {
 
   def libraries() = Action.async {
 
-    libraryDependencyDataUpdatingService.getAllCuratedLibraries().map(versions => Ok(Json.toJson(versions)))
+    dependencyDataUpdatingService.getAllCuratedLibraries().map(versions => Ok(Json.toJson(versions)))
   }
 
   def dependencies() = Action.async {
 
-    libraryDependencyDataUpdatingService.getAllRepositoriesDependencies().map(dependencies => Ok(Json.toJson(dependencies)))
+    dependencyDataUpdatingService.getAllRepositoriesDependencies().map(dependencies => Ok(Json.toJson(dependencies)))
   }
 
 }
 
 object ServiceDependenciesController extends ServiceDependenciesController {
 
-  override def libraryDependencyDataUpdatingService: LibraryDependencyDataUpdatingService =
-    new DefaultLibraryDependencyDataUpdatingService(config)
+  override def dependencyDataUpdatingService: DependencyDataUpdatingService =
+    new DefaultDependencyDataUpdatingService(config)
 
 
   protected val config = new ServiceDependenciesConfig("/dependency-versions-config.json")
