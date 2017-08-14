@@ -174,7 +174,7 @@ class DependenciesDataSourceSpec extends FreeSpec with Matchers with ScalaFuture
 
     val timestampF: () => Long = () => 1234l
 
-    "should persist the dependencies for each repository" in {
+    "should persist the dependencies (library and plugin) for each repository" in {
 
       val dependenciesDataSource = prepareUnderTestClass(Seq(githubStubForMultiArtifacts), Seq("repo1", "repo2", "repo3"))
 

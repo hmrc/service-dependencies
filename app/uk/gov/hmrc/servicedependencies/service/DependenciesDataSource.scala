@@ -90,9 +90,6 @@ class DependenciesDataSource(val releasesConnector: DeploymentsDataSource,
   val retries: Int = 5
   val initialDuration: Double = 100
 
-
-
-  //!@ add tests for plugins
   def persistDependenciesForAllRepositories(curatedDependencyConfig: CuratedDependencyConfig,
                                             timeStampGenerator: () => Long,
                                             currentDependencyEntries: Seq[MongoRepositoryDependencies],
