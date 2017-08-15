@@ -93,6 +93,12 @@ trait ServiceDependenciesController extends BaseController {
     dependencyDataUpdatingService.getAllRepositoriesDependencies().map(dependencies => Ok(Json.toJson(dependencies)))
   }
 
+  def sbtPlugins() = Action.async {
+
+    dependencyDataUpdatingService.getAllCuratedSbtPlugins().map(versions => Ok(Json.toJson(versions)))
+
+  }
+
 }
 
 object ServiceDependenciesController extends ServiceDependenciesController {

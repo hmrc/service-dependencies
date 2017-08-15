@@ -38,6 +38,7 @@ trait DependencyDataUpdatingService {
   def reloadDependenciesDataForAllRepositories(timeStampGenerator:() => Long): Future[Seq[MongoRepositoryDependencies]]
 
   def getAllCuratedLibraries(): Future[Seq[MongoLibraryVersion]]
+  def getAllCuratedSbtPlugins(): Future[Seq[MongoSbtPluginVersion]]
   def getAllRepositoriesDependencies(): Future[Seq[MongoRepositoryDependencies]]
 
   def getDependencyVersionsForRepository(repositoryName: String): Future[Option[RepositoryDependencies]]
@@ -148,6 +149,9 @@ class DefaultDependencyDataUpdatingService(override val config: ServiceDependenc
 
   override def getAllCuratedLibraries(): Future[Seq[MongoLibraryVersion]] =
     libraryVersionRepository.getAllEntries
+
+  override def getAllCuratedSbtPlugins(): Future[Seq[MongoSbtPluginVersion]] =
+    sbtPluginVersionRepository.getAllEntries
 
   override def getAllRepositoriesDependencies(): Future[Seq[MongoRepositoryDependencies]] =
     repositoryLibraryDependenciesRepository.getAllEntries

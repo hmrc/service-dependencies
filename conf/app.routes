@@ -8,3 +8,4 @@ GET    /reloadDependencies                 uk.gov.hmrc.servicedependencies.Servi
 
 GET    /libraries                           uk.gov.hmrc.servicedependencies.ServiceDependenciesController.libraries()
 GET    /dependencies                        uk.gov.hmrc.servicedependencies.ServiceDependenciesController.dependencies()
+GET    /sbtPlugins                        uk.gov.hmrc.servicedependencies.ServiceDependenciesController.sbtPlugins()
