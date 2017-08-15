@@ -123,7 +123,8 @@ class DefaultDependencyDataUpdatingService(override val config: ServiceDependenc
       SbtPluginDependencyState(
         sbtPluginDependency.sbtPluginName,
         sbtPluginDependency.currentVersion,
-        latestVersion
+        latestVersion,
+        mayBeExternalSbtPlugin.isDefined
       )
     }
 

@@ -28,7 +28,7 @@ import uk.gov.hmrc.servicedependencies.service._
 
 
 case class LibraryDependencyState(libraryName: String, currentVersion:Version, latestVersion: Option[Version])
-case class SbtPluginDependencyState(sbtPluginName: String, currentVersion:Version, latestVersion: Option[Version])
+case class SbtPluginDependencyState(sbtPluginName: String, currentVersion:Version, latestVersion: Option[Version], isExternal: Boolean)
 
 case class RepositoryDependencies(repositoryName: String,
                                   libraryDependenciesState: Seq[LibraryDependencyState],

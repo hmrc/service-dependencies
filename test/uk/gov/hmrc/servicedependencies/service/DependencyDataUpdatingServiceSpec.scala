@@ -198,8 +198,8 @@ class DependencyDataUpdatingServiceSpec extends FunSpec with MockitoSugar with M
       maybeDependencies.value shouldBe RepositoryDependencies(repositoryName,
         Nil,
         Seq(
-          SbtPluginDependencyState("plugin1", Version(1, 0, 0), Some(Version(3, 1, 0))),
-          SbtPluginDependencyState("plugin2", Version(2, 0, 0), Some(Version(4, 1, 0)))
+          SbtPluginDependencyState("plugin1", Version(1, 0, 0), Some(Version(3, 1, 0)), false),
+          SbtPluginDependencyState("plugin2", Version(2, 0, 0), Some(Version(4, 1, 0)), false)
         )
       )
 
@@ -241,8 +241,8 @@ class DependencyDataUpdatingServiceSpec extends FunSpec with MockitoSugar with M
       maybeDependencies.value shouldBe RepositoryDependencies(repositoryName,
         Nil,
         Seq(
-          SbtPluginDependencyState("internal-plugin", Version(1, 0, 0), Some(Version(3, 1, 0))),
-          SbtPluginDependencyState("external-plugin", Version(2, 0, 0), Some(Version(11, 22, 33)))
+          SbtPluginDependencyState("internal-plugin", Version(1, 0, 0), Some(Version(3, 1, 0)), false),
+          SbtPluginDependencyState("external-plugin", Version(2, 0, 0), Some(Version(11, 22, 33)), true)
         )
       )
 
