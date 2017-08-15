@@ -41,7 +41,8 @@ abstract class Github(buildFilePaths: Seq[String]) {
 
     GithubSearchResults(
       sbtPlugins = searchPluginSbtFileForMultipleArtifacts(repoName, curatedDependencyConfig.sbtPlugins),
-      libraries = searchBuildFilesForMultipleArtifacts(repoName, curatedDependencyConfig.libraries)
+      libraries = searchBuildFilesForMultipleArtifacts(repoName, curatedDependencyConfig.libraries),
+      others = Map.empty //!@ added
     )
   }
 

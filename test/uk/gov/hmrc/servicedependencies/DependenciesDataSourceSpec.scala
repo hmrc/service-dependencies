@@ -141,15 +141,17 @@ class DependenciesDataSourceSpec extends FreeSpec with Matchers with ScalaFuture
   "getDependenciesForAllRepositories" - {
 
     def lookupTable(repo: String) = repo match {
-      case "repo1" => GithubSearchResults(Map("plugin1" -> Some(Version(100, 0, 1))), Map("library1" -> Some(Version(1, 0, 1))))
+      case "repo1" => GithubSearchResults(Map("plugin1" -> Some(Version(100, 0, 1))), Map("library1" -> Some(Version(1, 0, 1))), Map.empty) //!@ added
       case "repo2" => GithubSearchResults(
         Map("plugin1" -> Some(Version(100, 0, 2)), "plugin2" -> Some(Version(200, 0, 3))),
-        Map("library1" -> Some(Version(1, 0, 2)), "library2" -> Some(Version(2, 0, 3)))
+        Map("library1" -> Some(Version(1, 0, 2)), "library2" -> Some(Version(2, 0, 3))),
+        Map.empty //!@ added
       )
       case "repo3" => GithubSearchResults(
         Map("plugin1" -> Some(Version(100, 0, 3)), "plugin3" -> Some(Version(300, 0, 4))),
-        Map("library1" -> Some(Version(1, 0, 3)), "library3" -> Some(Version(3, 0, 4))))
-      case "repo4" => GithubSearchResults(Map.empty, Map("library1" -> Some(Version(1, 0, 3)), "library3" -> Some(Version(3, 0, 4))))
+        Map("library1" -> Some(Version(1, 0, 3)), "library3" -> Some(Version(3, 0, 4))),
+        Map.empty) //!@ added
+      case "repo4" => GithubSearchResults(Map.empty, Map("library1" -> Some(Version(1, 0, 3)), "library3" -> Some(Version(3, 0, 4))), Map.empty) //!@ added
       case _ => throw new RuntimeException(s"No entry in lookup function for repoName: $repo")
     }
 

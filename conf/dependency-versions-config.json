@@ -3,11 +3,26 @@
      {
         "name": "sbt-auto-build",
         "org": "uk.gov.hmrc"
+     },{
+        "name": "sbt-git-versioning",
+        "org": "uk.gov.hmrc"
+     },{
+        "name": "sbt-distributables",
+        "org": "uk.gov.hmrc"
+     },{
+        "name": "hmrc-resolvers",
+        "org": "uk.gov.hmrc"
+     },{
+        "name": "sbt-git-stamp",
+        "org": "uk.gov.hmrc"
+     },{
+        "name": "sbt-settings",
+        "org": "uk.gov.hmrc"
      },
      {
         "name": "sbt-plugin",
         "org": "com.typesafe.play",
-        "version": "2.6.11"
+        "version": "2.5.12"
      }
   ],
   "libraries": [
