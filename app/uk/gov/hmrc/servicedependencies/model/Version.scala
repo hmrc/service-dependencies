@@ -21,6 +21,7 @@ import play.api.libs.json.{JsPath, Json, Reads}
 import play.api.libs.functional.syntax._
 
 
+
 case class Version(major: Int, minor: Int, patch: Int) {
   def <(other: Version) = {
     if (major == other.major)
@@ -50,4 +51,10 @@ object Version {
   }
 
   implicit val ord = Ordering.by(unapply)
+
+  implicit class VersionExtensions(v: String) {
+    def asVersion(): Version = {
+      Version(v)
+    }
+  }
 }

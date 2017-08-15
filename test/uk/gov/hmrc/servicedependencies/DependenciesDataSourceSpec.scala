@@ -167,7 +167,7 @@ class DependenciesDataSourceSpec extends FreeSpec with Matchers with ScalaFuture
     def getDependencies(results: Seq[MongoRepositoryDependencies], repo: String): MongoRepositoryDependencies =
       results.filter(_.repositoryName == repo).head
 
-    val curatedDependencyConfig = CuratedDependencyConfig(Nil, Seq("library1", "library2", "library3"), Other(""))
+    val curatedDependencyConfig = CuratedDependencyConfig(Nil, Seq("library1", "library2", "library3"), None)
 
     val timestampF: () => Long = () => 1234l
 

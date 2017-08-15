@@ -152,7 +152,7 @@ class GithubSpec
       githubServiceForTestingPlugins.findVersionsForMultipleArtifacts(repoName, CuratedDependencyConfig(Seq(
         SbtPluginConfig("bla", "sbt-plugin", None),
         SbtPluginConfig("bla", "sbt-auto-build", None)
-      ), Nil, Other(""))).sbtPlugins shouldBe
+      ), Nil, None)).sbtPlugins shouldBe
         Map("sbt-plugin" -> Some(Version(2, 3, 10)), "sbt-auto-build" -> Some(Version(1,3,0)))
     }
 
@@ -172,24 +172,24 @@ class GithubSpec
         ), Seq(
           "play-ui",
           "play-health"
-        ), Other("")))
+        ), None))
 
       results.sbtPlugins shouldBe Map("sbt-plugin" -> Some(Version(2, 3, 10)), "sbt-auto-build" -> Some(Version(1,3,0)))
       results.libraries shouldBe Map("play-ui" -> Some(Version(1, 3, 0)),  "play-health" -> Some(Version("0.5.0")))
     }
 
     "return artifacts versions correctly for a repository's build file" in {
-      githubService.findVersionsForMultipleArtifacts(repoName, CuratedDependencyConfig(Nil, Seq("play-ui", "play-health"), Other(""))).libraries shouldBe
+      githubService.findVersionsForMultipleArtifacts(repoName, CuratedDependencyConfig(Nil, Seq("play-ui", "play-health"), None)).libraries shouldBe
         Map("play-ui" -> Some(Version(1, 3, 0)), "play-health" -> Some(Version(0, 5, 0)))
     }
 
     "return None for artifacts that don't appear in the build file for a repository" in {
-      githubService.findVersionsForMultipleArtifacts(repoName, CuratedDependencyConfig(Nil, Seq("play-ui", "non-existing"), Other(""))).libraries shouldBe
+      githubService.findVersionsForMultipleArtifacts(repoName, CuratedDependencyConfig(Nil, Seq("play-ui", "non-existing"), None)).libraries shouldBe
         Map("play-ui" -> Some(Version(1, 3, 0)), "non-existing" -> None)
     }
 
     "return empty map if no artifacts passed in" in {
-      githubService.findVersionsForMultipleArtifacts(repoName, CuratedDependencyConfig(Nil, Seq.empty[String], Other(""))).libraries shouldBe
+      githubService.findVersionsForMultipleArtifacts(repoName, CuratedDependencyConfig(Nil, Seq.empty[String], None)).libraries shouldBe
         Map.empty[String, Option[Version]]
     }
   }

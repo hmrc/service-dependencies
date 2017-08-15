@@ -35,7 +35,7 @@ class DependencyConfigLoaderSpec extends FunSpec with Matchers with OptionValues
         libraries = List(
           "lib1", "lib2"
         ),
-        other = Other(sbt = "0.13.11")
+        other = Some(Other(sbt = "0.13.11"))
       )
     }
   }

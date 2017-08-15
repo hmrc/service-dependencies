@@ -40,7 +40,7 @@ class DependencyDataUpdatingServiceSpec extends FunSpec with MockitoSugar with M
   val curatedDependencyConfig = CuratedDependencyConfig(
     sbtPlugins = Nil,
     libraries = Nil,
-    other = Other("")
+    other = None
   )
 
   describe("reloadLibraryVersions") {
@@ -209,7 +209,7 @@ class DependencyDataUpdatingServiceSpec extends FunSpec with MockitoSugar with M
       val curatedDependencyConfig = CuratedDependencyConfig(
         sbtPlugins = List(SbtPluginConfig("org.com", "internal-plugin", None), SbtPluginConfig("org.com", "external-plugin", Some(Version(11, 22, 33)))),
         libraries = Nil,
-        other = Other("")
+        other = None
       )
 
       val underTest = new TestDependencyDataUpdatingService(noLockTestMongoLockBuilder, curatedDependencyConfig)

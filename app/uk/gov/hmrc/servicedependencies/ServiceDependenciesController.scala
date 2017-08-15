@@ -58,11 +58,13 @@ trait ServiceDependenciesController extends BaseController {
           NotFound(s"$repositoryName not found"))(repoDependencies => Ok(Json.toJson(repoDependencies))))
   }
 
+  private val resultDone = Ok("Done")
+
   def reloadLibraryDependenciesForAllRepositories() = Action {
     dependencyDataUpdatingService.reloadDependenciesDataForAllRepositories(timeStampGenerator).map(_ => println(s"""${">" * 10} done ${"<" * 10}""")).onFailure{
 			case ex => throw new RuntimeException("reload of dependencies failed", ex)
 		}
-    Ok("Done")
+    resultDone
 	}
 
 
@@ -70,14 +72,14 @@ trait ServiceDependenciesController extends BaseController {
     dependencyDataUpdatingService.reloadLibraryVersions(timeStampGenerator).map(_ => println(s"""${">" * 10} done ${"<" * 10}""")).onFailure{
 			case ex => throw new RuntimeException("reload of libraries failed", ex)
 		}
-    Ok("Done")
+    resultDone
 	}
 
   def reloadSbtPluginVersions() = Action {
     dependencyDataUpdatingService.reloadSbtPluginVersions(timeStampGenerator).map(_ => println(s"""${">" * 10} done ${"<" * 10}""")).onFailure{
 			case ex => throw new RuntimeException("reload of sbt plugins failed", ex)
 		}
-    Ok("Done")
+    resultDone
 	}
 
 
