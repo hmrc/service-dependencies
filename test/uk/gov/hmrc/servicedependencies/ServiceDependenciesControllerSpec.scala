@@ -93,16 +93,16 @@ class ServiceDependenciesControllerSpec extends FreeSpec with BeforeAndAfterEach
     "should get all dependencies using the service" in new Setup {
       val mockedLibraryDependencyDataUpdatingService = mock[DependencyDataUpdatingService]
       val libraryDependencies = Seq(
-        MongoRepositoryDependencies("repo1", Nil, Nil, 1234l),
-        MongoRepositoryDependencies("repo2", Nil, Nil, 1234l),
-        MongoRepositoryDependencies("repo3", Nil, Nil, 1234l)
+        RepositoryDependencies("repo1", Nil, Nil),
+        RepositoryDependencies("repo2", Nil, Nil),
+        RepositoryDependencies("repo3", Nil, Nil)
       )
-      when(mockedLibraryDependencyDataUpdatingService.getAllRepositoriesDependencies()).thenReturn(Future.successful(
+      when(mockedLibraryDependencyDataUpdatingService.getDependencyVersionsForAllRepositories()).thenReturn(Future.successful(
         libraryDependencies
       ))
 
       val result = makeServiceDependenciesImpl(mockedLibraryDependencyDataUpdatingService).dependencies().apply(FakeRequest())
-      val repositoryLibraryDependencies = contentAsJson(result).as[Seq[MongoRepositoryDependencies]]
+      val repositoryLibraryDependencies = contentAsJson(result).as[Seq[RepositoryDependencies]]
 
       repositoryLibraryDependencies.size shouldBe 3
       repositoryLibraryDependencies should contain theSameElementsAs(libraryDependencies)

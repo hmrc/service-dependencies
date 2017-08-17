@@ -43,6 +43,8 @@ trait ServiceDependenciesController extends BaseController {
 
 	import BlockingIOExecutionContext._
 
+  private val doneResult = Ok("Done")
+
   def dependencyDataUpdatingService: DependencyDataUpdatingService
 
 	implicit val environmentDependencyWrites = Json.writes[EnvironmentDependency]
@@ -58,13 +60,16 @@ trait ServiceDependenciesController extends BaseController {
           NotFound(s"$repositoryName not found"))(repoDependencies => Ok(Json.toJson(repoDependencies))))
   }
 
-  private val resultDone = Ok("Done")
+  def dependencies() = Action.async {
+    dependencyDataUpdatingService.getDependencyVersionsForAllRepositories().map(dependencies => Ok(Json.toJson(dependencies)))
+  }
+
 
   def reloadLibraryDependenciesForAllRepositories() = Action {
     dependencyDataUpdatingService.reloadDependenciesDataForAllRepositories(timeStampGenerator).map(_ => println(s"""${">" * 10} done ${"<" * 10}""")).onFailure{
 			case ex => throw new RuntimeException("reload of dependencies failed", ex)
 		}
-    resultDone
+    doneResult
 	}
 
 
@@ -72,31 +77,24 @@ trait ServiceDependenciesController extends BaseController {
     dependencyDataUpdatingService.reloadLibraryVersions(timeStampGenerator).map(_ => println(s"""${">" * 10} done ${"<" * 10}""")).onFailure{
 			case ex => throw new RuntimeException("reload of libraries failed", ex)
 		}
-    resultDone
+    doneResult
 	}
 
   def reloadSbtPluginVersions() = Action {
     dependencyDataUpdatingService.reloadSbtPluginVersions(timeStampGenerator).map(_ => println(s"""${">" * 10} done ${"<" * 10}""")).onFailure{
 			case ex => throw new RuntimeException("reload of sbt plugins failed", ex)
 		}
-    resultDone
+    doneResult
 	}
 
 
   def libraries() = Action.async {
-
     dependencyDataUpdatingService.getAllCuratedLibraries().map(versions => Ok(Json.toJson(versions)))
   }
 
-  def dependencies() = Action.async {
-
-    dependencyDataUpdatingService.getAllRepositoriesDependencies().map(dependencies => Ok(Json.toJson(dependencies)))
-  }
 
   def sbtPlugins() = Action.async {
-
     dependencyDataUpdatingService.getAllCuratedSbtPlugins().map(versions => Ok(Json.toJson(versions)))
-
   }
 
 }

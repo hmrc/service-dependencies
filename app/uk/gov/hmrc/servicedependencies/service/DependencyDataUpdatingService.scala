@@ -42,6 +42,7 @@ trait DependencyDataUpdatingService {
   def getAllRepositoriesDependencies(): Future[Seq[MongoRepositoryDependencies]]
 
   def getDependencyVersionsForRepository(repositoryName: String): Future[Option[RepositoryDependencies]]
+  def getDependencyVersionsForAllRepositories(): Future[Seq[RepositoryDependencies]]
 
   lazy val releasesConnector = new DeploymentsDataSource(config)
   lazy val teamsAndRepositoriesClient = new TeamsAndRepositoriesClient(config.teamsAndRepositoriesServiceUrl)
@@ -131,9 +132,7 @@ class DefaultDependencyDataUpdatingService(override val config: ServiceDependenc
   }
 
 
-  override def getDependencyVersionsForRepository(repositoryName: String): Future[Option[RepositoryDependencies]] = {
-
-
+  override def getDependencyVersionsForRepository(repositoryName: String): Future[Option[RepositoryDependencies]] =
     for {
       dependencies <- repositoryLibraryDependenciesRepository.getForRepository(repositoryName)
       libraryReferences <- libraryVersionRepository.getAllEntries
@@ -146,7 +145,20 @@ class DefaultDependencyDataUpdatingService(override val config: ServiceDependenc
           getSbtPluginDependencyState(dep, sbtPluginReferences)
         )
       }
-  }
+
+  override def getDependencyVersionsForAllRepositories(): Future[Seq[RepositoryDependencies]] =
+    for {
+      allDependencies <- repositoryLibraryDependenciesRepository.getAllEntries
+      libraryReferences <- libraryVersionRepository.getAllEntries
+      sbtPluginReferences <- sbtPluginVersionRepository.getAllEntries
+    } yield
+      allDependencies.map { dep =>
+        RepositoryDependencies(
+          dep.repositoryName,
+          dep.libraryDependencies.map(d => LibraryDependencyState(d.libraryName, d.currentVersion, libraryReferences.find(mlv => mlv.libraryName == d.libraryName).flatMap(_.version))),
+          getSbtPluginDependencyState(dep, sbtPluginReferences)
+        )
+      }
 
   override def getAllCuratedLibraries(): Future[Seq[MongoLibraryVersion]] =
     libraryVersionRepository.getAllEntries
