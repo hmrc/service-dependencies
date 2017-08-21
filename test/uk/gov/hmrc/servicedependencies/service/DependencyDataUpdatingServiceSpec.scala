@@ -306,6 +306,84 @@ class DependencyDataUpdatingServiceSpec extends FunSpec with MockitoSugar with M
 
   }
 
+  describe("getDependencyVersionsForAllRepositories") {
+    it("should return the current and latest library and sbt plugin dependency versions for all repositories") {
+      val underTest = new TestDependencyDataUpdatingService(noLockTestMongoLockBuilder, curatedDependencyConfig)
+
+      val libraryDependencies1 = Seq(
+        LibraryDependency("lib1", Version(1, 1, 0)),
+        LibraryDependency("lib2", Version(1, 2, 0))
+      )
+      val libraryDependencies2 = Seq(
+        LibraryDependency("lib1", Version(2, 1, 0)),
+        LibraryDependency("lib2", Version(2, 2, 0))
+      )
+
+      val sbtPluginDependencies1 = Seq(
+        SbtPluginDependency("plugin1", Version(10, 1, 0)),
+        SbtPluginDependency("plugin2", Version(10, 2, 0))
+      )
+
+      val sbtPluginDependencies2 = Seq(
+        SbtPluginDependency("plugin1", Version(20, 1, 0)),
+        SbtPluginDependency("plugin2", Version(20, 2, 0))
+      )
+
+      val referenceLibraryVersions = Seq(
+        MongoLibraryVersion("lib1", Some(Version(3, 0, 0))),
+        MongoLibraryVersion("lib2", Some(Version(4, 0, 0)))
+      )
+
+      val referenceSbtPluginVersions = Seq(
+        MongoSbtPluginVersion("plugin1", Some(Version(30, 0, 0))),
+        MongoSbtPluginVersion("plugin2", Some(Version(40, 0, 0)))
+      )
+
+      val repository1 = "repo1"
+      val repository2 = "repo2"
+
+      when(underTest.repositoryLibraryDependenciesRepository.getAllEntries)
+        .thenReturn(Future.successful(Seq(
+          MongoRepositoryDependencies(repository1, libraryDependencies1, sbtPluginDependencies1),
+          MongoRepositoryDependencies(repository2, libraryDependencies2, sbtPluginDependencies2)
+        )))
+
+      when(underTest.libraryVersionRepository.getAllEntries)
+        .thenReturn(Future.successful(referenceLibraryVersions))
+
+      when(underTest.sbtPluginVersionRepository.getAllEntries)
+        .thenReturn(Future.successful(referenceSbtPluginVersions))
+      
+
+      val maybeDependencies = await(underTest.getDependencyVersionsForAllRepositories())
+
+      verify(underTest.repositoryLibraryDependenciesRepository, times(1)).getAllEntries
+
+      maybeDependencies should contain theSameElementsAs Seq(
+        RepositoryDependencies(repositoryName = repository1,
+          libraryDependenciesState = Seq(
+            LibraryDependencyState("lib1", Version(1, 1, 0), Some(Version(3, 0, 0))),
+            LibraryDependencyState("lib2", Version(1, 2, 0), Some(Version(4, 0, 0)))
+          ), sbtPluginsDependenciesState = Seq(
+            SbtPluginDependencyState("plugin1", Version(10, 1, 0), Some(Version(30, 0, 0)), false),
+            SbtPluginDependencyState("plugin2", Version(10, 2, 0), Some(Version(40, 0, 0)), false)
+          )
+        ),
+        RepositoryDependencies(repositoryName = repository2,
+          libraryDependenciesState = Seq(
+            LibraryDependencyState("lib1", Version(2, 1, 0), Some(Version(3, 0, 0))),
+            LibraryDependencyState("lib2", Version(2, 2, 0), Some(Version(4, 0, 0)))
+          ), sbtPluginsDependenciesState = Seq(
+            SbtPluginDependencyState("plugin1", Version(20, 1, 0), Some(Version(30, 0, 0)), false),
+            SbtPluginDependencyState("plugin2", Version(20, 2, 0), Some(Version(40, 0, 0)), false)
+          )
+
+        )
+
+      )
+
+    }
+  }
 
   def noLockTestMongoLockBuilder(lockId: String) = new MongoLock(() => mock[DB], lockId) {
     override def tryLock[T](body: => Future[T])(implicit ec: ExecutionContext): Future[Option[T]] =
