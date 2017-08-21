@@ -21,13 +21,17 @@ import play.api.libs.json.{JsPath, Json, Reads}
 import uk.gov.hmrc.servicedependencies.model.Version
 
 
-case class Other(sbt: String)
+
+case class OtherDependencyConfig(name: String, latestVersion: Option[Version])
 
 case class CuratedDependencyConfig(sbtPlugins: Seq[SbtPluginConfig],
                                    libraries: Seq[String],
-                                   other: Option[Other])
+                                   otherDependencies: Seq[OtherDependencyConfig])
 object CuratedDependencyConfig {
-  implicit val otherReader = Json.reads[Other]
+
+  implicit val otherReader: Reads[OtherDependencyConfig] =
+    ((JsPath \ "name").read[String] and
+      (JsPath \ "latestVersion").readNullable[String])((name, version) => OtherDependencyConfig(name, version.map(Version.parse)))
 
   implicit val pluginsReader: Reads[SbtPluginConfig] = (
     (JsPath \ "org").read[String] and

@@ -19,7 +19,7 @@ package uk.gov.hmrc.servicedependencies.model
 import org.scalatest.{FunSpec, Matchers, OptionValues}
 import org.slf4j.LoggerFactory
 import uk.gov.hmrc.servicedependencies.config.ServiceDependenciesConfig
-import uk.gov.hmrc.servicedependencies.config.model.{CuratedDependencyConfig, Other, SbtPluginConfig}
+import uk.gov.hmrc.servicedependencies.config.model.{CuratedDependencyConfig, OtherDependencyConfig, SbtPluginConfig}
 
 class DependencyConfigLoaderSpec extends FunSpec with Matchers with OptionValues {
 
@@ -35,7 +35,7 @@ class DependencyConfigLoaderSpec extends FunSpec with Matchers with OptionValues
         libraries = List(
           "lib1", "lib2"
         ),
-        other = Some(Other(sbt = "0.13.11"))
+        otherDependencies = Seq(OtherDependencyConfig("sbt" , Some(Version("0.13.11"))))
       )
     }
   }

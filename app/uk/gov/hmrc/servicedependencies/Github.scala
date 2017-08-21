@@ -21,7 +21,7 @@ import org.eclipse.egit.github.core.client.RequestException
 import org.eclipse.egit.github.core.{IRepositoryIdProvider, RepositoryContents}
 import org.slf4j.LoggerFactory
 import uk.gov.hmrc.githubclient.GithubApiClient
-import uk.gov.hmrc.servicedependencies.config.model.{CuratedDependencyConfig, SbtPluginConfig}
+import uk.gov.hmrc.servicedependencies.config.model.{CuratedDependencyConfig, OtherDependencyConfig, SbtPluginConfig}
 import uk.gov.hmrc.servicedependencies.model.{GithubSearchResults, SbtPluginDependency, Version}
 import uk.gov.hmrc.servicedependencies.util.{Max, VersionParser}
 
@@ -42,7 +42,7 @@ abstract class Github(buildFilePaths: Seq[String]) {
     GithubSearchResults(
       sbtPlugins = searchPluginSbtFileForMultipleArtifacts(repoName, curatedDependencyConfig.sbtPlugins),
       libraries = searchBuildFilesForMultipleArtifacts(repoName, curatedDependencyConfig.libraries),
-      others = Map.empty //!@ added
+      others = searchForOtherSpecifiedDependencies(repoName, curatedDependencyConfig.otherDependencies)
     )
   }
 
@@ -76,7 +76,7 @@ abstract class Github(buildFilePaths: Seq[String]) {
     def searchRemainingBuildFiles(remainingFiles: Seq[String]): Option[Version] = {
       remainingFiles match {
         case filePath :: xs =>
-          val maybeVersion = performSearch(serviceName, version, filePath, parseBuildFile(_, artifact))
+          val maybeVersion = performSearch(serviceName, Some(version), filePath, parseBuildFile(_, artifact))
           maybeVersion match {
             case None =>
               searchRemainingBuildFiles(xs)
@@ -110,6 +110,13 @@ abstract class Github(buildFilePaths: Seq[String]) {
     searchRemainingBuildFiles(buildFilePaths)
   }
 
+  private def getCurrentSbtVersion(repositoryName: String): Option[Version] =
+    performSearch(repositoryName, None, "project/build.properties", rc => VersionParser.parsePropertyFile(parseFileContents(rc), "sbt.version"))
+
+  private def searchForOtherSpecifiedDependencies(serviceName: String, otherDependencies: Seq[OtherDependencyConfig]): Map[String, Option[Version]] = {
+    otherDependencies.find(_.name == "sbt").map(_ => Map("sbt" -> getCurrentSbtVersion(serviceName))).getOrElse(Map.empty)
+  }
+
   private def searchPluginSbtFileForMultipleArtifacts(serviceName: String, sbtPluginConfigs: Seq[SbtPluginConfig]): Map[String, Option[Version]] =
     performSearchForMultipleArtifacts(serviceName, "project/plugins.sbt", parseFileForMultipleArtifacts(_, sbtPluginConfigs.map(_.name)))
 
@@ -136,7 +143,7 @@ abstract class Github(buildFilePaths: Seq[String]) {
 
 
   private def searchPluginSbtFile(serviceName: String, artifact: String, version: String) =
-      performSearch(serviceName, version, "project/plugins.sbt", parsePluginsSbtFile(_, artifact))
+      performSearch(serviceName, Some(version), "project/plugins.sbt", parsePluginsSbtFile(_, artifact))
 
   private def parseBuildFile(response: RepositoryContents, artifact: String): Option[Version] =
     VersionParser.parse(parseFileContents(response), artifact)
@@ -144,15 +151,18 @@ abstract class Github(buildFilePaths: Seq[String]) {
   private def parsePluginsSbtFile(response: RepositoryContents, artifact: String): Option[Version] =
     VersionParser.parse(parseFileContents(response), artifact)
 
-  private def performSearch(serviceName: String, version: String, filePath: String, transformF: (RepositoryContents) => Option[Version]): Option[Version] =
+  private def performSearch(serviceName: String, mayBeVersion: Option[String], filePath: String, transformF: (RepositoryContents) => Option[Version]): Option[Version] =
     try {
-      val results = gh.contentsService.getContents(repositoryId(serviceName, "HMRC"), filePath, resolveTag(version))
+      val results = mayBeVersion.fold(gh.contentsService.getContents(repositoryId(serviceName, "HMRC"), filePath)) { version =>
+          gh.contentsService.getContents(repositoryId(serviceName, "HMRC"), filePath, resolveTag(version))
+        }
       if (results.isEmpty) None
       else transformF(results.get(0))
     }
     catch {
       case (ex: RequestException) => None
     }
+
 
   private def repositoryId(repoName: String, orgName: String): IRepositoryIdProvider =
     new IRepositoryIdProvider { val generateId: String = orgName + "/" + repoName }

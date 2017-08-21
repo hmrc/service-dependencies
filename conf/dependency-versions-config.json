@@ -62,7 +62,7 @@
      "reactivemongo"
   ],
   "other": {
-    "sbt":"0.13.11",
+    "sbt": "0.13.11",
     "someOtherLib": "13.9.1"
   }
 

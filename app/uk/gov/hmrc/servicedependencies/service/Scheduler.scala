@@ -44,7 +44,7 @@ abstract class Scheduler {
     Logger.info(s"Initialising libraryDependencyDataReloader update every $interval")
 
     val scheduler = akkaSystem.scheduler.schedule(100 milliseconds, interval) {
-      dependencyDataUpdatingService.reloadDependenciesDataForAllRepositories(timeStampGenerator)
+      dependencyDataUpdatingService.reloadCurrentDependenciesDataForAllRepositories(timeStampGenerator)
     }
 
     scheduler
@@ -54,7 +54,7 @@ abstract class Scheduler {
     Logger.info(s"Initialising libraryDataReloader update every $interval")
 
     val scheduler = akkaSystem.scheduler.schedule(100 milliseconds, interval) {
-      dependencyDataUpdatingService.reloadLibraryVersions(timeStampGenerator)
+      dependencyDataUpdatingService.reloadLatestLibraryVersions(timeStampGenerator)
     }
 
     scheduler
@@ -64,7 +64,7 @@ abstract class Scheduler {
     Logger.info(s"Initialising SbtPluginDataReloader update every $interval")
 
     val scheduler = akkaSystem.scheduler.schedule(100 milliseconds, interval) {
-      dependencyDataUpdatingService.reloadSbtPluginVersions(timeStampGenerator)
+      dependencyDataUpdatingService.reloadLatestSbtPluginVersions(timeStampGenerator)
     }
 
     scheduler

@@ -126,7 +126,7 @@ class DependenciesDataSource(val releasesConnector: DeploymentsDataSource,
             val errorOrDependencies: Either[Throwable, Option[DependenciesFromGitHub]] = getDependenciesFromGitHub(repoName, curatedDependencyConfig)
 
             if (errorOrDependencies.isLeft) {
-              // error, short circuit
+              // error (only rate limiting should be bubbled up to here) => short circuit
               logger.error("terminating current run because ===>", errorOrDependencies.left.get)
               acc
             } else {
@@ -134,7 +134,7 @@ class DependenciesDataSource(val releasesConnector: DeploymentsDataSource,
                 case None =>
                   getLibDependencies(xs, acc)
                 case Some(dependencies) =>
-                  val repositoryLibraryDependencies = MongoRepositoryDependencies(repoName, dependencies.libraries, dependencies.sbtPlugins, timeStampGenerator())
+                  val repositoryLibraryDependencies = MongoRepositoryDependencies(repoName, dependencies.libraries, dependencies.sbtPlugins, dependencies.otherDependencies, timeStampGenerator())
                   persisterF(repositoryLibraryDependencies)
                   getLibDependencies(xs, acc :+ repositoryLibraryDependencies)
               }
@@ -158,7 +158,7 @@ class DependenciesDataSource(val releasesConnector: DeploymentsDataSource,
   }
 
 
-  case class DependenciesFromGitHub(libraries: Seq[LibraryDependency], sbtPlugins: Seq[SbtPluginDependency])
+  case class DependenciesFromGitHub(libraries: Seq[LibraryDependency], sbtPlugins: Seq[SbtPluginDependency], otherDependencies: Seq[OtherDependency])
 
   import cats.syntax.either._
   private def getDependenciesFromGitHub(repoName: String, curatedDependencyConfig: CuratedDependencyConfig): Either[Throwable, Option[DependenciesFromGitHub]] = {
@@ -172,10 +172,17 @@ class DependenciesDataSource(val releasesConnector: DeploymentsDataSource,
         mayBeVersion.fold(acc)(currentVersion => acc :+ SbtPluginDependency(plugin, currentVersion))
     }
 
+    def getOtherDependencies(githubSearchResults: GithubSearchResults) = githubSearchResults.others.foldLeft(Seq.empty[OtherDependency]) {
+      case (acc, ("sbt", mayBeVersion)) =>
+        mayBeVersion.fold(acc)(currentVersion => acc :+ OtherDependency("sbt", currentVersion))
+    }
+
+    // caching the rate limiting exception
     Either.catchNonFatal {
       val currentDependencyAndPluginVersions: Option[GithubSearchResults] = searchGithubsForArtifacts(repoName, curatedDependencyConfig)
+
       currentDependencyAndPluginVersions.map { vs =>
-        DependenciesFromGitHub(getLibraryDependencies(vs), getPluginDependencies(vs))
+        DependenciesFromGitHub(getLibraryDependencies(vs), getPluginDependencies(vs), getOtherDependencies(vs))
       }
     }
   }

@@ -27,7 +27,7 @@ import org.scalatest.mock.MockitoSugar
 import org.scalatest.{FreeSpec, Matchers}
 import uk.gov.hmrc.githubclient.{ExtendedContentsService, GithubApiClient}
 import uk.gov.hmrc.servicedependencies.config._
-import uk.gov.hmrc.servicedependencies.config.model.{CuratedDependencyConfig, Other, SbtPluginConfig}
+import uk.gov.hmrc.servicedependencies.config.model.{CuratedDependencyConfig, OtherDependencyConfig, SbtPluginConfig}
 import uk.gov.hmrc.servicedependencies.model._
 import uk.gov.hmrc.servicedependencies.service._
 
@@ -141,17 +141,24 @@ class DependenciesDataSourceSpec extends FreeSpec with Matchers with ScalaFuture
   "getDependenciesForAllRepositories" - {
 
     def lookupTable(repo: String) = repo match {
-      case "repo1" => GithubSearchResults(Map("plugin1" -> Some(Version(100, 0, 1))), Map("library1" -> Some(Version(1, 0, 1))), Map.empty) //!@ added
+      case "repo1" => GithubSearchResults(
+        Map("plugin1" -> Some(Version(100, 0, 1))),
+        Map("library1" -> Some(Version(1, 0, 1))),
+        Map("sbt" -> Some(Version(1, 13, 100))))
       case "repo2" => GithubSearchResults(
         Map("plugin1" -> Some(Version(100, 0, 2)), "plugin2" -> Some(Version(200, 0, 3))),
         Map("library1" -> Some(Version(1, 0, 2)), "library2" -> Some(Version(2, 0, 3))),
-        Map.empty //!@ added
+        Map("sbt" -> Some(Version(1, 13, 200)))
       )
       case "repo3" => GithubSearchResults(
         Map("plugin1" -> Some(Version(100, 0, 3)), "plugin3" -> Some(Version(300, 0, 4))),
         Map("library1" -> Some(Version(1, 0, 3)), "library3" -> Some(Version(3, 0, 4))),
-        Map.empty) //!@ added
-      case "repo4" => GithubSearchResults(Map.empty, Map("library1" -> Some(Version(1, 0, 3)), "library3" -> Some(Version(3, 0, 4))), Map.empty) //!@ added
+        Map("sbt" -> Some(Version(1, 13, 300))))
+      case "repo4" => GithubSearchResults(
+        Map.empty,
+        Map("library1" -> Some(Version(1, 0, 3)), "library3" -> Some(Version(3, 0, 4))),
+        Map("sbt" -> Some(Version(1, 13, 400)))
+      )
       case _ => throw new RuntimeException(s"No entry in lookup function for repoName: $repo")
     }
 
@@ -169,11 +176,11 @@ class DependenciesDataSourceSpec extends FreeSpec with Matchers with ScalaFuture
     def getDependencies(results: Seq[MongoRepositoryDependencies], repo: String): MongoRepositoryDependencies =
       results.filter(_.repositoryName == repo).head
 
-    val curatedDependencyConfig = CuratedDependencyConfig(Nil, Seq("library1", "library2", "library3"), None)
+    val curatedDependencyConfig = CuratedDependencyConfig(Nil, Seq("library1", "library2", "library3"), Seq(OtherDependencyConfig("sbt", Some(Version(1,2,3)))))
 
     val timestampF: () => Long = () => 1234l
 
-    "should persist the dependencies (library and plugin) for each repository" in {
+    "should persist the dependencies (library, plugin and other) for each repository" in {
 
       val dependenciesDataSource = prepareUnderTestClass(Seq(githubStubForMultiArtifacts), Seq("repo1", "repo2", "repo3"))
 
@@ -195,6 +202,10 @@ class DependenciesDataSourceSpec extends FreeSpec with Matchers with ScalaFuture
       getDependencies(callsToPersisterF, "repo1").sbtPluginDependencies should contain theSameElementsAs Seq(SbtPluginDependency("plugin1", Version(100, 0, 1)))
       getDependencies(callsToPersisterF, "repo2").sbtPluginDependencies should contain theSameElementsAs Seq(SbtPluginDependency("plugin1", Version(100, 0, 2)), SbtPluginDependency("plugin2", Version(200, 0, 3)))
       getDependencies(callsToPersisterF, "repo3").sbtPluginDependencies should contain theSameElementsAs Seq(SbtPluginDependency("plugin1", Version(100, 0, 3)), SbtPluginDependency("plugin3", Version(300, 0, 4)))
+
+      getDependencies(callsToPersisterF, "repo1").otherDependencies should contain theSameElementsAs Seq(OtherDependency("sbt", Version(1, 13, 100)))
+      getDependencies(callsToPersisterF, "repo2").otherDependencies should contain theSameElementsAs Seq(OtherDependency("sbt", Version(1, 13, 200)))
+      getDependencies(callsToPersisterF, "repo3").otherDependencies should contain theSameElementsAs Seq(OtherDependency("sbt", Version(1, 13, 300)))
 
 
     }
@@ -247,9 +258,9 @@ class DependenciesDataSourceSpec extends FreeSpec with Matchers with ScalaFuture
       dataSource.persistDependenciesForAllRepositories(curatedDependencyConfig, timestampF, Nil, persisterF).futureValue
 
       callsToPersisterF should contain theSameElementsAs Seq(
-        MongoRepositoryDependencies("repo1", Seq(LibraryDependency("library1", Version(1, 0, 0)), LibraryDependency("library2", Version(2, 0, 0)), LibraryDependency("library3", Version(3, 0, 0))), Nil, 1234),
-        MongoRepositoryDependencies("repo2", Seq(LibraryDependency("library1", Version(1, 0, 0)), LibraryDependency("library2", Version(2, 0, 0)), LibraryDependency("library3", Version(3, 0, 0))), Nil, 1234),
-        MongoRepositoryDependencies("repo3", Seq(LibraryDependency("library1", Version(1, 0, 0)), LibraryDependency("library2", Version(2, 0, 0)), LibraryDependency("library3", Version(3, 0, 0))), Nil, 1234)
+        MongoRepositoryDependencies("repo1", Seq(LibraryDependency("library1", Version(1, 0, 0)), LibraryDependency("library2", Version(2, 0, 0)), LibraryDependency("library3", Version(3, 0, 0))), Nil, Nil, 1234),
+        MongoRepositoryDependencies("repo2", Seq(LibraryDependency("library1", Version(1, 0, 0)), LibraryDependency("library2", Version(2, 0, 0)), LibraryDependency("library3", Version(3, 0, 0))), Nil, Nil, 1234),
+        MongoRepositoryDependencies("repo3", Seq(LibraryDependency("library1", Version(1, 0, 0)), LibraryDependency("library2", Version(2, 0, 0)), LibraryDependency("library3", Version(3, 0, 0))), Nil, Nil, 1234)
       )
     }
 
@@ -283,9 +294,9 @@ class DependenciesDataSourceSpec extends FreeSpec with Matchers with ScalaFuture
       dataSource.persistDependenciesForAllRepositories(curatedDependencyConfig, timestampF, Nil, persisterF).futureValue
 
       callsToPersisterF should contain theSameElementsAs List(
-        MongoRepositoryDependencies("repo1", List(LibraryDependency("library1", Version(1, 0, 0)), LibraryDependency("library3", Version(3, 0, 0))), Nil, 1234),
-        MongoRepositoryDependencies("repo2", List(LibraryDependency("library1", Version(1, 0, 0)), LibraryDependency("library3", Version(3, 0, 0))), Nil, 1234),
-        MongoRepositoryDependencies("repo3", List(LibraryDependency("library1", Version(1, 0, 0)), LibraryDependency("library3", Version(3, 0, 0))), Nil, 1234)
+        MongoRepositoryDependencies("repo1", List(LibraryDependency("library1", Version(1, 0, 0)), LibraryDependency("library3", Version(3, 0, 0))), Nil, Nil, 1234),
+        MongoRepositoryDependencies("repo2", List(LibraryDependency("library1", Version(1, 0, 0)), LibraryDependency("library3", Version(3, 0, 0))), Nil, Nil, 1234),
+        MongoRepositoryDependencies("repo3", List(LibraryDependency("library1", Version(1, 0, 0)), LibraryDependency("library3", Version(3, 0, 0))), Nil, Nil, 1234)
       )
     }
 
@@ -334,8 +345,8 @@ class DependenciesDataSourceSpec extends FreeSpec with Matchers with ScalaFuture
 
 
       val dependenciesAlreadyInDb = Seq(
-        MongoRepositoryDependencies("repo1",Nil, Nil),
-        MongoRepositoryDependencies("repo3",Nil, Nil)
+        MongoRepositoryDependencies("repo1",Nil, Nil, Nil),
+        MongoRepositoryDependencies("repo3",Nil, Nil, Nil)
       )
 
 
@@ -362,8 +373,8 @@ class DependenciesDataSourceSpec extends FreeSpec with Matchers with ScalaFuture
 
 
       val dependenciesAlreadyInDb = Seq(
-        MongoRepositoryDependencies("repo1", Nil, Nil, 20000l),
-        MongoRepositoryDependencies("repo3", Nil, Nil, 10000l) // <-- oldest record should get updated first
+        MongoRepositoryDependencies("repo1", Nil, Nil, Nil, 20000l),
+        MongoRepositoryDependencies("repo3", Nil, Nil, Nil, 10000l) // <-- oldest record should get updated first
       )
 
 

@@ -128,4 +128,14 @@ class VersionParserSpec extends FreeSpec with MustMatchers {
     val tag = "release/1.0.1"
     VersionParser.parseReleaseVersion("non-release/", tag) mustBe None
   }
+
+  "Parsing a build.properties file returns the sbt version" in {
+    VersionParser.parsePropertyFile("sbt.version=1.2.3", "sbt.version") mustBe Some(Version(1,2,3))
+    VersionParser.parsePropertyFile(" sbt.version = 1.2.3 ", "sbt.version") mustBe Some(Version(1,2,3))
+  }
+
+  "Parsing build.properties file returns None for sbt version if the 'sbt.version' is not defined" in {
+    VersionParser.parsePropertyFile("some.non-related.key=1.2.3", "sbt.version") mustBe None
+  }
+
 }

@@ -37,7 +37,7 @@ class ServiceDependenciesControllerSpec extends FreeSpec with BeforeAndAfterEach
     "should get dependency versions for a repository using the service" in new Setup {
       val mockedLibraryDependencyDataUpdatingService = mock[DependencyDataUpdatingService]
       val repoName = "repo1"
-      val repositoryDependencies = RepositoryDependencies(repoName, Nil, Nil)
+      val repositoryDependencies = RepositoryDependencies(repoName, Nil, Nil, Nil)
 
       when(mockedLibraryDependencyDataUpdatingService.getDependencyVersionsForRepository(any()))
         .thenReturn(Future.successful(Some(repositoryDependencies)))
@@ -57,13 +57,13 @@ class ServiceDependenciesControllerSpec extends FreeSpec with BeforeAndAfterEach
       val repoName = "repo1"
 
 
-      when(mockedLibraryDependencyDataUpdatingService.reloadDependenciesDataForAllRepositories(any()))
+      when(mockedLibraryDependencyDataUpdatingService.reloadCurrentDependenciesDataForAllRepositories(any()))
         .thenReturn(Future.successful(Seq.empty[MongoRepositoryDependencies]))
 
       val controller = makeServiceDependenciesImpl(mockedLibraryDependencyDataUpdatingService)
       controller.reloadLibraryDependenciesForAllRepositories().apply(FakeRequest())
 
-      Mockito.verify(mockedLibraryDependencyDataUpdatingService).reloadDependenciesDataForAllRepositories(controller.timeStampGenerator)
+      Mockito.verify(mockedLibraryDependencyDataUpdatingService).reloadCurrentDependenciesDataForAllRepositories(controller.timeStampGenerator)
     }
 
   }
@@ -93,9 +93,9 @@ class ServiceDependenciesControllerSpec extends FreeSpec with BeforeAndAfterEach
     "should get all dependencies using the service" in new Setup {
       val mockedLibraryDependencyDataUpdatingService = mock[DependencyDataUpdatingService]
       val libraryDependencies = Seq(
-        RepositoryDependencies("repo1", Nil, Nil),
-        RepositoryDependencies("repo2", Nil, Nil),
-        RepositoryDependencies("repo3", Nil, Nil)
+        RepositoryDependencies("repo1", Nil, Nil, Nil),
+        RepositoryDependencies("repo2", Nil, Nil, Nil),
+        RepositoryDependencies("repo3", Nil, Nil, Nil)
       )
       when(mockedLibraryDependencyDataUpdatingService.getDependencyVersionsForAllRepositories()).thenReturn(Future.successful(
         libraryDependencies

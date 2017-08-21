@@ -29,11 +29,14 @@ import uk.gov.hmrc.servicedependencies.service._
 
 case class LibraryDependencyState(libraryName: String, currentVersion:Version, latestVersion: Option[Version])
 case class SbtPluginDependencyState(sbtPluginName: String, currentVersion:Version, latestVersion: Option[Version], isExternal: Boolean)
+case class OtherDependencyState(name: String, currentVersion:Version, latestVersion: Option[Version])
 
 case class RepositoryDependencies(repositoryName: String,
                                   libraryDependenciesState: Seq[LibraryDependencyState],
-                                  sbtPluginsDependenciesState: Seq[SbtPluginDependencyState])
+                                  sbtPluginsDependenciesState: Seq[SbtPluginDependencyState],
+                                  otherDependency: Seq[OtherDependencyState])
 object RepositoryDependencies {
+  implicit val osf = Json.format[OtherDependencyState]
   implicit val ldsf = Json.format[LibraryDependencyState]
   implicit val spdsf = Json.format[SbtPluginDependencyState]
   implicit val format = Json.format[RepositoryDependencies]
@@ -66,7 +69,7 @@ trait ServiceDependenciesController extends BaseController {
 
 
   def reloadLibraryDependenciesForAllRepositories() = Action {
-    dependencyDataUpdatingService.reloadDependenciesDataForAllRepositories(timeStampGenerator).map(_ => println(s"""${">" * 10} done ${"<" * 10}""")).onFailure{
+    dependencyDataUpdatingService.reloadCurrentDependenciesDataForAllRepositories(timeStampGenerator).map(_ => println(s"""${">" * 10} done ${"<" * 10}""")).onFailure{
 			case ex => throw new RuntimeException("reload of dependencies failed", ex)
 		}
     doneResult
@@ -74,14 +77,14 @@ trait ServiceDependenciesController extends BaseController {
 
 
   def reloadLibraryVersions() = Action {
-    dependencyDataUpdatingService.reloadLibraryVersions(timeStampGenerator).map(_ => println(s"""${">" * 10} done ${"<" * 10}""")).onFailure{
+    dependencyDataUpdatingService.reloadLatestLibraryVersions(timeStampGenerator).map(_ => println(s"""${">" * 10} done ${"<" * 10}""")).onFailure{
 			case ex => throw new RuntimeException("reload of libraries failed", ex)
 		}
     doneResult
 	}
 
   def reloadSbtPluginVersions() = Action {
-    dependencyDataUpdatingService.reloadSbtPluginVersions(timeStampGenerator).map(_ => println(s"""${">" * 10} done ${"<" * 10}""")).onFailure{
+    dependencyDataUpdatingService.reloadLatestSbtPluginVersions(timeStampGenerator).map(_ => println(s"""${">" * 10} done ${"<" * 10}""")).onFailure{
 			case ex => throw new RuntimeException("reload of sbt plugins failed", ex)
 		}
     doneResult

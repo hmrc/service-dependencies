@@ -21,7 +21,7 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.modules.reactivemongo.MongoDbConnection
 import uk.gov.hmrc.servicedependencies.config.ServiceDependenciesConfig
 import uk.gov.hmrc.servicedependencies.config.model.SbtPluginConfig
-import uk.gov.hmrc.servicedependencies.{LibraryDependencyState, RepositoryDependencies, SbtPluginDependencyState}
+import uk.gov.hmrc.servicedependencies.{LibraryDependencyState, OtherDependencyState, RepositoryDependencies, SbtPluginDependencyState}
 import uk.gov.hmrc.servicedependencies.model._
 import uk.gov.hmrc.servicedependencies.presistence._
 
@@ -33,9 +33,9 @@ trait DependencyDataUpdatingService {
   def libraryMongoLock: MongoLock
   def sbtPluginMongoLock: MongoLock
 
-  def reloadSbtPluginVersions(timeStampGenerator:() => Long): Future[Seq[MongoSbtPluginVersion]]
-  def reloadLibraryVersions(timeStampGenerator:() => Long): Future[Seq[MongoLibraryVersion]]
-  def reloadDependenciesDataForAllRepositories(timeStampGenerator:() => Long): Future[Seq[MongoRepositoryDependencies]]
+  def reloadLatestSbtPluginVersions(timeStampGenerator:() => Long): Future[Seq[MongoSbtPluginVersion]]
+  def reloadLatestLibraryVersions(timeStampGenerator:() => Long): Future[Seq[MongoLibraryVersion]]
+  def reloadCurrentDependenciesDataForAllRepositories(timeStampGenerator:() => Long): Future[Seq[MongoRepositoryDependencies]]
 
   def getAllCuratedLibraries(): Future[Seq[MongoLibraryVersion]]
   def getAllCuratedSbtPlugins(): Future[Seq[MongoSbtPluginVersion]]
@@ -70,7 +70,7 @@ class DefaultDependencyDataUpdatingService(override val config: ServiceDependenc
 
   lazy val curatedDependencyConfig = config.curatedDependencyConfig
 
-  override def reloadSbtPluginVersions(timeStampGenerator:() => Long): Future[Seq[MongoSbtPluginVersion]] = {
+  override def reloadLatestSbtPluginVersions(timeStampGenerator:() => Long): Future[Seq[MongoSbtPluginVersion]] = {
     runMongoUpdate(sbtPluginMongoLock) {
       val sbtPluginVersions = dependenciesDataSource.getLatestSbtPluginVersions(curatedDependencyConfig.sbtPlugins)
 
@@ -81,7 +81,7 @@ class DefaultDependencyDataUpdatingService(override val config: ServiceDependenc
   }
 
 
-  override def reloadLibraryVersions(timeStampGenerator:() => Long): Future[Seq[MongoLibraryVersion]] = {
+  override def reloadLatestLibraryVersions(timeStampGenerator:() => Long): Future[Seq[MongoLibraryVersion]] = {
     runMongoUpdate(libraryMongoLock) {
       val latestLibraryVersions = dependenciesDataSource.getLatestLibrariesVersions(curatedDependencyConfig.libraries)
 
@@ -91,7 +91,7 @@ class DefaultDependencyDataUpdatingService(override val config: ServiceDependenc
     }
   }
 
-  override def reloadDependenciesDataForAllRepositories(timeStampGenerator:() => Long): Future[Seq[MongoRepositoryDependencies]] = {
+  override def reloadCurrentDependenciesDataForAllRepositories(timeStampGenerator:() => Long): Future[Seq[MongoRepositoryDependencies]] = {
     runMongoUpdate(repositoryDependencyMongoLock) {
       for {
         currentDependencyEntries <- repositoryLibraryDependenciesRepository.getAllEntries
@@ -142,7 +142,8 @@ class DefaultDependencyDataUpdatingService(override val config: ServiceDependenc
         RepositoryDependencies(
           repositoryName,
           dep.libraryDependencies.map(d => LibraryDependencyState(d.libraryName, d.currentVersion, libraryReferences.find(mlv => mlv.libraryName == d.libraryName).flatMap(_.version))),
-          getSbtPluginDependencyState(dep, sbtPluginReferences)
+          getSbtPluginDependencyState(dep, sbtPluginReferences),
+          dep.otherDependencies.map(other => OtherDependencyState(other.name, other.currentVersion, curatedDependencyConfig.otherDependencies.find(_.name == "sbt").flatMap(_.latestVersion)))
         )
       }
 
@@ -156,7 +157,8 @@ class DefaultDependencyDataUpdatingService(override val config: ServiceDependenc
         RepositoryDependencies(
           dep.repositoryName,
           dep.libraryDependencies.map(d => LibraryDependencyState(d.libraryName, d.currentVersion, libraryReferences.find(mlv => mlv.libraryName == d.libraryName).flatMap(_.version))),
-          getSbtPluginDependencyState(dep, sbtPluginReferences)
+          getSbtPluginDependencyState(dep, sbtPluginReferences),
+          dep.otherDependencies.map(other => OtherDependencyState(other.name, other.currentVersion, curatedDependencyConfig.otherDependencies.find(_.name == "sbt").flatMap(_.latestVersion)))
         )
       }
 

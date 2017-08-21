@@ -28,8 +28,7 @@ import org.mockito.stubbing.Answer
 import org.scalatest.mock.MockitoSugar
 import org.scalatest.{Matchers, OptionValues, WordSpec}
 import uk.gov.hmrc.githubclient._
-import uk.gov.hmrc.servicedependencies.config.model.{CuratedDependencyConfig, Other, SbtPluginConfig}
-
+import uk.gov.hmrc.servicedependencies.config.model.{CuratedDependencyConfig, OtherDependencyConfig, SbtPluginConfig}
 import uk.gov.hmrc.servicedependencies.model.{SbtPluginDependency, Version}
 
 import scala.collection.JavaConverters._
@@ -46,6 +45,7 @@ class GithubSpec
   private val firstBuildFile = "project/BuildFile.scala"
   private val secondBuildFile = "project/MicroserviceBuild.scala"
   private val pluginsSbtFile = "project/plugins.sbt"
+  private val buildPropertiesFile = "project/build.properties"
 
   private val repoName = "citizen-auth-frontend"
   private val version = "2.2.0"
@@ -152,8 +152,19 @@ class GithubSpec
       githubServiceForTestingPlugins.findVersionsForMultipleArtifacts(repoName, CuratedDependencyConfig(Seq(
         SbtPluginConfig("bla", "sbt-plugin", None),
         SbtPluginConfig("bla", "sbt-auto-build", None)
-      ), Nil, None)).sbtPlugins shouldBe
+      ), Nil, Nil)).sbtPlugins shouldBe
         Map("sbt-plugin" -> Some(Version(2, 3, 10)), "sbt-auto-build" -> Some(Version(1,3,0)))
+    }
+
+    "queries build.properties file(s) for sbt version" in {
+
+      val githubServiceForTestingPlugins = new TestGithub()
+      val stub = attachRepoContentsStub(githubServiceForTestingPlugins.gh, repoName)
+
+      stub.respond(buildPropertiesFile, Base64.getEncoder.withoutPadding().encodeToString("sbt.version=0.13.15".getBytes()))
+
+      githubServiceForTestingPlugins.findVersionsForMultipleArtifacts(repoName, CuratedDependencyConfig(Nil, Nil, Seq(OtherDependencyConfig("sbt" , Some(Version(1,2,3)))))).others shouldBe
+        Map("sbt" -> Some(Version(0, 13, 15)))
     }
 
     "queries github's repository for plugins and libraries" in {
@@ -172,24 +183,24 @@ class GithubSpec
         ), Seq(
           "play-ui",
           "play-health"
-        ), None))
+        ), Nil))
 
       results.sbtPlugins shouldBe Map("sbt-plugin" -> Some(Version(2, 3, 10)), "sbt-auto-build" -> Some(Version(1,3,0)))
       results.libraries shouldBe Map("play-ui" -> Some(Version(1, 3, 0)),  "play-health" -> Some(Version("0.5.0")))
     }
 
     "return artifacts versions correctly for a repository's build file" in {
-      githubService.findVersionsForMultipleArtifacts(repoName, CuratedDependencyConfig(Nil, Seq("play-ui", "play-health"), None)).libraries shouldBe
+      githubService.findVersionsForMultipleArtifacts(repoName, CuratedDependencyConfig(Nil, Seq("play-ui", "play-health"), Nil)).libraries shouldBe
         Map("play-ui" -> Some(Version(1, 3, 0)), "play-health" -> Some(Version(0, 5, 0)))
     }
 
     "return None for artifacts that don't appear in the build file for a repository" in {
-      githubService.findVersionsForMultipleArtifacts(repoName, CuratedDependencyConfig(Nil, Seq("play-ui", "non-existing"), None)).libraries shouldBe
+      githubService.findVersionsForMultipleArtifacts(repoName, CuratedDependencyConfig(Nil, Seq("play-ui", "non-existing"), Nil)).libraries shouldBe
         Map("play-ui" -> Some(Version(1, 3, 0)), "non-existing" -> None)
     }
 
-    "return empty map if no artifacts passed in" in {
-      githubService.findVersionsForMultipleArtifacts(repoName, CuratedDependencyConfig(Nil, Seq.empty[String], None)).libraries shouldBe
+    "return empty map if curated config is empty passed in" in {
+      githubService.findVersionsForMultipleArtifacts(repoName, CuratedDependencyConfig(Nil, Seq.empty[String], Nil)).libraries shouldBe
         Map.empty[String, Option[Version]]
     }
   }
@@ -291,9 +302,8 @@ class GithubSpec
     scala.io.Source.fromInputStream(getClass.getResourceAsStream(filename)).mkString
   }
 
-  private def loadFileAsBase64String(filename: String): String = {
+  private def loadFileAsBase64String(filename: String): String =
     Base64.getEncoder.withoutPadding().encodeToString(loadFileAsString(filename).getBytes())
-  }
 
   // NB -> This is a workaround for a bug in Mockito whereby a test file can't contain more than one captor of the same type
   def buildAnswer3[A, B, C, ARGS, RESULT](function: (A, B, C) => ARGS)(result: ARGS => RESULT) = {

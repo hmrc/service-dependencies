@@ -19,6 +19,14 @@ package uk.gov.hmrc.servicedependencies.util
 import uk.gov.hmrc.servicedependencies.model.Version
 
 object VersionParser {
+  def parsePropertyFile(contents: String, key: String): Option[Version] = {
+    val propertyRegex = ("^\\s*" + key.replaceAll("\\.", "\\\\.") + """\s*=\s*(\d+\.\d+\.\d+)\s*$""").r.unanchored
+    contents match {
+      case propertyRegex(version) => Some(Version.parse(version.replaceAll("\"", "")))
+      case _ => None
+    }
+  }
+
 
   def parse(fileContent: String, artifacts: Seq[String]): Map[String, Option[Version]] = {
     artifacts.map(artifact => artifact -> parse(fileContent, artifact)).toMap

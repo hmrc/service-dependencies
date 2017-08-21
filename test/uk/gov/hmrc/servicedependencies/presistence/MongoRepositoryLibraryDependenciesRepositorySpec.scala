@@ -54,7 +54,7 @@ class MongoRepositoryLibraryDependenciesRepositorySpec extends UnitSpec with Lon
   "update" should {
     "inserts correctly" in {
 
-      val repositoryLibraryDependencies = MongoRepositoryDependencies("some-repo", Seq(LibraryDependency("some-lib", Version(1, 0, 2))), Nil)
+      val repositoryLibraryDependencies = MongoRepositoryDependencies("some-repo", Seq(LibraryDependency("some-lib", Version(1, 0, 2))), Nil, Nil)
       await(mongoRepositoryLibraryDependenciesRepository.update(repositoryLibraryDependencies))
 
       await(mongoRepositoryLibraryDependenciesRepository.getAllEntries) shouldBe Seq(repositoryLibraryDependencies)
@@ -62,7 +62,7 @@ class MongoRepositoryLibraryDependenciesRepositorySpec extends UnitSpec with Lon
 
     "updates correctly (based on repository name)" in {
 
-      val repositoryLibraryDependencies = MongoRepositoryDependencies("some-repo", Seq(LibraryDependency("some-lib", Version(1, 0, 2))), Nil)
+      val repositoryLibraryDependencies = MongoRepositoryDependencies("some-repo", Seq(LibraryDependency("some-lib", Version(1, 0, 2))), Nil, Nil)
       val newRepositoryLibraryDependencies = repositoryLibraryDependencies.copy(libraryDependencies = repositoryLibraryDependencies.libraryDependencies :+ LibraryDependency("some-other-lib", Version(8, 4, 2)) )
       await(mongoRepositoryLibraryDependenciesRepository.update(repositoryLibraryDependencies))
 
@@ -74,8 +74,8 @@ class MongoRepositoryLibraryDependenciesRepositorySpec extends UnitSpec with Lon
 
   "getForRepository" should {
     "get back the correct record" in {
-      val repositoryLibraryDependencies1 = MongoRepositoryDependencies("some-repo1", Seq(LibraryDependency("some-lib1", Version(1, 0, 2))), Nil)
-      val repositoryLibraryDependencies2 = MongoRepositoryDependencies("some-repo2", Seq(LibraryDependency("some-lib2", Version(11, 0, 22))), Nil)
+      val repositoryLibraryDependencies1 = MongoRepositoryDependencies("some-repo1", Seq(LibraryDependency("some-lib1", Version(1, 0, 2))), Nil, Nil)
+      val repositoryLibraryDependencies2 = MongoRepositoryDependencies("some-repo2", Seq(LibraryDependency("some-lib2", Version(11, 0, 22))), Nil, Nil)
 
       await(mongoRepositoryLibraryDependenciesRepository.update(repositoryLibraryDependencies1))
       await(mongoRepositoryLibraryDependenciesRepository.update(repositoryLibraryDependencies2))
@@ -88,7 +88,7 @@ class MongoRepositoryLibraryDependenciesRepositorySpec extends UnitSpec with Lon
   "clearAllDependencyEntries" should {
     "deletes everything" in {
 
-      val repositoryLibraryDependencies = MongoRepositoryDependencies("some-repo", Seq(LibraryDependency("some-lib", Version(1, 0, 2))), Nil)
+      val repositoryLibraryDependencies = MongoRepositoryDependencies("some-repo", Seq(LibraryDependency("some-lib", Version(1, 0, 2))), Nil, Nil)
 
       await(mongoRepositoryLibraryDependenciesRepository.update(repositoryLibraryDependencies))
 
