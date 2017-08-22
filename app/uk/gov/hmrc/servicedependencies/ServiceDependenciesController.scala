@@ -30,11 +30,12 @@ import uk.gov.hmrc.servicedependencies.service._
 case class LibraryDependencyState(libraryName: String, currentVersion:Version, latestVersion: Option[Version])
 case class SbtPluginDependencyState(sbtPluginName: String, currentVersion:Version, latestVersion: Option[Version], isExternal: Boolean)
 case class OtherDependencyState(name: String, currentVersion:Version, latestVersion: Option[Version])
+                                
 
 case class RepositoryDependencies(repositoryName: String,
                                   libraryDependenciesState: Seq[LibraryDependencyState],
                                   sbtPluginsDependenciesState: Seq[SbtPluginDependencyState],
-                                  otherDependency: Seq[OtherDependencyState])
+                                  otherDependenciesState: Seq[OtherDependencyState])
 object RepositoryDependencies {
   implicit val osf = Json.format[OtherDependencyState]
   implicit val ldsf = Json.format[LibraryDependencyState]
@@ -98,6 +99,10 @@ trait ServiceDependenciesController extends BaseController {
 
   def sbtPlugins() = Action.async {
     dependencyDataUpdatingService.getAllCuratedSbtPlugins().map(versions => Ok(Json.toJson(versions)))
+  }
+
+  def dropCollection(collection: String) = Action.async {
+    dependencyDataUpdatingService.dropCollection(collection).map(_ => Ok(s"$collection dropped"))
   }
 
 }

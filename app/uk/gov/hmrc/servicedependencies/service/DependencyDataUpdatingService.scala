@@ -44,6 +44,9 @@ trait DependencyDataUpdatingService {
   def getDependencyVersionsForRepository(repositoryName: String): Future[Option[RepositoryDependencies]]
   def getDependencyVersionsForAllRepositories(): Future[Seq[RepositoryDependencies]]
 
+  def dropCollection(collectionName: String): Future[Boolean]
+
+
   lazy val releasesConnector = new DeploymentsDataSource(config)
   lazy val teamsAndRepositoriesClient = new TeamsAndRepositoriesClient(config.teamsAndRepositoriesServiceUrl)
 
@@ -170,4 +173,13 @@ class DefaultDependencyDataUpdatingService(override val config: ServiceDependenc
 
   override def getAllRepositoriesDependencies(): Future[Seq[MongoRepositoryDependencies]] =
     repositoryLibraryDependenciesRepository.getAllEntries
+
+  override def dropCollection(collectionName: String) = collectionName match {
+    case "repositoryLibraryDependencies" => repositoryLibraryDependenciesRepository.clearAllData
+    case "libraryVersions" => libraryVersionRepository.clearAllData
+    case "sbtPluginVersions" => sbtPluginVersionRepository.clearAllData
+    case anythingElse => throw new RuntimeException(s"dropping $anythingElse collection is not supported")
+
+  }
+
 }
