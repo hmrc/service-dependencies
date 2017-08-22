@@ -165,7 +165,7 @@ class DependencyDataUpdatingServiceSpec extends FunSpec with MockitoSugar with M
           LibraryDependencyState("lib2", Version(2, 0, 0), Some(Version(2, 1, 0)))
         ),
         sbtPluginsDependenciesState = Nil,
-        otherDependency = Nil
+        otherDependenciesState = Nil
       )
 
     }
@@ -247,7 +247,7 @@ class DependencyDataUpdatingServiceSpec extends FunSpec with MockitoSugar with M
           SbtPluginDependencyState("internal-plugin", Version(1, 0, 0), Some(Version(3, 1, 0)), false),
           SbtPluginDependencyState("external-plugin", Version(2, 0, 0), Some(Version(11, 22, 33)), true)
         ),
-        otherDependency = Nil
+        otherDependenciesState = Nil
       )
 
     }
@@ -305,7 +305,7 @@ class DependencyDataUpdatingServiceSpec extends FunSpec with MockitoSugar with M
           LibraryDependencyState("lib2", Version(2, 0, 0), None)
         ),
         sbtPluginsDependenciesState = Nil ,
-        otherDependency = Nil
+        otherDependenciesState = Nil
       )
 
     }
@@ -382,7 +382,7 @@ class DependencyDataUpdatingServiceSpec extends FunSpec with MockitoSugar with M
           ), sbtPluginsDependenciesState = Seq(
             SbtPluginDependencyState("plugin1", Version(10, 1, 0), Some(Version(30, 0, 0)), false),
             SbtPluginDependencyState("plugin2", Version(10, 2, 0), Some(Version(40, 0, 0)), false)
-          ), otherDependency = Seq(
+          ), otherDependenciesState = Seq(
             OtherDependencyState("sbt", Version(0, 13, 1), Some(Version(100, 10, 1)))
           )
         ),
@@ -393,7 +393,7 @@ class DependencyDataUpdatingServiceSpec extends FunSpec with MockitoSugar with M
           ), sbtPluginsDependenciesState = Seq(
             SbtPluginDependencyState("plugin1", Version(20, 1, 0), Some(Version(30, 0, 0)), false),
             SbtPluginDependencyState("plugin2", Version(20, 2, 0), Some(Version(40, 0, 0)), false)
-          ), otherDependency = Seq(
+          ), otherDependenciesState = Seq(
             OtherDependencyState("sbt", Version(0, 13, 2), Some(Version(100, 10, 1)))
           )
         )
