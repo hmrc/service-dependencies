@@ -58,11 +58,13 @@ class MongoRepositoryLibraryDependenciesRepository(mongo: () => DB)
 
     logger.info(s"writing to mongo: $repositoryLibraryDependencies")
 
+    import reactivemongo.play.json.ImplicitBSONHandlers._
+
     withTimerAndCounter("mongo.update") {
       for {
         update <- collection.update(selector = Json.obj("repositoryName" -> Json.toJson(repositoryLibraryDependencies.repositoryName)), update = repositoryLibraryDependencies, upsert = true)
       } yield update match {
-        case lastError if lastError.inError => throw new RuntimeException(s"failed to persist RepositoryLibraryDependencies: $repositoryLibraryDependencies")
+        case lastError if lastError.writeConcernError.isDefined && lastError.writeErrors.nonEmpty => throw new RuntimeException(s"failed to persist RepositoryLibraryDependencies: $repositoryLibraryDependencies")
         case _ => repositoryLibraryDependencies
       }
     }
@@ -71,6 +73,7 @@ class MongoRepositoryLibraryDependenciesRepository(mongo: () => DB)
 
   override def getForRepository(repositoryName: String): Future[Option[MongoRepositoryDependencies]] = {
     withTimerAndCounter("mongo.read") {
+      import reactivemongo.play.json.ImplicitBSONHandlers.BSONDocumentFormat
       find("repositoryName" -> BSONDocument("$eq" -> repositoryName)) map {
         case data if data.size > 1 => throw new RuntimeException(s"There should only be '1' record per repository! for $repositoryName there are ${data.size}")
         case data => data.headOption
@@ -85,6 +88,6 @@ class MongoRepositoryLibraryDependenciesRepository(mongo: () => DB)
   }
 
 
-  override def clearAllData: Future[Boolean] = super.removeAll().map(!_.hasErrors)
+  override def clearAllData: Future[Boolean] = super.removeAll().map(lastError => lastError.ok && lastError.writeErrors.isEmpty && lastError.writeConcernError.isEmpty)
 
 }
