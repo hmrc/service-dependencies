@@ -55,14 +55,14 @@ class MongoSbtPluginVersionRepository(mongo: () => DB)
     )
 
   override def update(sbtPluginVersion: MongoSbtPluginVersion): Future[MongoSbtPluginVersion] = {
-
+    import reactivemongo.play.json.ImplicitBSONHandlers._
 
     logger.info(s"writing $sbtPluginVersion")
     withTimerAndCounter("mongo.update") {
       for {
         update <- collection.update(selector = Json.obj("sbtPluginName" -> Json.toJson(sbtPluginVersion.sbtPluginName)), update = sbtPluginVersion, upsert = true)
       } yield update match {
-        case lastError if lastError.inError => throw new RuntimeException(s"failed to persist SbtPluginVersion: $sbtPluginVersion")
+        case lastError if !lastError.ok || lastError.writeConcernError.isDefined || lastError.writeErrors.nonEmpty => throw new RuntimeException(s"failed to persist SbtPluginVersion: $sbtPluginVersion")
         case _ => sbtPluginVersion
       }
     }
@@ -70,6 +70,6 @@ class MongoSbtPluginVersionRepository(mongo: () => DB)
 
   override def getAllEntries: Future[Seq[MongoSbtPluginVersion]] = findAll()
 
-  override def clearAllData: Future[Boolean] = super.removeAll().map(!_.hasErrors)
+  override def clearAllData: Future[Boolean] = super.removeAll().map(lastError => lastError.ok && lastError.writeConcernError.isEmpty && lastError.writeErrors.isEmpty)
 }
 
