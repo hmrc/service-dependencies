@@ -62,9 +62,11 @@ class MongoSbtPluginVersionRepository(mongo: () => DB)
       for {
         update <- collection.update(selector = Json.obj("sbtPluginName" -> Json.toJson(sbtPluginVersion.sbtPluginName)), update = sbtPluginVersion, upsert = true)
       } yield update match {
-        case lastError if !lastError.ok || lastError.writeConcernError.isDefined || lastError.writeErrors.nonEmpty => throw new RuntimeException(s"failed to persist SbtPluginVersion: $sbtPluginVersion")
+        case lastError if !lastError.ok => throw new RuntimeException(s"failed to persist SbtPluginVersion: $sbtPluginVersion")
         case _ => sbtPluginVersion
       }
+    } recover {
+      case e => throw new RuntimeException(s"failed to persist SbtPluginVersion: $sbtPluginVersion", e)
     }
   }
 

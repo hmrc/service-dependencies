@@ -64,9 +64,11 @@ class MongoRepositoryLibraryDependenciesRepository(mongo: () => DB)
       for {
         update <- collection.update(selector = Json.obj("repositoryName" -> Json.toJson(repositoryLibraryDependencies.repositoryName)), update = repositoryLibraryDependencies, upsert = true)
       } yield update match {
-        case lastError if lastError.writeConcernError.isDefined && lastError.writeErrors.nonEmpty => throw new RuntimeException(s"failed to persist RepositoryLibraryDependencies: $repositoryLibraryDependencies")
+        case lastError if !lastError.ok => throw new RuntimeException(s"failed to persist RepositoryLibraryDependencies: $repositoryLibraryDependencies")
         case _ => repositoryLibraryDependencies
       }
+    } recover {
+      case e => throw new RuntimeException(s"failed to persist RepositoryLibraryDependencies: $repositoryLibraryDependencies", e)
     }
   }
 

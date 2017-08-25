@@ -23,8 +23,8 @@ import reactivemongo.bson.BSONObjectID
 import uk.gov.hmrc.mongo.ReactiveRepository
 import uk.gov.hmrc.servicedependencies.util.FutureHelpers.withTimerAndCounter
 import uk.gov.hmrc.servicedependencies.model._
-
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
+import reactivemongo.api.commands.LastError
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -63,9 +63,11 @@ class MongoLibraryVersionRepository(mongo: () => DB)
       for {
         update <- collection.update(selector = Json.obj("libraryName" -> Json.toJson(libraryVersion.libraryName)), update = libraryVersion, upsert = true)
       } yield update match {
-        case lastError if !lastError.ok || lastError.writeErrors.nonEmpty || lastError.writeConcernError.isDefined => throw new RuntimeException(s"failed to persist LibraryVersion: $libraryVersion")
+        case lastError if !lastError.ok => throw new RuntimeException(s"failed to persist LibraryVersion: $libraryVersion")
         case _ => libraryVersion
       }
+    } recover {
+      case e => throw new RuntimeException(s"failed to persist LibraryVersion: $libraryVersion", e)
     }
   }
 
