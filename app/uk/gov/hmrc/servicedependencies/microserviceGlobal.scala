@@ -24,9 +24,8 @@ import play.api._
 import play.api.inject.ApplicationLifecycle
 import play.api.mvc._
 import uk.gov.hmrc.play.config.{ControllerConfig, RunMode}
-import uk.gov.hmrc.play.filters.{MicroserviceFilterSupport, _}
+import uk.gov.hmrc.play.microservice.filters._
 import uk.gov.hmrc.play.graphite.GraphiteConfig
-import uk.gov.hmrc.play.http.logging.filters.LoggingFilter
 import uk.gov.hmrc.play.microservice.bootstrap.JsonErrorHandling
 import uk.gov.hmrc.play.microservice.bootstrap.Routing.RemovingOfTrailingSlashes
 import uk.gov.hmrc.servicedependencies.service.UpdateScheduler
@@ -34,6 +33,7 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 
 import scala.concurrent.Future
+import uk.gov.hmrc.play.microservice.filters.{ LoggingFilter, MicroserviceFilterSupport }
 
 object ControllerConfiguration extends ControllerConfig {
   lazy val controllerConfigs = Play.current.configuration.underlying.as[Config]("controllers")
