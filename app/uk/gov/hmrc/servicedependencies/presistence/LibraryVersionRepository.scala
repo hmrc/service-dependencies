@@ -23,8 +23,8 @@ import reactivemongo.bson.BSONObjectID
 import uk.gov.hmrc.mongo.ReactiveRepository
 import uk.gov.hmrc.servicedependencies.util.FutureHelpers.withTimerAndCounter
 import uk.gov.hmrc.servicedependencies.model._
+
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import reactivemongo.api.commands.LastError
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -56,23 +56,20 @@ class MongoLibraryVersionRepository(mongo: () => DB)
 
   override def  update(libraryVersion: MongoLibraryVersion): Future[MongoLibraryVersion] = {
 
-    import reactivemongo.play.json.ImplicitBSONHandlers._
 
     logger.info(s"writing $libraryVersion")
     withTimerAndCounter("mongo.update") {
       for {
         update <- collection.update(selector = Json.obj("libraryName" -> Json.toJson(libraryVersion.libraryName)), update = libraryVersion, upsert = true)
       } yield update match {
-        case lastError if !lastError.ok => throw new RuntimeException(s"failed to persist LibraryVersion: $libraryVersion")
+        case lastError if lastError.inError => throw new RuntimeException(s"failed to persist LibraryVersion: $libraryVersion")
         case _ => libraryVersion
       }
-    } recover {
-      case e => throw new RuntimeException(s"failed to persist LibraryVersion: $libraryVersion", e)
     }
   }
 
   override def getAllEntries: Future[Seq[MongoLibraryVersion]] = findAll()
 
-  override def clearAllData: Future[Boolean] = super.removeAll().map(lastError => lastError.ok && lastError.writeErrors.isEmpty && lastError.writeConcernError.isEmpty)
+  override def clearAllData: Future[Boolean] = super.removeAll().map(!_.hasErrors)
 }
 
