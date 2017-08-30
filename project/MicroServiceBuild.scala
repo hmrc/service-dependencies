@@ -12,7 +12,7 @@ private object AppDependencies {
   import play.sbt.PlayImport._
   import play.core.PlayVersion
 
-  private val microserviceBootstrapVersion = "6.7.0"
+  private val microserviceBootstrapVersion = "6.8.0"
   private val playUrlBindersVersion = "2.1.0"
   private val hmrcTestVersion = "2.3.0"
   private val scalaTestVersion = "2.2.6"
