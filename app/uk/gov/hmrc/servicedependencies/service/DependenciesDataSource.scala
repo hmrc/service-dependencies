@@ -118,7 +118,7 @@ class DependenciesDataSource(val releasesConnector: DeploymentsDataSource,
 
 
     @tailrec
-    def getLibDependencies(remainingRepos: Seq[String], acc: Seq[MongoRepositoryDependencies]): Seq[MongoRepositoryDependencies] = {
+    def getDependencies(remainingRepos: Seq[String], acc: Seq[MongoRepositoryDependencies]): Seq[MongoRepositoryDependencies] = {
 
         remainingRepos match {
           case repoName :: xs =>
@@ -132,11 +132,11 @@ class DependenciesDataSource(val releasesConnector: DeploymentsDataSource,
             } else {
               errorOrDependencies.right.get match {
                 case None =>
-                  getLibDependencies(xs, acc)
+                  getDependencies(xs, acc)
                 case Some(dependencies) =>
                   val repositoryLibraryDependencies = MongoRepositoryDependencies(repoName, dependencies.libraries, dependencies.sbtPlugins, dependencies.otherDependencies, timeStampGenerator())
                   persisterF(repositoryLibraryDependencies)
-                  getLibDependencies(xs, acc :+ repositoryLibraryDependencies)
+                  getDependencies(xs, acc :+ repositoryLibraryDependencies)
               }
 
             }
@@ -146,7 +146,7 @@ class DependenciesDataSource(val releasesConnector: DeploymentsDataSource,
         }
     }
 
-    orderedRepos.map(r => getLibDependencies(r.toList, Nil)).andThen{ case s =>
+    orderedRepos.map(r => getDependencies(r.toList, Nil)).andThen{ case s =>
       s match {
         case Failure(x) => logger.error("Error!", x)
         case Success(g) =>

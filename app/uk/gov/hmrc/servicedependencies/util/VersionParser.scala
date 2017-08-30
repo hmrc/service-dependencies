@@ -32,6 +32,7 @@ object VersionParser {
     artifacts.map(artifact => artifact -> parse(fileContent, artifact)).toMap
   }
 
+  
   def parseReleaseVersion(tagPrefix: String, tag: String): Option[Version] = {
     val tagRegex = ("^" + tagPrefix + """(\d+\.\d+\.\d+)$""").r.unanchored
     tag match {
