@@ -21,7 +21,6 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.modules.reactivemongo.MongoDbConnection
 import uk.gov.hmrc.lock.LockFormats.Lock
 import uk.gov.hmrc.servicedependencies.config.ServiceDependenciesConfig
-import uk.gov.hmrc.servicedependencies.config.model.SbtPluginConfig
 import uk.gov.hmrc.servicedependencies.{LibraryDependencyState, OtherDependencyState, RepositoryDependencies, SbtPluginDependencyState}
 import uk.gov.hmrc.servicedependencies.model._
 import uk.gov.hmrc.servicedependencies.presistence._
@@ -98,6 +97,7 @@ class DefaultDependencyDataUpdatingService(override val config: ServiceDependenc
   }
 
   override def reloadCurrentDependenciesDataForAllRepositories(timeStampGenerator:() => Long): Future[Seq[MongoRepositoryDependencies]] = {
+    logger.debug("reloading current dependencies data for all repositories...")
     runMongoUpdate(repositoryDependencyMongoLock) {
       for {
         currentDependencyEntries <- repositoryLibraryDependenciesRepository.getAllEntries
@@ -111,7 +111,11 @@ class DefaultDependencyDataUpdatingService(override val config: ServiceDependenc
       logger.info(s"Starting mongo update for ${mongoLock.lockId}")
       f
     } map {
-      _.getOrElse(throw new RuntimeException(s"Mongo is locked for ${mongoLock.lockId}"))
+      _.getOrElse {
+        val message = s"Mongo is locked for ${mongoLock.lockId}"
+        logger.error(message)
+        throw new RuntimeException(message)
+      }
     } map { r =>
       logger.info(s"mongo update completed ${mongoLock.lockId}")
       r
