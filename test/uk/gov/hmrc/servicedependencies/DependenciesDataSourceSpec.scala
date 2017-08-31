@@ -259,6 +259,24 @@ class DependenciesDataSourceSpec extends FreeSpec with Matchers with ScalaFuture
       override lazy val gitOpenClient = mockedGithubOpenApiClient
     }
 
+
+    "should examine appDependencies.scala before build.sbt" - {
+
+      def checkTheIndex(buildFilePaths: Seq[String]) = {
+        buildFilePaths.indexWhere(_.contains("AppDependencies.scala")) should be < buildFilePaths.indexWhere(_.contains("build.sbt"))
+      }
+
+      "for github open" in {
+        val buildFilePaths = dataSource.GithubOpen.buildFilePaths
+        checkTheIndex(buildFilePaths)
+      }
+
+      "for github exterprise" in {
+        val buildFilePaths = dataSource.GithubEnterprise.buildFilePaths
+        checkTheIndex(buildFilePaths)
+      }
+    }
+
     "should return the github open results over enterprise when a repository exists in both" in {
 
       val openContents =
@@ -484,6 +502,12 @@ class DependenciesDataSourceSpec extends FreeSpec with Matchers with ScalaFuture
 
   }
 
+  "GithubOpen" - {
+    "should look at appDependencies.scala before build.sbt" in {
+
+    }
+  }
+
   private def prepareUnderTestClass(stubbedGithubs: Seq[Github], repositories: Seq[String]): DependenciesDataSource = {
     val mockedDependenciesConfig: ServiceDependenciesConfig = getMockedConfig()
 
@@ -513,7 +537,7 @@ class DependenciesDataSourceSpec extends FreeSpec with Matchers with ScalaFuture
 
     when(mockedGitApiConfig.apiUrl).thenReturn("http://some.api.url")
     when(mockedGitApiConfig.key).thenReturn("key-12345")
-    when(mockedDependenciesConfig.buildFiles).thenReturn(Seq("buildFile1", "buildFile2"))
+//    when(mockedDependenciesConfig.buildFiles).thenReturn(Seq("buildFile1", "buildFile2"))
     mockedDependenciesConfig
   }
 }

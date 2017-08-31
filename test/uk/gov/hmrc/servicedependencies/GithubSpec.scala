@@ -46,6 +46,8 @@ class GithubSpec
   private val secondBuildFile = "project/MicroserviceBuild.scala"
   private val pluginsSbtFile = "project/plugins.sbt"
   private val buildPropertiesFile = "project/build.properties"
+  private val buildSbtFile = "build.sbt"
+  private val appDependenciesFile = "project/AppDependencies.scala"
 
   private val repoName = "citizen-auth-frontend"
   private val version = "2.2.0"
@@ -139,13 +141,13 @@ class GithubSpec
 
   "Finding multiple artifacts versions for a repository" should {
 
-    def stubGithubService(file: String) = {
-      val githubService = new TestGithub()
+    def stubGithubService(testFileToLoad: String, buildFile: String) = {
+      val githubService = new TestGithub(Seq(buildFile))
       val stub = attachRepoContentsStub(githubService.gh, repoName)
-      stub.respond(firstBuildFile, loadFileAsBase64String(file))
+      stub.respond(buildFile, loadFileAsBase64String(testFileToLoad))
       githubService
     }
-    
+
     "queries github's repository for plugins by looking in plugins.sbt" in {
 
       val githubServiceForTestingPlugins = new TestGithub()
@@ -194,25 +196,39 @@ class GithubSpec
     }
 
     "return artifacts versions correctly for a repository's build file" in {
-      val githubService = stubGithubService("/github/contents_build_file_with_play_frontend.sbt.txt")
+      val githubService = stubGithubService("/github/contents_build_file_with_play_frontend.sbt.txt", firstBuildFile)
       githubService.findVersionsForMultipleArtifacts(repoName, CuratedDependencyConfig(Nil, Seq("play-ui", "play-health"), Nil)).libraries shouldBe
         Map("play-ui" -> Some(Version(1, 3, 0)), "play-health" -> Some(Version(0, 5, 0)))
     }
 
     "return artifacts versions correctly for a repository's sbt.build file" in {
-      val githubService = stubGithubService("/github/contents_sbt-build_file_with_play_frontend.build.txt")
+      val githubService = stubGithubService("/github/contents_sbt-build_file_with_play_frontend.build.txt", buildSbtFile)
       githubService.findVersionsForMultipleArtifacts(repoName, CuratedDependencyConfig(Nil, Seq("play-frontend", "play-ui", "play-health"), Nil)).libraries shouldBe
         Map("play-frontend" -> Some(Version(1, 1, 1)), "play-ui" -> Some(Version(2, 2, 2)), "play-health" -> Some(Version(8, 8, 8)))
     }
 
+    "return artifacts versions correctly for a repository's appDependencies.scala file" in {
+      val githubService = stubGithubService("/github/contents_appDependencies.scala.txt", appDependenciesFile)
+      githubService.findVersionsForMultipleArtifacts(repoName, CuratedDependencyConfig(Nil, Seq("play-frontend", "play-ui", "play-health"), Nil)).libraries shouldBe
+        Map("play-frontend" -> None, "play-ui" -> Some(Version(7, 4, 0)), "play-health" -> Some(Version(2, 1, 0)))
+    }
+
+
+    "No search if git sha has not chaned XXXXXXXXXX" in {
+      pending
+      val githubService = stubGithubService("/github/contents_appDependencies.scala.txt", appDependenciesFile)
+      githubService.findVersionsForMultipleArtifacts(repoName, CuratedDependencyConfig(Nil, Seq("play-frontend", "play-ui", "play-health"), Nil)).libraries shouldBe
+        Map("play-frontend" -> None, "play-ui" -> Some(Version(7, 4, 0)), "play-health" -> Some(Version(2, 1, 0)))
+    }
+
     "return None for artifacts that don't appear in the build file for a repository" in {
-      val githubService = stubGithubService("/github/contents_build_file_with_play_frontend.sbt.txt")
+      val githubService = stubGithubService("/github/contents_build_file_with_play_frontend.sbt.txt", firstBuildFile)
       githubService.findVersionsForMultipleArtifacts(repoName, CuratedDependencyConfig(Nil, Seq("play-ui", "non-existing"), Nil)).libraries shouldBe
         Map("play-ui" -> Some(Version(1, 3, 0)), "non-existing" -> None)
     }
 
     "return empty map if curated config is empty passed in" in {
-      val githubService = stubGithubService("/github/contents_build_file_with_play_frontend.sbt.txt")
+      val githubService = stubGithubService("/github/contents_build_file_with_play_frontend.sbt.txt", firstBuildFile)
       githubService.findVersionsForMultipleArtifacts(repoName, CuratedDependencyConfig(Nil, Seq.empty[String], Nil)).libraries shouldBe
         Map.empty[String, Option[Version]]
     }

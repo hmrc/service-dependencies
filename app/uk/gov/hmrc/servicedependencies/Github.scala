@@ -28,7 +28,7 @@ import uk.gov.hmrc.servicedependencies.util.{Max, VersionParser}
 import scala.annotation.tailrec
 import scala.util.Try
 
-abstract class Github(buildFilePaths: Seq[String]) {
+abstract class Github(val buildFilePaths: Seq[String]) {
   private val org = "HMRC"
 
   def gh: GithubApiClient

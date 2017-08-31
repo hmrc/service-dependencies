@@ -35,6 +35,7 @@ import scala.util.{Failure, Success, Try}
 
 
 
+
 class DependenciesDataSource(val releasesConnector: DeploymentsDataSource,
                              val teamsAndRepositoriesDataSource: TeamsAndRepositoriesDataSource,
                              val config: ServiceDependenciesConfig) {
@@ -44,20 +45,30 @@ class DependenciesDataSource(val releasesConnector: DeploymentsDataSource,
   lazy val gitEnterpriseClient: GithubApiClient = GithubApiClient(config.githubApiEnterpriseConfig.apiUrl, config.githubApiEnterpriseConfig.key)
   lazy val gitOpenClient: GithubApiClient = GithubApiClient(config.githubApiOpenConfig.apiUrl, config.githubApiOpenConfig.key)
 
-  protected class GithubOpen() extends Github(config.buildFiles) {
+  val buildFiles = Seq(
+    "project/AppDependencies.scala", //!@ test this (the order of this being before build.sbt is important)
+    "build.sbt",
+    "project/MicroServiceBuild.scala",
+    "project/FrontendBuild.scala",
+    "project/StubServiceBuild.scala",
+    "project/HmrcBuild.scala"
+  )
+
+
+  object GithubOpen extends Github(buildFiles) {
     override val tagPrefix = "v"
     override val gh = gitOpenClient
     override def resolveTag(version: String) = s"$tagPrefix$version"
   }
 
-  protected class GithubEnterprise() extends Github(config.buildFiles) {
+  object GithubEnterprise extends Github(buildFiles) {
     override val tagPrefix = "release/"
     override val gh = gitEnterpriseClient
     override def resolveTag(version: String) = s"$tagPrefix$version"
   }
 
-  lazy val githubEnterprise = new GithubEnterprise
-  lazy val githubOpen = new GithubOpen
+  lazy val githubEnterprise = GithubEnterprise
+  lazy val githubOpen = GithubOpen
   protected[servicedependencies] lazy val githubs = Seq(githubOpen, githubEnterprise)
 
 
@@ -112,11 +123,12 @@ class DependenciesDataSource(val releasesConnector: DeploymentsDataSource,
       val newRepos = repos.filterNot(r => currentDependencyEntries.exists(_.repositoryName == r))
       newRepos ++ updatedLastOrdered
     }
-      .map(_.filter(repoName => Seq(
-        "pertax-penetration-tests",
-        "native-app-widget",
-        "awrs-acceptance-tests"
-      ).contains(repoName)))
+//      .map(_.filter(repoName => Seq(
+//        "pertax-penetration-tests",
+//        "push-registration",
+//        "native-app-widget",
+//        "awrs-acceptance-tests"
+//      ).contains(repoName)))
 
 
     @tailrec
