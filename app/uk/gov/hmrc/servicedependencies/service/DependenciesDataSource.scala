@@ -123,7 +123,7 @@ class DependenciesDataSource(val releasesConnector: DeploymentsDataSource,
             val errorOrDependencies: Either[Throwable, Option[DependenciesFromGitHub]] = getDependenciesFromGitHub(repoName, curatedDependencyConfig)
 
             if (errorOrDependencies.isLeft) {
-              logger.error(s"${errorOrDependencies.left.get.getMessage}")
+              logger.error(s"Something went wrong: ${errorOrDependencies.left.get.getMessage}")
               // error (only rate limiting should be bubbled up to here) => short circuit
               logger.error("terminating current run because ===>", errorOrDependencies.left.get)
               acc
