@@ -21,7 +21,8 @@ import java.util.Date
 import org.slf4j.LoggerFactory
 import play.api.libs.json.Json
 import play.api.mvc._
-import uk.gov.hmrc.BlockingIOExecutionContext
+import play.api.libs.concurrent.Execution.Implicits._
+
 import uk.gov.hmrc.play.microservice.controller.BaseController
 import uk.gov.hmrc.servicedependencies.config.ServiceDependenciesConfig
 import uk.gov.hmrc.servicedependencies.model._
@@ -45,8 +46,6 @@ object RepositoryDependencies {
 }
 
 trait ServiceDependenciesController extends BaseController {
-
-	import BlockingIOExecutionContext._
 
   lazy val logger = LoggerFactory.getLogger(this.getClass)
 
