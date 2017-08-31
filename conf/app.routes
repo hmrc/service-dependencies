@@ -10,4 +10,4 @@ GET    /libraries                           uk.gov.hmrc.servicedependencies.Serv
 GET    /dependencies                        uk.gov.hmrc.servicedependencies.ServiceDependenciesController.dependencies()
 GET    /sbtPlugins                        uk.gov.hmrc.servicedependencies.ServiceDependenciesController.sbtPlugins()
 
-POST   /dropCollection/:collection                    uk.gov.hmrc.servicedependencies.ServiceDependenciesController.dropCollection(collection)
+POST   /dropCollection/:collection          uk.gov.hmrc.servicedependencies.ServiceDependenciesController.dropCollection(collection)

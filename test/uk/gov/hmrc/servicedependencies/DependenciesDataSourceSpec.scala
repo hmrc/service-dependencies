@@ -159,6 +159,11 @@ class DependenciesDataSourceSpec extends FreeSpec with Matchers with ScalaFuture
         Map("library1" -> Some(Version(1, 0, 3)), "library3" -> Some(Version(3, 0, 4))),
         Map("sbt" -> Some(Version(1, 13, 400)))
       )
+      case "non-sbt-repo5" => GithubSearchResults(
+        Map.empty,
+        Map.empty,
+        Map("sbt" -> None)
+      )
       case _ => throw new RuntimeException(s"No entry in lookup function for repoName: $repo")
     }
 
@@ -206,6 +211,30 @@ class DependenciesDataSourceSpec extends FreeSpec with Matchers with ScalaFuture
       getDependencies(callsToPersisterF, "repo1").otherDependencies should contain theSameElementsAs Seq(OtherDependency("sbt", Version(1, 13, 100)))
       getDependencies(callsToPersisterF, "repo2").otherDependencies should contain theSameElementsAs Seq(OtherDependency("sbt", Version(1, 13, 200)))
       getDependencies(callsToPersisterF, "repo3").otherDependencies should contain theSameElementsAs Seq(OtherDependency("sbt", Version(1, 13, 300)))
+
+
+    }
+
+    "should persist the empty dependencies (non-sbt - i.e: no library, no plugins and no other dependencies)" in {
+
+      val dependenciesDataSource = prepareUnderTestClass(Seq(githubStubForMultiArtifacts), Seq("non-sbt-repo5"))
+
+      var callsToPersisterF = ListBuffer.empty[MongoRepositoryDependencies]
+      val persisterF: MongoRepositoryDependencies => Future[MongoRepositoryDependencies] = { repositoryLibraryDependencies =>
+        callsToPersisterF += repositoryLibraryDependencies
+        Future.successful(repositoryLibraryDependencies)
+      }
+
+
+      dependenciesDataSource.persistDependenciesForAllRepositories(curatedDependencyConfig, timestampF, Nil, persisterF).futureValue
+
+      callsToPersisterF.size shouldBe 1
+
+      getDependencies(callsToPersisterF, "non-sbt-repo5").libraryDependencies shouldBe Nil
+
+      getDependencies(callsToPersisterF, "non-sbt-repo5").sbtPluginDependencies shouldBe Nil
+
+      getDependencies(callsToPersisterF, "non-sbt-repo5").otherDependencies shouldBe Nil
 
 
     }

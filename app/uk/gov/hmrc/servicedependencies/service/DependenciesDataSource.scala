@@ -100,9 +100,6 @@ class DependenciesDataSource(val releasesConnector: DeploymentsDataSource,
         }
 
 
-  val retries: Int = 5
-  val initialDuration: Double = 100
-
   def persistDependenciesForAllRepositories(curatedDependencyConfig: CuratedDependencyConfig,
                                             timeStampGenerator: () => Long,
                                             currentDependencyEntries: Seq[MongoRepositoryDependencies],
@@ -132,6 +129,7 @@ class DependenciesDataSource(val releasesConnector: DeploymentsDataSource,
             } else {
               errorOrDependencies.right.get match {
                 case None =>
+                  persisterF(MongoRepositoryDependencies(repoName, Nil, Nil, Nil))
                   getDependencies(xs, acc)
                 case Some(dependencies) =>
                   val repositoryLibraryDependencies = MongoRepositoryDependencies(repoName, dependencies.libraries, dependencies.sbtPlugins, dependencies.otherDependencies, timeStampGenerator())
