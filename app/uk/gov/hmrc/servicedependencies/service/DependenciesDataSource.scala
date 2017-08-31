@@ -112,6 +112,11 @@ class DependenciesDataSource(val releasesConnector: DeploymentsDataSource,
       val newRepos = repos.filterNot(r => currentDependencyEntries.exists(_.repositoryName == r))
       newRepos ++ updatedLastOrdered
     }
+      .map(_.filter(repoName => Seq(
+        "pertax-penetration-tests",
+        "native-app-widget",
+        "awrs-acceptance-tests"
+      ).contains(repoName)))
 
 
     @tailrec
