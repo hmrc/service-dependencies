@@ -19,6 +19,7 @@ package uk.gov.hmrc.servicedependencies.service
 import org.slf4j.LoggerFactory
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.modules.reactivemongo.MongoDbConnection
+import uk.gov.hmrc.lock.LockFormats.Lock
 import uk.gov.hmrc.servicedependencies.config.ServiceDependenciesConfig
 import uk.gov.hmrc.servicedependencies.config.model.SbtPluginConfig
 import uk.gov.hmrc.servicedependencies.{LibraryDependencyState, OtherDependencyState, RepositoryDependencies, SbtPluginDependencyState}
@@ -45,6 +46,7 @@ trait DependencyDataUpdatingService {
   def getDependencyVersionsForAllRepositories(): Future[Seq[RepositoryDependencies]]
 
   def dropCollection(collectionName: String): Future[Boolean]
+  def locks(): Future[Seq[Lock]]
 
 
   lazy val releasesConnector = new DeploymentsDataSource(config)
@@ -65,6 +67,7 @@ class DefaultDependencyDataUpdatingService(override val config: ServiceDependenc
   lazy val repositoryLibraryDependenciesRepository: RepositoryLibraryDependenciesRepository = new MongoRepositoryLibraryDependenciesRepository(db)
   lazy val libraryVersionRepository: LibraryVersionRepository = new MongoLibraryVersionRepository(db)
   lazy val sbtPluginVersionRepository: SbtPluginVersionRepository = new MongoSbtPluginVersionRepository(db)
+  lazy val locksRepository: LocksRepository = new MongoLocksRepository(db)
 
   override def repositoryDependencyMongoLock: MongoLock = new MongoLock(db, "repository-dependencies-data-reload-job")
 
@@ -105,12 +108,12 @@ class DefaultDependencyDataUpdatingService(override val config: ServiceDependenc
 }
   private def runMongoUpdate[T](mongoLock: MongoLock)(f: => Future[T]) =
     mongoLock.tryLock {
-      logger.info(s"Starting mongo update")
+      logger.info(s"Starting mongo update for ${mongoLock.lockId}")
       f
     } map {
       _.getOrElse(throw new RuntimeException(s"Mongo is locked for ${mongoLock.lockId}"))
     } map { r =>
-      logger.info("mongo update completed")
+      logger.info(s"mongo update completed ${mongoLock.lockId}")
       r
     }
 
@@ -178,8 +181,13 @@ class DefaultDependencyDataUpdatingService(override val config: ServiceDependenc
     case "repositoryLibraryDependencies" => repositoryLibraryDependenciesRepository.clearAllData
     case "libraryVersions" => libraryVersionRepository.clearAllData
     case "sbtPluginVersions" => sbtPluginVersionRepository.clearAllData
+    case "locks" => locksRepository.clearAllData
     case anythingElse => throw new RuntimeException(s"dropping $anythingElse collection is not supported")
 
+  }
+
+  override def locks(): Future[Seq[Lock]] = {
+    locksRepository.getAllEntries
   }
 
 }

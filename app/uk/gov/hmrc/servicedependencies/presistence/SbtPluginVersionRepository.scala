@@ -57,6 +57,7 @@ class MongoSbtPluginVersionRepository(mongo: () => DB)
   override def update(sbtPluginVersion: MongoSbtPluginVersion): Future[MongoSbtPluginVersion] = {
 
 
+
     logger.info(s"writing $sbtPluginVersion")
     withTimerAndCounter("mongo.update") {
       for {

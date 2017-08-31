@@ -22,7 +22,7 @@ import uk.gov.hmrc.lock.{LockKeeper, LockMongoRepository, LockRepository}
 
 
 class MongoLock(db: () => DB, lockId_ : String) extends LockKeeper {
-  override val forceLockReleaseAfter: Duration = Duration.standardMinutes(30)
+  override val forceLockReleaseAfter: Duration = Duration.standardMinutes(60)
 
   override def repo: LockRepository = LockMongoRepository(db)
 

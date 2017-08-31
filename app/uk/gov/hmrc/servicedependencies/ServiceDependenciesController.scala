@@ -18,6 +18,7 @@ package uk.gov.hmrc.servicedependencies
 
 import java.util.Date
 
+import org.slf4j.LoggerFactory
 import play.api.libs.json.Json
 import play.api.mvc._
 import uk.gov.hmrc.BlockingIOExecutionContext
@@ -47,6 +48,8 @@ trait ServiceDependenciesController extends BaseController {
 
 	import BlockingIOExecutionContext._
 
+  lazy val logger = LoggerFactory.getLogger(this.getClass)
+
   private val doneResult = Ok("Done")
 
   def dependencyDataUpdatingService: DependencyDataUpdatingService
@@ -70,7 +73,7 @@ trait ServiceDependenciesController extends BaseController {
 
 
   def reloadLibraryDependenciesForAllRepositories() = Action {
-    dependencyDataUpdatingService.reloadCurrentDependenciesDataForAllRepositories(timeStampGenerator).map(_ => println(s"""${">" * 10} done ${"<" * 10}""")).onFailure{
+    dependencyDataUpdatingService.reloadCurrentDependenciesDataForAllRepositories(timeStampGenerator).map(_ => logger.info(s"""${">" * 10} done ${"<" * 10}""")).onFailure{
 			case ex => throw new RuntimeException("reload of dependencies failed", ex)
 		}
     doneResult
@@ -99,6 +102,10 @@ trait ServiceDependenciesController extends BaseController {
 
   def sbtPlugins() = Action.async {
     dependencyDataUpdatingService.getAllCuratedSbtPlugins().map(versions => Ok(Json.toJson(versions)))
+  }
+
+  def locks() = Action.async {
+    dependencyDataUpdatingService.locks().map(locks => Ok(Json.toJson(locks)))
   }
 
   def dropCollection(collection: String) = Action.async {
