@@ -194,13 +194,14 @@ class GithubSpec
 //
     "optimising for avoiding gh rate limit" when {
 
-      val githubService = new TestGithub()
-      attachRepoContentsStub(githubService.gh, repoName)
-
-
-
       val date = LocalDateTime.of(2017, 9, 1, 10, 0, 0)
       val laterDate = date.plusMinutes(1)
+
+      def init() = {
+        val githubService = new TestGithub()
+        attachRepoContentsStub(githubService.gh, repoName)
+        githubService
+      }
 
 //!@      "stored last update date is the same as the last update date returned from github" in {
 //        val mockRepositoryService = mock[RepositoryService]
@@ -223,6 +224,7 @@ class GithubSpec
 //      }
 
       "should not hit github api if the repo has not had any commits/pushes" in {
+        val githubService = init()
         val mockRepositoryService = mock[RepositoryService]
         val mockRepository = mock[Repository]
         when(mockRepository.getPushedAt).thenReturn(toDate(date))
@@ -235,6 +237,7 @@ class GithubSpec
       }
 
       "should hit github api for info if the repo has had commits/pushes" in {
+        val githubService = init()
         val mockRepositoryService = mock[RepositoryService]
         val mockRepository = mock[Repository]
         when(mockRepository.getPushedAt).thenReturn(toDate(laterDate))
@@ -244,10 +247,8 @@ class GithubSpec
         githubService.findVersionsForMultipleArtifacts(repoName, CuratedDependencyConfig(Nil, Nil, Nil), Some(toDate(date))).lastGitUpdateDate.value shouldBe toDate(laterDate)
 
         verify(mockRepository).getPushedAt
+        verify(githubService.gh.contentsService, Mockito.atLeast(1)).getContents(any(), any())
       }
-
-
-
 
     }
 
