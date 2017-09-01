@@ -19,7 +19,8 @@ package uk.gov.hmrc.servicedependencies.model
 
 case class GithubSearchResults(sbtPlugins: Map[String, Option[Version]],
                                libraries: Map[String, Option[Version]],
-                               others: Map[String, Option[Version]]) {
+                               others: Map[String, Option[Version]],
+                               shouldPersist: Boolean = true) {
   
   def isEmpty = sbtPlugins.isEmpty && libraries.isEmpty
 

@@ -16,6 +16,8 @@
 
 package uk.gov.hmrc.servicedependencies
 
+import java.util.Date
+
 import org.apache.commons.codec.binary.Base64
 import org.eclipse.egit.github.core.client.RequestException
 import org.eclipse.egit.github.core.{IRepositoryIdProvider, RepositoryContents}
@@ -37,13 +39,26 @@ abstract class Github(val buildFilePaths: Seq[String]) {
 
   lazy val logger = LoggerFactory.getLogger(this.getClass)
 
-  def findVersionsForMultipleArtifacts(repoName: String, curatedDependencyConfig: CuratedDependencyConfig): GithubSearchResults = {
 
-    GithubSearchResults(
-      sbtPlugins = searchPluginSbtFileForMultipleArtifacts(repoName, curatedDependencyConfig.sbtPlugins),
-      libraries = searchBuildFilesForMultipleArtifacts(repoName, curatedDependencyConfig.libraries),
-      others = searchForOtherSpecifiedDependencies(repoName, curatedDependencyConfig.otherDependencies)
-    )
+  def findVersionsForMultipleArtifacts(repoName: String,
+                                       curatedDependencyConfig: CuratedDependencyConfig,
+                                       storedLastUpdateDateO:Option[Date]): GithubSearchResults = {
+
+    val shouldPersist = (Try(gh.repositoryService.getRepository(org, repoName).getUpdatedAt).toOption, storedLastUpdateDateO) match {
+      case (Some(lastUpdateDate), Some(storedLastUpdateDate)) => lastUpdateDate.after(storedLastUpdateDate)
+      case _ => true
+    }
+
+    if(shouldPersist)
+      GithubSearchResults(
+        sbtPlugins = searchPluginSbtFileForMultipleArtifacts(repoName, curatedDependencyConfig.sbtPlugins),
+        libraries = searchBuildFilesForMultipleArtifacts(repoName, curatedDependencyConfig.libraries),
+        others = searchForOtherSpecifiedDependencies(repoName, curatedDependencyConfig.otherDependencies),
+        shouldPersist = true)
+    else
+      GithubSearchResults(sbtPlugins = Map.empty, libraries = Map.empty, others = Map.empty, shouldPersist = false)
+
+
   }
 
   def findArtifactVersion(serviceName: String, artifact: String, versionOption: Option[String]): Option[Version] = {

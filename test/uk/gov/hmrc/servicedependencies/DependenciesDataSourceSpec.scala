@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.servicedependencies
 
-import java.util.Base64
+import java.util.{Base64, Date}
 
 import org.eclipse.egit.github.core.client.RequestException
 import org.eclipse.egit.github.core.{RepositoryContents, RequestError}
@@ -79,8 +79,9 @@ class DependenciesDataSourceSpec extends FreeSpec with Matchers with ScalaFuture
     }
 
 
-    override def findVersionsForMultipleArtifacts(repoName: String, curatedDependencyConfig: CuratedDependencyConfig): GithubSearchResults =
+    override def findVersionsForMultipleArtifacts(repoName: String, curatedDependencyConfig: CuratedDependencyConfig, storedLastUpdateDateO: Option[Date]): GithubSearchResults =
       findVersionsForMultipleArtifactsF.get.apply(repoName, curatedDependencyConfig.libraries)
+
 
     override def findLatestVersion(repoName: String): Option[Version] = {
       repositoryAndVersions.get(repoName)
@@ -164,6 +165,12 @@ class DependenciesDataSourceSpec extends FreeSpec with Matchers with ScalaFuture
         Map.empty,
         Map("sbt" -> None)
       )
+      case "unchanged-repo6" => GithubSearchResults(
+        Map("plugin1" -> Some(Version(100, 0, 3)), "plugin3" -> Some(Version(300, 0, 4))),
+        Map("library1" -> Some(Version(1, 0, 3)), "library3" -> Some(Version(3, 0, 4))),
+        Map("sbt" -> Some(Version(1, 13, 300))),
+        shouldPersist = false
+      )
       case _ => throw new RuntimeException(s"No entry in lookup function for repoName: $repo")
     }
 
@@ -239,6 +246,21 @@ class DependenciesDataSourceSpec extends FreeSpec with Matchers with ScalaFuture
 
     }
 
+    "should NOT persist the dependency when shouldPersist indicator is false" in {
+
+      val dependenciesDataSource = prepareUnderTestClass(Seq(githubStubForMultiArtifacts), Seq("unchanged-repo6"))
+
+      var callsToPersisterF = ListBuffer.empty[MongoRepositoryDependencies]
+      val persisterF: MongoRepositoryDependencies => Future[MongoRepositoryDependencies] = { repositoryLibraryDependencies =>
+        callsToPersisterF += repositoryLibraryDependencies
+        Future.successful(repositoryLibraryDependencies)
+      }
+
+      dependenciesDataSource.persistDependenciesForAllRepositories(curatedDependencyConfig, timestampF, Nil, persisterF).futureValue
+
+      callsToPersisterF.size shouldBe 0
+    }
+
     def base64(s: String) =  Base64.getEncoder.withoutPadding().encodeToString(s.getBytes())
 
 
@@ -305,9 +327,9 @@ class DependenciesDataSourceSpec extends FreeSpec with Matchers with ScalaFuture
       dataSource.persistDependenciesForAllRepositories(curatedDependencyConfig, timestampF, Nil, persisterF).futureValue
 
       callsToPersisterF should contain theSameElementsAs Seq(
-        MongoRepositoryDependencies("repo1", Seq(LibraryDependency("library1", Version(1, 0, 0)), LibraryDependency("library2", Version(2, 0, 0)), LibraryDependency("library3", Version(3, 0, 0))), Nil, Nil, 1234),
-        MongoRepositoryDependencies("repo2", Seq(LibraryDependency("library1", Version(1, 0, 0)), LibraryDependency("library2", Version(2, 0, 0)), LibraryDependency("library3", Version(3, 0, 0))), Nil, Nil, 1234),
-        MongoRepositoryDependencies("repo3", Seq(LibraryDependency("library1", Version(1, 0, 0)), LibraryDependency("library2", Version(2, 0, 0)), LibraryDependency("library3", Version(3, 0, 0))), Nil, Nil, 1234)
+        MongoRepositoryDependencies("repo1", Seq(LibraryDependency("library1", Version(1, 0, 0)), LibraryDependency("library2", Version(2, 0, 0)), LibraryDependency("library3", Version(3, 0, 0))), Nil, Nil, None, 1234),
+        MongoRepositoryDependencies("repo2", Seq(LibraryDependency("library1", Version(1, 0, 0)), LibraryDependency("library2", Version(2, 0, 0)), LibraryDependency("library3", Version(3, 0, 0))), Nil, Nil, None, 1234),
+        MongoRepositoryDependencies("repo3", Seq(LibraryDependency("library1", Version(1, 0, 0)), LibraryDependency("library2", Version(2, 0, 0)), LibraryDependency("library3", Version(3, 0, 0))), Nil, Nil, None, 1234)
       )
     }
 
@@ -341,9 +363,9 @@ class DependenciesDataSourceSpec extends FreeSpec with Matchers with ScalaFuture
       dataSource.persistDependenciesForAllRepositories(curatedDependencyConfig, timestampF, Nil, persisterF).futureValue
 
       callsToPersisterF should contain theSameElementsAs List(
-        MongoRepositoryDependencies("repo1", List(LibraryDependency("library1", Version(1, 0, 0)), LibraryDependency("library3", Version(3, 0, 0))), Nil, Nil, 1234),
-        MongoRepositoryDependencies("repo2", List(LibraryDependency("library1", Version(1, 0, 0)), LibraryDependency("library3", Version(3, 0, 0))), Nil, Nil, 1234),
-        MongoRepositoryDependencies("repo3", List(LibraryDependency("library1", Version(1, 0, 0)), LibraryDependency("library3", Version(3, 0, 0))), Nil, Nil, 1234)
+        MongoRepositoryDependencies("repo1", List(LibraryDependency("library1", Version(1, 0, 0)), LibraryDependency("library3", Version(3, 0, 0))), Nil, Nil, None, 1234),
+        MongoRepositoryDependencies("repo2", List(LibraryDependency("library1", Version(1, 0, 0)), LibraryDependency("library3", Version(3, 0, 0))), Nil, Nil, None, 1234),
+        MongoRepositoryDependencies("repo3", List(LibraryDependency("library1", Version(1, 0, 0)), LibraryDependency("library3", Version(3, 0, 0))), Nil, Nil, None, 1234)
       )
     }
 
@@ -392,8 +414,8 @@ class DependenciesDataSourceSpec extends FreeSpec with Matchers with ScalaFuture
 
 
       val dependenciesAlreadyInDb = Seq(
-        MongoRepositoryDependencies("repo1",Nil, Nil, Nil),
-        MongoRepositoryDependencies("repo3",Nil, Nil, Nil)
+        MongoRepositoryDependencies("repo1",Nil, Nil, Nil, None),
+        MongoRepositoryDependencies("repo3",Nil, Nil, Nil, None)
       )
 
 
@@ -420,8 +442,8 @@ class DependenciesDataSourceSpec extends FreeSpec with Matchers with ScalaFuture
 
 
       val dependenciesAlreadyInDb = Seq(
-        MongoRepositoryDependencies("repo1", Nil, Nil, Nil, 20000l),
-        MongoRepositoryDependencies("repo3", Nil, Nil, Nil, 10000l) // <-- oldest record should get updated first
+        MongoRepositoryDependencies("repo1", Nil, Nil, Nil, None, 20000l),
+        MongoRepositoryDependencies("repo3", Nil, Nil, Nil, None, 10000l) // <-- oldest record should get updated first
       )
 
 

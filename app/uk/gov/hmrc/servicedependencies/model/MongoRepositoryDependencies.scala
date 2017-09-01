@@ -40,6 +40,7 @@ case class MongoRepositoryDependencies(repositoryName: String,
                                        libraryDependencies: Seq[LibraryDependency],
                                        sbtPluginDependencies: Seq[SbtPluginDependency] = Nil,
                                        otherDependencies: Seq[OtherDependency],
+                                       lastGitUpdateDate: Option[Date],
                                        updateDate: Long = new Date().getTime)
 object MongoRepositoryDependencies {
 
