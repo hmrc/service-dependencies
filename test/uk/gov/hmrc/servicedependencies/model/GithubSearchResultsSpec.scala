@@ -24,16 +24,16 @@ class GithubSearchResultsSpec extends FreeSpec with MockitoSugar with Matchers {
   "GithubSearchResults" - {
     "isEmpty when" - {
       "sbtPlugins and libraries are empty and no 'Some' values in others" in {
-        GithubSearchResults(Map.empty, Map.empty, Map("a" -> Some(Version(1,2,3)))).isEmpty shouldBe true
+        GithubSearchResults(Map.empty, Map.empty, Map("a" -> Some(Version(1,2,3))), None).isEmpty shouldBe true
 
       }
 
     }
     "isEmpty is false when" - {
       "sbtPlugins or libraries is not empty" in {
-        GithubSearchResults(Map.empty, Map("a" -> Some(Version(1,2,3))), Map("a" -> None)).isEmpty shouldBe false
-        GithubSearchResults(Map.empty, Map("a" -> Some(Version(1,2,3))), Map.empty).isEmpty shouldBe false
-        GithubSearchResults(Map("a" -> Some(Version(1,2,3))), Map.empty, Map.empty).isEmpty shouldBe false
+        GithubSearchResults(Map.empty, Map("a" -> Some(Version(1,2,3))), Map("a" -> None), None).isEmpty shouldBe false
+        GithubSearchResults(Map.empty, Map("a" -> Some(Version(1,2,3))), Map.empty, None).isEmpty shouldBe false
+        GithubSearchResults(Map("a" -> Some(Version(1,2,3))), Map.empty, Map.empty, None).isEmpty shouldBe false
       }
 
     }

@@ -16,6 +16,7 @@
 
 package uk.gov.hmrc.servicedependencies
 
+import java.time.LocalDateTime
 import java.util.{Base64, Date}
 
 import org.eclipse.egit.github.core.client.RequestException
@@ -24,8 +25,9 @@ import org.mockito.ArgumentMatchers.any
 import org.mockito.Mockito.when
 import org.scalatest.concurrent.{IntegrationPatience, ScalaFutures}
 import org.scalatest.mock.MockitoSugar
-import org.scalatest.{FreeSpec, Matchers}
+import org.scalatest.{FreeSpec, Matchers, OptionValues}
 import uk.gov.hmrc.githubclient.{ExtendedContentsService, GithubApiClient}
+import uk.gov.hmrc.servicedependencies.TestHelpers.toDate
 import uk.gov.hmrc.servicedependencies.config._
 import uk.gov.hmrc.servicedependencies.config.model.{CuratedDependencyConfig, OtherDependencyConfig, SbtPluginConfig}
 import uk.gov.hmrc.servicedependencies.model._
@@ -35,7 +37,7 @@ import scala.collection.JavaConverters.seqAsJavaListConverter
 import scala.collection.mutable.ListBuffer
 import scala.concurrent.Future
 
-class DependenciesDataSourceSpec extends FreeSpec with Matchers with ScalaFutures with MockitoSugar with IntegrationPatience {
+class DependenciesDataSourceSpec extends FreeSpec with Matchers with ScalaFutures with MockitoSugar with IntegrationPatience with OptionValues {
 
 //  type FindVersionsForMultipleArtifactsF = (String, Seq[String]) => Map[String, Option[Version]]
   type FindVersionsForMultipleArtifactsF = (String, Seq[String]) => GithubSearchResults
@@ -141,35 +143,55 @@ class DependenciesDataSourceSpec extends FreeSpec with Matchers with ScalaFuture
 
   "getDependenciesForAllRepositories" - {
 
+    val unchangedRepoStoredLastGitUpdateDate = LocalDateTime.of(2017, 9, 1, 10, 0, 0)
+    val changedRepoStoredLastGitUpdateDate = LocalDateTime.of(2017, 9, 1, 10, 0, 0)
+    val changedRepoLastGitUpdateDate = changedRepoStoredLastGitUpdateDate.plusSeconds(1)
+
+
     def lookupTable(repo: String) = repo match {
       case "repo1" => GithubSearchResults(
         Map("plugin1" -> Some(Version(100, 0, 1))),
         Map("library1" -> Some(Version(1, 0, 1))),
-        Map("sbt" -> Some(Version(1, 13, 100))))
+        Map("sbt" -> Some(Version(1, 13, 100))),
+        lastGitUpdateDate = None
+      )
       case "repo2" => GithubSearchResults(
         Map("plugin1" -> Some(Version(100, 0, 2)), "plugin2" -> Some(Version(200, 0, 3))),
         Map("library1" -> Some(Version(1, 0, 2)), "library2" -> Some(Version(2, 0, 3))),
-        Map("sbt" -> Some(Version(1, 13, 200)))
+        Map("sbt" -> Some(Version(1, 13, 200))),
+        lastGitUpdateDate = None
       )
       case "repo3" => GithubSearchResults(
         Map("plugin1" -> Some(Version(100, 0, 3)), "plugin3" -> Some(Version(300, 0, 4))),
         Map("library1" -> Some(Version(1, 0, 3)), "library3" -> Some(Version(3, 0, 4))),
-        Map("sbt" -> Some(Version(1, 13, 300))))
+        Map("sbt" -> Some(Version(1, 13, 300))),
+        lastGitUpdateDate = None
+      )
       case "repo4" => GithubSearchResults(
         Map.empty,
         Map("library1" -> Some(Version(1, 0, 3)), "library3" -> Some(Version(3, 0, 4))),
-        Map("sbt" -> Some(Version(1, 13, 400)))
+        Map("sbt" -> Some(Version(1, 13, 400))),
+        lastGitUpdateDate = None
       )
       case "non-sbt-repo5" => GithubSearchResults(
         Map.empty,
         Map.empty,
-        Map("sbt" -> None)
+        Map("sbt" -> None),
+        lastGitUpdateDate = None
       )
-      case "unchanged-repo6" => GithubSearchResults(
+      case "unchanged-repo6" =>
+        GithubSearchResults(
         Map("plugin1" -> Some(Version(100, 0, 3)), "plugin3" -> Some(Version(300, 0, 4))),
         Map("library1" -> Some(Version(1, 0, 3)), "library3" -> Some(Version(3, 0, 4))),
         Map("sbt" -> Some(Version(1, 13, 300))),
-        shouldPersist = false
+        lastGitUpdateDate = Some(toDate(unchangedRepoStoredLastGitUpdateDate))
+      )
+      case "changed-repo7" =>
+        GithubSearchResults(
+        Map("plugin1" -> Some(Version(100, 0, 3)), "plugin3" -> Some(Version(300, 0, 4))),
+        Map("library1" -> Some(Version(1, 0, 3)), "library3" -> Some(Version(3, 0, 4))),
+        Map("sbt" -> Some(Version(1, 13, 300))),
+        lastGitUpdateDate = Some(toDate(changedRepoLastGitUpdateDate))
       )
       case _ => throw new RuntimeException(s"No entry in lookup function for repoName: $repo")
     }
@@ -246,7 +268,24 @@ class DependenciesDataSourceSpec extends FreeSpec with Matchers with ScalaFuture
 
     }
 
-    "should NOT persist the dependency when shouldPersist indicator is false" in {
+    "should persist the dependency with correct lastGitUpdateDate when there has been updates to the git repository" in {
+
+      val dependenciesDataSource = prepareUnderTestClass(Seq(githubStubForMultiArtifacts), Seq("changed-repo7"))
+
+      var callsToPersisterF = ListBuffer.empty[MongoRepositoryDependencies]
+      val persisterF: MongoRepositoryDependencies => Future[MongoRepositoryDependencies] = { repositoryLibraryDependencies =>
+        callsToPersisterF += repositoryLibraryDependencies
+        Future.successful(repositoryLibraryDependencies)
+      }
+
+      val currentDependencyEntries = Seq(MongoRepositoryDependencies("changed-repo7", Nil, Nil, Nil, Some(toDate(changedRepoStoredLastGitUpdateDate))))
+      dependenciesDataSource.persistDependenciesForAllRepositories(curatedDependencyConfig, timestampF, currentDependencyEntries, persisterF).futureValue
+
+      callsToPersisterF.size shouldBe 1
+      getDependencies(callsToPersisterF, "changed-repo7").lastGitUpdateDate.value shouldBe toDate(changedRepoLastGitUpdateDate)
+    }
+
+    "should NOT persist the dependency when there not been any updates to the git repository" in {
 
       val dependenciesDataSource = prepareUnderTestClass(Seq(githubStubForMultiArtifacts), Seq("unchanged-repo6"))
 
@@ -256,7 +295,8 @@ class DependenciesDataSourceSpec extends FreeSpec with Matchers with ScalaFuture
         Future.successful(repositoryLibraryDependencies)
       }
 
-      dependenciesDataSource.persistDependenciesForAllRepositories(curatedDependencyConfig, timestampF, Nil, persisterF).futureValue
+      val currentDependencyEntries = Seq(MongoRepositoryDependencies("unchanged-repo6", Nil, Nil, Nil, Some(toDate(unchangedRepoStoredLastGitUpdateDate))))
+      dependenciesDataSource.persistDependenciesForAllRepositories(curatedDependencyConfig, timestampF, currentDependencyEntries, persisterF).futureValue
 
       callsToPersisterF.size shouldBe 0
     }

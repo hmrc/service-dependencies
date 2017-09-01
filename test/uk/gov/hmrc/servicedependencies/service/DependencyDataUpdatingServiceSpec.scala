@@ -165,7 +165,8 @@ class DependencyDataUpdatingServiceSpec extends FunSpec with MockitoSugar with M
           LibraryDependencyState("lib2", Version(2, 0, 0), Some(Version(2, 1, 0)))
         ),
         sbtPluginsDependenciesState = Nil,
-        otherDependenciesState = Nil
+        otherDependenciesState = Nil,
+        None
       )
 
     }
@@ -203,7 +204,8 @@ class DependencyDataUpdatingServiceSpec extends FunSpec with MockitoSugar with M
           SbtPluginDependencyState("plugin1", Version(1, 0, 0), Some(Version(3, 1, 0)), false),
           SbtPluginDependencyState("plugin2", Version(2, 0, 0), Some(Version(4, 1, 0)), false)
         ),
-        Nil
+        Nil,
+        None
       )
 
     }
@@ -247,7 +249,8 @@ class DependencyDataUpdatingServiceSpec extends FunSpec with MockitoSugar with M
           SbtPluginDependencyState("internal-plugin", Version(1, 0, 0), Some(Version(3, 1, 0)), false),
           SbtPluginDependencyState("external-plugin", Version(2, 0, 0), Some(Version(11, 22, 33)), true)
         ),
-        otherDependenciesState = Nil
+        otherDependenciesState = Nil,
+        None
       )
 
     }
@@ -305,7 +308,8 @@ class DependencyDataUpdatingServiceSpec extends FunSpec with MockitoSugar with M
           LibraryDependencyState("lib2", Version(2, 0, 0), None)
         ),
         sbtPluginsDependenciesState = Nil ,
-        otherDependenciesState = Nil
+        otherDependenciesState = Nil,
+        None
       )
 
     }
@@ -384,7 +388,8 @@ class DependencyDataUpdatingServiceSpec extends FunSpec with MockitoSugar with M
             SbtPluginDependencyState("plugin2", Version(10, 2, 0), Some(Version(40, 0, 0)), false)
           ), otherDependenciesState = Seq(
             OtherDependencyState("sbt", Version(0, 13, 1), Some(Version(100, 10, 1)))
-          )
+          ),
+          None
         ),
         RepositoryDependencies(repositoryName = repository2,
           libraryDependenciesState = Seq(
@@ -395,7 +400,8 @@ class DependencyDataUpdatingServiceSpec extends FunSpec with MockitoSugar with M
             SbtPluginDependencyState("plugin2", Version(20, 2, 0), Some(Version(40, 0, 0)), false)
           ), otherDependenciesState = Seq(
             OtherDependencyState("sbt", Version(0, 13, 2), Some(Version(100, 10, 1)))
-          )
+          ),
+          None
         )
 
       )

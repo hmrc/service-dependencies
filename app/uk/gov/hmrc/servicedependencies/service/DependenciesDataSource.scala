@@ -113,6 +113,16 @@ class DependenciesDataSource(val releasesConnector: DeploymentsDataSource,
         }
 
 
+  //!@ test
+  private def shouldPersist(dependencies: DependenciesFromGitHub, maybeLastStoredGitUpdateDate: Option[Date]): Boolean = {
+    (dependencies.lastGitUpdateDate, maybeLastStoredGitUpdateDate) match {
+      case (Some(lastUpdateDate), Some(storedLastUpdateDate)) => lastUpdateDate.after(storedLastUpdateDate)
+      case _ => true
+    }
+  }
+
+
+
   def persistDependenciesForAllRepositories(curatedDependencyConfig: CuratedDependencyConfig,
                                             timeStampGenerator: () => Long,
                                             currentDependencyEntries: Seq[MongoRepositoryDependencies],
@@ -152,9 +162,9 @@ class DependenciesDataSource(val releasesConnector: DeploymentsDataSource,
                       libraryDependencies = dependencies.libraries,
                       sbtPluginDependencies = dependencies.sbtPlugins,
                       otherDependencies = dependencies.otherDependencies,
-                      lastGitUpdateDate = maybeLastGitUpdateDate,
+                      lastGitUpdateDate = dependencies.lastGitUpdateDate,
                       updateDate = timeStampGenerator())
-                  if(dependencies.shouldPersist)
+                  if(shouldPersist(dependencies, maybeLastGitUpdateDate))
                     persisterF(repositoryLibraryDependencies)
                   getDependencies(xs, acc :+ repositoryLibraryDependencies)
               }
@@ -181,7 +191,7 @@ class DependenciesDataSource(val releasesConnector: DeploymentsDataSource,
   case class DependenciesFromGitHub(libraries: Seq[LibraryDependency],
                                     sbtPlugins: Seq[SbtPluginDependency],
                                     otherDependencies: Seq[OtherDependency],
-                                    shouldPersist: Boolean = true)
+                                    lastGitUpdateDate: Option[Date])
 
   import cats.syntax.either._
   private def getDependenciesFromGitHub(repoName: String,
@@ -210,7 +220,7 @@ class DependenciesDataSource(val releasesConnector: DeploymentsDataSource,
           getLibraryDependencies(searchResults),
           getPluginDependencies(searchResults),
           getOtherDependencies(searchResults),
-          searchResults.shouldPersist
+          searchResults.lastGitUpdateDate
         )
       }
     }

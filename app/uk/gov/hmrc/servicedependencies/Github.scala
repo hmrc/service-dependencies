@@ -44,19 +44,21 @@ abstract class Github(val buildFilePaths: Seq[String]) {
                                        curatedDependencyConfig: CuratedDependencyConfig,
                                        storedLastUpdateDateO:Option[Date]): GithubSearchResults = {
 
-    val shouldPersist = (Try(gh.repositoryService.getRepository(org, repoName).getUpdatedAt).toOption, storedLastUpdateDateO) match {
+    val maybeLastGitUpdateDate = Try(gh.repositoryService.getRepository(org, repoName).getPushedAt).toOption
+
+    val hasThereBeenAnyPushes = (maybeLastGitUpdateDate, storedLastUpdateDateO) match {
       case (Some(lastUpdateDate), Some(storedLastUpdateDate)) => lastUpdateDate.after(storedLastUpdateDate)
       case _ => true
     }
 
-    if(shouldPersist)
+    if(hasThereBeenAnyPushes)
       GithubSearchResults(
         sbtPlugins = searchPluginSbtFileForMultipleArtifacts(repoName, curatedDependencyConfig.sbtPlugins),
         libraries = searchBuildFilesForMultipleArtifacts(repoName, curatedDependencyConfig.libraries),
         others = searchForOtherSpecifiedDependencies(repoName, curatedDependencyConfig.otherDependencies),
-        shouldPersist = true)
+        lastGitUpdateDate = maybeLastGitUpdateDate)
     else
-      GithubSearchResults(sbtPlugins = Map.empty, libraries = Map.empty, others = Map.empty, shouldPersist = false)
+      GithubSearchResults(sbtPlugins = Map.empty, libraries = Map.empty, others = Map.empty, lastGitUpdateDate = maybeLastGitUpdateDate)
 
 
   }
