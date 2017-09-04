@@ -70,21 +70,6 @@ abstract class Github(val buildFilePaths: Seq[String]) {
       }
     }
 
-//    val hasThereBeenAnyPushes = (maybeLastGitUpdateDate, storedLastUpdateDateO) match {
-//      case (Some(lastUpdateDate), Some(storedLastUpdateDate)) => lastUpdateDate.after(storedLastUpdateDate)
-//      case _ => true
-//    }
-//
-//
-//    if(hasThereBeenAnyPushes) {
-//      logger.info(s"Changes to repository ($repoName) detected. processing...")
-//      performGithubSearch
-//    }
-//    else {
-//      logger.info(s"No changes for repository ($repoName). Skipping....")
-//      GithubSearchResults(sbtPlugins = Map.empty, libraries = Map.empty, others = Map.empty, lastGitUpdateDate = maybeLastGitUpdateDate)
-//    }
-
 
   }
 

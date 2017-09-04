@@ -135,7 +135,7 @@ class DependenciesDataSource(val releasesConnector: DeploymentsDataSource,
       val updatedLastOrdered = currentDependencyEntries.sortBy(_.updateDate).map(_.repositoryName)
       val newRepos = repos.filterNot(r => currentDependencyEntries.exists(_.repositoryName == r))
       newRepos ++ updatedLastOrdered
-    }//.map(_.filter(_.startsWith("agent")))
+    }
 
     @tailrec
     def getDependencies(remainingRepos: Seq[String], acc: Seq[MongoRepositoryDependencies]): Seq[MongoRepositoryDependencies] = {

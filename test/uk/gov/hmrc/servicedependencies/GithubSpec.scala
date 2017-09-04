@@ -64,9 +64,6 @@ class GithubSpec
 
     override def resolveTag(version: String) = s"$tagPrefix$version"
 
-//    private val mockRepositoryService: RepositoryService = mock[RepositoryService]
-//    when(gh.repositoryService).thenReturn(mockRepositoryService)
-//    when(mockRepositoryService.getRepository(any(), any())).thenReturn(mock[Repository])
     override protected def getLastGithubPushDate(repoName: String): Option[Date] =
       Some(toDate(LocalDateTime.now()))
   }
@@ -157,46 +154,6 @@ class GithubSpec
     }
 
 
-//!@    "set shouldPersist to 'true'" when {
-//
-//      val githubService = new TestGithub()
-//      attachRepoContentsStub(githubService.gh, repoName)
-//
-//      val mockRepository = mock[Repository]
-//
-//      val date = LocalDateTime.of(2017, 9, 1, 10, 0, 0)
-//      val laterDate = date.plusMinutes(1)
-//
-//      "stored last update date is before the last update date returned from github" in {
-//        val mockRepositoryService = mock[RepositoryService]
-//        when(mockRepository.getUpdatedAt).thenReturn(toDate(laterDate))
-//        when(githubService.gh.repositoryService).thenReturn(mockRepositoryService)
-//        when(mockRepositoryService.getRepository(any(), any())).thenReturn(mockRepository)
-//
-//        githubService.findVersionsForMultipleArtifacts(repoName, CuratedDependencyConfig(Nil, Nil, Nil), Some(toDate(date))).shouldPersist shouldBe true
-//        verify(mockRepositoryService).getRepository("HMRC", repoName)
-//      }
-//
-//      "no last update date returned from github because of an error getting/finding the repository" in {
-//        val mockRepositoryService = mock[RepositoryService]
-//        when(githubService.gh.repositoryService).thenReturn(mockRepositoryService)
-//        when(mockRepositoryService.getRepository(any(), any())).thenReturn(null)
-//
-//        githubService.findVersionsForMultipleArtifacts(repoName, CuratedDependencyConfig(Nil, Nil, Nil), Some(toDate(date))).shouldPersist shouldBe true
-//        verify(mockRepositoryService).getRepository("HMRC", repoName)
-//      }
-//
-//      "stored last update date is None" in {
-//        val mockRepositoryService = mock[RepositoryService]
-//        when(mockRepository.getUpdatedAt).thenReturn(toDate(laterDate))
-//        when(githubService.gh.repositoryService).thenReturn(mockRepositoryService)
-//        when(mockRepositoryService.getRepository(any(), any())).thenReturn(mockRepository)
-//
-//        githubService.findVersionsForMultipleArtifacts(repoName, CuratedDependencyConfig(Nil, Nil, Nil), None).shouldPersist shouldBe true
-//        verify(mockRepositoryService).getRepository("HMRC", repoName)
-//      }
-//    }
-//
     "optimising for avoiding gh rate limit" when {
 
       val date = LocalDateTime.of(2017, 9, 1, 10, 0, 0)
@@ -210,50 +167,40 @@ class GithubSpec
         githubService
       }
 
-//!@      "stored last update date is the same as the last update date returned from github" in {
-//        val mockRepositoryService = mock[RepositoryService]
-//        when(mockRepository.getUpdatedAt).thenReturn(toDate(date))
-//        when(githubService.gh.repositoryService).thenReturn(mockRepositoryService)
-//        when(mockRepositoryService.getRepository(any(), any())).thenReturn(mockRepository)
-//
-//        githubService.findVersionsForMultipleArtifacts(repoName, CuratedDependencyConfig(Nil, Nil, Nil), Some(toDate(date))).shouldPersist shouldBe false
-//        verify(mockRepositoryService).getRepository("HMRC", repoName)
-//      }
-//
-//      "stored last update date is after as the last update date returned from github" in {
-//        val mockRepositoryService = mock[RepositoryService]
-//        when(mockRepository.getUpdatedAt).thenReturn(toDate(date))
-//        when(githubService.gh.repositoryService).thenReturn(mockRepositoryService)
-//        when(mockRepositoryService.getRepository(any(), any())).thenReturn(mockRepository)
-//
-//        githubService.findVersionsForMultipleArtifacts(repoName, CuratedDependencyConfig(Nil, Nil, Nil), Some(toDate(date))).shouldPersist shouldBe false
-//        verify(mockRepositoryService).getRepository("HMRC", repoName)
-//      }
+//!@
+      "should set the last update date of the search result to the returned value of last push github" in {
+        val githubService = init(toDate(laterDate))
+
+        githubService.findVersionsForMultipleArtifacts(
+          repoName,
+          CuratedDependencyConfig(Nil, Nil, Nil),
+          Some(toDate(date))).value.lastGitUpdateDate.value shouldBe toDate(laterDate)
+      }
 
       "should not hit github api if the repo has not had any commits/pushes" in {
         val githubService = init(toDate(date))
-//        val mockRepositoryService = mock[RepositoryService]
-//        val mockRepository = mock[Repository]
-//        when(mockRepository.getPushedAt).thenReturn(toDate(date))
-//        when(githubService.gh.repositoryService).thenReturn(mockRepositoryService)
-//        when(mockRepositoryService.getRepository(any(), any())).thenReturn(mockRepository)
 
         githubService.findVersionsForMultipleArtifacts(repoName, CuratedDependencyConfig(Nil, Nil, Nil), Some(toDate(date))).value.lastGitUpdateDate.value shouldBe toDate(date)
 
         verifyZeroInteractions(githubService.gh.contentsService)
       }
 
+      "should not hit github api if github last push date lookup errors" in {
+        val githubService = new TestGithub() {
+          override protected def getLastGithubPushDate(repoName: String) = None
+        }
+        attachRepoContentsStub(githubService.gh, repoName)
+
+        githubService.findVersionsForMultipleArtifacts(repoName, CuratedDependencyConfig(Nil, Nil, Nil), Some(toDate(date)))
+
+        verifyZeroInteractions(githubService.gh.contentsService)
+      }
+
       "should hit github api for info if the repo has had commits/pushes" in {
         val githubService = init(toDate(laterDate))
-//        val mockRepositoryService = mock[RepositoryService]
-//        val mockRepository = mock[Repository]
-//        when(mockRepository.getPushedAt).thenReturn(toDate(laterDate))
-//        when(githubService.gh.repositoryService).thenReturn(mockRepositoryService)
-//        when(mockRepositoryService.getRepository(any(), any())).thenReturn(mockRepository)
 
-        githubService.findVersionsForMultipleArtifacts(repoName, CuratedDependencyConfig(Nil, Nil, Nil), Some(toDate(date))).value.lastGitUpdateDate.value shouldBe toDate(laterDate)
+        githubService.findVersionsForMultipleArtifacts(repoName, CuratedDependencyConfig(Nil, Nil, Nil), Some(toDate(date)))
 
-//        verify(mockRepository).getPushedAt
         verify(githubService.gh.contentsService, Mockito.atLeast(1)).getContents(any(), any())
       }
 

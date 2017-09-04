@@ -354,7 +354,6 @@ class DependenciesDataSourceSpec extends FreeSpec with Matchers with ScalaFuture
       }
     }
 
-    //////////////////////////////!@
     "should return the github open results over enterprise when a repository exists in both" in {
 
       val openContents =
