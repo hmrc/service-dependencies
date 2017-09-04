@@ -16,6 +16,8 @@
 
 package uk.gov.hmrc.servicedependencies.service
 
+import java.util.Date
+
 import akka.actor.ActorSystem
 import cats.data.OptionT
 import org.slf4j.LoggerFactory
@@ -35,6 +37,7 @@ import scala.util.{Failure, Success, Try}
 
 
 
+
 class DependenciesDataSource(val releasesConnector: DeploymentsDataSource,
                              val teamsAndRepositoriesDataSource: TeamsAndRepositoriesDataSource,
                              val config: ServiceDependenciesConfig) {
@@ -44,20 +47,30 @@ class DependenciesDataSource(val releasesConnector: DeploymentsDataSource,
   lazy val gitEnterpriseClient: GithubApiClient = GithubApiClient(config.githubApiEnterpriseConfig.apiUrl, config.githubApiEnterpriseConfig.key)
   lazy val gitOpenClient: GithubApiClient = GithubApiClient(config.githubApiOpenConfig.apiUrl, config.githubApiOpenConfig.key)
 
-  protected class GithubOpen() extends Github(config.buildFiles) {
+  val buildFiles = Seq(
+    "project/AppDependencies.scala",
+    "build.sbt",
+    "project/MicroServiceBuild.scala",
+    "project/FrontendBuild.scala",
+    "project/StubServiceBuild.scala",
+    "project/HmrcBuild.scala"
+  )
+
+
+  object GithubOpen extends Github(buildFiles) {
     override val tagPrefix = "v"
     override val gh = gitOpenClient
     override def resolveTag(version: String) = s"$tagPrefix$version"
   }
 
-  protected class GithubEnterprise() extends Github(config.buildFiles) {
+  object GithubEnterprise extends Github(buildFiles) {
     override val tagPrefix = "release/"
     override val gh = gitEnterpriseClient
     override def resolveTag(version: String) = s"$tagPrefix$version"
   }
 
-  lazy val githubEnterprise = new GithubEnterprise
-  lazy val githubOpen = new GithubOpen
+  lazy val githubEnterprise = GithubEnterprise
+  lazy val githubOpen = GithubOpen
   protected[servicedependencies] lazy val githubs = Seq(githubOpen, githubEnterprise)
 
 
@@ -100,6 +113,17 @@ class DependenciesDataSource(val releasesConnector: DeploymentsDataSource,
         }
 
 
+  //!@ test
+  private def shouldPersist(dependencies: DependenciesFromGitHub, maybeLastStoredGitUpdateDate: Option[Date]): Boolean = {
+    (dependencies.lastGitUpdateDate, maybeLastStoredGitUpdateDate) match {
+      case (Some(lastUpdateDate), Some(storedLastUpdateDate)) => lastUpdateDate.after(storedLastUpdateDate)
+      case _ => true
+    }
+    
+  }
+
+
+
   def persistDependenciesForAllRepositories(curatedDependencyConfig: CuratedDependencyConfig,
                                             timeStampGenerator: () => Long,
                                             currentDependencyEntries: Seq[MongoRepositoryDependencies],
@@ -113,14 +137,14 @@ class DependenciesDataSource(val releasesConnector: DeploymentsDataSource,
       newRepos ++ updatedLastOrdered
     }
 
-
     @tailrec
     def getDependencies(remainingRepos: Seq[String], acc: Seq[MongoRepositoryDependencies]): Seq[MongoRepositoryDependencies] = {
 
         remainingRepos match {
           case repoName :: xs =>
             logger.info(s"getting dependencies for: $repoName")
-            val errorOrDependencies: Either[Throwable, Option[DependenciesFromGitHub]] = getDependenciesFromGitHub(repoName, curatedDependencyConfig)
+            val maybeLastGitUpdateDate = currentDependencyEntries.find(_.repositoryName == repoName).flatMap(_.lastGitUpdateDate)
+            val errorOrDependencies: Either[Throwable, Option[DependenciesFromGitHub]] = getDependenciesFromGitHub(repoName, curatedDependencyConfig, maybeLastGitUpdateDate)
 
             if (errorOrDependencies.isLeft) {
               logger.error(s"Something went wrong: ${errorOrDependencies.left.get.getMessage}")
@@ -130,11 +154,19 @@ class DependenciesDataSource(val releasesConnector: DeploymentsDataSource,
             } else {
               errorOrDependencies.right.get match {
                 case None =>
-                  persisterF(MongoRepositoryDependencies(repoName, Nil, Nil, Nil))
+                  persisterF(MongoRepositoryDependencies(repoName, Nil, Nil, Nil, maybeLastGitUpdateDate))
                   getDependencies(xs, acc)
                 case Some(dependencies) =>
-                  val repositoryLibraryDependencies = MongoRepositoryDependencies(repoName, dependencies.libraries, dependencies.sbtPlugins, dependencies.otherDependencies, timeStampGenerator())
-                  persisterF(repositoryLibraryDependencies)
+                  val repositoryLibraryDependencies =
+                    MongoRepositoryDependencies(
+                      repositoryName = repoName,
+                      libraryDependencies = dependencies.libraries,
+                      sbtPluginDependencies = dependencies.sbtPlugins,
+                      otherDependencies = dependencies.otherDependencies,
+                      lastGitUpdateDate = dependencies.lastGitUpdateDate,
+                      updateDate = timeStampGenerator())
+                  if(shouldPersist(dependencies, maybeLastGitUpdateDate))
+                    persisterF(repositoryLibraryDependencies)
                   getDependencies(xs, acc :+ repositoryLibraryDependencies)
               }
 
@@ -157,10 +189,16 @@ class DependenciesDataSource(val releasesConnector: DeploymentsDataSource,
   }
 
 
-  case class DependenciesFromGitHub(libraries: Seq[LibraryDependency], sbtPlugins: Seq[SbtPluginDependency], otherDependencies: Seq[OtherDependency])
+  case class DependenciesFromGitHub(libraries: Seq[LibraryDependency],
+                                    sbtPlugins: Seq[SbtPluginDependency],
+                                    otherDependencies: Seq[OtherDependency],
+                                    lastGitUpdateDate: Option[Date])
 
   import cats.syntax.either._
-  private def getDependenciesFromGitHub(repoName: String, curatedDependencyConfig: CuratedDependencyConfig): Either[Throwable, Option[DependenciesFromGitHub]] = {
+  private def getDependenciesFromGitHub(repoName: String,
+                                        curatedDependencyConfig: CuratedDependencyConfig,
+                                        maybeLastCommitDate:Option[Date]): Either[Throwable, Option[DependenciesFromGitHub]] = {
+
     def getLibraryDependencies(githubSearchResults: GithubSearchResults) = githubSearchResults.libraries.foldLeft(Seq.empty[LibraryDependency]) {
       case (acc, (library, mayBeVersion)) =>
         mayBeVersion.fold(acc)(currentVersion => acc :+ LibraryDependency(library, currentVersion))
@@ -178,10 +216,13 @@ class DependenciesDataSource(val releasesConnector: DeploymentsDataSource,
 
     // caching the rate limiting exception
     Either.catchNonFatal {
-      val currentDependencyAndPluginVersions: Option[GithubSearchResults] = searchGithubsForArtifacts(repoName, curatedDependencyConfig)
-
-      currentDependencyAndPluginVersions.map { vs =>
-        DependenciesFromGitHub(getLibraryDependencies(vs), getPluginDependencies(vs), getOtherDependencies(vs))
+      searchGithubsForArtifacts(repoName, curatedDependencyConfig, maybeLastCommitDate).map { searchResults =>
+        DependenciesFromGitHub(
+          getLibraryDependencies(searchResults),
+          getPluginDependencies(searchResults),
+          getOtherDependencies(searchResults),
+          searchResults.lastGitUpdateDate
+        )
       }
     }
   }
@@ -220,16 +261,20 @@ class DependenciesDataSource(val releasesConnector: DeploymentsDataSource,
     None
   }
 
-  private def searchGithubsForArtifacts(repositoryName: String, curatedDependencyConfig: CuratedDependencyConfig): Option[GithubSearchResults] = {
+  private def searchGithubsForArtifacts(repositoryName: String,
+                                        curatedDependencyConfig: CuratedDependencyConfig,
+                                        maybeLastCommitDate:Option[Date]): Option[GithubSearchResults] = {
     @tailrec
     def searchRemainingGitHubs(remainingGithubs: Seq[Github]): Option[GithubSearchResults] = {
       remainingGithubs match {
         case github :: xs =>
-          val versionsMap = github.findVersionsForMultipleArtifacts(repositoryName, curatedDependencyConfig)
-          if(versionsMap.isEmpty)
+          
+          val githubSearchResults = github.findVersionsForMultipleArtifacts(repositoryName, curatedDependencyConfig, maybeLastCommitDate)
+
+          if(githubSearchResults.isEmpty)
             searchRemainingGitHubs(xs)
           else
-            Some(versionsMap)
+            githubSearchResults
         case Nil => None
       }
     }

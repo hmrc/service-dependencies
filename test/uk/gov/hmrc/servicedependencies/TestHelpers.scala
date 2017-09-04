@@ -14,15 +14,13 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.servicedependencies.model
+package uk.gov.hmrc.servicedependencies
 
+import java.time.{LocalDateTime, ZoneId}
 import java.util.Date
 
-
-case class GithubSearchResults(sbtPlugins: Map[String, Option[Version]],
-                               libraries: Map[String, Option[Version]],
-                               others: Map[String, Option[Version]],
-                               lastGitUpdateDate: Option[Date]) {
-  
+object TestHelpers {
+  def toDate(localDateTime: LocalDateTime) =
+    Date.from(localDateTime.atZone(ZoneId.systemDefault()).toInstant)
 
 }

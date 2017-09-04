@@ -16,20 +16,23 @@
 
 package uk.gov.hmrc.servicedependencies
 
+import java.time.{LocalDateTime, ZoneId}
 import java.util.{Base64, Date}
 
 import org.eclipse.egit.github.core.client.{GitHubClient, RequestException}
-import org.eclipse.egit.github.core.{IRepositoryIdProvider, RepositoryContents, RequestError}
+import org.eclipse.egit.github.core.service.RepositoryService
+import org.eclipse.egit.github.core.{IRepositoryIdProvider, Repository, RepositoryContents, RequestError}
 import org.mockito.ArgumentMatchers._
 import org.mockito.Mockito
-import org.mockito.Mockito.when
+import org.mockito.Mockito.{verify, verifyZeroInteractions, when}
 import org.mockito.invocation.InvocationOnMock
 import org.mockito.stubbing.Answer
 import org.scalatest.mock.MockitoSugar
 import org.scalatest.{Matchers, OptionValues, WordSpec}
 import uk.gov.hmrc.githubclient._
+import uk.gov.hmrc.servicedependencies.TestHelpers.toDate
 import uk.gov.hmrc.servicedependencies.config.model.{CuratedDependencyConfig, OtherDependencyConfig, SbtPluginConfig}
-import uk.gov.hmrc.servicedependencies.model.{SbtPluginDependency, Version}
+import uk.gov.hmrc.servicedependencies.model.Version
 
 import scala.collection.JavaConverters._
 import scala.collection.mutable
@@ -46,6 +49,8 @@ class GithubSpec
   private val secondBuildFile = "project/MicroserviceBuild.scala"
   private val pluginsSbtFile = "project/plugins.sbt"
   private val buildPropertiesFile = "project/build.properties"
+  private val buildSbtFile = "build.sbt"
+  private val appDependenciesFile = "project/AppDependencies.scala"
 
   private val repoName = "citizen-auth-frontend"
   private val version = "2.2.0"
@@ -59,6 +64,8 @@ class GithubSpec
 
     override def resolveTag(version: String) = s"$tagPrefix$version"
 
+    override protected def getLastGithubPushDate(repoName: String): Option[Date] =
+      Some(toDate(LocalDateTime.now()))
   }
 
   "Finding artifact version for a service" should {
@@ -138,9 +145,67 @@ class GithubSpec
   }
 
   "Finding multiple artifacts versions for a repository" should {
-    val githubService = new TestGithub()
-    val stub = attachRepoContentsStub(githubService.gh, repoName)
-    stub.respond(firstBuildFile, loadFileAsBase64String("/github/contents_build_file_with_play_frontend.sbt.txt"))
+
+    def stubGithubService(testFileToLoad: String, buildFile: String) = {
+      val githubService = new TestGithub(Seq(buildFile))
+      val stub = attachRepoContentsStub(githubService.gh, repoName)
+      stub.respond(buildFile, loadFileAsBase64String(testFileToLoad))
+      githubService
+    }
+
+
+    "optimising for avoiding gh rate limit" when {
+
+      val date = LocalDateTime.of(2017, 9, 1, 10, 0, 0)
+      val laterDate = date.plusMinutes(1)
+
+      def init(lastGithubPushDate: Date) = {
+        val githubService = new TestGithub() {
+          override protected def getLastGithubPushDate(repoName: String) = Some(lastGithubPushDate)
+        }
+        attachRepoContentsStub(githubService.gh, repoName)
+        githubService
+      }
+
+//!@
+      "should set the last update date of the search result to the returned value of last push github" in {
+        val githubService = init(toDate(laterDate))
+
+        githubService.findVersionsForMultipleArtifacts(
+          repoName,
+          CuratedDependencyConfig(Nil, Nil, Nil),
+          Some(toDate(date))).value.lastGitUpdateDate.value shouldBe toDate(laterDate)
+      }
+
+      "should not hit github api if the repo has not had any commits/pushes" in {
+        val githubService = init(toDate(date))
+
+        githubService.findVersionsForMultipleArtifacts(repoName, CuratedDependencyConfig(Nil, Nil, Nil), Some(toDate(date))).value.lastGitUpdateDate.value shouldBe toDate(date)
+
+        verifyZeroInteractions(githubService.gh.contentsService)
+      }
+
+      "should not hit github api if github last push date lookup errors" in {
+        val githubService = new TestGithub() {
+          override protected def getLastGithubPushDate(repoName: String) = None
+        }
+        attachRepoContentsStub(githubService.gh, repoName)
+
+        githubService.findVersionsForMultipleArtifacts(repoName, CuratedDependencyConfig(Nil, Nil, Nil), Some(toDate(date)))
+
+        verifyZeroInteractions(githubService.gh.contentsService)
+      }
+
+      "should hit github api for info if the repo has had commits/pushes" in {
+        val githubService = init(toDate(laterDate))
+
+        githubService.findVersionsForMultipleArtifacts(repoName, CuratedDependencyConfig(Nil, Nil, Nil), Some(toDate(date)))
+
+        verify(githubService.gh.contentsService, Mockito.atLeast(1)).getContents(any(), any())
+      }
+
+    }
+
 
     "queries github's repository for plugins by looking in plugins.sbt" in {
 
@@ -152,7 +217,7 @@ class GithubSpec
       githubServiceForTestingPlugins.findVersionsForMultipleArtifacts(repoName, CuratedDependencyConfig(Seq(
         SbtPluginConfig("bla", "sbt-plugin", None),
         SbtPluginConfig("bla", "sbt-auto-build", None)
-      ), Nil, Nil)).sbtPlugins shouldBe
+      ), Nil, Nil), None).value.sbtPlugins shouldBe
         Map("sbt-plugin" -> Some(Version(2, 3, 10)), "sbt-auto-build" -> Some(Version(1,3,0)))
     }
 
@@ -163,7 +228,7 @@ class GithubSpec
 
       stub.respond(buildPropertiesFile, Base64.getEncoder.withoutPadding().encodeToString("sbt.version=0.13.15".getBytes()))
 
-      githubServiceForTestingPlugins.findVersionsForMultipleArtifacts(repoName, CuratedDependencyConfig(Nil, Nil, Seq(OtherDependencyConfig("sbt" , Some(Version(1,2,3)))))).others shouldBe
+      githubServiceForTestingPlugins.findVersionsForMultipleArtifacts(repoName, CuratedDependencyConfig(Nil, Nil, Seq(OtherDependencyConfig("sbt" , Some(Version(1,2,3))))), None).value.others shouldBe
         Map("sbt" -> Some(Version(0, 13, 15)))
     }
 
@@ -183,24 +248,47 @@ class GithubSpec
         ), Seq(
           "play-ui",
           "play-health"
-        ), Nil))
+        ), Nil), None)
 
-      results.sbtPlugins shouldBe Map("sbt-plugin" -> Some(Version(2, 3, 10)), "sbt-auto-build" -> Some(Version(1,3,0)))
-      results.libraries shouldBe Map("play-ui" -> Some(Version(1, 3, 0)),  "play-health" -> Some(Version("0.5.0")))
+      results.value.sbtPlugins shouldBe Map("sbt-plugin" -> Some(Version(2, 3, 10)), "sbt-auto-build" -> Some(Version(1,3,0)))
+      results.value.libraries shouldBe Map("play-ui" -> Some(Version(1, 3, 0)),  "play-health" -> Some(Version("0.5.0")))
     }
 
     "return artifacts versions correctly for a repository's build file" in {
-      githubService.findVersionsForMultipleArtifacts(repoName, CuratedDependencyConfig(Nil, Seq("play-ui", "play-health"), Nil)).libraries shouldBe
+      val githubService = stubGithubService("/github/contents_build_file_with_play_frontend.sbt.txt", firstBuildFile)
+      githubService.findVersionsForMultipleArtifacts(repoName, CuratedDependencyConfig(Nil, Seq("play-ui", "play-health"), Nil), None).value.libraries shouldBe
         Map("play-ui" -> Some(Version(1, 3, 0)), "play-health" -> Some(Version(0, 5, 0)))
     }
 
+    "return artifacts versions correctly for a repository's sbt.build file" in {
+      val githubService = stubGithubService("/github/contents_sbt-build_file_with_play_frontend.build.txt", buildSbtFile)
+      githubService.findVersionsForMultipleArtifacts(repoName, CuratedDependencyConfig(Nil, Seq("play-frontend", "play-ui", "play-health"), Nil), None).value.libraries shouldBe
+        Map("play-frontend" -> Some(Version(1, 1, 1)), "play-ui" -> Some(Version(2, 2, 2)), "play-health" -> Some(Version(8, 8, 8)))
+    }
+
+    "return artifacts versions correctly for a repository's appDependencies.scala file" in {
+      val githubService = stubGithubService("/github/contents_appDependencies.scala.txt", appDependenciesFile)
+      githubService.findVersionsForMultipleArtifacts(repoName, CuratedDependencyConfig(Nil, Seq("play-frontend", "play-ui", "play-health"), Nil), None).value.libraries shouldBe
+        Map("play-frontend" -> None, "play-ui" -> Some(Version(7, 4, 0)), "play-health" -> Some(Version(2, 1, 0)))
+    }
+
+
+    "No search if git sha has not changed XXXXXXXXXX" in {
+      pending
+      val githubService = stubGithubService("/github/contents_appDependencies.scala.txt", appDependenciesFile)
+      githubService.findVersionsForMultipleArtifacts(repoName, CuratedDependencyConfig(Nil, Seq("play-frontend", "play-ui", "play-health"), Nil), None).value.libraries shouldBe
+        Map("play-frontend" -> None, "play-ui" -> Some(Version(7, 4, 0)), "play-health" -> Some(Version(2, 1, 0)))
+    }
+
     "return None for artifacts that don't appear in the build file for a repository" in {
-      githubService.findVersionsForMultipleArtifacts(repoName, CuratedDependencyConfig(Nil, Seq("play-ui", "non-existing"), Nil)).libraries shouldBe
+      val githubService = stubGithubService("/github/contents_build_file_with_play_frontend.sbt.txt", firstBuildFile)
+      githubService.findVersionsForMultipleArtifacts(repoName, CuratedDependencyConfig(Nil, Seq("play-ui", "non-existing"), Nil), None).value.libraries shouldBe
         Map("play-ui" -> Some(Version(1, 3, 0)), "non-existing" -> None)
     }
 
     "return empty map if curated config is empty passed in" in {
-      githubService.findVersionsForMultipleArtifacts(repoName, CuratedDependencyConfig(Nil, Seq.empty[String], Nil)).libraries shouldBe
+      val githubService = stubGithubService("/github/contents_build_file_with_play_frontend.sbt.txt", firstBuildFile)
+      githubService.findVersionsForMultipleArtifacts(repoName, CuratedDependencyConfig(Nil, Seq.empty[String], Nil), None).value.libraries shouldBe
         Map.empty[String, Option[Version]]
     }
   }

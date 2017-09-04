@@ -16,6 +16,8 @@
 
 package uk.gov.hmrc.servicedependencies
 
+import java.util.Date
+
 import org.apache.commons.codec.binary.Base64
 import org.eclipse.egit.github.core.client.RequestException
 import org.eclipse.egit.github.core.{IRepositoryIdProvider, RepositoryContents}
@@ -28,7 +30,7 @@ import uk.gov.hmrc.servicedependencies.util.{Max, VersionParser}
 import scala.annotation.tailrec
 import scala.util.Try
 
-abstract class Github(buildFilePaths: Seq[String]) {
+abstract class Github(val buildFilePaths: Seq[String]) {
   private val org = "HMRC"
 
   def gh: GithubApiClient
@@ -37,13 +39,42 @@ abstract class Github(buildFilePaths: Seq[String]) {
 
   lazy val logger = LoggerFactory.getLogger(this.getClass)
 
-  def findVersionsForMultipleArtifacts(repoName: String, curatedDependencyConfig: CuratedDependencyConfig): GithubSearchResults = {
 
-    GithubSearchResults(
-      sbtPlugins = searchPluginSbtFileForMultipleArtifacts(repoName, curatedDependencyConfig.sbtPlugins),
-      libraries = searchBuildFilesForMultipleArtifacts(repoName, curatedDependencyConfig.libraries),
-      others = searchForOtherSpecifiedDependencies(repoName, curatedDependencyConfig.otherDependencies)
-    )
+  def findVersionsForMultipleArtifacts(repoName: String,
+                                       curatedDependencyConfig: CuratedDependencyConfig,
+                                       storedLastUpdateDateO:Option[Date]): Option[GithubSearchResults] = {
+
+    def performGithubSearch(maybeLastGitUpdateDate: Option[Date] ) = {
+      Some(GithubSearchResults(
+        sbtPlugins = searchPluginSbtFileForMultipleArtifacts(repoName, curatedDependencyConfig.sbtPlugins),
+        libraries = searchBuildFilesForMultipleArtifacts(repoName, curatedDependencyConfig.libraries),
+        others = searchForOtherSpecifiedDependencies(repoName, curatedDependencyConfig.otherDependencies),
+        lastGitUpdateDate = maybeLastGitUpdateDate))
+    }
+
+
+    val maybeLastGitUpdateDate: Option[Date] = getLastGithubPushDate(repoName)
+
+    maybeLastGitUpdateDate.fold(Option.empty[GithubSearchResults]) { lastGitUpdate =>
+      storedLastUpdateDateO.fold {
+        logger.info(s"No previous record for repository ($repoName) detected in database. processing...")
+        performGithubSearch(maybeLastGitUpdateDate)
+      } { storedLastUpdateDate =>
+        if(lastGitUpdate.after(storedLastUpdateDate)) {
+          logger.info(s"Changes to repository ($repoName) detected. processing...")
+          performGithubSearch(maybeLastGitUpdateDate)
+        } else {
+          logger.info(s"No changes for repository ($repoName). Skipping....")
+          Some(GithubSearchResults(sbtPlugins = Map.empty, libraries = Map.empty, others = Map.empty, lastGitUpdateDate = maybeLastGitUpdateDate))
+        }
+      }
+    }
+
+
+  }
+
+  protected def getLastGithubPushDate(repoName: String): Option[Date] = {
+    Try(gh.repositoryService.getRepository(org, repoName).getPushedAt).toOption
   }
 
   def findArtifactVersion(serviceName: String, artifact: String, versionOption: Option[String]): Option[Version] = {

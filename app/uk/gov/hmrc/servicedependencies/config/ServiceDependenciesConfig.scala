@@ -55,13 +55,6 @@ class ServiceDependenciesConfig(configPath: String) extends CacheConfig with Rel
   }
 
 
-  val buildFiles = Seq(
-    "project/MicroServiceBuild.scala",
-    "project/FrontendBuild.scala",
-    "project/StubServiceBuild.scala",
-    "project/HmrcBuild.scala"
-  )
-
   def cacheDuration: FiniteDuration = {
     Play.current.configuration.getMilliseconds(cacheDurationConfigPath).map(_.milliseconds).getOrElse(defaultTimeout)
   }

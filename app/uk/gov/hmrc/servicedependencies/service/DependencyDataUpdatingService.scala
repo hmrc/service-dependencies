@@ -153,7 +153,8 @@ class DefaultDependencyDataUpdatingService(override val config: ServiceDependenc
           repositoryName,
           dep.libraryDependencies.map(d => LibraryDependencyState(d.libraryName, d.currentVersion, libraryReferences.find(mlv => mlv.libraryName == d.libraryName).flatMap(_.version))),
           getSbtPluginDependencyState(dep, sbtPluginReferences),
-          dep.otherDependencies.map(other => OtherDependencyState(other.name, other.currentVersion, curatedDependencyConfig.otherDependencies.find(_.name == "sbt").flatMap(_.latestVersion)))
+          dep.otherDependencies.map(other => OtherDependencyState(other.name, other.currentVersion, curatedDependencyConfig.otherDependencies.find(_.name == "sbt").flatMap(_.latestVersion))),
+          dep.lastGitUpdateDate
         )
       }
 
@@ -168,7 +169,9 @@ class DefaultDependencyDataUpdatingService(override val config: ServiceDependenc
           dep.repositoryName,
           dep.libraryDependencies.map(d => LibraryDependencyState(d.libraryName, d.currentVersion, libraryReferences.find(mlv => mlv.libraryName == d.libraryName).flatMap(_.version))),
           getSbtPluginDependencyState(dep, sbtPluginReferences),
-          dep.otherDependencies.map(other => OtherDependencyState(other.name, other.currentVersion, curatedDependencyConfig.otherDependencies.find(_.name == "sbt").flatMap(_.latestVersion)))
+          dep.otherDependencies.map(other => OtherDependencyState(other.name, other.currentVersion, curatedDependencyConfig.otherDependencies.find(_.name == "sbt").flatMap(_.latestVersion))),
+          dep.lastGitUpdateDate
+
         )
       }
 

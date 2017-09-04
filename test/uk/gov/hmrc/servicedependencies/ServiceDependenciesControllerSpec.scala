@@ -37,7 +37,7 @@ class ServiceDependenciesControllerSpec extends FreeSpec with BeforeAndAfterEach
     "should get dependency versions for a repository using the service" in new Setup {
       val mockedLibraryDependencyDataUpdatingService = mock[DependencyDataUpdatingService]
       val repoName = "repo1"
-      val repositoryDependencies = RepositoryDependencies(repoName, Nil, Nil, Nil)
+      val repositoryDependencies = RepositoryDependencies(repoName, Nil, Nil, Nil, None)
 
       when(mockedLibraryDependencyDataUpdatingService.getDependencyVersionsForRepository(any()))
         .thenReturn(Future.successful(Some(repositoryDependencies)))
@@ -93,9 +93,9 @@ class ServiceDependenciesControllerSpec extends FreeSpec with BeforeAndAfterEach
     "should get all dependencies using the service" in new Setup {
       val mockedLibraryDependencyDataUpdatingService = mock[DependencyDataUpdatingService]
       val libraryDependencies = Seq(
-        RepositoryDependencies("repo1", Nil, Nil, Nil),
-        RepositoryDependencies("repo2", Nil, Nil, Nil),
-        RepositoryDependencies("repo3", Nil, Nil, Nil)
+        RepositoryDependencies("repo1", Nil, Nil, Nil, None),
+        RepositoryDependencies("repo2", Nil, Nil, Nil, None),
+        RepositoryDependencies("repo3", Nil, Nil, Nil, None)
       )
       when(mockedLibraryDependencyDataUpdatingService.getDependencyVersionsForAllRepositories()).thenReturn(Future.successful(
         libraryDependencies

@@ -19,7 +19,7 @@ package uk.gov.hmrc.servicedependencies.util
 import org.scalatest.{FunSpec, Matchers}
 import uk.gov.hmrc.servicedependencies.model.Version
 
-class MaxTest extends FunSpec with Matchers {
+class MaxSpec extends FunSpec with Matchers {
 
   describe("maxOf") {
   

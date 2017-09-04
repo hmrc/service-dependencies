@@ -106,7 +106,7 @@ class DependencyDataUpdatingServiceSpec extends FunSpec with MockitoSugar with M
     it("should call the dependency update function to persist the dependencies") {
       val underTest = new TestDependencyDataUpdatingService(noLockTestMongoLockBuilder, curatedDependencyConfig)
 
-      val mongoRepositoryDependencies = Seq(MongoRepositoryDependencies("repoXyz", Nil, Nil, Nil))
+      val mongoRepositoryDependencies = Seq(MongoRepositoryDependencies("repoXyz", Nil, Nil, Nil, None))
 
       when(underTest.mockedRepositoryLibraryDependenciesRepository.getAllEntries).thenReturn(Future.successful(mongoRepositoryDependencies))
       when(underTest.dependenciesDataSource.persistDependenciesForAllRepositories(any(), any(), any(), any())).thenReturn(Future.successful(mongoRepositoryDependencies))
@@ -141,7 +141,7 @@ class DependencyDataUpdatingServiceSpec extends FunSpec with MockitoSugar with M
       val repositoryName = "repoXYZ"
 
       when(underTest.repositoryLibraryDependenciesRepository.getForRepository(any()))
-        .thenReturn(Future.successful(Some(MongoRepositoryDependencies(repositoryName, libraryDependencies, Nil, Nil))))
+        .thenReturn(Future.successful(Some(MongoRepositoryDependencies(repositoryName, libraryDependencies, Nil, Nil, None))))
 
       val referenceLibraryVersions = Seq(
         MongoLibraryVersion("lib1", Some(Version(1, 1, 0))),
@@ -165,7 +165,8 @@ class DependencyDataUpdatingServiceSpec extends FunSpec with MockitoSugar with M
           LibraryDependencyState("lib2", Version(2, 0, 0), Some(Version(2, 1, 0)))
         ),
         sbtPluginsDependenciesState = Nil,
-        otherDependenciesState = Nil
+        otherDependenciesState = Nil,
+        None
       )
 
     }
@@ -180,7 +181,7 @@ class DependencyDataUpdatingServiceSpec extends FunSpec with MockitoSugar with M
       val repositoryName = "repoXYZ"
 
       when(underTest.repositoryLibraryDependenciesRepository.getForRepository(any()))
-        .thenReturn(Future.successful(Some(MongoRepositoryDependencies(repositoryName, Nil, sbtPluginDependencies, Nil))))
+        .thenReturn(Future.successful(Some(MongoRepositoryDependencies(repositoryName, Nil, sbtPluginDependencies, Nil, None))))
 
       val referenceSbtPluginVersions = Seq(
         MongoSbtPluginVersion("plugin1", Some(Version(3, 1, 0))),
@@ -203,7 +204,8 @@ class DependencyDataUpdatingServiceSpec extends FunSpec with MockitoSugar with M
           SbtPluginDependencyState("plugin1", Version(1, 0, 0), Some(Version(3, 1, 0)), false),
           SbtPluginDependencyState("plugin2", Version(2, 0, 0), Some(Version(4, 1, 0)), false)
         ),
-        Nil
+        Nil,
+        None
       )
 
     }
@@ -224,7 +226,7 @@ class DependencyDataUpdatingServiceSpec extends FunSpec with MockitoSugar with M
       val repositoryName = "repoXYZ"
 
       when(underTest.repositoryLibraryDependenciesRepository.getForRepository(any()))
-        .thenReturn(Future.successful(Some(MongoRepositoryDependencies(repositoryName, Nil, sbtPluginDependencies, Nil))))
+        .thenReturn(Future.successful(Some(MongoRepositoryDependencies(repositoryName, Nil, sbtPluginDependencies, Nil, None))))
 
       val referenceSbtPluginVersions = Seq(
         MongoSbtPluginVersion("internal-plugin", Some(Version(3, 1, 0))),
@@ -247,7 +249,8 @@ class DependencyDataUpdatingServiceSpec extends FunSpec with MockitoSugar with M
           SbtPluginDependencyState("internal-plugin", Version(1, 0, 0), Some(Version(3, 1, 0)), false),
           SbtPluginDependencyState("external-plugin", Version(2, 0, 0), Some(Version(11, 22, 33)), true)
         ),
-        otherDependenciesState = Nil
+        otherDependenciesState = Nil,
+        None
       )
 
     }
@@ -285,7 +288,7 @@ class DependencyDataUpdatingServiceSpec extends FunSpec with MockitoSugar with M
       val repositoryName = "repoXYZ"
 
       when(underTest.repositoryLibraryDependenciesRepository.getForRepository(any()))
-        .thenReturn(Future.successful(Some(MongoRepositoryDependencies(repositoryName, libraryDependencies, Nil, Nil))))
+        .thenReturn(Future.successful(Some(MongoRepositoryDependencies(repositoryName, libraryDependencies, Nil, Nil, None))))
 
       when(underTest.libraryVersionRepository.getAllEntries)
         .thenReturn(Future.successful(Nil))
@@ -305,7 +308,8 @@ class DependencyDataUpdatingServiceSpec extends FunSpec with MockitoSugar with M
           LibraryDependencyState("lib2", Version(2, 0, 0), None)
         ),
         sbtPluginsDependenciesState = Nil ,
-        otherDependenciesState = Nil
+        otherDependenciesState = Nil,
+        None
       )
 
     }
@@ -358,8 +362,8 @@ class DependencyDataUpdatingServiceSpec extends FunSpec with MockitoSugar with M
 
       when(underTest.repositoryLibraryDependenciesRepository.getAllEntries)
         .thenReturn(Future.successful(Seq(
-          MongoRepositoryDependencies(repository1, libraryDependencies1, sbtPluginDependencies1, otherDependencies1),
-          MongoRepositoryDependencies(repository2, libraryDependencies2, sbtPluginDependencies2, otherDependencies2)
+          MongoRepositoryDependencies(repository1, libraryDependencies1, sbtPluginDependencies1, otherDependencies1, None),
+          MongoRepositoryDependencies(repository2, libraryDependencies2, sbtPluginDependencies2, otherDependencies2, None)
         )))
 
       when(underTest.libraryVersionRepository.getAllEntries)
@@ -384,7 +388,8 @@ class DependencyDataUpdatingServiceSpec extends FunSpec with MockitoSugar with M
             SbtPluginDependencyState("plugin2", Version(10, 2, 0), Some(Version(40, 0, 0)), false)
           ), otherDependenciesState = Seq(
             OtherDependencyState("sbt", Version(0, 13, 1), Some(Version(100, 10, 1)))
-          )
+          ),
+          None
         ),
         RepositoryDependencies(repositoryName = repository2,
           libraryDependenciesState = Seq(
@@ -395,7 +400,8 @@ class DependencyDataUpdatingServiceSpec extends FunSpec with MockitoSugar with M
             SbtPluginDependencyState("plugin2", Version(20, 2, 0), Some(Version(40, 0, 0)), false)
           ), otherDependenciesState = Seq(
             OtherDependencyState("sbt", Version(0, 13, 2), Some(Version(100, 10, 1)))
-          )
+          ),
+          None
         )
 
       )

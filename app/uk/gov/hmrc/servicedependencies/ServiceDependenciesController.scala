@@ -37,7 +37,9 @@ case class OtherDependencyState(name: String, currentVersion:Version, latestVers
 case class RepositoryDependencies(repositoryName: String,
                                   libraryDependenciesState: Seq[LibraryDependencyState],
                                   sbtPluginsDependenciesState: Seq[SbtPluginDependencyState],
-                                  otherDependenciesState: Seq[OtherDependencyState])
+                                  otherDependenciesState: Seq[OtherDependencyState],
+                                  lastGitUpdateDate:Option[Date])
+
 object RepositoryDependencies {
   implicit val osf = Json.format[OtherDependencyState]
   implicit val ldsf = Json.format[LibraryDependencyState]
