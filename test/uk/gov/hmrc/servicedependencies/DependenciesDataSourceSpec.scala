@@ -20,7 +20,8 @@ import java.time.LocalDateTime
 import java.util.{Base64, Date}
 
 import org.eclipse.egit.github.core.client.RequestException
-import org.eclipse.egit.github.core.{RepositoryContents, RequestError}
+import org.eclipse.egit.github.core.service.RepositoryService
+import org.eclipse.egit.github.core.{Repository, RepositoryContents, RequestError}
 import org.mockito.ArgumentMatchers.any
 import org.mockito.Mockito.when
 import org.scalatest.concurrent.{IntegrationPatience, ScalaFutures}
@@ -60,6 +61,8 @@ class DependenciesDataSourceSpec extends FreeSpec with Matchers with ScalaFuture
     "service3" -> teamNames)
 
 
+  private val now: Date = toDate(LocalDateTime.now())
+
   class GithubStub(
                     val lookupMap: Map[String, Option[String]],
                     val findVersionsForMultipleArtifactsF: Option[FindVersionsForMultipleArtifactsF] = None,
@@ -71,6 +74,10 @@ class DependenciesDataSourceSpec extends FreeSpec with Matchers with ScalaFuture
 
     override val tagPrefix: String = "?-?"
 
+
+//    override protected def getLastGithubPushDate(repoName: String): Option[Date] =
+//      Some(now)
+
     override def findArtifactVersion(serviceName: String, artifact: String, versionOption: Option[String]): Option[Version] = {
       versionOption match {
         case Some(version) =>
@@ -81,8 +88,8 @@ class DependenciesDataSourceSpec extends FreeSpec with Matchers with ScalaFuture
     }
 
 
-    override def findVersionsForMultipleArtifacts(repoName: String, curatedDependencyConfig: CuratedDependencyConfig, storedLastUpdateDateO: Option[Date]): GithubSearchResults =
-      findVersionsForMultipleArtifactsF.get.apply(repoName, curatedDependencyConfig.libraries)
+    override def findVersionsForMultipleArtifacts(repoName: String, curatedDependencyConfig: CuratedDependencyConfig, storedLastUpdateDateO: Option[Date]): Option[GithubSearchResults] =
+      findVersionsForMultipleArtifactsF.map(_.apply(repoName, curatedDependencyConfig.libraries))
 
 
     override def findLatestVersion(repoName: String): Option[Version] = {
@@ -313,12 +320,20 @@ class DependenciesDataSourceSpec extends FreeSpec with Matchers with ScalaFuture
     when(mockedGithubOpenApiClient.contentsService).thenReturn(mockedExtendedContentsServiceForOpen)
     when(mockedGithubEnterpriseApiClient.contentsService).thenReturn(mockedExtendedContentsServiceForEnterprise)
 
+    val mockedRepositoryService = mock[RepositoryService]
+    when(mockedGithubEnterpriseApiClient.repositoryService).thenReturn(mockedRepositoryService)
+    when(mockedGithubOpenApiClient.repositoryService).thenReturn(mockedRepositoryService)
+    val mockedRepository = mock[Repository]
+    when(mockedRepositoryService.getRepository(any(), any())).thenReturn(mockedRepository)
+    when(mockedRepository.getPushedAt).thenReturn(now)
+
 
 
     val dataSource = new DependenciesDataSource(servicesStub, teamsAndRepositoriesStub(Seq("repo1", "repo2", "repo3")), getMockedConfig()) {
 
       override lazy val gitEnterpriseClient = mockedGithubEnterpriseApiClient
       override lazy val gitOpenClient = mockedGithubOpenApiClient
+
     }
 
 
@@ -339,6 +354,7 @@ class DependenciesDataSourceSpec extends FreeSpec with Matchers with ScalaFuture
       }
     }
 
+    //////////////////////////////!@
     "should return the github open results over enterprise when a repository exists in both" in {
 
       val openContents =
@@ -367,9 +383,9 @@ class DependenciesDataSourceSpec extends FreeSpec with Matchers with ScalaFuture
       dataSource.persistDependenciesForAllRepositories(curatedDependencyConfig, timestampF, Nil, persisterF).futureValue
 
       callsToPersisterF should contain theSameElementsAs Seq(
-        MongoRepositoryDependencies("repo1", Seq(LibraryDependency("library1", Version(1, 0, 0)), LibraryDependency("library2", Version(2, 0, 0)), LibraryDependency("library3", Version(3, 0, 0))), Nil, Nil, None, 1234),
-        MongoRepositoryDependencies("repo2", Seq(LibraryDependency("library1", Version(1, 0, 0)), LibraryDependency("library2", Version(2, 0, 0)), LibraryDependency("library3", Version(3, 0, 0))), Nil, Nil, None, 1234),
-        MongoRepositoryDependencies("repo3", Seq(LibraryDependency("library1", Version(1, 0, 0)), LibraryDependency("library2", Version(2, 0, 0)), LibraryDependency("library3", Version(3, 0, 0))), Nil, Nil, None, 1234)
+        MongoRepositoryDependencies("repo1", Seq(LibraryDependency("library1", Version(1, 0, 0)), LibraryDependency("library2", Version(2, 0, 0)), LibraryDependency("library3", Version(3, 0, 0))), Nil, Nil, Some(now), 1234),
+        MongoRepositoryDependencies("repo2", Seq(LibraryDependency("library1", Version(1, 0, 0)), LibraryDependency("library2", Version(2, 0, 0)), LibraryDependency("library3", Version(3, 0, 0))), Nil, Nil, Some(now), 1234),
+        MongoRepositoryDependencies("repo3", Seq(LibraryDependency("library1", Version(1, 0, 0)), LibraryDependency("library2", Version(2, 0, 0)), LibraryDependency("library3", Version(3, 0, 0))), Nil, Nil, Some(now), 1234)
       )
     }
 
@@ -403,9 +419,9 @@ class DependenciesDataSourceSpec extends FreeSpec with Matchers with ScalaFuture
       dataSource.persistDependenciesForAllRepositories(curatedDependencyConfig, timestampF, Nil, persisterF).futureValue
 
       callsToPersisterF should contain theSameElementsAs List(
-        MongoRepositoryDependencies("repo1", List(LibraryDependency("library1", Version(1, 0, 0)), LibraryDependency("library3", Version(3, 0, 0))), Nil, Nil, None, 1234),
-        MongoRepositoryDependencies("repo2", List(LibraryDependency("library1", Version(1, 0, 0)), LibraryDependency("library3", Version(3, 0, 0))), Nil, Nil, None, 1234),
-        MongoRepositoryDependencies("repo3", List(LibraryDependency("library1", Version(1, 0, 0)), LibraryDependency("library3", Version(3, 0, 0))), Nil, Nil, None, 1234)
+        MongoRepositoryDependencies("repo1", List(LibraryDependency("library1", Version(1, 0, 0)), LibraryDependency("library3", Version(3, 0, 0))), Nil, Nil, Some(now), 1234),
+        MongoRepositoryDependencies("repo2", List(LibraryDependency("library1", Version(1, 0, 0)), LibraryDependency("library3", Version(3, 0, 0))), Nil, Nil, Some(now), 1234),
+        MongoRepositoryDependencies("repo3", List(LibraryDependency("library1", Version(1, 0, 0)), LibraryDependency("library3", Version(3, 0, 0))), Nil, Nil, Some(now), 1234)
       )
     }
 

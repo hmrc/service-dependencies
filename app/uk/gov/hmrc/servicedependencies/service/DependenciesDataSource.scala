@@ -48,7 +48,7 @@ class DependenciesDataSource(val releasesConnector: DeploymentsDataSource,
   lazy val gitOpenClient: GithubApiClient = GithubApiClient(config.githubApiOpenConfig.apiUrl, config.githubApiOpenConfig.key)
 
   val buildFiles = Seq(
-    "project/AppDependencies.scala", //!@ test this (the order of this being before build.sbt is important)
+    "project/AppDependencies.scala",
     "build.sbt",
     "project/MicroServiceBuild.scala",
     "project/FrontendBuild.scala",
@@ -119,6 +119,7 @@ class DependenciesDataSource(val releasesConnector: DeploymentsDataSource,
       case (Some(lastUpdateDate), Some(storedLastUpdateDate)) => lastUpdateDate.after(storedLastUpdateDate)
       case _ => true
     }
+    
   }
 
 
@@ -134,7 +135,7 @@ class DependenciesDataSource(val releasesConnector: DeploymentsDataSource,
       val updatedLastOrdered = currentDependencyEntries.sortBy(_.updateDate).map(_.repositoryName)
       val newRepos = repos.filterNot(r => currentDependencyEntries.exists(_.repositoryName == r))
       newRepos ++ updatedLastOrdered
-    }
+    }//.map(_.filter(_.startsWith("agent")))
 
     @tailrec
     def getDependencies(remainingRepos: Seq[String], acc: Seq[MongoRepositoryDependencies]): Seq[MongoRepositoryDependencies] = {
@@ -273,7 +274,7 @@ class DependenciesDataSource(val releasesConnector: DeploymentsDataSource,
           if(githubSearchResults.isEmpty)
             searchRemainingGitHubs(xs)
           else
-            Some(githubSearchResults)
+            githubSearchResults
         case Nil => None
       }
     }

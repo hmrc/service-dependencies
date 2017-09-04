@@ -42,25 +42,54 @@ abstract class Github(val buildFilePaths: Seq[String]) {
 
   def findVersionsForMultipleArtifacts(repoName: String,
                                        curatedDependencyConfig: CuratedDependencyConfig,
-                                       storedLastUpdateDateO:Option[Date]): GithubSearchResults = {
+                                       storedLastUpdateDateO:Option[Date]): Option[GithubSearchResults] = {
 
-    val maybeLastGitUpdateDate = Try(gh.repositoryService.getRepository(org, repoName).getPushedAt).toOption
-
-    val hasThereBeenAnyPushes = (maybeLastGitUpdateDate, storedLastUpdateDateO) match {
-      case (Some(lastUpdateDate), Some(storedLastUpdateDate)) => lastUpdateDate.after(storedLastUpdateDate)
-      case _ => true
-    }
-
-    if(hasThereBeenAnyPushes)
-      GithubSearchResults(
+    def performGithubSearch(maybeLastGitUpdateDate: Option[Date] ) = {
+      Some(GithubSearchResults(
         sbtPlugins = searchPluginSbtFileForMultipleArtifacts(repoName, curatedDependencyConfig.sbtPlugins),
         libraries = searchBuildFilesForMultipleArtifacts(repoName, curatedDependencyConfig.libraries),
         others = searchForOtherSpecifiedDependencies(repoName, curatedDependencyConfig.otherDependencies),
-        lastGitUpdateDate = maybeLastGitUpdateDate)
-    else
-      GithubSearchResults(sbtPlugins = Map.empty, libraries = Map.empty, others = Map.empty, lastGitUpdateDate = maybeLastGitUpdateDate)
+        lastGitUpdateDate = maybeLastGitUpdateDate))
+    }
 
 
+    val maybeLastGitUpdateDate: Option[Date] = getLastGithubPushDate(repoName)
+
+    maybeLastGitUpdateDate.fold(Option.empty[GithubSearchResults]) { lastGitUpdate =>
+      storedLastUpdateDateO.fold {
+        logger.info(s"No previous record for repository ($repoName) detected in database. processing...")
+        performGithubSearch(maybeLastGitUpdateDate)
+      } { storedLastUpdateDate =>
+        if(lastGitUpdate.after(storedLastUpdateDate)) {
+          logger.info(s"Changes to repository ($repoName) detected. processing...")
+          performGithubSearch(maybeLastGitUpdateDate)
+        } else {
+          logger.info(s"No changes for repository ($repoName). Skipping....")
+          Some(GithubSearchResults(sbtPlugins = Map.empty, libraries = Map.empty, others = Map.empty, lastGitUpdateDate = maybeLastGitUpdateDate))
+        }
+      }
+    }
+
+//    val hasThereBeenAnyPushes = (maybeLastGitUpdateDate, storedLastUpdateDateO) match {
+//      case (Some(lastUpdateDate), Some(storedLastUpdateDate)) => lastUpdateDate.after(storedLastUpdateDate)
+//      case _ => true
+//    }
+//
+//
+//    if(hasThereBeenAnyPushes) {
+//      logger.info(s"Changes to repository ($repoName) detected. processing...")
+//      performGithubSearch
+//    }
+//    else {
+//      logger.info(s"No changes for repository ($repoName). Skipping....")
+//      GithubSearchResults(sbtPlugins = Map.empty, libraries = Map.empty, others = Map.empty, lastGitUpdateDate = maybeLastGitUpdateDate)
+//    }
+
+
+  }
+
+  protected def getLastGithubPushDate(repoName: String): Option[Date] = {
+    Try(gh.repositoryService.getRepository(org, repoName).getPushedAt).toOption
   }
 
   def findArtifactVersion(serviceName: String, artifact: String, versionOption: Option[String]): Option[Version] = {

@@ -24,6 +24,5 @@ case class GithubSearchResults(sbtPlugins: Map[String, Option[Version]],
                                others: Map[String, Option[Version]],
                                lastGitUpdateDate: Option[Date]) {
   
-  def isEmpty = sbtPlugins.isEmpty && libraries.isEmpty
 
 }
