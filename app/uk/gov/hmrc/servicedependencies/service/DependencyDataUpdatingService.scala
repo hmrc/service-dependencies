@@ -47,6 +47,7 @@ trait DependencyDataUpdatingService {
   def dropCollection(collectionName: String): Future[Boolean]
   def locks(): Future[Seq[Lock]]
 
+  def clearAllGithubLastUpdateDates: Future[Seq[MongoRepositoryDependencies]]
 
   lazy val releasesConnector = new DeploymentsDataSource(config)
   lazy val teamsAndRepositoriesClient = new TeamsAndRepositoriesClient(config.teamsAndRepositoriesServiceUrl)
@@ -190,11 +191,15 @@ class DefaultDependencyDataUpdatingService(override val config: ServiceDependenc
     case "sbtPluginVersions" => sbtPluginVersionRepository.clearAllData
     case "locks" => locksRepository.clearAllData
     case anythingElse => throw new RuntimeException(s"dropping $anythingElse collection is not supported")
-
   }
+
+
+
 
   override def locks(): Future[Seq[Lock]] = {
     locksRepository.getAllEntries
   }
 
+  override def clearAllGithubLastUpdateDates =
+    repositoryLibraryDependenciesRepository.clearAllGithubLastUpdateDates
 }

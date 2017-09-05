@@ -35,6 +35,7 @@ trait RepositoryLibraryDependenciesRepository {
   def getForRepository(repositoryName: String): Future[Option[MongoRepositoryDependencies]]
   def getAllEntries: Future[Seq[MongoRepositoryDependencies]]
   def clearAllData: Future[Boolean]
+  def clearAllGithubLastUpdateDates: Future[Seq[MongoRepositoryDependencies]]
 }
 
 class MongoRepositoryLibraryDependenciesRepository(mongo: () => DB)
@@ -87,4 +88,9 @@ class MongoRepositoryLibraryDependenciesRepository(mongo: () => DB)
 
   override def clearAllData: Future[Boolean] = super.removeAll().map(!_.hasErrors)
 
+  override def clearAllGithubLastUpdateDates: Future[Seq[MongoRepositoryDependencies]] = {
+    getAllEntries.flatMap { es =>
+      Future.sequence(es.map(mrd => update(mrd.copy(lastGitUpdateDate = None))))
+    }
+  }
 }

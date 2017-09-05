@@ -11,3 +11,6 @@ GET    /dependencies                        uk.gov.hmrc.servicedependencies.Serv
 GET    /sbtPlugins                        uk.gov.hmrc.servicedependencies.ServiceDependenciesController.sbtPlugins()
 GET    /locks                             uk.gov.hmrc.servicedependencies.ServiceDependenciesController.locks()
 POST   /dropCollection/:collection          uk.gov.hmrc.servicedependencies.ServiceDependenciesController.dropCollection(collection)
+
+
+POST   /clearGithubLastUpdateDates        uk.gov.hmrc.servicedependencies.ServiceDependenciesController.clearAllGithubLastUpdateDates

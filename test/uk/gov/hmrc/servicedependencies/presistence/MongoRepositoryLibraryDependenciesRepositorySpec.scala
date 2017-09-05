@@ -34,14 +34,17 @@ package uk.gov.hmrc.servicedependencies.presistence
 
 
 
+import java.time.LocalDateTime
+
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.{BeforeAndAfterEach, LoneElement, OptionValues}
 import org.scalatestplus.play.OneAppPerTest
 import uk.gov.hmrc.mongo.MongoSpecSupport
 import uk.gov.hmrc.play.test.UnitSpec
 import uk.gov.hmrc.servicedependencies.model.{LibraryDependency, MongoLibraryVersion, MongoRepositoryDependencies, Version}
-
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
+import uk.gov.hmrc.servicedependencies.TestHelpers
+import uk.gov.hmrc.servicedependencies.TestHelpers._
 
 class MongoRepositoryLibraryDependenciesRepositorySpec extends UnitSpec with LoneElement with MongoSpecSupport with ScalaFutures with OptionValues with BeforeAndAfterEach with OneAppPerTest {
 
@@ -97,6 +100,28 @@ class MongoRepositoryLibraryDependenciesRepositorySpec extends UnitSpec with Lon
       await(mongoRepositoryLibraryDependenciesRepository.clearAllData)
 
       await(mongoRepositoryLibraryDependenciesRepository.getAllEntries) shouldBe Nil
+    }
+  }
+
+  "clearAllGithubLastUpdateDates" should {
+    "resets the last update dates to None" in {
+
+      val someDate = Some(toDate(LocalDateTime.now()))
+      val repositoryLibraryDependencies1 =
+        MongoRepositoryDependencies("some-repo", Seq(LibraryDependency("some-lib2", Version(1, 0, 2))), Nil, Nil, someDate)
+      val repositoryLibraryDependencies2 =
+        MongoRepositoryDependencies("some-other-repo", Seq(LibraryDependency("some-lib2", Version(1, 0, 2))), Nil, Nil, someDate)
+
+      await(mongoRepositoryLibraryDependenciesRepository.update(repositoryLibraryDependencies1))
+      await(mongoRepositoryLibraryDependenciesRepository.update(repositoryLibraryDependencies2))
+
+      val mongoRepositoryDependencieses = await(mongoRepositoryLibraryDependenciesRepository.getAllEntries)
+      mongoRepositoryDependencieses should have size 2
+      mongoRepositoryDependencieses.map(_.lastGitUpdateDate) should contain theSameElementsAs Seq(someDate, someDate)
+
+      await(mongoRepositoryLibraryDependenciesRepository.clearAllGithubLastUpdateDates)
+
+      await(mongoRepositoryLibraryDependenciesRepository.getAllEntries).map(_.lastGitUpdateDate) should contain theSameElementsAs Seq(None, None)
     }
   }
 }

@@ -113,6 +113,10 @@ trait ServiceDependenciesController extends BaseController {
     dependencyDataUpdatingService.dropCollection(collection).map(_ => Ok(s"$collection dropped"))
   }
 
+  def clearAllGithubLastUpdateDates = Action.async {
+    dependencyDataUpdatingService.clearAllGithubLastUpdateDates.map(rs => Ok(s"${rs.size} records updated"))
+  }
+
 }
 
 object ServiceDependenciesController extends ServiceDependenciesController {
