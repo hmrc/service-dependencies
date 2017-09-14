@@ -20,6 +20,7 @@ import play.api.libs.json.Json
 import reactivemongo.api.DB
 import reactivemongo.api.indexes.{Index, IndexType}
 import reactivemongo.bson.BSONObjectID
+import reactivemongo.play.json.ImplicitBSONHandlers._
 import uk.gov.hmrc.mongo.ReactiveRepository
 import uk.gov.hmrc.servicedependencies.util.FutureHelpers.withTimerAndCounter
 import uk.gov.hmrc.servicedependencies.model._
@@ -27,8 +28,6 @@ import uk.gov.hmrc.servicedependencies.model._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 import scala.concurrent.{ExecutionContext, Future}
-
-
 
 trait SbtPluginVersionRepository {
 
@@ -63,14 +62,15 @@ class MongoSbtPluginVersionRepository(mongo: () => DB)
       for {
         update <- collection.update(selector = Json.obj("sbtPluginName" -> Json.toJson(sbtPluginVersion.sbtPluginName)), update = sbtPluginVersion, upsert = true)
       } yield update match {
-        case lastError if lastError.inError => throw new RuntimeException(s"failed to persist SbtPluginVersion: $sbtPluginVersion")
         case _ => sbtPluginVersion
       }
+    } recover {
+      case lastError => throw new RuntimeException(s"failed to persist SbtPluginVersion: $sbtPluginVersion", lastError)
     }
   }
 
   override def getAllEntries: Future[Seq[MongoSbtPluginVersion]] = findAll()
 
-  override def clearAllData: Future[Boolean] = super.removeAll().map(!_.hasErrors)
+  override def clearAllData: Future[Boolean] = super.removeAll().map(_.ok)
 }
 

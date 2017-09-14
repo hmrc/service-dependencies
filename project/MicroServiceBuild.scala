@@ -21,7 +21,7 @@ private object AppDependencies {
   private val mockitoVersion = "2.2.6"
   private val wireMockVersion = "1.55"
   private val scalaTestPlusPlayVersion = "1.5.1"
-  private val playReactivemongoVersion = "5.2.0"
+  private val playReactivemongoVersion = "6.0.0"
 
 
   val compile = Seq(
@@ -30,7 +30,7 @@ private object AppDependencies {
     "uk.gov.hmrc" %% "play-url-binders" % playUrlBindersVersion,
     "uk.gov.hmrc" %% "github-client" % githubClientVersion,
     "uk.gov.hmrc" %% "play-reactivemongo" % playReactivemongoVersion,
-    "uk.gov.hmrc" %% "mongo-lock" % "4.1.0",
+    "uk.gov.hmrc" %% "mongo-lock" % "5.0.0",
     "org.typelevel" %% "cats" % "0.9.0"
   )
 
@@ -44,7 +44,7 @@ private object AppDependencies {
       override lazy val test = Seq(
         "uk.gov.hmrc" %% "hmrctest" % hmrcTestVersion % scope,
         "org.scalatest" %% "scalatest" % scalaTestVersion % scope,
-        "uk.gov.hmrc" %% "reactivemongo-test" % "2.0.0" % scope,
+        "uk.gov.hmrc" %% "reactivemongo-test" % "3.0.0" % scope,
         "org.mockito" % "mockito-core" % mockitoVersion % scope,
         "org.pegdown" % "pegdown" % pegdownVersion % scope,
         "com.typesafe.play" %% "play-test" % PlayVersion.current % scope,

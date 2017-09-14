@@ -21,6 +21,7 @@ import play.api.libs.json.Json
 import reactivemongo.api.DB
 import reactivemongo.api.indexes.{Index, IndexType}
 import reactivemongo.bson.{BSONDocument, BSONObjectID}
+import reactivemongo.play.json.ImplicitBSONHandlers._
 import uk.gov.hmrc.mongo.ReactiveRepository
 import uk.gov.hmrc.servicedependencies.model._
 import uk.gov.hmrc.servicedependencies.util.FutureHelpers.withTimerAndCounter
@@ -63,9 +64,10 @@ class MongoRepositoryLibraryDependenciesRepository(mongo: () => DB)
       for {
         update <- collection.update(selector = Json.obj("repositoryName" -> Json.toJson(repositoryLibraryDependencies.repositoryName)), update = repositoryLibraryDependencies, upsert = true)
       } yield update match {
-        case lastError if lastError.inError => throw new RuntimeException(s"failed to persist RepositoryLibraryDependencies: $repositoryLibraryDependencies")
         case _ => repositoryLibraryDependencies
       }
+    } recover {
+      case lastError => throw new RuntimeException(s"failed to persist RepositoryLibraryDependencies: $repositoryLibraryDependencies", lastError)
     }
   }
 
@@ -86,7 +88,7 @@ class MongoRepositoryLibraryDependenciesRepository(mongo: () => DB)
   }
 
 
-  override def clearAllData: Future[Boolean] = super.removeAll().map(!_.hasErrors)
+  override def clearAllData: Future[Boolean] = super.removeAll().map(_.ok)
 
   override def clearAllGithubLastUpdateDates: Future[Seq[MongoRepositoryDependencies]] = {
     getAllEntries.flatMap { es =>

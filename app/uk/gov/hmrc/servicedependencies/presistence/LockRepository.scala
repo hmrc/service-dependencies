@@ -42,6 +42,6 @@ class MongoLocksRepository(mongo: () => DB)
 
   override def getAllEntries: Future[Seq[Lock]] = findAll()
 
-  override def clearAllData: Future[Boolean] = super.removeAll().map(!_.hasErrors)
+  override def clearAllData: Future[Boolean] = super.removeAll().map(_.ok)
 }
 
