@@ -38,12 +38,11 @@ package uk.gov.hmrc.cataloguefrontend.events
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.{BeforeAndAfterEach, LoneElement, OptionValues}
 import org.scalatestplus.play.OneAppPerTest
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import uk.gov.hmrc.mongo.MongoSpecSupport
 import uk.gov.hmrc.play.test.UnitSpec
 import uk.gov.hmrc.servicedependencies.model.{MongoLibraryVersion, Version}
 import uk.gov.hmrc.servicedependencies.presistence.MongoLibraryVersionRepository
-
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 class MongoLibraryVersionRepositorySpec extends UnitSpec with LoneElement with MongoSpecSupport with ScalaFutures with OptionValues with BeforeAndAfterEach with OneAppPerTest {
 

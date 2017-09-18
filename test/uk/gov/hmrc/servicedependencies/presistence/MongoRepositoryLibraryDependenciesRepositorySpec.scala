@@ -39,12 +39,11 @@ import java.time.LocalDateTime
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.{BeforeAndAfterEach, LoneElement, OptionValues}
 import org.scalatestplus.play.OneAppPerTest
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import uk.gov.hmrc.mongo.MongoSpecSupport
 import uk.gov.hmrc.play.test.UnitSpec
-import uk.gov.hmrc.servicedependencies.model.{LibraryDependency, MongoLibraryVersion, MongoRepositoryDependencies, Version}
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import uk.gov.hmrc.servicedependencies.TestHelpers
 import uk.gov.hmrc.servicedependencies.TestHelpers._
+import uk.gov.hmrc.servicedependencies.model.{LibraryDependency, MongoRepositoryDependencies, Version}
 
 class MongoRepositoryLibraryDependenciesRepositorySpec extends UnitSpec with LoneElement with MongoSpecSupport with ScalaFutures with OptionValues with BeforeAndAfterEach with OneAppPerTest {
 

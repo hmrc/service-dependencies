@@ -20,6 +20,8 @@ import com.github.tomakehurst.wiremock.client.WireMock._
 import org.scalatest._
 import org.scalatest.concurrent.{IntegrationPatience, ScalaFutures}
 import org.scalatestplus.play.OneAppPerSuite
+import play.api.Application
+import play.api.inject.guice.GuiceApplicationBuilder
 import uk.gov.hmrc.servicedependencies.config.ReleasesConfig
 import uk.gov.hmrc.servicedependencies.service.DeploymentsDataSource
 

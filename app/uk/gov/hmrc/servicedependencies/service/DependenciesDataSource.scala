@@ -35,9 +35,6 @@ import uk.gov.hmrc.servicedependencies.config.{CacheConfig, ServiceDependenciesC
 import scala.concurrent.{ExecutionContext, Future, Promise}
 import scala.util.{Failure, Success, Try}
 
-
-
-
 class DependenciesDataSource(val releasesConnector: DeploymentsDataSource,
                              val teamsAndRepositoriesDataSource: TeamsAndRepositoriesDataSource,
                              val config: ServiceDependenciesConfig) {

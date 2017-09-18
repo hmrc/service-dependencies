@@ -29,10 +29,6 @@ class SchedulerSpec extends FunSpec
   with Matchers
   with OneAppPerSuite with BeforeAndAfterEach {
 
-//  override def beforeEach() {
-//    scheduler.resetCallCount
-//    super.beforeEach()
-//  }
 
   trait Counter {
     def getCallCount: Int

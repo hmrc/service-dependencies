@@ -46,6 +46,7 @@ class MongoSbtPluginVersionRepositorySpec extends UnitSpec with LoneElement with
 
   val mongoSbtPluginVersions = new MongoSbtPluginVersionRepository(mongo)
 
+
   override def beforeEach() {
     await(mongoSbtPluginVersions.drop)
   }

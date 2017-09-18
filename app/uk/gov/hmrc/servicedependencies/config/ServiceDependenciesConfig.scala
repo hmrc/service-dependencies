@@ -19,9 +19,9 @@ package uk.gov.hmrc.servicedependencies.config
 import java.io.File
 import java.nio.file.Path
 
-import play.api.Play
+import play.api.{Configuration, Play}
 import play.api.libs.json.Json
-import uk.gov.hmrc.play.config.ServicesConfig
+import uk.gov.hmrc.play.bootstrap.config.BaseUrl
 import uk.gov.hmrc.servicedependencies.config.model.CuratedDependencyConfig
 
 import scala.concurrent.duration._
@@ -35,7 +35,8 @@ trait ReleasesConfig {
   def releasesServiceUrl: String
 }
 
-class ServiceDependenciesConfig(configPath: String) extends CacheConfig with ReleasesConfig with ServicesConfig {
+
+class ServiceDependenciesConfig (configPath: String, playConfiguration: Configuration) extends CacheConfig with ReleasesConfig with BaseUrl  {
 
   private val cacheDurationConfigPath = "cache.timeout.duration"
   private val githubOpenConfigKey = "github.open.api"
@@ -59,6 +60,7 @@ class ServiceDependenciesConfig(configPath: String) extends CacheConfig with Rel
     Play.current.configuration.getMilliseconds(cacheDurationConfigPath).map(_.milliseconds).getOrElse(defaultTimeout)
   }
 
+
   lazy val releasesServiceUrl = optionalConfig(s"$releaseServiceUrlKey").get
   lazy val teamsAndRepositoriesServiceUrl: String = baseUrl("teams-and-repositories")//optionalConfig(teamsAndRepositoriesServiceUrlKey).get
 
@@ -75,6 +77,8 @@ class ServiceDependenciesConfig(configPath: String) extends CacheConfig with Rel
       user <- config("user")
       key <- config("key")
     } yield GitApiConfig(user, key, host)
+
+  override protected def configuration = playConfiguration
 }
 
 case class GitApiConfig(user: String, key: String, apiUrl: String)
