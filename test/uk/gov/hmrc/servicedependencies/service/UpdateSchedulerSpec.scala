@@ -21,10 +21,11 @@ import org.scalatest.mock.MockitoSugar
 import org.scalatest.{BeforeAndAfterEach, FunSpec, Matchers}
 import org.scalatestplus.play.OneAppPerSuite
 import play.libs.Akka
+import uk.gov.hmrc.servicedependencies.ServiceDependenciesController
 
 import scala.concurrent.duration._
 
-class SchedulerSpec extends FunSpec
+class UpdateSchedulerSpec extends FunSpec
   with MockitoSugar
   with Matchers
   with OneAppPerSuite with BeforeAndAfterEach {
@@ -36,11 +37,9 @@ class SchedulerSpec extends FunSpec
   }
 
 
-  def schedulerF = new Scheduler with Counter {
+  def schedulerF = new UpdateScheduler(Akka.system(), mock[ServiceDependenciesController]) with Counter {
 
     var count = 0
-
-    override def akkaSystem: ActorSystem = Akka.system()
 
     override def dependencyDataUpdatingService: DependencyDataUpdatingService = {
       count += 1

@@ -416,7 +416,7 @@ class DependencyDataUpdatingServiceSpec extends FunSpec with MockitoSugar with M
   }
 
   class TestDependencyDataUpdatingService(testMongoLockBuilder: (String) => MongoLock, dependencyConfig: CuratedDependencyConfig)
-    extends DefaultDependencyDataUpdatingService(mock[ServiceDependenciesConfig]) {
+    extends DefaultDependencyDataUpdatingService(mock[ServiceDependenciesConfig], mock[() => DB]) {
 
     override val libraryMongoLock = testMongoLockBuilder("libraryMongoLock")
     override val sbtPluginMongoLock = testMongoLockBuilder("sbtPluginMongoLock")

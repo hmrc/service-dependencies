@@ -19,6 +19,7 @@ package uk.gov.hmrc.servicedependencies.service
 import org.slf4j.LoggerFactory
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.modules.reactivemongo.MongoDbConnection
+import reactivemongo.api.DB
 import uk.gov.hmrc.lock.LockFormats.Lock
 import uk.gov.hmrc.servicedependencies.config.ServiceDependenciesConfig
 import uk.gov.hmrc.servicedependencies.{LibraryDependencyState, OtherDependencyState, RepositoryDependencies, SbtPluginDependencyState}
@@ -59,8 +60,8 @@ trait DependencyDataUpdatingService {
 }
 
 
-class DefaultDependencyDataUpdatingService(override val config: ServiceDependenciesConfig)
-  extends DependencyDataUpdatingService with MongoDbConnection {
+class DefaultDependencyDataUpdatingService(override val config: ServiceDependenciesConfig, db: () => DB)
+  extends DependencyDataUpdatingService  {
 
   lazy val logger = LoggerFactory.getLogger(this.getClass)
 

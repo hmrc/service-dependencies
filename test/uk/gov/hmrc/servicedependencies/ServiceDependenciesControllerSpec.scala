@@ -23,9 +23,10 @@ import org.scalatest._
 import org.scalatest.concurrent.{IntegrationPatience, ScalaFutures}
 import org.scalatest.mock.MockitoSugar
 import org.scalatestplus.play.OneServerPerSuite
-import play.api.inject.guice.GuiceApplicationBuilder
+import play.api.Configuration
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
+import play.modules.reactivemongo.ReactiveMongoComponent
 import uk.gov.hmrc.servicedependencies.model.{MongoLibraryVersion, MongoRepositoryDependencies, Version}
 import uk.gov.hmrc.servicedependencies.service._
 
@@ -113,8 +114,8 @@ class ServiceDependenciesControllerSpec extends FreeSpec with BeforeAndAfterEach
   trait Setup {
 
     def makeServiceDependenciesImpl(libraryDependencyUpdatingService: DependencyDataUpdatingService) =
-      new ServiceDependenciesController {
-        override def dependencyDataUpdatingService: DependencyDataUpdatingService = libraryDependencyUpdatingService
+      new ServiceDependenciesController(Configuration(), mock[ReactiveMongoComponent]) {
+        lazy override val dependencyDataUpdatingService: DependencyDataUpdatingService = libraryDependencyUpdatingService
 
         override val timeStampGenerator = () => 12345l
       }
