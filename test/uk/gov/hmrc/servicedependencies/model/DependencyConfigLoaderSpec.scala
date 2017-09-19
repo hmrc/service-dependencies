@@ -18,6 +18,7 @@ package uk.gov.hmrc.servicedependencies.model
 
 import org.scalatest.{FunSpec, Matchers, OptionValues}
 import org.slf4j.LoggerFactory
+import play.api.Configuration
 import uk.gov.hmrc.servicedependencies.config.ServiceDependenciesConfig
 import uk.gov.hmrc.servicedependencies.config.model.{CuratedDependencyConfig, OtherDependencyConfig, SbtPluginConfig}
 
@@ -25,7 +26,7 @@ class DependencyConfigLoaderSpec extends FunSpec with Matchers with OptionValues
 
   describe("config loader") {
     it("should load the config") {
-      val configLoader = new ServiceDependenciesConfig("/config/test-config.json")
+      val configLoader = new ServiceDependenciesConfig("/config/test-config.json", Configuration())
       LoggerFactory.getLogger(this.getClass).info(configLoader.curatedDependencyConfig.sbtPlugins.toString)
       configLoader.curatedDependencyConfig shouldBe CuratedDependencyConfig(
         sbtPlugins = Seq(

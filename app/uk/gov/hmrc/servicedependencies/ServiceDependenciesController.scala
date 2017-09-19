@@ -19,11 +19,11 @@ package uk.gov.hmrc.servicedependencies
 import java.util.Date
 
 import org.slf4j.LoggerFactory
+import play.api.Play
 import play.api.libs.json.Json
 import play.api.mvc._
 import play.api.libs.concurrent.Execution.Implicits._
-
-import uk.gov.hmrc.play.microservice.controller.BaseController
+import uk.gov.hmrc.play.bootstrap.controller.BaseController
 import uk.gov.hmrc.servicedependencies.config.ServiceDependenciesConfig
 import uk.gov.hmrc.servicedependencies.model._
 import uk.gov.hmrc.servicedependencies.service._
@@ -124,8 +124,9 @@ object ServiceDependenciesController extends ServiceDependenciesController {
   override def dependencyDataUpdatingService: DependencyDataUpdatingService =
     new DefaultDependencyDataUpdatingService(config)
 
+  import play.api.Play.current
 
-  protected val config = new ServiceDependenciesConfig("/dependency-versions-config.json")
+  protected val config = new ServiceDependenciesConfig("/dependency-versions-config.json", Play.configuration)
 
 }
 
