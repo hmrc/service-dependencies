@@ -20,10 +20,10 @@ import java.util.Date
 
 import com.google.inject.{Inject, Singleton}
 import org.slf4j.LoggerFactory
-import play.api.{Configuration, Play}
+import play.api.Configuration
+import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json.Json
 import play.api.mvc._
-import play.api.libs.concurrent.Execution.Implicits._
 import play.modules.reactivemongo.ReactiveMongoComponent
 import uk.gov.hmrc.play.bootstrap.controller.BaseController
 import uk.gov.hmrc.servicedependencies.config.ServiceDependenciesConfig
@@ -51,11 +51,13 @@ object RepositoryDependencies {
 
 
 @Singleton
-class ServiceDependenciesController @Inject()(configuration: Configuration, mongo: ReactiveMongoComponent) extends BaseController {
+class ServiceDependenciesController @Inject()(configuration: Configuration,
+                                              dependencyDataUpdatingService: DependencyDataUpdatingService,
+                                              config: ServiceDependenciesConfig) extends BaseController {
 
-  protected val config = new ServiceDependenciesConfig("/dependency-versions-config.json", configuration)
+//  protected val config = new ServiceDependenciesConfig("/dependency-versions-config.json", configuration)
 
-  lazy val dependencyDataUpdatingService: DependencyDataUpdatingService = new DefaultDependencyDataUpdatingService(config, mongo.mongoConnector.db)
+//  lazy val dependencyDataUpdatingService: DependencyDataUpdatingService = new DependencyDataUpdatingService(config, mongo.mongoConnector.db)
 
   val logger = LoggerFactory.getLogger(this.getClass)
 
@@ -63,8 +65,6 @@ class ServiceDependenciesController @Inject()(configuration: Configuration, mong
 
   implicit val environmentDependencyWrites = Json.writes[EnvironmentDependency]
   implicit val serviceDependenciesWrites = Json.writes[ServiceDependencies]
-
-  def timeStampGenerator: () => Long = new Date().getTime
 
 
   def getDependencyVersionsForRepository(repositoryName: String) = Action.async {
@@ -80,7 +80,7 @@ class ServiceDependenciesController @Inject()(configuration: Configuration, mong
 
 
   def reloadLibraryDependenciesForAllRepositories() = Action {
-    dependencyDataUpdatingService.reloadCurrentDependenciesDataForAllRepositories(timeStampGenerator).map(_ => logger.info(s"""${">" * 10} done ${"<" * 10}""")).onFailure{
+    dependencyDataUpdatingService.reloadCurrentDependenciesDataForAllRepositories().map(_ => logger.info(s"""${">" * 10} done ${"<" * 10}""")).onFailure{
       case ex => throw new RuntimeException("reload of dependencies failed", ex)
     }
     doneResult
@@ -88,14 +88,14 @@ class ServiceDependenciesController @Inject()(configuration: Configuration, mong
 
 
   def reloadLibraryVersions() = Action {
-    dependencyDataUpdatingService.reloadLatestLibraryVersions(timeStampGenerator).map(_ => println(s"""${">" * 10} done ${"<" * 10}""")).onFailure{
+    dependencyDataUpdatingService.reloadLatestLibraryVersions().map(_ => println(s"""${">" * 10} done ${"<" * 10}""")).onFailure{
       case ex => throw new RuntimeException("reload of libraries failed", ex)
     }
     doneResult
   }
 
   def reloadSbtPluginVersions() = Action {
-    dependencyDataUpdatingService.reloadLatestSbtPluginVersions(timeStampGenerator).map(_ => println(s"""${">" * 10} done ${"<" * 10}""")).onFailure{
+    dependencyDataUpdatingService.reloadLatestSbtPluginVersions().map(_ => println(s"""${">" * 10} done ${"<" * 10}""")).onFailure{
       case ex => throw new RuntimeException("reload of sbt plugins failed", ex)
     }
     doneResult

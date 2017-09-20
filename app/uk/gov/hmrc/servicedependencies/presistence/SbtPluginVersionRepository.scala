@@ -16,31 +16,25 @@
 
 package uk.gov.hmrc.servicedependencies.presistence
 
+import com.google.inject.{Inject, Singleton}
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json.Json
-import reactivemongo.api.DB
+import play.modules.reactivemongo.ReactiveMongoComponent
 import reactivemongo.api.indexes.{Index, IndexType}
 import reactivemongo.bson.BSONObjectID
 import reactivemongo.play.json.ImplicitBSONHandlers._
 import uk.gov.hmrc.mongo.ReactiveRepository
-import uk.gov.hmrc.servicedependencies.util.FutureHelpers.withTimerAndCounter
 import uk.gov.hmrc.servicedependencies.model._
-
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
+import uk.gov.hmrc.servicedependencies.util.FutureHelpers.withTimerAndCounter
 
 import scala.concurrent.{ExecutionContext, Future}
 
-trait SbtPluginVersionRepository {
-
-  def update(sbtPluginVersion: MongoSbtPluginVersion): Future[MongoSbtPluginVersion]
-  def getAllEntries: Future[Seq[MongoSbtPluginVersion]]
-  def clearAllData: Future[Boolean]
-}
-
-class MongoSbtPluginVersionRepository(mongo: () => DB)
+@Singleton
+class SbtPluginVersionRepository @Inject()(mongo: ReactiveMongoComponent)
   extends ReactiveRepository[MongoSbtPluginVersion, BSONObjectID](
     collectionName = "sbtPluginVersions",
-    mongo = mongo,
-    domainFormat = MongoSbtPluginVersion.format) with SbtPluginVersionRepository {
+    mongo = mongo.mongoConnector.db,
+    domainFormat = MongoSbtPluginVersion.format) {
 
 
   override def ensureIndexes(implicit ec: ExecutionContext = defaultContext): Future[Seq[Boolean]] =
@@ -53,8 +47,7 @@ class MongoSbtPluginVersionRepository(mongo: () => DB)
       )
     )
 
-  override def update(sbtPluginVersion: MongoSbtPluginVersion): Future[MongoSbtPluginVersion] = {
-
+  def update(sbtPluginVersion: MongoSbtPluginVersion): Future[MongoSbtPluginVersion] = {
 
 
     logger.info(s"writing $sbtPluginVersion")
@@ -69,8 +62,8 @@ class MongoSbtPluginVersionRepository(mongo: () => DB)
     }
   }
 
-  override def getAllEntries: Future[Seq[MongoSbtPluginVersion]] = findAll()
+  def getAllEntries: Future[Seq[MongoSbtPluginVersion]] = findAll()
 
-  override def clearAllData: Future[Boolean] = super.removeAll().map(_.ok)
+  def clearAllData: Future[Boolean] = super.removeAll().map(_.ok)
 }
 

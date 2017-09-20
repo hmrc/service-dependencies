@@ -16,12 +16,12 @@
 
 package uk.gov.hmrc.servicedependencies.service
 
-import akka.actor.ActorSystem
+import org.mockito.Mockito
+import org.mockito.Mockito.verify
 import org.scalatest.mock.MockitoSugar
 import org.scalatest.{BeforeAndAfterEach, FunSpec, Matchers}
 import org.scalatestplus.play.OneAppPerSuite
 import play.libs.Akka
-import uk.gov.hmrc.servicedependencies.ServiceDependenciesController
 
 import scala.concurrent.duration._
 
@@ -30,53 +30,45 @@ class UpdateSchedulerSpec extends FunSpec
   with Matchers
   with OneAppPerSuite with BeforeAndAfterEach {
 
-
   trait Counter {
-    def getCallCount: Int
-    def resetCallCount: Unit
-  }
-
-
-  def schedulerF = new UpdateScheduler(Akka.system(), mock[ServiceDependenciesController]) with Counter {
-
     var count = 0
-
-    override def dependencyDataUpdatingService: DependencyDataUpdatingService = {
-      count += 1
-
-      mock[DependencyDataUpdatingService]
-    }
-
-    override def getCallCount: Int = count
-
-    override def resetCallCount: Unit = count = 0
+    def getCallCount: Int = count
+    def resetCallCount: Unit = count = 0
   }
+
+
+  def schedulerF(dependencyDataUpdatingService: DependencyDataUpdatingService) = new UpdateScheduler(Akka.system(), dependencyDataUpdatingService)
 
   describe("Scheduler") {
     it("should schedule startUpdatingLibraryData based on configured interval") {
-      val scheduler = schedulerF
+      val dependencyDataUpdatingService = mock[DependencyDataUpdatingService]
+      val scheduler = schedulerF(dependencyDataUpdatingService)
       scheduler.startUpdatingLibraryData(100 milliseconds)
       Thread.sleep(1000)
 
-      scheduler.getCallCount should be > 8
-      scheduler.getCallCount should be < 11
+      verify(dependencyDataUpdatingService, Mockito.atLeast(8)).reloadLatestLibraryVersions
+      verify(dependencyDataUpdatingService, Mockito.atMost(11)).reloadLatestLibraryVersions
     }
+
     it("should schedule reloadLibraryDependencyDataForAllRepositories based on configured interval") {
-      val scheduler = schedulerF
+      val dependencyDataUpdatingService = mock[DependencyDataUpdatingService]
+      val scheduler = schedulerF(dependencyDataUpdatingService)
       scheduler.startUpdatingLibraryDependencyData(100 milliseconds)
       Thread.sleep(1000)
 
-      scheduler.getCallCount should be > 8
-      scheduler.getCallCount should be < 11
+      verify(dependencyDataUpdatingService, Mockito.atLeast(8)).reloadCurrentDependenciesDataForAllRepositories
+      verify(dependencyDataUpdatingService, Mockito.atMost(11)).reloadCurrentDependenciesDataForAllRepositories
+
     }
 
     it("should schedule reloadSbtPluginVersionData For AllRepositories based on configured interval") {
-      val scheduler = schedulerF
+      val dependencyDataUpdatingService = mock[DependencyDataUpdatingService]
+      val scheduler = schedulerF(dependencyDataUpdatingService)
       scheduler.startUpdatingSbtPluingVersionData(100 milliseconds)
       Thread.sleep(1000)
 
-      scheduler.getCallCount should be > 8
-      scheduler.getCallCount should be < 11
+      verify(dependencyDataUpdatingService, Mockito.atLeast(8)).reloadLatestSbtPluginVersions
+      verify(dependencyDataUpdatingService, Mockito.atMost(11)).reloadLatestSbtPluginVersions
     }
   }
 }

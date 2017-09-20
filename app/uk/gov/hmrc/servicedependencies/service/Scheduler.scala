@@ -26,20 +26,20 @@ import scala.concurrent.duration.{FiniteDuration, _}
 
 
 @Singleton
-class UpdateScheduler @Inject()(actorSystem: ActorSystem, serviceDependenciesController: ServiceDependenciesController) {
+class UpdateScheduler @Inject()(actorSystem: ActorSystem, dependencyDataUpdatingService: DependencyDataUpdatingService) {
 
-//  implicit val db: () => DefaultDB = mongo.mongoConnector.db
+  //  implicit val db: () => DefaultDB = mongo.mongoConnector.db
 
-  def dependencyDataUpdatingService = serviceDependenciesController.dependencyDataUpdatingService
-
-  private val timeStampGenerator = serviceDependenciesController.timeStampGenerator
+  //  def dependencyDataUpdatingService = serviceDependenciesController.dependencyDataUpdatingService
+  //
+  //  private val timeStampGenerator = serviceDependenciesController.timeStampGenerator
 
 
   def startUpdatingLibraryDependencyData(interval: FiniteDuration): Cancellable = {
     Logger.info(s"Initialising libraryDependencyDataReloader update every $interval")
 
     val scheduler = actorSystem.scheduler.schedule(100 milliseconds, interval) {
-      dependencyDataUpdatingService.reloadCurrentDependenciesDataForAllRepositories(timeStampGenerator)
+      dependencyDataUpdatingService.reloadCurrentDependenciesDataForAllRepositories()
     }
 
     scheduler
@@ -49,7 +49,7 @@ class UpdateScheduler @Inject()(actorSystem: ActorSystem, serviceDependenciesCon
     Logger.info(s"Initialising libraryDataReloader update every $interval")
 
     val scheduler = actorSystem.scheduler.schedule(100 milliseconds, interval) {
-      dependencyDataUpdatingService.reloadLatestLibraryVersions(timeStampGenerator)
+      dependencyDataUpdatingService.reloadLatestLibraryVersions()
     }
 
     scheduler
@@ -59,7 +59,7 @@ class UpdateScheduler @Inject()(actorSystem: ActorSystem, serviceDependenciesCon
     Logger.info(s"Initialising SbtPluginDataReloader update every $interval")
 
     val scheduler = actorSystem.scheduler.schedule(100 milliseconds, interval) {
-      dependencyDataUpdatingService.reloadLatestSbtPluginVersions(timeStampGenerator)
+      dependencyDataUpdatingService.reloadLatestSbtPluginVersions()
     }
 
     scheduler

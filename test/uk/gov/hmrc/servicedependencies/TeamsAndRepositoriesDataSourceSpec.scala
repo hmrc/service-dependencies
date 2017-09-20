@@ -18,9 +18,12 @@ package uk.gov.hmrc.servicedependencies
 
 import com.github.tomakehurst.wiremock.client.WireMock._
 import org.scalatest.concurrent.{IntegrationPatience, ScalaFutures}
+import org.scalatest.mock.MockitoSugar
 import org.scalatest.{BeforeAndAfterAll, FreeSpec, MustMatchers}
 import org.scalatestplus.play.OneAppPerSuite
-import uk.gov.hmrc.servicedependencies.service.TeamsAndRepositoriesClient
+import play.api.Configuration
+import uk.gov.hmrc.servicedependencies.config.ServiceDependenciesConfig
+import uk.gov.hmrc.servicedependencies.service.TeamsAndRepositoriesDataSource
 
 class TeamsAndRepositoriesDataSourceSpec
   extends FreeSpec
@@ -28,7 +31,8 @@ class TeamsAndRepositoriesDataSourceSpec
   with ScalaFutures
   with IntegrationPatience
   with BeforeAndAfterAll
-  with OneAppPerSuite {
+  with OneAppPerSuite
+  with MockitoSugar {
 
   val wireMock = new WireMockConfig(8080)
 
@@ -73,9 +77,13 @@ class TeamsAndRepositoriesDataSourceSpec
     scala.io.Source.fromInputStream(getClass.getResourceAsStream(filename)).mkString
   }
 
+  def stubbedConfig = new ServiceDependenciesConfig(Configuration()) {
+    override lazy val teamsAndRepositoriesServiceUrl = wireMock.host()
+  }
+
   "Retrieving a list of teams for a repository" - {
     "correctly parse json response" in {
-      val services = new TeamsAndRepositoriesClient(wireMock.host())
+      val services = new TeamsAndRepositoriesDataSource(stubbedConfig)
 
       val teams = services.getTeamsForRepository("test-repo").futureValue
       teams mustBe Seq("PlatOps", "Webops")
@@ -84,7 +92,7 @@ class TeamsAndRepositoriesDataSourceSpec
 
   "Retrieving a list of teams for all services" - {
     "correctly parse json response" in {
-      val services = new TeamsAndRepositoriesClient(wireMock.host())
+      val services = new TeamsAndRepositoriesDataSource(stubbedConfig)
 
       val teams = services.getTeamsForServices().futureValue
       teams mustBe Map(
@@ -95,7 +103,7 @@ class TeamsAndRepositoriesDataSourceSpec
 
   "Retrieving a list of all repositories" - {
     "correctly parse json response" in {
-      val services = new TeamsAndRepositoriesClient(wireMock.host())
+      val services = new TeamsAndRepositoriesDataSource(stubbedConfig)
 
       val repositories = services.getAllRepositories().futureValue
       repositories mustBe Seq("test-repo", "another-repo")
