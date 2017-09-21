@@ -180,7 +180,7 @@ class GithubSpec
       "should not hit github api if the repo has not had any commits/pushes" in {
         val githubService = init(toDate(date))
 
-        githubService.findVersionsForMultipleArtifacts(repoName, CuratedDependencyConfig(Nil, Nil, Nil), Some(toDate(date))).value.lastGitUpdateDate.value shouldBe toDate(date)
+        githubService.findVersionsForMultipleArtifacts(repoName, CuratedDependencyConfig(Nil, Nil, Nil), Some(toDate(date))) shouldBe None
 
         verifyZeroInteractions(githubService.gh.contentsService)
       }

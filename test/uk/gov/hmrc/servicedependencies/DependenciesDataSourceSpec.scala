@@ -388,7 +388,7 @@ class DependenciesDataSourceSpec extends FreeSpec with Matchers with ScalaFuture
         if (callCount >= 2) {
           val requestError = mock[RequestError]
           when(requestError.getMessage).thenReturn("rate limit exceeded")
-          throw new RequestException(requestError, 403)
+          throw new RateLimitExceeded(new RequestException(requestError, 403))
         }
 
         callCount += 1
@@ -404,7 +404,6 @@ class DependenciesDataSourceSpec extends FreeSpec with Matchers with ScalaFuture
 
       dataSource.persistDependenciesForAllRepositories(
         curatedDependencyConfig = curatedDependencyConfig,
-        //        timeStampGenerator = timestampF,
         currentDependencyEntries = Nil,
         persisterF = rlp => Future.successful(rlp)).futureValue
 
@@ -532,11 +531,6 @@ class DependenciesDataSourceSpec extends FreeSpec with Matchers with ScalaFuture
 
   }
 
-  "GithubOpen" - {
-    "should look at appDependencies.scala before build.sbt" in {
-
-    }
-  }
 
   private def prepareUnderTestClass(stubbedGithubs: Seq[Github], repositories: Seq[String]): DependenciesDataSource = {
     val mockedDependenciesConfig: ServiceDependenciesConfig = getMockedConfig()

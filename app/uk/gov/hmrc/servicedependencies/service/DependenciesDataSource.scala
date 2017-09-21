@@ -97,10 +97,10 @@ class DependenciesDataSource @Inject()(teamsAndRepositoriesDataSource: TeamsAndR
   }
 
 
-  private def shouldPersist(dependencies: DependenciesFromGitHub, maybeLastStoredGitUpdateDate: Option[Date]): Boolean = {
+  private def isRepositoryUpdated(dependencies: DependenciesFromGitHub, maybeLastStoredGitUpdateDate: Option[Date]): Boolean = {
     (dependencies.lastGitUpdateDate, maybeLastStoredGitUpdateDate) match {
       case (Some(lastUpdateDate), Some(storedLastUpdateDate)) => lastUpdateDate.after(storedLastUpdateDate)
-      case _ => true
+      case _ => true //!@  I think this should be false!!!
     }
   }
 
@@ -124,7 +124,7 @@ class DependenciesDataSource @Inject()(teamsAndRepositoriesDataSource: TeamsAndR
         case repoName :: xs =>
           logger.info(s"getting dependencies for: $repoName")
           val maybeLastGitUpdateDate = currentDependencyEntries.find(_.repositoryName == repoName).flatMap(_.lastGitUpdateDate)
-          val errorOrDependencies: Either[Throwable, Option[DependenciesFromGitHub]] = getDependenciesFromGitHub(repoName, curatedDependencyConfig, maybeLastGitUpdateDate)
+          val errorOrDependencies: Either[RateLimitExceeded, Option[DependenciesFromGitHub]] = getDependenciesFromGitHub(repoName, curatedDependencyConfig, maybeLastGitUpdateDate)
 
           if (errorOrDependencies.isLeft) {
             logger.error(s"Something went wrong: ${errorOrDependencies.left.get.getMessage}")
@@ -134,7 +134,7 @@ class DependenciesDataSource @Inject()(teamsAndRepositoriesDataSource: TeamsAndR
           } else {
             errorOrDependencies.right.get match {
               case None =>
-                persisterF(MongoRepositoryDependencies(repoName, Nil, Nil, Nil, maybeLastGitUpdateDate))
+                //!@persisterF(MongoRepositoryDependencies(repoName, Nil, Nil, Nil, maybeLastGitUpdateDate))
                 getDependencies(xs, acc)
               case Some(dependencies) =>
                 val repositoryLibraryDependencies =
@@ -145,7 +145,7 @@ class DependenciesDataSource @Inject()(teamsAndRepositoriesDataSource: TeamsAndR
                     otherDependencies = dependencies.otherDependencies,
                     lastGitUpdateDate = dependencies.lastGitUpdateDate,
                     updateDate = timestampGenerator.now)
-                if (shouldPersist(dependencies, maybeLastGitUpdateDate))
+                if (isRepositoryUpdated(dependencies, maybeLastGitUpdateDate))
                   persisterF(repositoryLibraryDependencies)
                 getDependencies(xs, acc :+ repositoryLibraryDependencies)
             }
@@ -177,7 +177,7 @@ class DependenciesDataSource @Inject()(teamsAndRepositoriesDataSource: TeamsAndR
 
   private def getDependenciesFromGitHub(repoName: String,
                                         curatedDependencyConfig: CuratedDependencyConfig,
-                                        maybeLastCommitDate: Option[Date]): Either[Throwable, Option[DependenciesFromGitHub]] = {
+                                        maybeLastCommitDate: Option[Date]): Either[RateLimitExceeded, Option[DependenciesFromGitHub]] = {
 
     def getLibraryDependencies(githubSearchResults: GithubSearchResults) = githubSearchResults.libraries.foldLeft(Seq.empty[LibraryDependency]) {
       case (acc, (library, mayBeVersion)) =>
@@ -195,7 +195,7 @@ class DependenciesDataSource @Inject()(teamsAndRepositoriesDataSource: TeamsAndR
     }
 
     // caching the rate limiting exception
-    Either.catchNonFatal {
+    Either.catchOnly[RateLimitExceeded] {
       searchGithubsForArtifacts(repoName, curatedDependencyConfig, maybeLastCommitDate).map { searchResults =>
         DependenciesFromGitHub(
           getLibraryDependencies(searchResults),
@@ -216,12 +216,12 @@ class DependenciesDataSource @Inject()(teamsAndRepositoriesDataSource: TeamsAndR
       remainingGithubs match {
         case github :: xs =>
 
-          val githubSearchResults = github.findVersionsForMultipleArtifacts(repositoryName, curatedDependencyConfig, maybeLastCommitDate)
+          val mayBeGithubSearchResults = github.findVersionsForMultipleArtifacts(repositoryName, curatedDependencyConfig, maybeLastCommitDate)
 
-          if (githubSearchResults.isEmpty)
+          if (mayBeGithubSearchResults.isEmpty)
             searchRemainingGitHubs(xs)
           else
-            githubSearchResults
+            mayBeGithubSearchResults
         case Nil => None
       }
     }

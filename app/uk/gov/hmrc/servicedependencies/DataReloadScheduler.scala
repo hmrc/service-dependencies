@@ -28,7 +28,7 @@ import scala.concurrent.Future
 import javax.inject.Inject
 
 @Singleton
-class DataReloadScheduler @Inject()(app: Application, configuration: Configuration, updateScheduler: UpdateScheduler) {
+class DataReloadScheduler @Inject()(app: Application, configuration: Configuration, updateScheduler: UpdateScheduler, applicationLifecycle: ApplicationLifecycle) {
   lazy val appName = "service-dependencies"
   lazy val loggerDateFormat: Option[String] = configuration.getString("logger.json.dateformat")
 
@@ -59,7 +59,7 @@ class DataReloadScheduler @Inject()(app: Application, configuration: Configurati
     } { reloadInterval =>
       Logger.warn(s"repositoryDependenciesReloadInterval set to $reloadInterval minutes")
       val cancellable = updateScheduler.startUpdatingLibraryDependencyData(reloadInterval minutes)
-      app.injector.instanceOf[ApplicationLifecycle].addStopHook(() => Future(cancellable.cancel()))
+      applicationLifecycle.addStopHook(() => Future(cancellable.cancel()))
     }
   }
 
@@ -71,7 +71,7 @@ class DataReloadScheduler @Inject()(app: Application, configuration: Configurati
     } { reloadInterval =>
       Logger.warn(s"libraryReloadIntervalKey set to $reloadInterval minutes")
       val cancellable = updateScheduler.startUpdatingLibraryData(reloadInterval minutes)
-      app.injector.instanceOf[ApplicationLifecycle].addStopHook(() => Future(cancellable.cancel()))
+      applicationLifecycle.addStopHook(() => Future(cancellable.cancel()))
     }
   }
 
@@ -83,7 +83,7 @@ class DataReloadScheduler @Inject()(app: Application, configuration: Configurati
     } { reloadInterval =>
       Logger.warn(s"sbtPluginReloadIntervalKey set to $reloadInterval minutes")
       val cancellable = updateScheduler.startUpdatingSbtPluingVersionData(reloadInterval minutes)
-      app.injector.instanceOf[ApplicationLifecycle].addStopHook(() => Future(cancellable.cancel()))
+      applicationLifecycle.addStopHook(() => Future(cancellable.cancel()))
     }
   }
 }

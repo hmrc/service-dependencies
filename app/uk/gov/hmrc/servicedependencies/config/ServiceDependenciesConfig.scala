@@ -29,7 +29,7 @@ import scala.io.Source
 
 
 @Singleton
-class ServiceDependenciesConfig @Inject()(appConfiguration: Configuration) extends BaseUrl  {
+class ServiceDependenciesConfig @Inject()(override val configuration: Configuration) extends BaseUrl  {
 
   private val cacheDurationConfigPath = "cache.timeout.duration"
   private val githubOpenConfigKey = "github.open.api"
@@ -43,7 +43,7 @@ class ServiceDependenciesConfig @Inject()(appConfiguration: Configuration) exten
 
 
   def cacheDuration: FiniteDuration = {
-    appConfiguration.getMilliseconds(cacheDurationConfigPath).map(_.milliseconds).getOrElse(defaultTimeout)
+    configuration.getMilliseconds(cacheDurationConfigPath).map(_.milliseconds).getOrElse(defaultTimeout)
   }
 
 
@@ -64,7 +64,7 @@ class ServiceDependenciesConfig @Inject()(appConfiguration: Configuration) exten
       key <- config("key")
     } yield GitApiConfig(user, key, host)
 
-  override protected def configuration = appConfiguration
+
 }
 
 case class GitApiConfig(user: String, key: String, apiUrl: String)

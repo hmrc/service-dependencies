@@ -24,7 +24,6 @@ import play.api.Configuration
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json.Json
 import play.api.mvc._
-import play.modules.reactivemongo.ReactiveMongoComponent
 import uk.gov.hmrc.play.bootstrap.controller.BaseController
 import uk.gov.hmrc.servicedependencies.config.ServiceDependenciesConfig
 import uk.gov.hmrc.servicedependencies.model._
@@ -54,10 +53,6 @@ object RepositoryDependencies {
 class ServiceDependenciesController @Inject()(configuration: Configuration,
                                               dependencyDataUpdatingService: DependencyDataUpdatingService,
                                               config: ServiceDependenciesConfig) extends BaseController {
-
-//  protected val config = new ServiceDependenciesConfig("/dependency-versions-config.json", configuration)
-
-//  lazy val dependencyDataUpdatingService: DependencyDataUpdatingService = new DependencyDataUpdatingService(config, mongo.mongoConnector.db)
 
   val logger = LoggerFactory.getLogger(this.getClass)
 
