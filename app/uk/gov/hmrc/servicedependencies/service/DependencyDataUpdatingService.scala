@@ -16,97 +16,83 @@
 
 package uk.gov.hmrc.servicedependencies.service
 
+import com.google.inject.{Inject, Singleton}
 import org.slf4j.LoggerFactory
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import play.modules.reactivemongo.MongoDbConnection
 import uk.gov.hmrc.lock.LockFormats.Lock
-import uk.gov.hmrc.servicedependencies.config.ServiceDependenciesConfig
-import uk.gov.hmrc.servicedependencies.{LibraryDependencyState, OtherDependencyState, RepositoryDependencies, SbtPluginDependencyState}
+import uk.gov.hmrc.servicedependencies.config.CuratedDependencyConfigProvider
 import uk.gov.hmrc.servicedependencies.model._
 import uk.gov.hmrc.servicedependencies.presistence._
+import uk.gov.hmrc.servicedependencies.{LibraryDependencyState, OtherDependencyState, RepositoryDependencies, SbtPluginDependencyState}
 
 import scala.concurrent.Future
 
-trait DependencyDataUpdatingService {
 
-  def repositoryDependencyMongoLock: MongoLock
-  def libraryMongoLock: MongoLock
-  def sbtPluginMongoLock: MongoLock
+@Singleton
+class DependencyDataUpdatingService @Inject()(curatedDependencyConfigProvider: CuratedDependencyConfigProvider,
+                                              repositoryLibraryDependenciesRepository: RepositoryLibraryDependenciesRepository,
+                                              libraryVersionRepository: LibraryVersionRepository,
+                                              sbtPluginVersionRepository: SbtPluginVersionRepository,
+                                              locksRepository: LocksRepository,
+                                              mongoLocks: MongoLocks,
+                                              dependenciesDataSource: DependenciesDataSource,
+                                              timestampGenerator: TimestampGenerator) {
 
-  def reloadLatestSbtPluginVersions(timeStampGenerator:() => Long): Future[Seq[MongoSbtPluginVersion]]
-  def reloadLatestLibraryVersions(timeStampGenerator:() => Long): Future[Seq[MongoLibraryVersion]]
-  def reloadCurrentDependenciesDataForAllRepositories(timeStampGenerator:() => Long): Future[Seq[MongoRepositoryDependencies]]
-
-  def getAllCuratedLibraries(): Future[Seq[MongoLibraryVersion]]
-  def getAllCuratedSbtPlugins(): Future[Seq[MongoSbtPluginVersion]]
-  def getAllRepositoriesDependencies(): Future[Seq[MongoRepositoryDependencies]]
-
-  def getDependencyVersionsForRepository(repositoryName: String): Future[Option[RepositoryDependencies]]
-  def getDependencyVersionsForAllRepositories(): Future[Seq[RepositoryDependencies]]
-
-  def dropCollection(collectionName: String): Future[Boolean]
-  def locks(): Future[Seq[Lock]]
-
-  def clearAllGithubLastUpdateDates: Future[Seq[MongoRepositoryDependencies]]
-
-  lazy val releasesConnector = new DeploymentsDataSource(config)
-  lazy val teamsAndRepositoriesClient = new TeamsAndRepositoriesClient(config.teamsAndRepositoriesServiceUrl)
-
-  lazy val dependenciesDataSource = new DependenciesDataSource(releasesConnector, teamsAndRepositoriesClient, config)
-
-  val config: ServiceDependenciesConfig
-
-}
-
-
-class DefaultDependencyDataUpdatingService(override val config: ServiceDependenciesConfig)
-  extends DependencyDataUpdatingService with MongoDbConnection {
+  //  private val db = mongo.mongoConnector.db
 
   lazy val logger = LoggerFactory.getLogger(this.getClass)
 
-  lazy val repositoryLibraryDependenciesRepository: RepositoryLibraryDependenciesRepository = new MongoRepositoryLibraryDependenciesRepository(db)
-  lazy val libraryVersionRepository: LibraryVersionRepository = new MongoLibraryVersionRepository(db)
-  lazy val sbtPluginVersionRepository: SbtPluginVersionRepository = new MongoSbtPluginVersionRepository(db)
-  lazy val locksRepository: LocksRepository = new MongoLocksRepository(db)
+  //  lazy val releasesConnector: DeploymentsDataSource = new DeploymentsDataSource(serviceConfig)
+  //  lazy val teamsAndRepositoriesClient: TeamsAndRepositoriesClient = new TeamsAndRepositoriesClient(serviceConfig.teamsAndRepositoriesServiceUrl)
 
-  override def repositoryDependencyMongoLock: MongoLock = new MongoLock(db, "repository-dependencies-data-reload-job")
+  //  lazy val dependenciesDataSource: DependenciesDataSource = new DependenciesDataSource(releasesConnector, teamsAndRepositoriesClient, serviceConfig)
 
-  override def libraryMongoLock: MongoLock = new MongoLock(db, "libraries-data-reload-job")
-  override def sbtPluginMongoLock: MongoLock = new MongoLock(db, "sbt-plugin-data-reload-job")
+  //  lazy val repositoryLibraryDependenciesRepository: RepositoryLibraryDependenciesRepository = new MongoRepositoryLibraryDependenciesRepository(db)
+  //  lazy val libraryVersionRepository: LibraryVersionRepository = new MongoLibraryVersionRepository(db)
+  //  lazy val sbtPluginVersionRepository: SbtPluginVersionRepository = new MongoSbtPluginVersionRepository(db)
+  //  lazy val locksRepository: LocksRepository = new MongoLocksRepository(db)
 
-  lazy val curatedDependencyConfig = config.curatedDependencyConfig
+  def repositoryDependencyMongoLock: MongoLock = mongoLocks.repositoryDependencyMongoLock
 
-  override def reloadLatestSbtPluginVersions(timeStampGenerator:() => Long): Future[Seq[MongoSbtPluginVersion]] = {
+  def libraryMongoLock: MongoLock = mongoLocks.libraryMongoLock
+
+  def sbtPluginMongoLock: MongoLock = mongoLocks.sbtPluginMongoLock
+
+  lazy val curatedDependencyConfig = curatedDependencyConfigProvider.curatedDependencyConfig
+
+  def reloadLatestSbtPluginVersions(): Future[Seq[MongoSbtPluginVersion]] = {
     runMongoUpdate(sbtPluginMongoLock) {
       val sbtPluginVersions = dependenciesDataSource.getLatestSbtPluginVersions(curatedDependencyConfig.sbtPlugins)
 
       Future.sequence(sbtPluginVersions.map { x =>
-        sbtPluginVersionRepository.update(MongoSbtPluginVersion(x.sbtPluginName, x.version, timeStampGenerator()))
+        sbtPluginVersionRepository.update(MongoSbtPluginVersion(x.sbtPluginName, x.version, timestampGenerator.now))
       })
     }
   }
 
 
-  override def reloadLatestLibraryVersions(timeStampGenerator:() => Long): Future[Seq[MongoLibraryVersion]] = {
+  def
+  reloadLatestLibraryVersions(): Future[Seq[MongoLibraryVersion]] = {
     runMongoUpdate(libraryMongoLock) {
       val latestLibraryVersions = dependenciesDataSource.getLatestLibrariesVersions(curatedDependencyConfig.libraries)
 
       Future.sequence(latestLibraryVersions.map { x =>
-        libraryVersionRepository.update(MongoLibraryVersion(x.libraryName, x.version, timeStampGenerator()))
+        libraryVersionRepository.update(MongoLibraryVersion(x.libraryName, x.version, timestampGenerator.now))
       })
     }
   }
 
-  override def reloadCurrentDependenciesDataForAllRepositories(timeStampGenerator:() => Long): Future[Seq[MongoRepositoryDependencies]] = {
+  def reloadCurrentDependenciesDataForAllRepositories(): Future[Seq[MongoRepositoryDependencies]] = {
     logger.debug("reloading current dependencies data for all repositories...")
     runMongoUpdate(repositoryDependencyMongoLock) {
       for {
         currentDependencyEntries <- repositoryLibraryDependenciesRepository.getAllEntries
-        libraryDependencies <- dependenciesDataSource.persistDependenciesForAllRepositories(curatedDependencyConfig, timeStampGenerator, currentDependencyEntries, repositoryLibraryDependenciesRepository.update)
+        libraryDependencies <- dependenciesDataSource.persistDependenciesForAllRepositories(curatedDependencyConfig, currentDependencyEntries, repositoryLibraryDependenciesRepository.update)
       } yield libraryDependencies
 
     }
-}
+  }
+
   private def runMongoUpdate[T](mongoLock: MongoLock)(f: => Future[T]) =
     mongoLock.tryLock {
       logger.info(s"Starting mongo update for ${mongoLock.lockId}")
@@ -127,10 +113,10 @@ class DefaultDependencyDataUpdatingService(override val config: ServiceDependenc
     repositoryDependencies.sbtPluginDependencies.map { sbtPluginDependency =>
 
       val mayBeExternalSbtPlugin = curatedDependencyConfig.sbtPlugins
-          .find(pluginConfig => pluginConfig.name == sbtPluginDependency.sbtPluginName && pluginConfig.isExternal())
+        .find(pluginConfig => pluginConfig.name == sbtPluginDependency.sbtPluginName && pluginConfig.isExternal())
 
       val latestVersion = mayBeExternalSbtPlugin.map(_.version.getOrElse(throw new RuntimeException(s"External sbt plugin ($mayBeExternalSbtPlugin) must specify the (latest) version")))
-          .orElse(sbtPluginReferences.find(mlv => mlv.sbtPluginName == sbtPluginDependency.sbtPluginName).flatMap(_.version))
+        .orElse(sbtPluginReferences.find(mlv => mlv.sbtPluginName == sbtPluginDependency.sbtPluginName).flatMap(_.version))
 
       SbtPluginDependencyState(
         sbtPluginDependency.sbtPluginName,
@@ -143,7 +129,7 @@ class DefaultDependencyDataUpdatingService(override val config: ServiceDependenc
   }
 
 
-  override def getDependencyVersionsForRepository(repositoryName: String): Future[Option[RepositoryDependencies]] =
+  def getDependencyVersionsForRepository(repositoryName: String): Future[Option[RepositoryDependencies]] =
     for {
       dependencies <- repositoryLibraryDependenciesRepository.getForRepository(repositoryName)
       libraryReferences <- libraryVersionRepository.getAllEntries
@@ -159,7 +145,7 @@ class DefaultDependencyDataUpdatingService(override val config: ServiceDependenc
         )
       }
 
-  override def getDependencyVersionsForAllRepositories(): Future[Seq[RepositoryDependencies]] =
+  def getDependencyVersionsForAllRepositories(): Future[Seq[RepositoryDependencies]] =
     for {
       allDependencies <- repositoryLibraryDependenciesRepository.getAllEntries
       libraryReferences <- libraryVersionRepository.getAllEntries
@@ -176,16 +162,16 @@ class DefaultDependencyDataUpdatingService(override val config: ServiceDependenc
         )
       }
 
-  override def getAllCuratedLibraries(): Future[Seq[MongoLibraryVersion]] =
+  def getAllCuratedLibraries(): Future[Seq[MongoLibraryVersion]] =
     libraryVersionRepository.getAllEntries
 
-  override def getAllCuratedSbtPlugins(): Future[Seq[MongoSbtPluginVersion]] =
+  def getAllCuratedSbtPlugins(): Future[Seq[MongoSbtPluginVersion]] =
     sbtPluginVersionRepository.getAllEntries
 
-  override def getAllRepositoriesDependencies(): Future[Seq[MongoRepositoryDependencies]] =
+  def getAllRepositoriesDependencies(): Future[Seq[MongoRepositoryDependencies]] =
     repositoryLibraryDependenciesRepository.getAllEntries
 
-  override def dropCollection(collectionName: String) = collectionName match {
+  def dropCollection(collectionName: String) = collectionName match {
     case "repositoryLibraryDependencies" => repositoryLibraryDependenciesRepository.clearAllData
     case "libraryVersions" => libraryVersionRepository.clearAllData
     case "sbtPluginVersions" => sbtPluginVersionRepository.clearAllData
@@ -194,12 +180,10 @@ class DefaultDependencyDataUpdatingService(override val config: ServiceDependenc
   }
 
 
-
-
-  override def locks(): Future[Seq[Lock]] = {
+  def locks(): Future[Seq[Lock]] = {
     locksRepository.getAllEntries
   }
 
-  override def clearAllGithubLastUpdateDates =
+  def clearAllGithubLastUpdateDates =
     repositoryLibraryDependenciesRepository.clearAllGithubLastUpdateDates
 }

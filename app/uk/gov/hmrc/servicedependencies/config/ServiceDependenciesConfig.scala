@@ -19,45 +19,47 @@ package uk.gov.hmrc.servicedependencies.config
 import java.io.File
 import java.nio.file.Path
 
-import play.api.Play
-import play.api.libs.json.Json
-import uk.gov.hmrc.play.config.ServicesConfig
-import uk.gov.hmrc.servicedependencies.config.model.CuratedDependencyConfig
+import com.google.inject.{Inject, Singleton}
+import play.api.{Configuration, Play}
+import uk.gov.hmrc.play.bootstrap.config.BaseUrl
 
 import scala.concurrent.duration._
 import scala.io.Source
 
-trait CacheConfig {
-  def cacheDuration: FiniteDuration
-}
+//trait CacheConfig {
+//  def cacheDuration: FiniteDuration
+//}
+//
+//trait ReleasesConfig {
+//  def releasesServiceUrl: String
+//}
 
-trait ReleasesConfig {
-  def releasesServiceUrl: String
-}
 
-class ServiceDependenciesConfig(configPath: String) extends CacheConfig with ReleasesConfig with ServicesConfig {
+
+@Singleton
+class ServiceDependenciesConfig @Inject()(appConfiguration: Configuration) extends BaseUrl  {
 
   private val cacheDurationConfigPath = "cache.timeout.duration"
   private val githubOpenConfigKey = "github.open.api"
   private val githubEnterpriseConfigKey = "github.enterprise.api"
   private val releaseServiceUrlKey = "releases.api.url"
   private val targetArtifactsKey = "target.artifacts"
-//  private val teamsAndRepositoriesServiceUrlKey = "teamsandrepositories.api.url"
 
   private val defaultTimeout = 1 day
 
   lazy val targetArtifact = optionalConfig(s"$targetArtifactsKey").getOrElse("sbt-plugin")
 
-  lazy val curatedDependencyConfig: CuratedDependencyConfig = {
-    val stream = getClass.getResourceAsStream(configPath)
-    val json = try {  Json.parse(stream) } finally { stream.close() }
-    json.as[CuratedDependencyConfig]
-  }
+//  lazy val curatedDependencyConfig: CuratedDependencyConfig = {
+//    val stream = getClass.getResourceAsStream(configPath)
+//    val json = try {  Json.parse(stream) } finally { stream.close() }
+//    json.as[CuratedDependencyConfig]
+//  }
 
 
   def cacheDuration: FiniteDuration = {
-    Play.current.configuration.getMilliseconds(cacheDurationConfigPath).map(_.milliseconds).getOrElse(defaultTimeout)
+    appConfiguration.getMilliseconds(cacheDurationConfigPath).map(_.milliseconds).getOrElse(defaultTimeout)
   }
+
 
   lazy val releasesServiceUrl = optionalConfig(s"$releaseServiceUrlKey").get
   lazy val teamsAndRepositoriesServiceUrl: String = baseUrl("teams-and-repositories")//optionalConfig(teamsAndRepositoriesServiceUrlKey).get
@@ -75,6 +77,8 @@ class ServiceDependenciesConfig(configPath: String) extends CacheConfig with Rel
       user <- config("user")
       key <- config("key")
     } yield GitApiConfig(user, key, host)
+
+  override protected def configuration = appConfiguration
 }
 
 case class GitApiConfig(user: String, key: String, apiUrl: String)

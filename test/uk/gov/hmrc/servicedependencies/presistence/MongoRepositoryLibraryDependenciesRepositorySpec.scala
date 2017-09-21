@@ -36,19 +36,29 @@ package uk.gov.hmrc.servicedependencies.presistence
 
 import java.time.LocalDateTime
 
+import org.mockito.Mockito.when
 import org.scalatest.concurrent.ScalaFutures
+import org.scalatest.mock.MockitoSugar
 import org.scalatest.{BeforeAndAfterEach, LoneElement, OptionValues}
 import org.scalatestplus.play.OneAppPerTest
-import uk.gov.hmrc.mongo.MongoSpecSupport
-import uk.gov.hmrc.play.test.UnitSpec
-import uk.gov.hmrc.servicedependencies.model.{LibraryDependency, MongoLibraryVersion, MongoRepositoryDependencies, Version}
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import uk.gov.hmrc.servicedependencies.TestHelpers
+import play.modules.reactivemongo.ReactiveMongoComponent
+import uk.gov.hmrc.mongo.{MongoConnector, MongoSpecSupport}
+import uk.gov.hmrc.play.test.UnitSpec
 import uk.gov.hmrc.servicedependencies.TestHelpers._
+import uk.gov.hmrc.servicedependencies.model.{LibraryDependency, MongoRepositoryDependencies, Version}
 
-class MongoRepositoryLibraryDependenciesRepositorySpec extends UnitSpec with LoneElement with MongoSpecSupport with ScalaFutures with OptionValues with BeforeAndAfterEach with OneAppPerTest {
+class MongoRepositoryLibraryDependenciesRepositorySpec extends UnitSpec with LoneElement with MongoSpecSupport with ScalaFutures with OptionValues with BeforeAndAfterEach with OneAppPerTest with MockitoSugar {
 
-  val mongoRepositoryLibraryDependenciesRepository = new MongoRepositoryLibraryDependenciesRepository(mongo)
+  val reactiveMongoComponent = new ReactiveMongoComponent {
+    val mockedMongoConnector = mock[MongoConnector]
+    when(mockedMongoConnector.db).thenReturn(mongo)
+
+    override def mongoConnector = mockedMongoConnector
+  }
+
+
+  val mongoRepositoryLibraryDependenciesRepository = new RepositoryLibraryDependenciesRepository(reactiveMongoComponent)
 
   override def beforeEach() {
     await(mongoRepositoryLibraryDependenciesRepository.drop)

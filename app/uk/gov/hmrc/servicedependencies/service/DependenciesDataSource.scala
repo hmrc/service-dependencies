@@ -18,29 +18,25 @@ package uk.gov.hmrc.servicedependencies.service
 
 import java.util.Date
 
-import akka.actor.ActorSystem
-import cats.data.OptionT
+import com.google.inject.{Inject, Singleton}
 import org.slf4j.LoggerFactory
-import play.api.Logger
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import uk.gov.hmrc.githubclient.GithubApiClient
 import uk.gov.hmrc.servicedependencies._
+import uk.gov.hmrc.servicedependencies.config.ServiceDependenciesConfig
+import uk.gov.hmrc.servicedependencies.config.model.{CuratedDependencyConfig, SbtPluginConfig}
 import uk.gov.hmrc.servicedependencies.model._
 import uk.gov.hmrc.servicedependencies.util.Max
 
 import scala.annotation.tailrec
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import uk.gov.hmrc.servicedependencies.config.model.{CuratedDependencyConfig, SbtPluginConfig}
-import uk.gov.hmrc.servicedependencies.config.{CacheConfig, ServiceDependenciesConfig}
+import scala.concurrent.Future
+import scala.util.{Failure, Success}
 
-import scala.concurrent.{ExecutionContext, Future, Promise}
-import scala.util.{Failure, Success, Try}
-
-
-
-
-class DependenciesDataSource(val releasesConnector: DeploymentsDataSource,
-                             val teamsAndRepositoriesDataSource: TeamsAndRepositoriesDataSource,
-                             val config: ServiceDependenciesConfig) {
+@Singleton
+class DependenciesDataSource @Inject()(//releasesConnector: DeploymentsDataSource, //!@ remove this and all related code (legacy stuff)
+                                       teamsAndRepositoriesDataSource: TeamsAndRepositoriesDataSource,
+                                       config: ServiceDependenciesConfig,
+                                       timestampGenerator: TimestampGenerator) {
 
   lazy val logger = LoggerFactory.getLogger(this.getClass)
 
@@ -60,12 +56,14 @@ class DependenciesDataSource(val releasesConnector: DeploymentsDataSource,
   object GithubOpen extends Github(buildFiles) {
     override val tagPrefix = "v"
     override val gh = gitOpenClient
+
     override def resolveTag(version: String) = s"$tagPrefix$version"
   }
 
   object GithubEnterprise extends Github(buildFiles) {
     override val tagPrefix = "release/"
     override val gh = gitEnterpriseClient
+
     override def resolveTag(version: String) = s"$tagPrefix$version"
   }
 
@@ -84,7 +82,7 @@ class DependenciesDataSource(val releasesConnector: DeploymentsDataSource,
     ).map {
       case (sbtPluginConfig, version) => SbtPluginVersion(sbtPluginConfig.name, version)
     }
-    
+
   }
 
   def getLatestLibrariesVersions(libraries: Seq[String]): Seq[LibraryVersion] = {
@@ -100,32 +98,31 @@ class DependenciesDataSource(val releasesConnector: DeploymentsDataSource,
   }
 
 
-  def getDependencies(artifact:String): Future[Seq[ServiceDependencies]] =
-    for {
-      services <- releasesConnector.listOfRunningServices()
-      serviceTeams <- teamsAndRepositoriesDataSource.getTeamsForServices()
-    } yield
-      services
-        .sortBy(_.name)
-        .map { s =>
-          logger.info(s"Getting dependencies for service: ${s.name}")
-          serviceVersions(s, artifact, serviceTeams.getOrElse(s.name, Seq()))
-        }
+//  def getDependencies(artifact: String): Future[Seq[ServiceDependencies]] =
+//    for {
+//      services <- releasesConnector.listOfRunningServices()
+//      serviceTeams <- teamsAndRepositoriesDataSource.getTeamsForServices()
+//    } yield
+//      services
+//        .sortBy(_.name)
+//        .map { s =>
+//          logger.info(s"Getting dependencies for service: ${s.name}")
+//          serviceVersions(s, artifact, serviceTeams.getOrElse(s.name, Seq()))
+//        }
 
 
-  //!@ test
   private def shouldPersist(dependencies: DependenciesFromGitHub, maybeLastStoredGitUpdateDate: Option[Date]): Boolean = {
     (dependencies.lastGitUpdateDate, maybeLastStoredGitUpdateDate) match {
       case (Some(lastUpdateDate), Some(storedLastUpdateDate)) => lastUpdateDate.after(storedLastUpdateDate)
       case _ => true
     }
-    
   }
 
 
+  def
 
-  def persistDependenciesForAllRepositories(curatedDependencyConfig: CuratedDependencyConfig,
-                                            timeStampGenerator: () => Long,
+
+  persistDependenciesForAllRepositories(curatedDependencyConfig: CuratedDependencyConfig,
                                             currentDependencyEntries: Seq[MongoRepositoryDependencies],
                                             persisterF: (MongoRepositoryDependencies) => Future[MongoRepositoryDependencies]): Future[Seq[MongoRepositoryDependencies]] = {
 
@@ -140,44 +137,44 @@ class DependenciesDataSource(val releasesConnector: DeploymentsDataSource,
     @tailrec
     def getDependencies(remainingRepos: Seq[String], acc: Seq[MongoRepositoryDependencies]): Seq[MongoRepositoryDependencies] = {
 
-        remainingRepos match {
-          case repoName :: xs =>
-            logger.info(s"getting dependencies for: $repoName")
-            val maybeLastGitUpdateDate = currentDependencyEntries.find(_.repositoryName == repoName).flatMap(_.lastGitUpdateDate)
-            val errorOrDependencies: Either[Throwable, Option[DependenciesFromGitHub]] = getDependenciesFromGitHub(repoName, curatedDependencyConfig, maybeLastGitUpdateDate)
+      remainingRepos match {
+        case repoName :: xs =>
+          logger.info(s"getting dependencies for: $repoName")
+          val maybeLastGitUpdateDate = currentDependencyEntries.find(_.repositoryName == repoName).flatMap(_.lastGitUpdateDate)
+          val errorOrDependencies: Either[Throwable, Option[DependenciesFromGitHub]] = getDependenciesFromGitHub(repoName, curatedDependencyConfig, maybeLastGitUpdateDate)
 
-            if (errorOrDependencies.isLeft) {
-              logger.error(s"Something went wrong: ${errorOrDependencies.left.get.getMessage}")
-              // error (only rate limiting should be bubbled up to here) => short circuit
-              logger.error("terminating current run because ===>", errorOrDependencies.left.get)
-              acc
-            } else {
-              errorOrDependencies.right.get match {
-                case None =>
-                  persisterF(MongoRepositoryDependencies(repoName, Nil, Nil, Nil, maybeLastGitUpdateDate))
-                  getDependencies(xs, acc)
-                case Some(dependencies) =>
-                  val repositoryLibraryDependencies =
-                    MongoRepositoryDependencies(
-                      repositoryName = repoName,
-                      libraryDependencies = dependencies.libraries,
-                      sbtPluginDependencies = dependencies.sbtPlugins,
-                      otherDependencies = dependencies.otherDependencies,
-                      lastGitUpdateDate = dependencies.lastGitUpdateDate,
-                      updateDate = timeStampGenerator())
-                  if(shouldPersist(dependencies, maybeLastGitUpdateDate))
-                    persisterF(repositoryLibraryDependencies)
-                  getDependencies(xs, acc :+ repositoryLibraryDependencies)
-              }
-
+          if (errorOrDependencies.isLeft) {
+            logger.error(s"Something went wrong: ${errorOrDependencies.left.get.getMessage}")
+            // error (only rate limiting should be bubbled up to here) => short circuit
+            logger.error("terminating current run because ===>", errorOrDependencies.left.get)
+            acc
+          } else {
+            errorOrDependencies.right.get match {
+              case None =>
+                persisterF(MongoRepositoryDependencies(repoName, Nil, Nil, Nil, maybeLastGitUpdateDate))
+                getDependencies(xs, acc)
+              case Some(dependencies) =>
+                val repositoryLibraryDependencies =
+                  MongoRepositoryDependencies(
+                    repositoryName = repoName,
+                    libraryDependencies = dependencies.libraries,
+                    sbtPluginDependencies = dependencies.sbtPlugins,
+                    otherDependencies = dependencies.otherDependencies,
+                    lastGitUpdateDate = dependencies.lastGitUpdateDate,
+                    updateDate = timestampGenerator.now)
+                if (shouldPersist(dependencies, maybeLastGitUpdateDate))
+                  persisterF(repositoryLibraryDependencies)
+                getDependencies(xs, acc :+ repositoryLibraryDependencies)
             }
 
-          case Nil =>
-            acc
-        }
+          }
+
+        case Nil =>
+          acc
+      }
     }
 
-    orderedRepos.map(r => getDependencies(r.toList, Nil)).andThen{ case s =>
+    orderedRepos.map(r => getDependencies(r.toList, Nil)).andThen { case s =>
       s match {
         case Failure(x) => logger.error("Error!", x)
         case Success(g) =>
@@ -195,9 +192,10 @@ class DependenciesDataSource(val releasesConnector: DeploymentsDataSource,
                                     lastGitUpdateDate: Option[Date])
 
   import cats.syntax.either._
+
   private def getDependenciesFromGitHub(repoName: String,
                                         curatedDependencyConfig: CuratedDependencyConfig,
-                                        maybeLastCommitDate:Option[Date]): Either[Throwable, Option[DependenciesFromGitHub]] = {
+                                        maybeLastCommitDate: Option[Date]): Either[Throwable, Option[DependenciesFromGitHub]] = {
 
     def getLibraryDependencies(githubSearchResults: GithubSearchResults) = githubSearchResults.libraries.foldLeft(Seq.empty[LibraryDependency]) {
       case (acc, (library, mayBeVersion)) =>
@@ -228,50 +226,39 @@ class DependenciesDataSource(val releasesConnector: DeploymentsDataSource,
   }
 
 
-//  import cats.syntax.either._
-//  private def getLibraryDependenciesFromGithubOld(repoName: String, curatedDependencyConfig: CuratedDependencyConfig): Either[Throwable, Seq[LibraryDependency]] = {
-//    Either.catchNonFatal {
-//      val currentDependencyVersions: Map[String, Option[Version]] = searchGithubsForArtifacts(repoName, curatedDependencyConfig)
-//      currentDependencyVersions.foldLeft(Seq.empty[LibraryDependency]) {
-//        case (acc, (library, mayBeVersion)) =>
-//          mayBeVersion.fold(acc)(currentVersion => acc :+ LibraryDependency(library, currentVersion))
-//      }
-//    }
+//  private def serviceVersions(service: Service, artifact: String, teams: Seq[String]): ServiceDependencies = {
+//    val environmentVersions = Map("qa" -> service.qaVersion, "staging" -> service.stagingVersion, "prod" -> service.prodVersion)
+//    val versions = environmentVersions.values.toSeq
+//      .distinct
+//      .map { (v: Option[String]) => v -> searchGithubsForArtifact(service.name, artifact, v).map(_.toString).getOrElse("N/A") }.toMap
+//
+//    ServiceDependencies(
+//      service.name,
+//      environmentVersions
+//        .filter { case (x, y) => y.nonEmpty }
+//        .map { case (x, y) => x -> EnvironmentDependency(y.get, versions(y)) },
+//      teams)
 //  }
 
-  private def serviceVersions(service: Service, artifact:String, teams: Seq[String]): ServiceDependencies = {
-    val environmentVersions = Map("qa" -> service.qaVersion, "staging" -> service.stagingVersion, "prod" -> service.prodVersion)
-    val versions = environmentVersions.values.toSeq
-      .distinct
-      .map { (v: Option[String]) => v -> searchGithubsForArtifact(service.name, artifact, v).map(_.toString).getOrElse("N/A") }.toMap
-
-    ServiceDependencies(
-      service.name,
-      environmentVersions
-        .filter { case (x, y) => y.nonEmpty }
-        .map { case (x, y) => x -> EnvironmentDependency(y.get, versions(y)) },
-      teams)
-  }
-
-  private def searchGithubsForArtifact(serviceName: String, artifact:String, version: Option[String]): Option[Version] = {
-    githubs.foreach((x: Github) => x.findArtifactVersion(serviceName, artifact, version) match {
-      case Some(v) => return Some(v)
-      case _ =>
-    })
-    None
-  }
+//  private def searchGithubsForArtifact(serviceName: String, artifact: String, version: Option[String]): Option[Version] = {
+//    githubs.foreach((x: Github) => x.findArtifactVersion(serviceName, artifact, version) match {
+//      case Some(v) => return Some(v)
+//      case _ =>
+//    })
+//    None
+//  }
 
   private def searchGithubsForArtifacts(repositoryName: String,
                                         curatedDependencyConfig: CuratedDependencyConfig,
-                                        maybeLastCommitDate:Option[Date]): Option[GithubSearchResults] = {
+                                        maybeLastCommitDate: Option[Date]): Option[GithubSearchResults] = {
     @tailrec
     def searchRemainingGitHubs(remainingGithubs: Seq[Github]): Option[GithubSearchResults] = {
       remainingGithubs match {
         case github :: xs =>
-          
+
           val githubSearchResults = github.findVersionsForMultipleArtifacts(repositoryName, curatedDependencyConfig, maybeLastCommitDate)
 
-          if(githubSearchResults.isEmpty)
+          if (githubSearchResults.isEmpty)
             searchRemainingGitHubs(xs)
           else
             githubSearchResults
@@ -280,55 +267,6 @@ class DependenciesDataSource(val releasesConnector: DeploymentsDataSource,
     }
 
     searchRemainingGitHubs(githubs)
-  }
-
-}
-
-class CachingDependenciesDataSource(akkaSystem: ActorSystem, cacheConfig: CacheConfig, dataSource: () => Future[Seq[ServiceDependencies]]) {
-  def reloadLibraryDependencies() = ???
-
-  private var cachedData: Option[Seq[ServiceDependencies]] = None
-  private val initialPromise = Promise[Seq[ServiceDependencies]]()
-
-  import ExecutionContext.Implicits._
-
-  // this used to make it run on start up. changed this so that it's run by a sche
-  // dataUpdate()
-
-  def getCachedData: Future[Seq[ServiceDependencies]] = {
-    Logger.info(s"cachedData is available = ${cachedData.isDefined}")
-    if (cachedData.isEmpty && initialPromise.isCompleted) {
-      Logger.warn("in unexpected state where initial promise is complete but there is not cached data. Perform manual reload.")
-    }
-    cachedData.fold(initialPromise.future)(d => Future.successful(d))
-  }
-
-  def reload(): Future[Unit] = {
-    Logger.info(s"Manual cache reload triggered")
-    Future(dataUpdate())
-  }
-
-  Logger.info(s"Initialising cache reload every ${cacheConfig.cacheDuration}")
-  akkaSystem.scheduler.schedule(cacheConfig.cacheDuration, cacheConfig.cacheDuration) {
-    Logger.info("Scheduled cache reload triggered")
-    dataUpdate()
-  }
-
-  private def dataUpdate() {
-    dataSource().onComplete {
-      case Failure(e) => Logger.warn(s"failed to get latest data due to ${e.getMessage}", e)
-      case Success(d) => {
-        synchronized {
-          this.cachedData = Some(d)
-          Logger.info(s"data update completed successfully")
-
-          if (!initialPromise.isCompleted) {
-            Logger.debug("early clients being sent result")
-            this.initialPromise.success(d)
-          }
-        }
-      }
-    }
   }
 
 }

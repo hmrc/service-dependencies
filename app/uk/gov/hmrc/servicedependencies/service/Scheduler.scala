@@ -17,34 +17,29 @@
 package uk.gov.hmrc.servicedependencies.service
 
 import akka.actor.{ActorSystem, Cancellable}
+import com.google.inject.{Inject, Singleton}
 import play.Logger
-import play.libs.Akka
-import play.modules.reactivemongo.MongoDbConnection
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import uk.gov.hmrc.servicedependencies.ServiceDependenciesController
 
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import scala.concurrent.duration.{FiniteDuration, _}
 
 
+@Singleton
+class UpdateScheduler @Inject()(actorSystem: ActorSystem, dependencyDataUpdatingService: DependencyDataUpdatingService) {
 
+  //  implicit val db: () => DefaultDB = mongo.mongoConnector.db
 
-trait DefaultSchedulerDependencies extends MongoDbConnection  {
+  //  def dependencyDataUpdatingService = serviceDependenciesController.dependencyDataUpdatingService
+  //
+  //  private val timeStampGenerator = serviceDependenciesController.timeStampGenerator
 
-  val akkaSystem = Akka.system()
-
-}
-
-abstract class Scheduler {
-  def akkaSystem: ActorSystem
-  def dependencyDataUpdatingService: DependencyDataUpdatingService
-
-  private val timeStampGenerator = ServiceDependenciesController.timeStampGenerator
 
   def startUpdatingLibraryDependencyData(interval: FiniteDuration): Cancellable = {
     Logger.info(s"Initialising libraryDependencyDataReloader update every $interval")
 
-    val scheduler = akkaSystem.scheduler.schedule(100 milliseconds, interval) {
-      dependencyDataUpdatingService.reloadCurrentDependenciesDataForAllRepositories(timeStampGenerator)
+    val scheduler = actorSystem.scheduler.schedule(100 milliseconds, interval) {
+      dependencyDataUpdatingService.reloadCurrentDependenciesDataForAllRepositories()
     }
 
     scheduler
@@ -53,8 +48,8 @@ abstract class Scheduler {
   def startUpdatingLibraryData(interval: FiniteDuration): Cancellable = {
     Logger.info(s"Initialising libraryDataReloader update every $interval")
 
-    val scheduler = akkaSystem.scheduler.schedule(100 milliseconds, interval) {
-      dependencyDataUpdatingService.reloadLatestLibraryVersions(timeStampGenerator)
+    val scheduler = actorSystem.scheduler.schedule(100 milliseconds, interval) {
+      dependencyDataUpdatingService.reloadLatestLibraryVersions()
     }
 
     scheduler
@@ -63,17 +58,12 @@ abstract class Scheduler {
   def startUpdatingSbtPluingVersionData(interval: FiniteDuration): Cancellable = {
     Logger.info(s"Initialising SbtPluginDataReloader update every $interval")
 
-    val scheduler = akkaSystem.scheduler.schedule(100 milliseconds, interval) {
-      dependencyDataUpdatingService.reloadLatestSbtPluginVersions(timeStampGenerator)
+    val scheduler = actorSystem.scheduler.schedule(100 milliseconds, interval) {
+      dependencyDataUpdatingService.reloadLatestSbtPluginVersions()
     }
 
     scheduler
   }
 
-}
-
-
-object UpdateScheduler extends Scheduler with DefaultSchedulerDependencies {
-  override def dependencyDataUpdatingService = ServiceDependenciesController.dependencyDataUpdatingService
 }
 

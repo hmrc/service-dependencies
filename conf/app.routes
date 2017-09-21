@@ -1,16 +1,16 @@
 # microservice specific routes
 
-GET    /reloadLibraryVersions              uk.gov.hmrc.servicedependencies.ServiceDependenciesController.reloadLibraryVersions()
-GET    /reloadSbtPluginVersions            uk.gov.hmrc.servicedependencies.ServiceDependenciesController.reloadSbtPluginVersions()
-GET    /dependencies/:repository           uk.gov.hmrc.servicedependencies.ServiceDependenciesController.getDependencyVersionsForRepository(repository)
+GET         /reloadLibraryVersions             @uk.gov.hmrc.servicedependencies.ServiceDependenciesController.reloadLibraryVersions()
+GET         /reloadSbtPluginVersions           @uk.gov.hmrc.servicedependencies.ServiceDependenciesController.reloadSbtPluginVersions()
+GET         /dependencies/:repository          @uk.gov.hmrc.servicedependencies.ServiceDependenciesController.getDependencyVersionsForRepository(repository)
 
-GET    /reloadDependencies                 uk.gov.hmrc.servicedependencies.ServiceDependenciesController.reloadLibraryDependenciesForAllRepositories()
+GET         /reloadDependencies                @uk.gov.hmrc.servicedependencies.ServiceDependenciesController.reloadLibraryDependenciesForAllRepositories()
 
-GET    /libraries                           uk.gov.hmrc.servicedependencies.ServiceDependenciesController.libraries()
-GET    /dependencies                        uk.gov.hmrc.servicedependencies.ServiceDependenciesController.dependencies()
-GET    /sbtPlugins                        uk.gov.hmrc.servicedependencies.ServiceDependenciesController.sbtPlugins()
-GET    /locks                             uk.gov.hmrc.servicedependencies.ServiceDependenciesController.locks()
-POST   /dropCollection/:collection          uk.gov.hmrc.servicedependencies.ServiceDependenciesController.dropCollection(collection)
+GET         /libraries                         @uk.gov.hmrc.servicedependencies.ServiceDependenciesController.libraries()
+GET         /dependencies                      @uk.gov.hmrc.servicedependencies.ServiceDependenciesController.dependencies()
+GET         /sbtPlugins                        @uk.gov.hmrc.servicedependencies.ServiceDependenciesController.sbtPlugins()
+GET         /locks                             @uk.gov.hmrc.servicedependencies.ServiceDependenciesController.locks()
+POST        /dropCollection/:collection        @uk.gov.hmrc.servicedependencies.ServiceDependenciesController.dropCollection(collection)
 
 
-POST   /clearGithubLastUpdateDates        uk.gov.hmrc.servicedependencies.ServiceDependenciesController.clearAllGithubLastUpdateDates
+POST        /clearGithubLastUpdateDates        @uk.gov.hmrc.servicedependencies.ServiceDependenciesController.clearAllGithubLastUpdateDates

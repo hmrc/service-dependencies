@@ -16,49 +16,33 @@
 
 package uk.gov.hmrc.servicedependencies
 
-import com.kenshoo.play.metrics.MetricsFilter
-import com.typesafe.config.Config
-import net.ceedubs.ficus.Ficus._
+import com.google.inject.Singleton
 import org.slf4j.MDC
 import play.api._
 import play.api.inject.ApplicationLifecycle
-import play.api.mvc._
-import uk.gov.hmrc.play.config.{ControllerConfig, RunMode}
-import uk.gov.hmrc.play.microservice.filters._
-import uk.gov.hmrc.play.graphite.GraphiteConfig
-import uk.gov.hmrc.play.microservice.bootstrap.JsonErrorHandling
-import uk.gov.hmrc.play.microservice.bootstrap.Routing.RemovingOfTrailingSlashes
-import uk.gov.hmrc.servicedependencies.service.UpdateScheduler
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-
+import uk.gov.hmrc.servicedependencies.service.UpdateScheduler
 
 import scala.concurrent.Future
-import uk.gov.hmrc.play.microservice.filters.{ LoggingFilter, MicroserviceFilterSupport }
 
-object ControllerConfiguration extends ControllerConfig {
-  lazy val controllerConfigs = Play.current.configuration.underlying.as[Config]("controllers")
-}
+import javax.inject.Inject
 
-object MicroserviceLoggingFilter extends LoggingFilter with MicroserviceFilterSupport {
-  override def controllerNeedsLogging(controllerName: String) = ControllerConfiguration.paramsForController(controllerName).needsLogging
-}
-
-object MicroserviceGlobal extends GlobalSettings
-  with GraphiteConfig with RemovingOfTrailingSlashes with JsonErrorHandling with RunMode with MicroserviceFilterSupport {
-
+@Singleton
+class DataReloadScheduler @Inject()(app: Application, configuration: Configuration, updateScheduler: UpdateScheduler) {
   lazy val appName = "service-dependencies"
-  lazy val loggerDateFormat: Option[String] = Play.current.configuration.getString("logger.json.dateformat")
+  lazy val loggerDateFormat: Option[String] = configuration.getString("logger.json.dateformat")
 
   val repositoryDependenciesReloadIntervalKey = "dependency.reload.intervalminutes"
   val libraryReloadIntervalKey = "library.reload.intervalminutes"
   val sbtPluginReloadIntervalKey = "sbtPlugin.reload.intervalminutes"
 
+  onStart()
 
-  override def onStart(app: Application) {
+  def onStart() {
     Logger.info(s"Starting microservice : $appName : in mode : ${app.mode}")
     MDC.put("appName", appName)
     loggerDateFormat.foreach(str => MDC.put("logger.json.dateformat", str))
-    super.onStart(app)
+
 
     scheduleRepositoryDependencyDataReloadSchedule(app)
     scheduleLibraryVersionDataReloadSchedule(app)
@@ -74,7 +58,7 @@ object MicroserviceGlobal extends GlobalSettings
       Logger.warn(s"$repositoryDependenciesReloadIntervalKey is missing. reload will be disabled")
     } { reloadInterval =>
       Logger.warn(s"repositoryDependenciesReloadInterval set to $reloadInterval minutes")
-      val cancellable = UpdateScheduler.startUpdatingLibraryDependencyData(reloadInterval minutes)
+      val cancellable = updateScheduler.startUpdatingLibraryDependencyData(reloadInterval minutes)
       app.injector.instanceOf[ApplicationLifecycle].addStopHook(() => Future(cancellable.cancel()))
     }
   }
@@ -86,7 +70,7 @@ object MicroserviceGlobal extends GlobalSettings
       Logger.warn(s"$libraryReloadIntervalKey is missing. reload will be disabled")
     } { reloadInterval =>
       Logger.warn(s"libraryReloadIntervalKey set to $reloadInterval minutes")
-      val cancellable = UpdateScheduler.startUpdatingLibraryData(reloadInterval minutes)
+      val cancellable = updateScheduler.startUpdatingLibraryData(reloadInterval minutes)
       app.injector.instanceOf[ApplicationLifecycle].addStopHook(() => Future(cancellable.cancel()))
     }
   }
@@ -98,21 +82,9 @@ object MicroserviceGlobal extends GlobalSettings
       Logger.warn(s"$sbtPluginReloadIntervalKey is missing. reload will be disabled")
     } { reloadInterval =>
       Logger.warn(s"sbtPluginReloadIntervalKey set to $reloadInterval minutes")
-      val cancellable = UpdateScheduler.startUpdatingSbtPluingVersionData(reloadInterval minutes)
+      val cancellable = updateScheduler.startUpdatingSbtPluingVersionData(reloadInterval minutes)
       app.injector.instanceOf[ApplicationLifecycle].addStopHook(() => Future(cancellable.cancel()))
     }
   }
-
-
-  protected lazy val microserviceFilters: Seq[EssentialFilter] = Seq(
-    Some(Play.current.injector.instanceOf[MetricsFilter]),
-    Some(MicroserviceLoggingFilter),
-    Some(NoCacheFilter),
-    Some(RecoveryFilter)).flatten
-
-  override def doFilter(a: EssentialAction): EssentialAction = {
-    Filters(super.doFilter(a), microserviceFilters: _*)
-  }
-
-  override def microserviceMetricsConfig(implicit app: Application): Option[Configuration] = app.configuration.getConfig(s"microservice.metrics")
 }
+
