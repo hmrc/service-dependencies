@@ -33,8 +33,7 @@ import scala.concurrent.Future
 import scala.util.{Failure, Success}
 
 @Singleton
-class DependenciesDataSource @Inject()(//releasesConnector: DeploymentsDataSource, //!@ remove this and all related code (legacy stuff)
-                                       teamsAndRepositoriesDataSource: TeamsAndRepositoriesDataSource,
+class DependenciesDataSource @Inject()(teamsAndRepositoriesDataSource: TeamsAndRepositoriesDataSource,
                                        config: ServiceDependenciesConfig,
                                        timestampGenerator: TimestampGenerator) {
 
@@ -98,19 +97,6 @@ class DependenciesDataSource @Inject()(//releasesConnector: DeploymentsDataSourc
   }
 
 
-//  def getDependencies(artifact: String): Future[Seq[ServiceDependencies]] =
-//    for {
-//      services <- releasesConnector.listOfRunningServices()
-//      serviceTeams <- teamsAndRepositoriesDataSource.getTeamsForServices()
-//    } yield
-//      services
-//        .sortBy(_.name)
-//        .map { s =>
-//          logger.info(s"Getting dependencies for service: ${s.name}")
-//          serviceVersions(s, artifact, serviceTeams.getOrElse(s.name, Seq()))
-//        }
-
-
   private def shouldPersist(dependencies: DependenciesFromGitHub, maybeLastStoredGitUpdateDate: Option[Date]): Boolean = {
     (dependencies.lastGitUpdateDate, maybeLastStoredGitUpdateDate) match {
       case (Some(lastUpdateDate), Some(storedLastUpdateDate)) => lastUpdateDate.after(storedLastUpdateDate)
@@ -119,10 +105,7 @@ class DependenciesDataSource @Inject()(//releasesConnector: DeploymentsDataSourc
   }
 
 
-  def
-
-
-  persistDependenciesForAllRepositories(curatedDependencyConfig: CuratedDependencyConfig,
+  def persistDependenciesForAllRepositories(curatedDependencyConfig: CuratedDependencyConfig,
                                             currentDependencyEntries: Seq[MongoRepositoryDependencies],
                                             persisterF: (MongoRepositoryDependencies) => Future[MongoRepositoryDependencies]): Future[Seq[MongoRepositoryDependencies]] = {
 
@@ -185,7 +168,6 @@ class DependenciesDataSource @Inject()(//releasesConnector: DeploymentsDataSourc
 
   }
 
-
   case class DependenciesFromGitHub(libraries: Seq[LibraryDependency],
                                     sbtPlugins: Seq[SbtPluginDependency],
                                     otherDependencies: Seq[OtherDependency],
@@ -225,28 +207,6 @@ class DependenciesDataSource @Inject()(//releasesConnector: DeploymentsDataSourc
     }
   }
 
-
-//  private def serviceVersions(service: Service, artifact: String, teams: Seq[String]): ServiceDependencies = {
-//    val environmentVersions = Map("qa" -> service.qaVersion, "staging" -> service.stagingVersion, "prod" -> service.prodVersion)
-//    val versions = environmentVersions.values.toSeq
-//      .distinct
-//      .map { (v: Option[String]) => v -> searchGithubsForArtifact(service.name, artifact, v).map(_.toString).getOrElse("N/A") }.toMap
-//
-//    ServiceDependencies(
-//      service.name,
-//      environmentVersions
-//        .filter { case (x, y) => y.nonEmpty }
-//        .map { case (x, y) => x -> EnvironmentDependency(y.get, versions(y)) },
-//      teams)
-//  }
-
-//  private def searchGithubsForArtifact(serviceName: String, artifact: String, version: Option[String]): Option[Version] = {
-//    githubs.foreach((x: Github) => x.findArtifactVersion(serviceName, artifact, version) match {
-//      case Some(v) => return Some(v)
-//      case _ =>
-//    })
-//    None
-//  }
 
   private def searchGithubsForArtifacts(repositoryName: String,
                                         curatedDependencyConfig: CuratedDependencyConfig,

@@ -30,13 +30,6 @@ import play.modules.reactivemongo.ReactiveMongoComponent
 
 import scala.concurrent.{ExecutionContext, Future}
 
-//trait LibraryVersionRepository {
-//
-//  def update(libraryVersion: MongoLibraryVersion): Future[MongoLibraryVersion]
-//  def getAllEntries: Future[Seq[MongoLibraryVersion]]
-//  def clearAllData: Future[Boolean]
-//}
-
 @Singleton
 class LibraryVersionRepository @Inject() (mongo: ReactiveMongoComponent)
   extends ReactiveRepository[MongoLibraryVersion, BSONObjectID](

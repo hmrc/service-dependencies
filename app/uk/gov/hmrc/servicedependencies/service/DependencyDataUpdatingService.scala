@@ -38,19 +38,8 @@ class DependencyDataUpdatingService @Inject()(curatedDependencyConfigProvider: C
                                               dependenciesDataSource: DependenciesDataSource,
                                               timestampGenerator: TimestampGenerator) {
 
-  //  private val db = mongo.mongoConnector.db
 
   lazy val logger = LoggerFactory.getLogger(this.getClass)
-
-  //  lazy val releasesConnector: DeploymentsDataSource = new DeploymentsDataSource(serviceConfig)
-  //  lazy val teamsAndRepositoriesClient: TeamsAndRepositoriesClient = new TeamsAndRepositoriesClient(serviceConfig.teamsAndRepositoriesServiceUrl)
-
-  //  lazy val dependenciesDataSource: DependenciesDataSource = new DependenciesDataSource(releasesConnector, teamsAndRepositoriesClient, serviceConfig)
-
-  //  lazy val repositoryLibraryDependenciesRepository: RepositoryLibraryDependenciesRepository = new MongoRepositoryLibraryDependenciesRepository(db)
-  //  lazy val libraryVersionRepository: LibraryVersionRepository = new MongoLibraryVersionRepository(db)
-  //  lazy val sbtPluginVersionRepository: SbtPluginVersionRepository = new MongoSbtPluginVersionRepository(db)
-  //  lazy val locksRepository: LocksRepository = new MongoLocksRepository(db)
 
   def repositoryDependencyMongoLock: MongoLock = mongoLocks.repositoryDependencyMongoLock
 

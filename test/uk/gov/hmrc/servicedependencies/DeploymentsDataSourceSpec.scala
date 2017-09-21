@@ -53,15 +53,4 @@ class DeploymentsDataSourceSpec
   private def loadFileAsString(filename: String): String = {
     scala.io.Source.fromInputStream(getClass.getResourceAsStream(filename)).mkString
   }
-
-//  "Retrieving a list of running services" - {
-//    "correctly parse json response" in {
-//      val services = new DeploymentsDataSource(new ReleasesConfig {
-//        override def releasesServiceUrl: String = wireMock.host()
-//      })
-//
-//      val runningServices = services.listOfRunningServices().futureValue
-//      runningServices.length mustBe 162
-//    }
-//  }
 }

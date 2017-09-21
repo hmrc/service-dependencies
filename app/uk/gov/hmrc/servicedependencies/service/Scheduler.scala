@@ -28,12 +28,6 @@ import scala.concurrent.duration.{FiniteDuration, _}
 @Singleton
 class UpdateScheduler @Inject()(actorSystem: ActorSystem, dependencyDataUpdatingService: DependencyDataUpdatingService) {
 
-  //  implicit val db: () => DefaultDB = mongo.mongoConnector.db
-
-  //  def dependencyDataUpdatingService = serviceDependenciesController.dependencyDataUpdatingService
-  //
-  //  private val timeStampGenerator = serviceDependenciesController.timeStampGenerator
-
 
   def startUpdatingLibraryDependencyData(interval: FiniteDuration): Cancellable = {
     Logger.info(s"Initialising libraryDependencyDataReloader update every $interval")

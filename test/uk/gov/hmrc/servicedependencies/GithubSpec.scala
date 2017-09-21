@@ -154,7 +154,7 @@ class GithubSpec
     }
 
 
-    "optimising for avoiding gh rate limit" when {
+    "optimise for avoiding github rate limit" when {
 
       val date = LocalDateTime.of(2017, 9, 1, 10, 0, 0)
       val laterDate = date.plusMinutes(1)
@@ -167,7 +167,7 @@ class GithubSpec
         githubService
       }
 
-//!@
+
       "should set the last update date of the search result to the returned value of last push github" in {
         val githubService = init(toDate(laterDate))
 
@@ -267,14 +267,6 @@ class GithubSpec
     }
 
     "return artifacts versions correctly for a repository's appDependencies.scala file" in {
-      val githubService = stubGithubService("/github/contents_appDependencies.scala.txt", appDependenciesFile)
-      githubService.findVersionsForMultipleArtifacts(repoName, CuratedDependencyConfig(Nil, Seq("play-frontend", "play-ui", "play-health"), Nil), None).value.libraries shouldBe
-        Map("play-frontend" -> None, "play-ui" -> Some(Version(7, 4, 0)), "play-health" -> Some(Version(2, 1, 0)))
-    }
-
-
-    "No search if git sha has not changed XXXXXXXXXX" in {
-      pending
       val githubService = stubGithubService("/github/contents_appDependencies.scala.txt", appDependenciesFile)
       githubService.findVersionsForMultipleArtifacts(repoName, CuratedDependencyConfig(Nil, Seq("play-frontend", "play-ui", "play-health"), Nil), None).value.libraries shouldBe
         Map("play-frontend" -> None, "play-ui" -> Some(Version(7, 4, 0)), "play-health" -> Some(Version(2, 1, 0)))

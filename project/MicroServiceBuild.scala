@@ -26,8 +26,7 @@ private object AppDependencies {
 
   val compile = Seq(
     ws,
-//    "uk.gov.hmrc" %% "microservice-bootstrap" % microserviceBootstrapVersion,
-    "uk.gov.hmrc" %% "bootstrap-play-25" % "0.7.0-0-g0000000",
+    "uk.gov.hmrc" %% "bootstrap-play-25" % "0.7.0",
     "uk.gov.hmrc" %% "play-url-binders" % playUrlBindersVersion,
     "uk.gov.hmrc" %% "github-client" % githubClientVersion,
     "uk.gov.hmrc" %% "play-reactivemongo" % playReactivemongoVersion,

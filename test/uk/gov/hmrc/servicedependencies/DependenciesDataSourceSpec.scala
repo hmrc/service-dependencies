@@ -45,19 +45,8 @@ class DependenciesDataSourceSpec extends FreeSpec with Matchers with ScalaFuture
     override def now = stubbedTime
   }
 
-  //  type FindVersionsForMultipleArtifactsF = (String, Seq[String]) => Map[String, Option[Version]]
   type FindVersionsForMultipleArtifactsF = (String, Seq[String]) => GithubSearchResults
 
-  //  val servicesStub = new DeploymentsDataSource(new ReleasesConfig { override def releasesServiceUrl: String = ""}) {
-  //    override def listOfRunningServices(): Future[List[Service]] = {
-  //      Future.successful(List(
-  //        Service("service1", Some("1.1.3"), Some("1.2.1"), Some("1.1.2")),
-  //        Service("service2", Some("1.2.3"), Some("1.2.2"), Some("1.2.0")),
-  //        Service("service3", Some("1.3.3"), Some("1.3.3"), None),
-  //        Service("missing-in-action", Some("1.3.3"), Some("1.3.3"), None)
-  //      ))
-  //    }
-  //  }
 
   val teamNames = Seq("PlatOps", "WebOps")
   val serviceTeams = Map(
@@ -79,10 +68,6 @@ class DependenciesDataSourceSpec extends FreeSpec with Matchers with ScalaFuture
     override def resolveTag(version: String) = version
 
     override val tagPrefix: String = "?-?"
-
-
-    //    override protected def getLastGithubPushDate(repoName: String): Option[Date] =
-    //      Some(now)
 
     override def findArtifactVersion(serviceName: String, artifact: String, versionOption: Option[String]): Option[Version] = {
       versionOption match {
@@ -118,41 +103,6 @@ class DependenciesDataSourceSpec extends FreeSpec with Matchers with ScalaFuture
     "missing-in-action-1.3.3" -> Some("17.0.0")
   ))
 
-  //  "Pull together dependency artifact information for each environment and version" in {
-  //
-  //    val underTest = prepareUnderTestClass(Seq(githubStub1, githubStub2), Seq("repo1", "repo2", "repo3"))
-  //
-  //    val results = underTest.getDependencies("play-frontend").futureValue
-  //
-  //    results should contain(
-  //      ServiceDependencies("service1", Map(
-  //        "qa" -> EnvironmentDependency("1.1.3", "17.0.0"),
-  //        "staging" -> EnvironmentDependency("1.2.1", "16.3.0"),
-  //        "prod" -> EnvironmentDependency("1.1.2", "16.0.0")), teamNames))
-  //
-  //    results should contain(
-  //      ServiceDependencies("service2", Map(
-  //        "qa" -> EnvironmentDependency("1.2.3", "N/A"),
-  //        "staging" -> EnvironmentDependency("1.2.2", "15.0.0"),
-  //        "prod" -> EnvironmentDependency("1.2.0", "15.0.0")), teamNames))
-  //
-  //    results should contain(
-  //      ServiceDependencies("service3", Map(
-  //        "qa" -> EnvironmentDependency("1.3.3", "16.3.0"),
-  //        "staging" -> EnvironmentDependency("1.3.3", "16.3.0")), teamNames))
-  //
-  //  }
-
-  //  "Handle a service that has no team mapings or no longer exists in the catalogue" in {
-  //
-  //    val dataSource = prepareUnderTestClass(Seq(githubStub1, githubStub2), Seq("repo1", "repo2", "repo3"))
-  //    val results = dataSource.getDependencies("play-frontend").futureValue
-  //
-  //    results should contain(
-  //      ServiceDependencies("missing-in-action", Map(
-  //        "qa" -> EnvironmentDependency("1.3.3", "17.0.0"),
-  //        "staging" -> EnvironmentDependency("1.3.3", "17.0.0")), Seq()))
-  //  }
 
   "getDependenciesForAllRepositories" - {
 
@@ -618,7 +568,6 @@ class DependenciesDataSourceSpec extends FreeSpec with Matchers with ScalaFuture
 
     when(mockedGitApiConfig.apiUrl).thenReturn("http://some.api.url")
     when(mockedGitApiConfig.key).thenReturn("key-12345")
-    //    when(mockedDependenciesConfig.buildFiles).thenReturn(Seq("buildFile1", "buildFile2"))
     mockedDependenciesConfig
   }
 }

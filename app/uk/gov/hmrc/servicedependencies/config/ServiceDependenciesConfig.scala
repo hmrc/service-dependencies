@@ -26,14 +26,6 @@ import uk.gov.hmrc.play.bootstrap.config.BaseUrl
 import scala.concurrent.duration._
 import scala.io.Source
 
-//trait CacheConfig {
-//  def cacheDuration: FiniteDuration
-//}
-//
-//trait ReleasesConfig {
-//  def releasesServiceUrl: String
-//}
-
 
 
 @Singleton
@@ -48,12 +40,6 @@ class ServiceDependenciesConfig @Inject()(appConfiguration: Configuration) exten
   private val defaultTimeout = 1 day
 
   lazy val targetArtifact = optionalConfig(s"$targetArtifactsKey").getOrElse("sbt-plugin")
-
-//  lazy val curatedDependencyConfig: CuratedDependencyConfig = {
-//    val stream = getClass.getResourceAsStream(configPath)
-//    val json = try {  Json.parse(stream) } finally { stream.close() }
-//    json.as[CuratedDependencyConfig]
-//  }
 
 
   def cacheDuration: FiniteDuration = {

@@ -450,21 +450,6 @@ class DependencyDataUpdatingServiceSpec extends FunSpec with MockitoSugar with M
       override val sbtPluginMongoLock = testMongoLockBuilder("sbtPluginMongoLock")
       override val repositoryDependencyMongoLock = testMongoLockBuilder("repositoryDependencyMongoLock")
 
-
-//      override lazy val curatedDependencyConfig = dependencyConfig
-
-
-
-      //      override lazy val repositoryLibraryDependenciesRepository = repositoryLibraryDependenciesRepository
-      //      override lazy val libraryVersionRepository = mockedLibraryVersionRepository
-      //      override lazy val sbtPluginVersionRepository = mockedSbtPluginVersionRepository
-      //
-      //      override lazy val teamsAndRepositoriesClient = mockedTeamsAndReposClient
-      //      override lazy val dependenciesDataSource = mockedDependenciesDataSource
-
-
-//      when(mockedTeamsAndReposClient.getAllRepositories()).thenReturn(Future.successful(Seq("repo1xx")))
-
     }
 
   }

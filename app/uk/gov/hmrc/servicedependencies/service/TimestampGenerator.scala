@@ -19,7 +19,6 @@ package uk.gov.hmrc.servicedependencies.service
 import com.google.inject.{Inject, Singleton}
 
 @Singleton
-//class TimestampGenerator @Inject()() {
 class TimestampGenerator {
   def now = System.currentTimeMillis()
 }

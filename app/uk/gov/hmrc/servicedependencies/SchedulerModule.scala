@@ -18,8 +18,8 @@ package uk.gov.hmrc.servicedependencies
 
 import com.google.inject.AbstractModule
 
-//!@ rename this
-class Module() extends AbstractModule {
+
+class SchedulerModule() extends AbstractModule {
 
   override def configure(): Unit = {
     bind(classOf[DataReloadScheduler]).asEagerSingleton()

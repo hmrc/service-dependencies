@@ -27,11 +27,6 @@ import uk.gov.hmrc.mongo.ReactiveRepository
 import scala.concurrent.Future
 
 
-//trait LocksRepository {
-//  def getAllEntries: Future[Seq[Lock]]
-//  def clearAllData: Future[Boolean]
-//}
-
 @Singleton
 class LocksRepository @Inject()(mongo: ReactiveMongoComponent)
   extends ReactiveRepository[Lock, BSONObjectID](
