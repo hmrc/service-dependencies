@@ -16,21 +16,8 @@
 
 package uk.gov.hmrc.servicedependencies
 
-//import play.api.{Configuration, Environment}
-//import play.api.inject.{Binding, Module}
-//
-//
-//class SchedulerModule extends Module {
-//
-//  override def bindings(environment: Environment, configuration: Configuration): Seq[Binding[_]] = {
-//    Seq(bind(classOf[DataReloadScheduler]).toSelf.eagerly())
-//  }
-//
-//
-//}
 
 import com.google.inject.AbstractModule
-
 
 class SchedulerModule() extends AbstractModule {
 

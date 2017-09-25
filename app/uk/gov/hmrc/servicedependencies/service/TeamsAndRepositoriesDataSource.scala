@@ -22,12 +22,6 @@ import uk.gov.hmrc.servicedependencies.config.ServiceDependenciesConfig
 
 import scala.concurrent.Future
 
-//trait TeamsAndRepositoriesDataSource {
-//  def getTeamsForRepository(repositoryName: String): Future[Seq[String]]
-//  def getTeamsForServices(): Future[Map[String, Seq[String]]]
-//  def getAllRepositories(): Future[Seq[String]]
-//}
-
 @Singleton
 class TeamsAndRepositoriesDataSource @Inject() (serviceConfiguration: ServiceDependenciesConfig) {
 

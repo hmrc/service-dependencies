@@ -20,7 +20,7 @@ import org.mockito.Mockito
 import org.mockito.Mockito.verify
 import org.scalatest.mock.MockitoSugar
 import org.scalatest.{BeforeAndAfterEach, FunSpec, Matchers}
-import org.scalatestplus.play.OneAppPerSuite
+import org.scalatestplus.play.OneAppPerTest
 import play.libs.Akka
 
 import scala.concurrent.duration._
@@ -28,7 +28,7 @@ import scala.concurrent.duration._
 class UpdateSchedulerSpec extends FunSpec
   with MockitoSugar
   with Matchers
-  with OneAppPerSuite with BeforeAndAfterEach {
+  with OneAppPerTest with BeforeAndAfterEach {
 
   trait Counter {
     var count = 0

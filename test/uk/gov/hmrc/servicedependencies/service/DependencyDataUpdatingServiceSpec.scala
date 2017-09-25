@@ -21,7 +21,7 @@ import org.mockito.Mockito._
 import org.scalatest.concurrent.{IntegrationPatience, ScalaFutures}
 import org.scalatest.mock.MockitoSugar
 import org.scalatest.{BeforeAndAfterEach, FunSpec, Matchers, OptionValues}
-import org.scalatestplus.play.OneAppPerSuite
+import org.scalatestplus.play.{OneAppPerSuite, OneAppPerTest}
 import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
 import reactivemongo.api.DB
@@ -34,7 +34,7 @@ import uk.gov.hmrc.servicedependencies.presistence._
 
 import scala.concurrent.{ExecutionContext, Future}
 
-class DependencyDataUpdatingServiceSpec extends FunSpec with MockitoSugar with Matchers with OneAppPerSuite with BeforeAndAfterEach with Awaiting with OptionValues with ScalaFutures with IntegrationPatience {
+class DependencyDataUpdatingServiceSpec extends FunSpec with MockitoSugar with Matchers with OneAppPerTest  with BeforeAndAfterEach with Awaiting with OptionValues with ScalaFutures with IntegrationPatience {
 
   val testTimestampGenerator: TimestampGenerator = new TimestampGenerator {
     override def now = 1234l
@@ -56,7 +56,7 @@ class DependencyDataUpdatingServiceSpec extends FunSpec with MockitoSugar with M
         .thenReturn(Seq(LibraryVersion("libYY", Some(Version(1, 1, 1)))))
       when(underTest.libraryVersionRepository.update(any())).thenReturn(Future.successful(mock[MongoLibraryVersion]))
 
-      underTest.theThing.reloadLatestLibraryVersions().futureValue
+      underTest.testDependencyUpdatingService.reloadLatestLibraryVersions().futureValue
 
       verify(underTest.libraryVersionRepository, times(1)).update(MongoLibraryVersion("libYY", Some(Version(1, 1, 1)), testTimestampGenerator.now))
       verifyZeroInteractions(underTest.repositoryLibraryDependenciesRepository)
@@ -66,7 +66,7 @@ class DependencyDataUpdatingServiceSpec extends FunSpec with MockitoSugar with M
     it("should not call the library update function if mongo is locked ") {
       val underTest = new TestDependencyDataUpdatingService(denyingTestMongoLockBuilder, curatedDependencyConfig)
 
-      a[RuntimeException] should be thrownBy underTest.theThing.reloadLatestLibraryVersions()
+      a[RuntimeException] should be thrownBy underTest.testDependencyUpdatingService.reloadLatestLibraryVersions()
 
       verifyZeroInteractions(underTest.libraryVersionRepository)
       verifyZeroInteractions(underTest.dependenciesDataSource)
@@ -84,7 +84,7 @@ class DependencyDataUpdatingServiceSpec extends FunSpec with MockitoSugar with M
         .thenReturn(Seq(SbtPluginVersion("sbtPlugin123", Some(Version(1, 1, 1)))))
       when(underTest.sbtPluginVersionRepository.update(any())).thenReturn(Future.successful(mock[MongoSbtPluginVersion]))
 
-      underTest.theThing.reloadLatestSbtPluginVersions().futureValue
+      underTest.testDependencyUpdatingService.reloadLatestSbtPluginVersions().futureValue
 
       verify(underTest.sbtPluginVersionRepository, times(1)).update(MongoSbtPluginVersion("sbtPlugin123", Some(Version(1, 1, 1)), testTimestampGenerator.now))
       verifyZeroInteractions(underTest.repositoryLibraryDependenciesRepository)
@@ -95,7 +95,7 @@ class DependencyDataUpdatingServiceSpec extends FunSpec with MockitoSugar with M
     it("should not call the sbt plugin update function if mongo is locked ") {
       val underTest = new TestDependencyDataUpdatingService(denyingTestMongoLockBuilder, curatedDependencyConfig)
 
-      a[RuntimeException] should be thrownBy underTest.theThing.reloadLatestSbtPluginVersions()
+      a[RuntimeException] should be thrownBy underTest.testDependencyUpdatingService.reloadLatestSbtPluginVersions()
 
       verifyZeroInteractions(underTest.sbtPluginVersionRepository)
       verifyZeroInteractions(underTest.libraryVersionRepository)
@@ -115,16 +115,16 @@ class DependencyDataUpdatingServiceSpec extends FunSpec with MockitoSugar with M
       when(underTest.repositoryLibraryDependenciesRepository.getAllEntries).thenReturn(Future.successful(mongoRepositoryDependencies))
       when(underTest.dependenciesDataSource.persistDependenciesForAllRepositories(any(), any(), any())).thenReturn(Future.successful(mongoRepositoryDependencies))
 
-      underTest.theThing.reloadCurrentDependenciesDataForAllRepositories().futureValue shouldBe mongoRepositoryDependencies
+      underTest.testDependencyUpdatingService.reloadCurrentDependenciesDataForAllRepositories().futureValue shouldBe mongoRepositoryDependencies
 
       //!@ TODO: how do we verify the persister function being called (last param)?
-      verify(underTest.dependenciesDataSource, times(1)).persistDependenciesForAllRepositories(eqTo(underTest.theThing.curatedDependencyConfig), eqTo(mongoRepositoryDependencies), any())
+      verify(underTest.dependenciesDataSource, times(1)).persistDependenciesForAllRepositories(eqTo(underTest.testDependencyUpdatingService.curatedDependencyConfig), eqTo(mongoRepositoryDependencies), any())
     }
 
     it("should not call the dependency update function if the mongo is locked") {
       val underTest = new TestDependencyDataUpdatingService(denyingTestMongoLockBuilder, curatedDependencyConfig)
 
-      a[RuntimeException] should be thrownBy underTest.theThing.reloadCurrentDependenciesDataForAllRepositories()
+      a[RuntimeException] should be thrownBy underTest.testDependencyUpdatingService.reloadCurrentDependenciesDataForAllRepositories()
 
       verifyZeroInteractions(underTest.repositoryLibraryDependenciesRepository)
 
@@ -159,7 +159,7 @@ class DependencyDataUpdatingServiceSpec extends FunSpec with MockitoSugar with M
         .thenReturn(Future.successful(Nil))
 
 
-      val maybeDependencies = await(underTest.theThing.getDependencyVersionsForRepository(repositoryName))
+      val maybeDependencies = await(underTest.testDependencyUpdatingService.getDependencyVersionsForRepository(repositoryName))
 
       verify(underTest.repositoryLibraryDependenciesRepository, times(1)).getForRepository(repositoryName)
 
@@ -198,7 +198,7 @@ class DependencyDataUpdatingServiceSpec extends FunSpec with MockitoSugar with M
       when(underTest.libraryVersionRepository.getAllEntries)
         .thenReturn(Future.successful(Nil))
 
-      val maybeDependencies = await(underTest.theThing.getDependencyVersionsForRepository(repositoryName))
+      val maybeDependencies = await(underTest.testDependencyUpdatingService.getDependencyVersionsForRepository(repositoryName))
 
       verify(underTest.repositoryLibraryDependenciesRepository, times(1)).getForRepository(repositoryName)
 
@@ -243,7 +243,7 @@ class DependencyDataUpdatingServiceSpec extends FunSpec with MockitoSugar with M
       when(underTest.libraryVersionRepository.getAllEntries)
         .thenReturn(Future.successful(Nil))
 
-      val maybeDependencies = await(underTest.theThing.getDependencyVersionsForRepository(repositoryName))
+      val maybeDependencies = await(underTest.testDependencyUpdatingService.getDependencyVersionsForRepository(repositoryName))
 
       verify(underTest.repositoryLibraryDependenciesRepository, times(1)).getForRepository(repositoryName)
 
@@ -274,7 +274,7 @@ class DependencyDataUpdatingServiceSpec extends FunSpec with MockitoSugar with M
         .thenReturn(Future.successful(Nil))
 
 
-      val maybeDependencies = await(underTest.theThing.getDependencyVersionsForRepository(repositoryName))
+      val maybeDependencies = await(underTest.testDependencyUpdatingService.getDependencyVersionsForRepository(repositoryName))
 
       verify(underTest.repositoryLibraryDependenciesRepository, times(1)).getForRepository(repositoryName)
 
@@ -301,7 +301,7 @@ class DependencyDataUpdatingServiceSpec extends FunSpec with MockitoSugar with M
         .thenReturn(Future.successful(Nil))
 
 
-      val maybeDependencies = await(underTest.theThing.getDependencyVersionsForRepository(repositoryName))
+      val maybeDependencies = await(underTest.testDependencyUpdatingService.getDependencyVersionsForRepository(repositoryName))
 
       verify(underTest.repositoryLibraryDependenciesRepository, times(1)).getForRepository(repositoryName)
 
@@ -376,7 +376,7 @@ class DependencyDataUpdatingServiceSpec extends FunSpec with MockitoSugar with M
         .thenReturn(Future.successful(referenceSbtPluginVersions))
 
 
-      val maybeDependencies = await(underTest.theThing.getDependencyVersionsForAllRepositories())
+      val maybeDependencies = await(underTest.testDependencyUpdatingService.getDependencyVersionsForAllRepositories())
 
       verify(underTest.repositoryLibraryDependenciesRepository, times(1)).getAllEntries
 
@@ -436,7 +436,7 @@ class DependencyDataUpdatingServiceSpec extends FunSpec with MockitoSugar with M
 
     val timestampGenerator: TimestampGenerator = testTimestampGenerator
 
-    val theThing = new DependencyDataUpdatingService(
+    val testDependencyUpdatingService = new DependencyDataUpdatingService(
       curatedDependencyConfigProvider,
       repositoryLibraryDependenciesRepository,
       libraryVersionRepository,

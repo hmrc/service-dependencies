@@ -23,14 +23,12 @@ import org.scalatest._
 import org.scalatest.concurrent.{IntegrationPatience, ScalaFutures}
 import org.scalatest.mock.MockitoSugar
 import org.scalatestplus.play.OneServerPerSuite
-import play.api.inject.guice.GuiceApplicationBuilder
-import play.api.{Application, Configuration}
+import play.api.Configuration
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
 import uk.gov.hmrc.servicedependencies.config.ServiceDependenciesConfig
 import uk.gov.hmrc.servicedependencies.model.{MongoLibraryVersion, MongoRepositoryDependencies, Version}
 import uk.gov.hmrc.servicedependencies.service._
-import play.api.inject.bind
 
 import scala.concurrent.Future
 
@@ -43,12 +41,7 @@ class ServiceDependenciesControllerSpec
     with ScalaFutures
     with IntegrationPatience
     with OptionValues {
-
-  override implicit lazy val app: Application =
-    new GuiceApplicationBuilder()
-      .configure("teams-and-repositories" -> "http://something.teams-and-repositories")
-      .build()
-
+  
 
   "getDependencyVersionsForRepository" - {
     "should get dependency versions for a repository using the service" in new Setup {

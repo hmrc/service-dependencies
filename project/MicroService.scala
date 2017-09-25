@@ -44,7 +44,6 @@ trait MicroService {
       unmanagedSourceDirectories in IntegrationTest <<= (baseDirectory in IntegrationTest)(base => Seq(base / "it")),
       addTestReportOption(IntegrationTest, "int-test-reports"),
       testGrouping in IntegrationTest := oneForkedJvmPerTest((definedTests in IntegrationTest).value),
-//      parallelExecution in Test := true,
       parallelExecution in IntegrationTest := false)
       .settings(resolvers ++= Seq(
         Resolver.bintrayRepo("hmrc", "releases"),

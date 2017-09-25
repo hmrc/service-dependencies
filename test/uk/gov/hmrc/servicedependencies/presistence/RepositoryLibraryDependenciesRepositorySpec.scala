@@ -36,51 +36,19 @@ package uk.gov.hmrc.servicedependencies.presistence
 
 import java.time.LocalDateTime
 
-import com.codahale.metrics.MetricRegistry
-import com.kenshoo.play.metrics.MetricsImpl
 import org.mockito.Mockito.when
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.mock.MockitoSugar
-import org.scalatest.{BeforeAndAfterEach, LoneElement, OptionValues, TestData}
+import org.scalatest.{BeforeAndAfterEach, LoneElement, OptionValues}
 import org.scalatestplus.play.OneAppPerTest
-import play.api.Application
-import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import play.modules.reactivemongo.{ReactiveMongoComponent, ReactiveMongoComponentImpl, ReactiveMongoHmrcModule}
+import play.modules.reactivemongo.ReactiveMongoComponent
 import uk.gov.hmrc.mongo.{MongoConnector, MongoSpecSupport}
-import uk.gov.hmrc.play.bootstrap.filters.MicroserviceFilters
-import uk.gov.hmrc.play.bootstrap.{AuditModule, AuthModule, HttpClientModule, MicroserviceModule}
-import uk.gov.hmrc.play.graphite.{GraphiteMetricsImpl, GraphiteMetricsModule}
 import uk.gov.hmrc.play.test.UnitSpec
-import uk.gov.hmrc.servicedependencies.SchedulerModule
 import uk.gov.hmrc.servicedependencies.TestHelpers._
 import uk.gov.hmrc.servicedependencies.model.{LibraryDependency, MongoRepositoryDependencies, Version}
-import play.api.inject.bind
-import uk.gov.hmrc.play.bootstrap.http.JsonErrorHandler
 
-trait GuiceOneAppPerTest extends MockitoSugar { self :OneAppPerTest =>
-  implicit override def newAppForTest(testData: TestData): Application =
-    new GuiceApplicationBuilder().disable(
-      classOf[HttpClientModule],
-      classOf[MicroserviceModule],
-      classOf[AuthModule],
-      classOf[MetricRegistry],
-      classOf[MetricsImpl],
-      classOf[GraphiteMetricsModule]
-      //      classOf[com.kenshoo.play.metrics.PlayModule],
-      //      classOf[AuditModule],
-      //      classOf[SchedulerModule],
-      //      classOf[GraphiteMetricsImpl],
-      //      classOf[ReactiveMongoHmrcModule],
-      //      classOf[ReactiveMongoComponentImpl]
-    ).overrides(
-      bind[MicroserviceFilters].toInstance(mock[MicroserviceFilters]),
-      bind[JsonErrorHandler].toInstance(mock[JsonErrorHandler])
-    ).build()
-
-}
-
-class RepositoryLibraryDependenciesRepositorySpec extends UnitSpec with LoneElement with MongoSpecSupport with ScalaFutures with OptionValues with BeforeAndAfterEach with OneAppPerTest with MockitoSugar with GuiceOneAppPerTest {
+class RepositoryLibraryDependenciesRepositorySpec extends UnitSpec with LoneElement with MongoSpecSupport with ScalaFutures with OptionValues with BeforeAndAfterEach with OneAppPerTest with MockitoSugar {
 
 
 

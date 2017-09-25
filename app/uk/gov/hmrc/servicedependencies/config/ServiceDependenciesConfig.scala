@@ -48,7 +48,7 @@ class ServiceDependenciesConfig @Inject()(override val configuration: Configurat
 
 
   lazy val releasesServiceUrl = optionalConfig(s"$releaseServiceUrlKey").get
-  lazy val teamsAndRepositoriesServiceUrl: String = baseUrl("teams-and-repositories")//optionalConfig(teamsAndRepositoriesServiceUrlKey).get
+  lazy val teamsAndRepositoriesServiceUrl: String = baseUrl("teams-and-repositories")
 
   private val gitOpenConfig = (key: String) => optionalConfig(s"$githubOpenConfigKey.$key")
   private val gitEnterpriseConfig = (key: String) => optionalConfig(s"$githubEnterpriseConfigKey.$key")
