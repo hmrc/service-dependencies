@@ -33,6 +33,7 @@
      "http-caching-client",
      "http-exceptions",
      "http-verbs",
+     "local-template-renderer",
      "microservice-bootstrap",
      "mongo-caching",
      "mongo-lock",
