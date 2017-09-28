@@ -36,18 +36,11 @@ class DataReloadScheduler @Inject()(app: Application, configuration: Configurati
   val libraryReloadIntervalKey = "library.reload.intervalminutes"
   val sbtPluginReloadIntervalKey = "sbtPlugin.reload.intervalminutes"
 
-  onStart()
+  Logger.info(s"Starting microservice : $appName : in mode : ${app.mode}")
 
-  def onStart() {
-    Logger.info(s"Starting microservice : $appName : in mode : ${app.mode}")
-    MDC.put("appName", appName)
-    loggerDateFormat.foreach(str => MDC.put("logger.json.dateformat", str))
-
-
-    scheduleRepositoryDependencyDataReloadSchedule(app)
-    scheduleLibraryVersionDataReloadSchedule(app)
-    scheduleSbtPluginVersionDataReloadSchedule(app)
-  }
+  scheduleRepositoryDependencyDataReloadSchedule(app)
+  scheduleLibraryVersionDataReloadSchedule(app)
+  scheduleSbtPluginVersionDataReloadSchedule(app)
 
   import scala.concurrent.duration._
 
