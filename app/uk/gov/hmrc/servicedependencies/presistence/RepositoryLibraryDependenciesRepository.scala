@@ -16,9 +16,10 @@
 
 package uk.gov.hmrc.servicedependencies.presistence
 
+import com.google.inject.{Inject, Singleton}
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json.Json
-import reactivemongo.api.DB
+import play.modules.reactivemongo.ReactiveMongoComponent
 import reactivemongo.api.indexes.{Index, IndexType}
 import reactivemongo.bson.{BSONDocument, BSONObjectID}
 import reactivemongo.play.json.ImplicitBSONHandlers._
@@ -29,21 +30,12 @@ import uk.gov.hmrc.servicedependencies.util.FutureHelpers.withTimerAndCounter
 import scala.concurrent.{ExecutionContext, Future}
 
 
-
-trait RepositoryLibraryDependenciesRepository {
-  def update(repositoryLibraryDependencies: MongoRepositoryDependencies): Future[MongoRepositoryDependencies]
-
-  def getForRepository(repositoryName: String): Future[Option[MongoRepositoryDependencies]]
-  def getAllEntries: Future[Seq[MongoRepositoryDependencies]]
-  def clearAllData: Future[Boolean]
-  def clearAllGithubLastUpdateDates: Future[Seq[MongoRepositoryDependencies]]
-}
-
-class MongoRepositoryLibraryDependenciesRepository(mongo: () => DB)
+@Singleton
+class RepositoryLibraryDependenciesRepository @Inject()(mongo: ReactiveMongoComponent)
   extends ReactiveRepository[MongoRepositoryDependencies, BSONObjectID](
     collectionName = "repositoryLibraryDependencies",
-    mongo = mongo,
-    domainFormat = MongoRepositoryDependencies.format) with RepositoryLibraryDependenciesRepository {
+    mongo = mongo.mongoConnector.db,
+    domainFormat = MongoRepositoryDependencies.format) {
 
   override def ensureIndexes(implicit ec: ExecutionContext): Future[Seq[Boolean]] = localEnsureIndexes
 
@@ -56,7 +48,7 @@ class MongoRepositoryLibraryDependenciesRepository(mongo: () => DB)
     )
   }
 
-  override def update(repositoryLibraryDependencies: MongoRepositoryDependencies): Future[MongoRepositoryDependencies] = {
+  def update(repositoryLibraryDependencies: MongoRepositoryDependencies): Future[MongoRepositoryDependencies] = {
 
     logger.info(s"writing to mongo: $repositoryLibraryDependencies")
 
@@ -72,7 +64,7 @@ class MongoRepositoryLibraryDependenciesRepository(mongo: () => DB)
   }
 
 
-  override def getForRepository(repositoryName: String): Future[Option[MongoRepositoryDependencies]] = {
+  def getForRepository(repositoryName: String): Future[Option[MongoRepositoryDependencies]] = {
     withTimerAndCounter("mongo.read") {
       find("repositoryName" -> BSONDocument("$eq" -> repositoryName)) map {
         case data if data.size > 1 => throw new RuntimeException(s"There should only be '1' record per repository! for $repositoryName there are ${data.size}")
@@ -82,15 +74,15 @@ class MongoRepositoryLibraryDependenciesRepository(mongo: () => DB)
 
   }
 
-  override def getAllEntries: Future[Seq[MongoRepositoryDependencies]] = {
+  def getAllEntries: Future[Seq[MongoRepositoryDependencies]] = {
     logger.info("retrieving getAll current dependencies")
     findAll()
   }
 
 
-  override def clearAllData: Future[Boolean] = super.removeAll().map(_.ok)
+  def clearAllData: Future[Boolean] = super.removeAll().map(_.ok)
 
-  override def clearAllGithubLastUpdateDates: Future[Seq[MongoRepositoryDependencies]] = {
+  def clearAllGithubLastUpdateDates: Future[Seq[MongoRepositoryDependencies]] = {
     getAllEntries.flatMap { es =>
       Future.sequence(es.map(mrd => update(mrd.copy(lastGitUpdateDate = None))))
     }

@@ -30,11 +30,15 @@ import uk.gov.hmrc.servicedependencies.util.{Max, VersionParser}
 import scala.annotation.tailrec
 import scala.util.Try
 
+class RateLimitExceeded(exception: Throwable) extends Throwable(exception)
+
 abstract class Github(val buildFilePaths: Seq[String]) {
   private val org = "HMRC"
 
   def gh: GithubApiClient
+
   def resolveTag(version: String): String
+
   val tagPrefix: String
 
   lazy val logger = LoggerFactory.getLogger(this.getClass)
@@ -42,9 +46,9 @@ abstract class Github(val buildFilePaths: Seq[String]) {
 
   def findVersionsForMultipleArtifacts(repoName: String,
                                        curatedDependencyConfig: CuratedDependencyConfig,
-                                       storedLastUpdateDateO:Option[Date]): Option[GithubSearchResults] = {
+                                       storedLastUpdateDateO: Option[Date]): Option[GithubSearchResults] = {
 
-    def performGithubSearch(maybeLastGitUpdateDate: Option[Date] ) = {
+    def performGithubSearch(maybeLastGitUpdateDate: Option[Date]): Option[GithubSearchResults] = {
       Some(GithubSearchResults(
         sbtPlugins = searchPluginSbtFileForMultipleArtifacts(repoName, curatedDependencyConfig.sbtPlugins),
         libraries = searchBuildFilesForMultipleArtifacts(repoName, curatedDependencyConfig.libraries),
@@ -55,17 +59,18 @@ abstract class Github(val buildFilePaths: Seq[String]) {
 
     val maybeLastGitUpdateDate: Option[Date] = getLastGithubPushDate(repoName)
 
-    maybeLastGitUpdateDate.fold(Option.empty[GithubSearchResults]) { lastGitUpdate =>
+    maybeLastGitUpdateDate.fold(Option.empty[GithubSearchResults]) { lastGitPushDate =>
       storedLastUpdateDateO.fold {
         logger.info(s"No previous record for repository ($repoName) detected in database. processing...")
         performGithubSearch(maybeLastGitUpdateDate)
       } { storedLastUpdateDate =>
-        if(lastGitUpdate.after(storedLastUpdateDate)) {
+        if (lastGitPushDate.after(storedLastUpdateDate)) {
           logger.info(s"Changes to repository ($repoName) detected. processing...")
           performGithubSearch(maybeLastGitUpdateDate)
         } else {
           logger.info(s"No changes for repository ($repoName). Skipping....")
-          Some(GithubSearchResults(sbtPlugins = Map.empty, libraries = Map.empty, others = Map.empty, lastGitUpdateDate = maybeLastGitUpdateDate))
+          //!@Some(GithubSearchResults(sbtPlugins = Map.empty, libraries = Map.empty, others = Map.empty, lastGitUpdateDate = maybeLastGitUpdateDate))
+          Option.empty[GithubSearchResults]
         }
       }
     }
@@ -102,7 +107,7 @@ abstract class Github(val buildFilePaths: Seq[String]) {
   }
 
 
-  private def searchBuildFiles(serviceName: String, artifact:String, version: String): Option[Version] = {
+  private def searchBuildFiles(serviceName: String, artifact: String, version: String): Option[Version] = {
     @tailrec
     def searchRemainingBuildFiles(remainingFiles: Seq[String]): Option[Version] = {
       remainingFiles match {
@@ -121,7 +126,7 @@ abstract class Github(val buildFilePaths: Seq[String]) {
   }
 
 
-  private def searchBuildFilesForMultipleArtifacts(serviceName: String,artifacts: Seq[String]): Map[String, Option[Version]] = {
+  private def searchBuildFilesForMultipleArtifacts(serviceName: String, artifacts: Seq[String]): Map[String, Option[Version]] = {
 
     @tailrec
     def searchRemainingBuildFiles(remainingBuildFiles: Seq[String]): Map[String, Option[Version]] = {
@@ -129,7 +134,7 @@ abstract class Github(val buildFilePaths: Seq[String]) {
         case filePath :: xs =>
 
           val versionsMap = performSearchForMultipleArtifacts(serviceName, filePath, parseFileForMultipleArtifacts(_, artifacts))
-          if(versionsMap.isEmpty)
+          if (versionsMap.isEmpty)
             searchRemainingBuildFiles(xs)
           else
             versionsMap
@@ -164,9 +169,9 @@ abstract class Github(val buildFilePaths: Seq[String]) {
       else transformF(results.get(0))
     }
     catch {
-      case (ex: RequestException)  =>
+      case (ex: RequestException) =>
         if (ex.getMessage.toLowerCase().contains("rate limit exceeded"))
-          throw ex
+          throw new RateLimitExceeded(ex)
         else {
           Map.empty
         }
@@ -174,7 +179,7 @@ abstract class Github(val buildFilePaths: Seq[String]) {
 
 
   private def searchPluginSbtFile(serviceName: String, artifact: String, version: String) =
-      performSearch(serviceName, Some(version), "project/plugins.sbt", parsePluginsSbtFile(_, artifact))
+    performSearch(serviceName, Some(version), "project/plugins.sbt", parsePluginsSbtFile(_, artifact))
 
   private def parseBuildFile(response: RepositoryContents, artifact: String): Option[Version] =
     VersionParser.parse(parseFileContents(response), artifact)
@@ -185,8 +190,8 @@ abstract class Github(val buildFilePaths: Seq[String]) {
   private def performSearch(serviceName: String, mayBeVersion: Option[String], filePath: String, transformF: (RepositoryContents) => Option[Version]): Option[Version] =
     try {
       val results = mayBeVersion.fold(gh.contentsService.getContents(repositoryId(serviceName, "HMRC"), filePath)) { version =>
-          gh.contentsService.getContents(repositoryId(serviceName, "HMRC"), filePath, resolveTag(version))
-        }
+        gh.contentsService.getContents(repositoryId(serviceName, "HMRC"), filePath, resolveTag(version))
+      }
       if (results.isEmpty) None
       else transformF(results.get(0))
     }
@@ -196,7 +201,9 @@ abstract class Github(val buildFilePaths: Seq[String]) {
 
 
   private def repositoryId(repoName: String, orgName: String): IRepositoryIdProvider =
-    new IRepositoryIdProvider { val generateId: String = orgName + "/" + repoName }
+    new IRepositoryIdProvider {
+      val generateId: String = orgName + "/" + repoName
+    }
 
   private def parseFileContents(response: RepositoryContents): String =
     new String(Base64.decodeBase64(response.getContent.replaceAll("\n", "")))

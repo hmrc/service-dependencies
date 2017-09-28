@@ -16,17 +16,22 @@
 
 package uk.gov.hmrc.servicedependencies.service
 
+import com.google.inject.{Inject, Singleton}
 import uk.gov.hmrc.HttpClient
+import uk.gov.hmrc.servicedependencies.config.ServiceDependenciesConfig
 
 import scala.concurrent.Future
 
-trait TeamsAndRepositoriesDataSource {
-  def getTeamsForRepository(repositoryName: String): Future[Seq[String]]
-  def getTeamsForServices(): Future[Map[String, Seq[String]]]
-  def getAllRepositories(): Future[Seq[String]]
-}
+//trait TeamsAndRepositoriesDataSource {
+//  def getTeamsForRepository(repositoryName: String): Future[Seq[String]]
+//  def getTeamsForServices(): Future[Map[String, Seq[String]]]
+//  def getAllRepositories(): Future[Seq[String]]
+//}
 
-class TeamsAndRepositoriesClient(teamsAndRepositoriesApiBase: String) extends TeamsAndRepositoriesDataSource {
+@Singleton
+class TeamsAndRepositoriesDataSource @Inject() (serviceConfiguration: ServiceDependenciesConfig) {
+
+  val teamsAndRepositoriesApiBase = serviceConfiguration.teamsAndRepositoriesServiceUrl
 
   def getTeamsForRepository(repositoryName: String): Future[Seq[String]] =
     HttpClient.getWithParsing[List[String]](s"$teamsAndRepositoriesApiBase/api/repositories/$repositoryName"){json =>

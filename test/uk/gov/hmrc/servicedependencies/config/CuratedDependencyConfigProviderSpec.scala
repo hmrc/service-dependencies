@@ -14,20 +14,20 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.servicedependencies.model
+package uk.gov.hmrc.servicedependencies.config
 
 import org.scalatest.{FunSpec, Matchers, OptionValues}
-import org.slf4j.LoggerFactory
-import uk.gov.hmrc.servicedependencies.config.ServiceDependenciesConfig
+import play.api.Configuration
 import uk.gov.hmrc.servicedependencies.config.model.{CuratedDependencyConfig, OtherDependencyConfig, SbtPluginConfig}
+import uk.gov.hmrc.servicedependencies.model.Version
 
-class DependencyConfigLoaderSpec extends FunSpec with Matchers with OptionValues {
+class CuratedDependencyConfigProviderSpec extends FunSpec with Matchers with OptionValues {
 
   describe("config loader") {
     it("should load the config") {
-      val configLoader = new ServiceDependenciesConfig("/config/test-config.json")
-      LoggerFactory.getLogger(this.getClass).info(configLoader.curatedDependencyConfig.sbtPlugins.toString)
-      configLoader.curatedDependencyConfig shouldBe CuratedDependencyConfig(
+      val curatedDependencyConfigProvider = new CuratedDependencyConfigProvider(Configuration("curated.config.path" -> "/config/test-config.json"))
+
+      curatedDependencyConfigProvider.curatedDependencyConfig shouldBe CuratedDependencyConfig(
         sbtPlugins = Seq(
           SbtPluginConfig("uk.gov.hmrc", "internal-plugin", None),
           SbtPluginConfig("com.example.external", "external-plugin", Some(Version("1.4.0")))
