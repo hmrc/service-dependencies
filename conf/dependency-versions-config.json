@@ -26,6 +26,7 @@
      }
   ],
   "libraries": [
+     "bootstrap-play-25",
      "domain",
      "frontend-bootstrap",
      "github-client",
