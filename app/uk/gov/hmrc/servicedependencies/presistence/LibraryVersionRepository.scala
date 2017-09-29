@@ -16,6 +16,7 @@
 
 package uk.gov.hmrc.servicedependencies.presistence
 
+import com.google.inject.{Inject, Singleton}
 import play.api.libs.json.Json
 import reactivemongo.api.DB
 import reactivemongo.api.indexes.{Index, IndexType}
@@ -24,24 +25,17 @@ import reactivemongo.play.json.ImplicitBSONHandlers._
 import uk.gov.hmrc.mongo.ReactiveRepository
 import uk.gov.hmrc.servicedependencies.util.FutureHelpers.withTimerAndCounter
 import uk.gov.hmrc.servicedependencies.model._
-
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
+import play.modules.reactivemongo.ReactiveMongoComponent
 
 import scala.concurrent.{ExecutionContext, Future}
 
-trait LibraryVersionRepository {
-
-  def update(libraryVersion: MongoLibraryVersion): Future[MongoLibraryVersion]
-  def getAllEntries: Future[Seq[MongoLibraryVersion]]
-  def clearAllData: Future[Boolean]
-}
-
-class MongoLibraryVersionRepository(mongo: () => DB)
+@Singleton
+class LibraryVersionRepository @Inject() (mongo: ReactiveMongoComponent)
   extends ReactiveRepository[MongoLibraryVersion, BSONObjectID](
     collectionName = "libraryVersions",
-    mongo = mongo,
-    domainFormat = MongoLibraryVersion.format) with LibraryVersionRepository {
-
+    mongo = mongo.mongoConnector.db,
+    domainFormat = MongoLibraryVersion.format) {
 
   override def ensureIndexes(implicit ec: ExecutionContext = defaultContext): Future[Seq[Boolean]] =
     localEnsureIndexes
@@ -53,7 +47,7 @@ class MongoLibraryVersionRepository(mongo: () => DB)
       )
     )
 
-  override def  update(libraryVersion: MongoLibraryVersion): Future[MongoLibraryVersion] = {
+  def update(libraryVersion: MongoLibraryVersion): Future[MongoLibraryVersion] = {
 
 
     logger.info(s"writing $libraryVersion")
@@ -68,8 +62,8 @@ class MongoLibraryVersionRepository(mongo: () => DB)
     }
   }
 
-  override def getAllEntries: Future[Seq[MongoLibraryVersion]] = findAll()
+  def getAllEntries: Future[Seq[MongoLibraryVersion]] = findAll()
 
-  override def clearAllData: Future[Boolean] = super.removeAll().map(_.ok)
+  def clearAllData: Future[Boolean] = super.removeAll().map(_.ok)
 }
 

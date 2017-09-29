@@ -18,12 +18,13 @@ package uk.gov.hmrc.servicedependencies
 
 import java.util.Date
 
+import com.google.inject.{Inject, Singleton}
 import org.slf4j.LoggerFactory
+import play.api.Configuration
+import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json.Json
 import play.api.mvc._
-import play.api.libs.concurrent.Execution.Implicits._
-
-import uk.gov.hmrc.play.microservice.controller.BaseController
+import uk.gov.hmrc.play.bootstrap.controller.BaseController
 import uk.gov.hmrc.servicedependencies.config.ServiceDependenciesConfig
 import uk.gov.hmrc.servicedependencies.model._
 import uk.gov.hmrc.servicedependencies.service._
@@ -47,22 +48,22 @@ object RepositoryDependencies {
   implicit val format = Json.format[RepositoryDependencies]
 }
 
-trait ServiceDependenciesController extends BaseController {
 
-  lazy val logger = LoggerFactory.getLogger(this.getClass)
+@Singleton
+class ServiceDependenciesController @Inject()(configuration: Configuration,
+                                              dependencyDataUpdatingService: DependencyDataUpdatingService,
+                                              config: ServiceDependenciesConfig) extends BaseController {
+
+  val logger = LoggerFactory.getLogger(this.getClass)
 
   private val doneResult = Ok("Done")
 
-  def dependencyDataUpdatingService: DependencyDataUpdatingService
-
-	implicit val environmentDependencyWrites = Json.writes[EnvironmentDependency]
-	implicit val serviceDependenciesWrites = Json.writes[ServiceDependencies]
-
-  def timeStampGenerator: () => Long = new Date().getTime
+  implicit val environmentDependencyWrites = Json.writes[EnvironmentDependency]
+  implicit val serviceDependenciesWrites = Json.writes[ServiceDependencies]
 
 
   def getDependencyVersionsForRepository(repositoryName: String) = Action.async {
-		dependencyDataUpdatingService.getDependencyVersionsForRepository(repositoryName)
+    dependencyDataUpdatingService.getDependencyVersionsForRepository(repositoryName)
       .map(maybeRepositoryDependencies =>
         maybeRepositoryDependencies.fold(
           NotFound(s"$repositoryName not found"))(repoDependencies => Ok(Json.toJson(repoDependencies))))
@@ -74,26 +75,26 @@ trait ServiceDependenciesController extends BaseController {
 
 
   def reloadLibraryDependenciesForAllRepositories() = Action {
-    dependencyDataUpdatingService.reloadCurrentDependenciesDataForAllRepositories(timeStampGenerator).map(_ => logger.info(s"""${">" * 10} done ${"<" * 10}""")).onFailure{
-			case ex => throw new RuntimeException("reload of dependencies failed", ex)
-		}
+    dependencyDataUpdatingService.reloadCurrentDependenciesDataForAllRepositories().map(_ => logger.info(s"""${">" * 10} done ${"<" * 10}""")).onFailure{
+      case ex => throw new RuntimeException("reload of dependencies failed", ex)
+    }
     doneResult
-	}
+  }
 
 
   def reloadLibraryVersions() = Action {
-    dependencyDataUpdatingService.reloadLatestLibraryVersions(timeStampGenerator).map(_ => println(s"""${">" * 10} done ${"<" * 10}""")).onFailure{
-			case ex => throw new RuntimeException("reload of libraries failed", ex)
-		}
+    dependencyDataUpdatingService.reloadLatestLibraryVersions().map(_ => println(s"""${">" * 10} done ${"<" * 10}""")).onFailure{
+      case ex => throw new RuntimeException("reload of libraries failed", ex)
+    }
     doneResult
-	}
+  }
 
   def reloadSbtPluginVersions() = Action {
-    dependencyDataUpdatingService.reloadLatestSbtPluginVersions(timeStampGenerator).map(_ => println(s"""${">" * 10} done ${"<" * 10}""")).onFailure{
-			case ex => throw new RuntimeException("reload of sbt plugins failed", ex)
-		}
+    dependencyDataUpdatingService.reloadLatestSbtPluginVersions().map(_ => println(s"""${">" * 10} done ${"<" * 10}""")).onFailure{
+      case ex => throw new RuntimeException("reload of sbt plugins failed", ex)
+    }
     doneResult
-	}
+  }
 
 
   def libraries() = Action.async {
@@ -116,16 +117,6 @@ trait ServiceDependenciesController extends BaseController {
   def clearAllGithubLastUpdateDates = Action.async {
     dependencyDataUpdatingService.clearAllGithubLastUpdateDates.map(rs => Ok(s"${rs.size} records updated"))
   }
-
-}
-
-object ServiceDependenciesController extends ServiceDependenciesController {
-
-  override def dependencyDataUpdatingService: DependencyDataUpdatingService =
-    new DefaultDependencyDataUpdatingService(config)
-
-
-  protected val config = new ServiceDependenciesConfig("/dependency-versions-config.json")
 
 }
 

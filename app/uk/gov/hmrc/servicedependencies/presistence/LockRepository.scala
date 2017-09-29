@@ -16,9 +16,9 @@
 
 package uk.gov.hmrc.servicedependencies.presistence
 
+import com.google.inject.{Inject, Singleton}
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import play.api.libs.json.Json
-import reactivemongo.api.DB
+import play.modules.reactivemongo.ReactiveMongoComponent
 import reactivemongo.bson.BSONObjectID
 import uk.gov.hmrc.lock.LockFormats
 import uk.gov.hmrc.lock.LockFormats.Lock
@@ -27,21 +27,16 @@ import uk.gov.hmrc.mongo.ReactiveRepository
 import scala.concurrent.Future
 
 
-
-trait LocksRepository {
-  def getAllEntries: Future[Seq[Lock]]
-  def clearAllData: Future[Boolean]
-}
-
-class MongoLocksRepository(mongo: () => DB)
+@Singleton
+class LocksRepository @Inject()(mongo: ReactiveMongoComponent)
   extends ReactiveRepository[Lock, BSONObjectID](
     collectionName = "locks",
-    mongo = mongo,
-    domainFormat = LockFormats.format) with LocksRepository {
+    mongo = mongo.mongoConnector.db,
+    domainFormat = LockFormats.format) {
 
 
-  override def getAllEntries: Future[Seq[Lock]] = findAll()
+  def getAllEntries: Future[Seq[Lock]] = findAll()
 
-  override def clearAllData: Future[Boolean] = super.removeAll().map(_.ok)
+  def clearAllData: Future[Boolean] = super.removeAll().map(_.ok)
 }
 

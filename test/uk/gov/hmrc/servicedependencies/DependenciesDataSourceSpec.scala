@@ -40,19 +40,13 @@ import scala.concurrent.Future
 
 class DependenciesDataSourceSpec extends FreeSpec with Matchers with ScalaFutures with MockitoSugar with IntegrationPatience with OptionValues {
 
-//  type FindVersionsForMultipleArtifactsF = (String, Seq[String]) => Map[String, Option[Version]]
+  val stubbedTime = 123456l
+  val testTimestampGenerator = new TimestampGenerator {
+    override def now = stubbedTime
+  }
+
   type FindVersionsForMultipleArtifactsF = (String, Seq[String]) => GithubSearchResults
 
-  val servicesStub = new DeploymentsDataSource(new ReleasesConfig { override def releasesServiceUrl: String = ""}) {
-    override def listOfRunningServices(): Future[List[Service]] = {
-      Future.successful(List(
-        Service("service1", Some("1.1.3"), Some("1.2.1"), Some("1.1.2")),
-        Service("service2", Some("1.2.3"), Some("1.2.2"), Some("1.2.0")),
-        Service("service3", Some("1.3.3"), Some("1.3.3"), None),
-        Service("missing-in-action", Some("1.3.3"), Some("1.3.3"), None)
-      ))
-    }
-  }
 
   val teamNames = Seq("PlatOps", "WebOps")
   val serviceTeams = Map(
@@ -61,7 +55,7 @@ class DependenciesDataSourceSpec extends FreeSpec with Matchers with ScalaFuture
     "service3" -> teamNames)
 
 
-  private val now: Date = toDate(LocalDateTime.now())
+  private val nowAsDate: Date = toDate(LocalDateTime.now())
 
   class GithubStub(
                     val lookupMap: Map[String, Option[String]],
@@ -70,19 +64,16 @@ class DependenciesDataSourceSpec extends FreeSpec with Matchers with ScalaFuture
                   ) extends Github(Seq()) {
 
     override val gh = null
+
     override def resolveTag(version: String) = version
 
     override val tagPrefix: String = "?-?"
-
-
-//    override protected def getLastGithubPushDate(repoName: String): Option[Date] =
-//      Some(now)
 
     override def findArtifactVersion(serviceName: String, artifact: String, versionOption: Option[String]): Option[Version] = {
       versionOption match {
         case Some(version) =>
           lookupMap.get(s"$serviceName-$version").map(version =>
-           version.map(Version.parse)).getOrElse(None)
+            version.map(Version.parse)).getOrElse(None)
         case None => None
       }
     }
@@ -99,54 +90,19 @@ class DependenciesDataSourceSpec extends FreeSpec with Matchers with ScalaFuture
   }
 
   val githubStub1 = new GithubStub(Map(
-      "service1-1.1.3" -> Some("17.0.0"),
-      "service1-1.2.1" -> Some("16.3.0"),
-      "service1-1.1.2" -> Some("16.0.0")
-    ))
+    "service1-1.1.3" -> Some("17.0.0"),
+    "service1-1.2.1" -> Some("16.3.0"),
+    "service1-1.1.2" -> Some("16.0.0")
+  ))
 
   val githubStub2 = new GithubStub(Map(
-      "service2-1.2.3" -> None,
-      "service2-1.2.2" -> Some("15.0.0"),
-      "service2-1.2.0" -> Some("15.0.0"),
-      "service3-1.3.3" -> Some("16.3.0"),
-      "missing-in-action-1.3.3" -> Some("17.0.0")
-    ))
+    "service2-1.2.3" -> None,
+    "service2-1.2.2" -> Some("15.0.0"),
+    "service2-1.2.0" -> Some("15.0.0"),
+    "service3-1.3.3" -> Some("16.3.0"),
+    "missing-in-action-1.3.3" -> Some("17.0.0")
+  ))
 
-  "Pull together dependency artifact information for each environment and version" in {
-
-    val underTest = prepareUnderTestClass(Seq(githubStub1, githubStub2), Seq("repo1", "repo2", "repo3"))
-
-    val results = underTest.getDependencies("play-frontend").futureValue
-
-    results should contain(
-      ServiceDependencies("service1", Map(
-        "qa" -> EnvironmentDependency("1.1.3", "17.0.0"),
-        "staging" -> EnvironmentDependency("1.2.1", "16.3.0"),
-        "prod" -> EnvironmentDependency("1.1.2", "16.0.0")), teamNames))
-
-    results should contain(
-      ServiceDependencies("service2", Map(
-        "qa" -> EnvironmentDependency("1.2.3", "N/A"),
-        "staging" -> EnvironmentDependency("1.2.2", "15.0.0"),
-        "prod" -> EnvironmentDependency("1.2.0", "15.0.0")), teamNames))
-
-    results should contain(
-      ServiceDependencies("service3", Map(
-        "qa" -> EnvironmentDependency("1.3.3", "16.3.0"),
-        "staging" -> EnvironmentDependency("1.3.3", "16.3.0")), teamNames))
-
-  }
-
-  "Handle a service that has no team mapings or no longer exists in the catalogue" in {
-
-    val dataSource = prepareUnderTestClass(Seq(githubStub1, githubStub2), Seq("repo1", "repo2", "repo3"))
-    val results = dataSource.getDependencies("play-frontend").futureValue
-
-    results should contain(
-      ServiceDependencies("missing-in-action", Map(
-        "qa" -> EnvironmentDependency("1.3.3", "17.0.0"),
-        "staging" -> EnvironmentDependency("1.3.3", "17.0.0")), Seq()))
-  }
 
   "getDependenciesForAllRepositories" - {
 
@@ -188,18 +144,18 @@ class DependenciesDataSourceSpec extends FreeSpec with Matchers with ScalaFuture
       )
       case "unchanged-repo6" =>
         GithubSearchResults(
-        Map("plugin1" -> Some(Version(100, 0, 3)), "plugin3" -> Some(Version(300, 0, 4))),
-        Map("library1" -> Some(Version(1, 0, 3)), "library3" -> Some(Version(3, 0, 4))),
-        Map("sbt" -> Some(Version(1, 13, 300))),
-        lastGitUpdateDate = Some(toDate(unchangedRepoStoredLastGitUpdateDate))
-      )
+          Map("plugin1" -> Some(Version(100, 0, 3)), "plugin3" -> Some(Version(300, 0, 4))),
+          Map("library1" -> Some(Version(1, 0, 3)), "library3" -> Some(Version(3, 0, 4))),
+          Map("sbt" -> Some(Version(1, 13, 300))),
+          lastGitUpdateDate = Some(toDate(unchangedRepoStoredLastGitUpdateDate))
+        )
       case "changed-repo7" =>
         GithubSearchResults(
-        Map("plugin1" -> Some(Version(100, 0, 3)), "plugin3" -> Some(Version(300, 0, 4))),
-        Map("library1" -> Some(Version(1, 0, 3)), "library3" -> Some(Version(3, 0, 4))),
-        Map("sbt" -> Some(Version(1, 13, 300))),
-        lastGitUpdateDate = Some(toDate(changedRepoLastGitUpdateDate))
-      )
+          Map("plugin1" -> Some(Version(100, 0, 3)), "plugin3" -> Some(Version(300, 0, 4))),
+          Map("library1" -> Some(Version(1, 0, 3)), "library3" -> Some(Version(3, 0, 4))),
+          Map("sbt" -> Some(Version(1, 13, 300))),
+          lastGitUpdateDate = Some(toDate(changedRepoLastGitUpdateDate))
+        )
       case _ => throw new RuntimeException(s"No entry in lookup function for repoName: $repo")
     }
 
@@ -217,7 +173,7 @@ class DependenciesDataSourceSpec extends FreeSpec with Matchers with ScalaFuture
     def getDependencies(results: Seq[MongoRepositoryDependencies], repo: String): MongoRepositoryDependencies =
       results.filter(_.repositoryName == repo).head
 
-    val curatedDependencyConfig = CuratedDependencyConfig(Nil, Seq("library1", "library2", "library3"), Seq(OtherDependencyConfig("sbt", Some(Version(1,2,3)))))
+    val curatedDependencyConfig = CuratedDependencyConfig(Nil, Seq("library1", "library2", "library3"), Seq(OtherDependencyConfig("sbt", Some(Version(1, 2, 3)))))
 
     val timestampF: () => Long = () => 1234l
 
@@ -232,7 +188,7 @@ class DependenciesDataSourceSpec extends FreeSpec with Matchers with ScalaFuture
       }
 
 
-      dependenciesDataSource.persistDependenciesForAllRepositories(curatedDependencyConfig, timestampF, Nil, persisterF).futureValue
+      dependenciesDataSource.persistDependenciesForAllRepositories(curatedDependencyConfig, Nil, persisterF).futureValue
 
       callsToPersisterF.size shouldBe 3
 
@@ -262,7 +218,7 @@ class DependenciesDataSourceSpec extends FreeSpec with Matchers with ScalaFuture
       }
 
 
-      dependenciesDataSource.persistDependenciesForAllRepositories(curatedDependencyConfig, timestampF, Nil, persisterF).futureValue
+      dependenciesDataSource.persistDependenciesForAllRepositories(curatedDependencyConfig, Nil, persisterF).futureValue
 
       callsToPersisterF.size shouldBe 1
 
@@ -286,7 +242,7 @@ class DependenciesDataSourceSpec extends FreeSpec with Matchers with ScalaFuture
       }
 
       val currentDependencyEntries = Seq(MongoRepositoryDependencies("changed-repo7", Nil, Nil, Nil, Some(toDate(changedRepoStoredLastGitUpdateDate))))
-      dependenciesDataSource.persistDependenciesForAllRepositories(curatedDependencyConfig, timestampF, currentDependencyEntries, persisterF).futureValue
+      dependenciesDataSource.persistDependenciesForAllRepositories(curatedDependencyConfig, currentDependencyEntries, persisterF).futureValue
 
       callsToPersisterF.size shouldBe 1
       getDependencies(callsToPersisterF, "changed-repo7").lastGitUpdateDate.value shouldBe toDate(changedRepoLastGitUpdateDate)
@@ -303,12 +259,12 @@ class DependenciesDataSourceSpec extends FreeSpec with Matchers with ScalaFuture
       }
 
       val currentDependencyEntries = Seq(MongoRepositoryDependencies("unchanged-repo6", Nil, Nil, Nil, Some(toDate(unchangedRepoStoredLastGitUpdateDate))))
-      dependenciesDataSource.persistDependenciesForAllRepositories(curatedDependencyConfig, timestampF, currentDependencyEntries, persisterF).futureValue
+      dependenciesDataSource.persistDependenciesForAllRepositories(curatedDependencyConfig, currentDependencyEntries, persisterF).futureValue
 
       callsToPersisterF.size shouldBe 0
     }
 
-    def base64(s: String) =  Base64.getEncoder.withoutPadding().encodeToString(s.getBytes())
+    def base64(s: String) = Base64.getEncoder.withoutPadding().encodeToString(s.getBytes())
 
 
     val mockedGithubEnterpriseApiClient = mock[GithubApiClient]
@@ -325,11 +281,10 @@ class DependenciesDataSourceSpec extends FreeSpec with Matchers with ScalaFuture
     when(mockedGithubOpenApiClient.repositoryService).thenReturn(mockedRepositoryService)
     val mockedRepository = mock[Repository]
     when(mockedRepositoryService.getRepository(any(), any())).thenReturn(mockedRepository)
-    when(mockedRepository.getPushedAt).thenReturn(now)
+    when(mockedRepository.getPushedAt).thenReturn(nowAsDate)
 
 
-
-    val dataSource = new DependenciesDataSource(servicesStub, teamsAndRepositoriesStub(Seq("repo1", "repo2", "repo3")), getMockedConfig()) {
+    val dataSource = new DependenciesDataSource(teamsAndRepositoriesStub(Seq("repo1", "repo2", "repo3")), getMockedConfig(), testTimestampGenerator) {
 
       override lazy val gitEnterpriseClient = mockedGithubEnterpriseApiClient
       override lazy val gitOpenClient = mockedGithubOpenApiClient
@@ -374,17 +329,17 @@ class DependenciesDataSourceSpec extends FreeSpec with Matchers with ScalaFuture
       when(mockedExtendedContentsServiceForEnterprise.getContents(any(), any())).thenReturn(List(new RepositoryContents().setContent(base64(enterpriseContents))).asJava)
 
       var callsToPersisterF = ListBuffer.empty[MongoRepositoryDependencies]
-      val persisterF:MongoRepositoryDependencies => Future[MongoRepositoryDependencies] = { repositoryLibraryDependencies =>
+      val persisterF: MongoRepositoryDependencies => Future[MongoRepositoryDependencies] = { repositoryLibraryDependencies =>
         callsToPersisterF += repositoryLibraryDependencies
         Future.successful(repositoryLibraryDependencies)
       }
 
-      dataSource.persistDependenciesForAllRepositories(curatedDependencyConfig, timestampF, Nil, persisterF).futureValue
+      dataSource.persistDependenciesForAllRepositories(curatedDependencyConfig, Nil, persisterF).futureValue
 
       callsToPersisterF should contain theSameElementsAs Seq(
-        MongoRepositoryDependencies("repo1", Seq(LibraryDependency("library1", Version(1, 0, 0)), LibraryDependency("library2", Version(2, 0, 0)), LibraryDependency("library3", Version(3, 0, 0))), Nil, Nil, Some(now), 1234),
-        MongoRepositoryDependencies("repo2", Seq(LibraryDependency("library1", Version(1, 0, 0)), LibraryDependency("library2", Version(2, 0, 0)), LibraryDependency("library3", Version(3, 0, 0))), Nil, Nil, Some(now), 1234),
-        MongoRepositoryDependencies("repo3", Seq(LibraryDependency("library1", Version(1, 0, 0)), LibraryDependency("library2", Version(2, 0, 0)), LibraryDependency("library3", Version(3, 0, 0))), Nil, Nil, Some(now), 1234)
+        MongoRepositoryDependencies("repo1", Seq(LibraryDependency("library1", Version(1, 0, 0)), LibraryDependency("library2", Version(2, 0, 0)), LibraryDependency("library3", Version(3, 0, 0))), Nil, Nil, Some(nowAsDate), stubbedTime),
+        MongoRepositoryDependencies("repo2", Seq(LibraryDependency("library1", Version(1, 0, 0)), LibraryDependency("library2", Version(2, 0, 0)), LibraryDependency("library3", Version(3, 0, 0))), Nil, Nil, Some(nowAsDate), stubbedTime),
+        MongoRepositoryDependencies("repo3", Seq(LibraryDependency("library1", Version(1, 0, 0)), LibraryDependency("library2", Version(2, 0, 0)), LibraryDependency("library3", Version(3, 0, 0))), Nil, Nil, Some(nowAsDate), stubbedTime)
       )
     }
 
@@ -409,18 +364,18 @@ class DependenciesDataSourceSpec extends FreeSpec with Matchers with ScalaFuture
       when(mockedExtendedContentsServiceForEnterprise.getContents(any(), any())).thenReturn(List(new RepositoryContents().setContent(base64(enterpriseContents))).asJava)
 
       var callsToPersisterF = ListBuffer.empty[MongoRepositoryDependencies]
-      val persisterF:MongoRepositoryDependencies => Future[MongoRepositoryDependencies] = { repositoryLibraryDependencies =>
+      val persisterF: MongoRepositoryDependencies => Future[MongoRepositoryDependencies] = { repositoryLibraryDependencies =>
         callsToPersisterF += repositoryLibraryDependencies
         Future.successful(repositoryLibraryDependencies)
       }
 
 
-      dataSource.persistDependenciesForAllRepositories(curatedDependencyConfig, timestampF, Nil, persisterF).futureValue
+      dataSource.persistDependenciesForAllRepositories(curatedDependencyConfig, Nil, persisterF).futureValue
 
       callsToPersisterF should contain theSameElementsAs List(
-        MongoRepositoryDependencies("repo1", List(LibraryDependency("library1", Version(1, 0, 0)), LibraryDependency("library3", Version(3, 0, 0))), Nil, Nil, Some(now), 1234),
-        MongoRepositoryDependencies("repo2", List(LibraryDependency("library1", Version(1, 0, 0)), LibraryDependency("library3", Version(3, 0, 0))), Nil, Nil, Some(now), 1234),
-        MongoRepositoryDependencies("repo3", List(LibraryDependency("library1", Version(1, 0, 0)), LibraryDependency("library3", Version(3, 0, 0))), Nil, Nil, Some(now), 1234)
+        MongoRepositoryDependencies("repo1", List(LibraryDependency("library1", Version(1, 0, 0)), LibraryDependency("library3", Version(3, 0, 0))), Nil, Nil, Some(nowAsDate), stubbedTime),
+        MongoRepositoryDependencies("repo2", List(LibraryDependency("library1", Version(1, 0, 0)), LibraryDependency("library3", Version(3, 0, 0))), Nil, Nil, Some(nowAsDate), stubbedTime),
+        MongoRepositoryDependencies("repo3", List(LibraryDependency("library1", Version(1, 0, 0)), LibraryDependency("library3", Version(3, 0, 0))), Nil, Nil, Some(nowAsDate), stubbedTime)
       )
     }
 
@@ -430,10 +385,10 @@ class DependenciesDataSourceSpec extends FreeSpec with Matchers with ScalaFuture
       var callCount = 0
 
       def findVersionsF_withRateLimitException(repoName: String, artifacts: Seq[String]): GithubSearchResults = {
-        if(callCount >= 2) {
+        if (callCount >= 2) {
           val requestError = mock[RequestError]
           when(requestError.getMessage).thenReturn("rate limit exceeded")
-          throw new RequestException(requestError, 403)
+          throw new RateLimitExceeded(new RequestException(requestError, 403))
         }
 
         callCount += 1
@@ -449,7 +404,6 @@ class DependenciesDataSourceSpec extends FreeSpec with Matchers with ScalaFuture
 
       dataSource.persistDependenciesForAllRepositories(
         curatedDependencyConfig = curatedDependencyConfig,
-        timeStampGenerator = timestampF,
         currentDependencyEntries = Nil,
         persisterF = rlp => Future.successful(rlp)).futureValue
 
@@ -462,21 +416,20 @@ class DependenciesDataSourceSpec extends FreeSpec with Matchers with ScalaFuture
       var callsToPersisterF = ListBuffer.empty[MongoRepositoryDependencies]
 
       val dataSource = prepareUnderTestClass(Seq(githubStubForMultiArtifacts), Seq("repo1", "repo2", "repo3", "repo4"))
-      val persisterF:MongoRepositoryDependencies => Future[MongoRepositoryDependencies] = { repositoryLibraryDependencies =>
+      val persisterF: MongoRepositoryDependencies => Future[MongoRepositoryDependencies] = { repositoryLibraryDependencies =>
         callsToPersisterF += repositoryLibraryDependencies
         Future.successful(repositoryLibraryDependencies)
       }
 
 
       val dependenciesAlreadyInDb = Seq(
-        MongoRepositoryDependencies("repo1",Nil, Nil, Nil, None),
-        MongoRepositoryDependencies("repo3",Nil, Nil, Nil, None)
+        MongoRepositoryDependencies("repo1", Nil, Nil, Nil, None),
+        MongoRepositoryDependencies("repo3", Nil, Nil, Nil, None)
       )
 
 
       dataSource.persistDependenciesForAllRepositories(
         curatedDependencyConfig = curatedDependencyConfig,
-        timeStampGenerator = timestampF,
         currentDependencyEntries = dependenciesAlreadyInDb,
         persisterF = persisterF).futureValue
 
@@ -490,7 +443,7 @@ class DependenciesDataSourceSpec extends FreeSpec with Matchers with ScalaFuture
 
       val dataSource = prepareUnderTestClass(Seq(githubStubForMultiArtifacts), Seq("repo1", "repo2", "repo3", "repo4"))
 
-      val persisterF:MongoRepositoryDependencies => Future[MongoRepositoryDependencies] = { repositoryLibraryDependencies =>
+      val persisterF: MongoRepositoryDependencies => Future[MongoRepositoryDependencies] = { repositoryLibraryDependencies =>
         callsToPersisterF += repositoryLibraryDependencies
         Future.successful(repositoryLibraryDependencies)
       }
@@ -504,7 +457,6 @@ class DependenciesDataSourceSpec extends FreeSpec with Matchers with ScalaFuture
 
       dataSource.persistDependenciesForAllRepositories(
         curatedDependencyConfig = curatedDependencyConfig,
-        timeStampGenerator = timestampF,
         currentDependencyEntries = dependenciesAlreadyInDb,
         persisterF = persisterF).futureValue
 
@@ -519,10 +471,10 @@ class DependenciesDataSourceSpec extends FreeSpec with Matchers with ScalaFuture
 
   "getLatestLibrariesVersions" - {
     val githubStubForLibraryVersions = new GithubStub(Map(), None,
-      Map("library1" -> Version(1,0,0), "library2" -> Version(2,0,0), "library3" -> Version(3,0,0)))
+      Map("library1" -> Version(1, 0, 0), "library2" -> Version(2, 0, 0), "library3" -> Version(3, 0, 0)))
 
 
-    def extractLibVersion(results: Seq[LibraryVersion], lib:String): Option[Version] =
+    def extractLibVersion(results: Seq[LibraryVersion], lib: String): Option[Version] =
       results.filter(_.libraryName == lib).head.version
 
     "should get the latest library version" in {
@@ -535,9 +487,9 @@ class DependenciesDataSourceSpec extends FreeSpec with Matchers with ScalaFuture
       // 3 is for "library1", "library2" and "library3"
       results.size shouldBe 3
 
-      extractLibVersion(results, "library1") shouldBe Some(Version(1,0,0))
-      extractLibVersion(results, "library2") shouldBe Some(Version(2,0,0))
-      extractLibVersion(results, "library3") shouldBe Some(Version(3,0,0))
+      extractLibVersion(results, "library1") shouldBe Some(Version(1, 0, 0))
+      extractLibVersion(results, "library2") shouldBe Some(Version(2, 0, 0))
+      extractLibVersion(results, "library3") shouldBe Some(Version(3, 0, 0))
 
     }
 
@@ -554,14 +506,14 @@ class DependenciesDataSourceSpec extends FreeSpec with Matchers with ScalaFuture
     )
 
 
-    def extractSbtPluginVersion(results: Seq[SbtPluginVersion], lib:String): Option[Version] =
+    def extractSbtPluginVersion(results: Seq[SbtPluginVersion], lib: String): Option[Version] =
       results.filter(_.sbtPluginName == lib).head.version
 
     "should get the latest sbt plugin version" in {
       val curatedListOfSbtPluginConfigs = Seq(
-        SbtPluginConfig("org",  "sbtplugin1", Some(Version(1,2,3))),
-        SbtPluginConfig("org",  "sbtplugin2", Some(Version(1,2,3))),
-        SbtPluginConfig("org",  "sbtplugin3", Some(Version(1,2,3)))
+        SbtPluginConfig("org", "sbtplugin1", Some(Version(1, 2, 3))),
+        SbtPluginConfig("org", "sbtplugin2", Some(Version(1, 2, 3))),
+        SbtPluginConfig("org", "sbtplugin3", Some(Version(1, 2, 3)))
       )
 
       val dataSource = prepareUnderTestClass(Seq(githubStubForSbtpluginVersions), Seq("repo1", "repo2", "repo3"))
@@ -571,32 +523,28 @@ class DependenciesDataSourceSpec extends FreeSpec with Matchers with ScalaFuture
       // 3 is for "sbtplugin1", "sbtplugin2" and "sbtplugin3"
       results.size shouldBe 3
 
-      extractSbtPluginVersion(results, "sbtplugin1") shouldBe Some(Version(1,0,0))
-      extractSbtPluginVersion(results, "sbtplugin2") shouldBe Some(Version(2,0,0))
-      extractSbtPluginVersion(results, "sbtplugin3") shouldBe Some(Version(3,0,0))
+      extractSbtPluginVersion(results, "sbtplugin1") shouldBe Some(Version(1, 0, 0))
+      extractSbtPluginVersion(results, "sbtplugin2") shouldBe Some(Version(2, 0, 0))
+      extractSbtPluginVersion(results, "sbtplugin3") shouldBe Some(Version(3, 0, 0))
 
     }
 
   }
 
-  "GithubOpen" - {
-    "should look at appDependencies.scala before build.sbt" in {
-
-    }
-  }
 
   private def prepareUnderTestClass(stubbedGithubs: Seq[Github], repositories: Seq[String]): DependenciesDataSource = {
     val mockedDependenciesConfig: ServiceDependenciesConfig = getMockedConfig()
 
-    val dependenciesDataSource = new DependenciesDataSource(servicesStub, teamsAndRepositoriesStub(repositories), mockedDependenciesConfig) {
+    val dependenciesDataSource = new DependenciesDataSource(teamsAndRepositoriesStub(repositories), mockedDependenciesConfig, testTimestampGenerator) {
       override protected[servicedependencies] lazy val githubs = stubbedGithubs
     }
     dependenciesDataSource
   }
 
 
-  private def teamsAndRepositoriesStub(repositories: Seq[String]) = new TeamsAndRepositoriesDataSource {
+  private def teamsAndRepositoriesStub(repositories: Seq[String]) = new TeamsAndRepositoriesDataSource(mock[ServiceDependenciesConfig]) {
     override def getTeamsForRepository(repositoryName: String): Future[Seq[String]] = ???
+
     override def getTeamsForServices(): Future[Map[String, Seq[String]]] =
       Future.successful(serviceTeams)
 
@@ -614,7 +562,6 @@ class DependenciesDataSourceSpec extends FreeSpec with Matchers with ScalaFuture
 
     when(mockedGitApiConfig.apiUrl).thenReturn("http://some.api.url")
     when(mockedGitApiConfig.key).thenReturn("key-12345")
-//    when(mockedDependenciesConfig.buildFiles).thenReturn(Seq("buildFile1", "buildFile2"))
     mockedDependenciesConfig
   }
 }
