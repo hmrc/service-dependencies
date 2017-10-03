@@ -75,7 +75,7 @@ class ServiceDependenciesController @Inject()(configuration: Configuration,
 
 
   def reloadLibraryDependenciesForAllRepositories() = Action {
-    dependencyDataUpdatingService.reloadCurrentDependenciesDataForAllRepositories().map(_ => logger.info(s"""${">" * 10} done ${"<" * 10}""")).onFailure{
+    dependencyDataUpdatingService.reloadCurrentDependenciesDataForAllRepositories().map(_ => logger.debug(s"""${">" * 10} done ${"<" * 10}""")).onFailure{
       case ex => throw new RuntimeException("reload of dependencies failed", ex)
     }
     doneResult

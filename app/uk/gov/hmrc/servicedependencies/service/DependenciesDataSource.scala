@@ -122,7 +122,7 @@ class DependenciesDataSource @Inject()(teamsAndRepositoriesDataSource: TeamsAndR
 
       remainingRepos match {
         case repoName :: xs =>
-          logger.info(s"getting dependencies for: $repoName")
+          logger.debug(s"getting dependencies for: $repoName")
           val maybeLastGitUpdateDate = currentDependencyEntries.find(_.repositoryName == repoName).flatMap(_.lastGitUpdateDate)
           val errorOrDependencies: Either[RateLimitExceeded, Option[DependenciesFromGitHub]] = getDependenciesFromGitHub(repoName, curatedDependencyConfig, maybeLastGitUpdateDate)
 
@@ -161,7 +161,7 @@ class DependenciesDataSource @Inject()(teamsAndRepositoriesDataSource: TeamsAndR
       s match {
         case Failure(x) => logger.error("Error!", x)
         case Success(g) =>
-          logger.info(s"finished ordering with ${g.mkString(", ")}")
+          logger.debug(s"finished ordering with ${g.mkString(", ")}")
       }
       s
     }

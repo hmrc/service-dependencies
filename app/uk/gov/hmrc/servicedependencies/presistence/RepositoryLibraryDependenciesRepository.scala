@@ -50,7 +50,7 @@ class RepositoryLibraryDependenciesRepository @Inject()(mongo: ReactiveMongoComp
 
   def update(repositoryLibraryDependencies: MongoRepositoryDependencies): Future[MongoRepositoryDependencies] = {
 
-    logger.info(s"writing to mongo: $repositoryLibraryDependencies")
+    logger.debug(s"writing to mongo: $repositoryLibraryDependencies")
 
     withTimerAndCounter("mongo.update") {
       for {
@@ -75,7 +75,7 @@ class RepositoryLibraryDependenciesRepository @Inject()(mongo: ReactiveMongoComp
   }
 
   def getAllEntries: Future[Seq[MongoRepositoryDependencies]] = {
-    logger.info("retrieving getAll current dependencies")
+    logger.debug("retrieving getAll current dependencies")
     findAll()
   }
 

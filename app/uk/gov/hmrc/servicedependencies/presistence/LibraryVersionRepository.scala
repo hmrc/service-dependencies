@@ -50,7 +50,7 @@ class LibraryVersionRepository @Inject() (mongo: ReactiveMongoComponent)
   def update(libraryVersion: MongoLibraryVersion): Future[MongoLibraryVersion] = {
 
 
-    logger.info(s"writing $libraryVersion")
+    logger.debug(s"writing $libraryVersion")
     withTimerAndCounter("mongo.update") {
       for {
         update <- collection.update(selector = Json.obj("libraryName" -> Json.toJson(libraryVersion.libraryName)), update = libraryVersion, upsert = true)
