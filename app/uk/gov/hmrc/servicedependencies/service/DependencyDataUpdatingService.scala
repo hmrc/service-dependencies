@@ -84,7 +84,7 @@ class DependencyDataUpdatingService @Inject()(curatedDependencyConfigProvider: C
 
   private def runMongoUpdate[T](mongoLock: MongoLock)(f: => Future[T]) =
     mongoLock.tryLock {
-      logger.info(s"Starting mongo update for ${mongoLock.lockId}")
+      logger.debug(s"Starting mongo update for ${mongoLock.lockId}")
       f
     } map {
       _.getOrElse {
@@ -93,7 +93,7 @@ class DependencyDataUpdatingService @Inject()(curatedDependencyConfigProvider: C
         throw new RuntimeException(message)
       }
     } map { r =>
-      logger.info(s"mongo update completed ${mongoLock.lockId}")
+      logger.debug(s"mongo update completed ${mongoLock.lockId}")
       r
     }
 

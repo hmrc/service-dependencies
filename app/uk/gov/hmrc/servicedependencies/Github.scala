@@ -61,14 +61,14 @@ abstract class Github(val buildFilePaths: Seq[String]) {
 
     maybeLastGitUpdateDate.fold(Option.empty[GithubSearchResults]) { lastGitPushDate =>
       storedLastUpdateDateO.fold {
-        logger.info(s"No previous record for repository ($repoName) detected in database. processing...")
+        logger.debug(s"No previous record for repository ($repoName) detected in database. processing...")
         performGithubSearch(maybeLastGitUpdateDate)
       } { storedLastUpdateDate =>
         if (lastGitPushDate.after(storedLastUpdateDate)) {
-          logger.info(s"Changes to repository ($repoName) detected. processing...")
+          logger.debug(s"Changes to repository ($repoName) detected. processing...")
           performGithubSearch(maybeLastGitUpdateDate)
         } else {
-          logger.info(s"No changes for repository ($repoName). Skipping....")
+          logger.debug(s"No changes for repository ($repoName). Skipping....")
           //!@Some(GithubSearchResults(sbtPlugins = Map.empty, libraries = Map.empty, others = Map.empty, lastGitUpdateDate = maybeLastGitUpdateDate))
           Option.empty[GithubSearchResults]
         }

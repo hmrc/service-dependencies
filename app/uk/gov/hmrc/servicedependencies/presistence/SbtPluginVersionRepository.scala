@@ -50,7 +50,7 @@ class SbtPluginVersionRepository @Inject()(mongo: ReactiveMongoComponent)
   def update(sbtPluginVersion: MongoSbtPluginVersion): Future[MongoSbtPluginVersion] = {
 
 
-    logger.info(s"writing $sbtPluginVersion")
+    logger.debug(s"writing $sbtPluginVersion")
     withTimerAndCounter("mongo.update") {
       for {
         update <- collection.update(selector = Json.obj("sbtPluginName" -> Json.toJson(sbtPluginVersion.sbtPluginName)), update = sbtPluginVersion, upsert = true)
