@@ -50,7 +50,7 @@ class RepositoryLibraryDependenciesRepository @Inject()(mongo: ReactiveMongoComp
 
   def update(repositoryLibraryDependencies: MongoRepositoryDependencies): Future[MongoRepositoryDependencies] = {
 
-    logger.debug(s"writing to mongo: $repositoryLibraryDependencies")
+    logger.info(s"writing to mongo: $repositoryLibraryDependencies")
 
     withTimerAndCounter("mongo.update") {
       for {

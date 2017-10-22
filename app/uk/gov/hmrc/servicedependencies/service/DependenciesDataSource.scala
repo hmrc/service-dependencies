@@ -135,6 +135,7 @@ class DependenciesDataSource @Inject()(teamsAndRepositoriesDataSource: TeamsAndR
             errorOrDependencies.right.get match {
               case None =>
                 //!@persisterF(MongoRepositoryDependencies(repoName, Nil, Nil, Nil, maybeLastGitUpdateDate))
+                logger.info(s"No dependencies found for: $repoName")
                 getDependencies(xs, acc)
               case Some(dependencies) =>
                 val repositoryLibraryDependencies =
