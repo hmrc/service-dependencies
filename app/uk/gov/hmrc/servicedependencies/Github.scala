@@ -28,7 +28,7 @@ import uk.gov.hmrc.servicedependencies.model.{GithubSearchResults, SbtPluginDepe
 import uk.gov.hmrc.servicedependencies.util.{Max, VersionParser}
 
 import scala.annotation.tailrec
-import scala.util.Try
+import scala.util.{Failure, Success, Try}
 
 abstract class Github(val buildFilePaths: Seq[String]) {
   private val org = "HMRC"
@@ -80,7 +80,12 @@ abstract class Github(val buildFilePaths: Seq[String]) {
   }
 
   protected def getLastGithubPushDate(repoName: String): Option[Date] = {
-    Try(gh.repositoryService.getRepository(org, repoName).getPushedAt).toOption
+    Try(gh.repositoryService.getRepository(org, repoName).getPushedAt) match {
+      case Success(date) => Some(date)
+      case Failure(t) =>
+        logger.error("getLastGithubPushDate failed:", t)
+        None
+    }
   }
 
   def findArtifactVersion(serviceName: String, artifact: String, versionOption: Option[String]): Option[Version] = {
