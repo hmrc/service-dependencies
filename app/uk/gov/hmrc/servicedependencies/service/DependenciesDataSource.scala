@@ -21,7 +21,7 @@ import java.util.Date
 import com.google.inject.{Inject, Singleton}
 import org.slf4j.LoggerFactory
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import uk.gov.hmrc.githubclient.GithubApiClient
+import uk.gov.hmrc.githubclient.{APIRateLimitExceededException, GithubApiClient}
 import uk.gov.hmrc.servicedependencies._
 import uk.gov.hmrc.servicedependencies.config.ServiceDependenciesConfig
 import uk.gov.hmrc.servicedependencies.config.model.{CuratedDependencyConfig, SbtPluginConfig}
@@ -124,7 +124,7 @@ class DependenciesDataSource @Inject()(teamsAndRepositoriesDataSource: TeamsAndR
         case repoName :: xs =>
           logger.info(s"getting dependencies for: $repoName")
           val maybeLastGitUpdateDate = currentDependencyEntries.find(_.repositoryName == repoName).flatMap(_.lastGitUpdateDate)
-          val errorOrDependencies: Either[RateLimitExceeded, Option[DependenciesFromGitHub]] = getDependenciesFromGitHub(repoName, curatedDependencyConfig, maybeLastGitUpdateDate)
+          val errorOrDependencies: Either[APIRateLimitExceededException, Option[DependenciesFromGitHub]] = getDependenciesFromGitHub(repoName, curatedDependencyConfig, maybeLastGitUpdateDate)
 
           if (errorOrDependencies.isLeft) {
             logger.error(s"Something went wrong: ${errorOrDependencies.left.get.getMessage}")
@@ -178,7 +178,7 @@ class DependenciesDataSource @Inject()(teamsAndRepositoriesDataSource: TeamsAndR
 
   private def getDependenciesFromGitHub(repoName: String,
                                         curatedDependencyConfig: CuratedDependencyConfig,
-                                        maybeLastCommitDate: Option[Date]): Either[RateLimitExceeded, Option[DependenciesFromGitHub]] = {
+                                        maybeLastCommitDate: Option[Date]): Either[APIRateLimitExceededException, Option[DependenciesFromGitHub]] = {
 
     def getLibraryDependencies(githubSearchResults: GithubSearchResults) = githubSearchResults.libraries.foldLeft(Seq.empty[LibraryDependency]) {
       case (acc, (library, mayBeVersion)) =>
@@ -196,7 +196,7 @@ class DependenciesDataSource @Inject()(teamsAndRepositoriesDataSource: TeamsAndR
     }
 
     // caching the rate limiting exception
-    Either.catchOnly[RateLimitExceeded] {
+    Either.catchOnly[APIRateLimitExceededException] {
       searchGithubsForArtifacts(repoName, curatedDependencyConfig, maybeLastCommitDate).map { searchResults =>
         DependenciesFromGitHub(
           getLibraryDependencies(searchResults),
@@ -217,12 +217,17 @@ class DependenciesDataSource @Inject()(teamsAndRepositoriesDataSource: TeamsAndR
       remainingGithubs match {
         case github :: xs =>
 
+          logger.debug(s"searching ${github.gh} for dependencies of $repositoryName")
           val mayBeGithubSearchResults = github.findVersionsForMultipleArtifacts(repositoryName, curatedDependencyConfig, maybeLastCommitDate)
 
-          if (mayBeGithubSearchResults.isEmpty)
+          if (mayBeGithubSearchResults.isEmpty) {
+            logger.debug(s"github (${github.gh}) search returned no results for $repositoryName")
             searchRemainingGitHubs(xs)
-          else
+          }
+          else {
+            logger.debug(s"github (${github.gh}) search returned these results for $repositoryName: ${mayBeGithubSearchResults.get}")
             mayBeGithubSearchResults
+          }
         case Nil => None
       }
     }

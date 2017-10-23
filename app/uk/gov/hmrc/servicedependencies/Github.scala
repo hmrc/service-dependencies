@@ -22,15 +22,13 @@ import org.apache.commons.codec.binary.Base64
 import org.eclipse.egit.github.core.client.RequestException
 import org.eclipse.egit.github.core.{IRepositoryIdProvider, RepositoryContents}
 import org.slf4j.LoggerFactory
-import uk.gov.hmrc.githubclient.GithubApiClient
+import uk.gov.hmrc.githubclient.{APIRateLimitExceededException, GithubApiClient}
 import uk.gov.hmrc.servicedependencies.config.model.{CuratedDependencyConfig, OtherDependencyConfig, SbtPluginConfig}
 import uk.gov.hmrc.servicedependencies.model.{GithubSearchResults, SbtPluginDependency, Version}
 import uk.gov.hmrc.servicedependencies.util.{Max, VersionParser}
 
 import scala.annotation.tailrec
 import scala.util.Try
-
-class RateLimitExceeded(exception: Throwable) extends Throwable(exception)
 
 abstract class Github(val buildFilePaths: Seq[String]) {
   private val org = "HMRC"
@@ -59,7 +57,10 @@ abstract class Github(val buildFilePaths: Seq[String]) {
 
     val maybeLastGitUpdateDate: Option[Date] = getLastGithubPushDate(repoName)
 
-    maybeLastGitUpdateDate.fold(Option.empty[GithubSearchResults]) { lastGitPushDate =>
+    maybeLastGitUpdateDate.fold {
+      logger.debug(s"no previous push date found for $repoName")
+      Option.empty[GithubSearchResults]
+    } { lastGitPushDate =>
       storedLastUpdateDateO.fold {
         logger.debug(s"No previous record for repository ($repoName) detected in database. processing...")
         performGithubSearch(maybeLastGitUpdateDate)
@@ -169,12 +170,10 @@ abstract class Github(val buildFilePaths: Seq[String]) {
       else transformF(results.get(0))
     }
     catch {
-      case (ex: RequestException) =>
-        if (ex.getMessage.toLowerCase().contains("rate limit exceeded"))
-          throw new RateLimitExceeded(ex)
-        else {
+      case (ex: APIRateLimitExceededException) =>
+          throw ex
+      case _ =>
           Map.empty
-        }
     }
 
 

@@ -27,7 +27,7 @@ import org.mockito.Mockito.when
 import org.scalatest.concurrent.{IntegrationPatience, ScalaFutures}
 import org.scalatest.mock.MockitoSugar
 import org.scalatest.{FreeSpec, Matchers, OptionValues}
-import uk.gov.hmrc.githubclient.{ExtendedContentsService, GithubApiClient}
+import uk.gov.hmrc.githubclient.{APIRateLimitExceededException, ExtendedContentsService, GithubApiClient}
 import uk.gov.hmrc.servicedependencies.TestHelpers.toDate
 import uk.gov.hmrc.servicedependencies.config._
 import uk.gov.hmrc.servicedependencies.config.model.{CuratedDependencyConfig, OtherDependencyConfig, SbtPluginConfig}
@@ -388,7 +388,7 @@ class DependenciesDataSourceSpec extends FreeSpec with Matchers with ScalaFuture
         if (callCount >= 2) {
           val requestError = mock[RequestError]
           when(requestError.getMessage).thenReturn("rate limit exceeded")
-          throw new RateLimitExceeded(new RequestException(requestError, 403))
+          throw new APIRateLimitExceededException(new RequestException(requestError, 403))
         }
 
         callCount += 1
