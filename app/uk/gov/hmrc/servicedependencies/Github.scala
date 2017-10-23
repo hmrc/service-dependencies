@@ -83,7 +83,7 @@ abstract class Github(val buildFilePaths: Seq[String]) {
     Try(gh.repositoryService.getRepository(org, repoName).getPushedAt) match {
       case Success(date) => Some(date)
       case Failure(t) =>
-        logger.error("getLastGithubPushDate failed:", t)
+        logger.error(s"getLastGithubPushDate failed for $repoName:", t)
         None
     }
   }
