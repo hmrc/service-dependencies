@@ -41,6 +41,7 @@ abstract class Github(val buildFilePaths: Seq[String]) {
 
   lazy val logger = LoggerFactory.getLogger(this.getClass)
 
+  lazy val isOpen = false
 
   def findVersionsForMultipleArtifacts(repoName: String,
                                        curatedDependencyConfig: CuratedDependencyConfig,
