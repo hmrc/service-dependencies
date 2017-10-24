@@ -10,7 +10,7 @@
 
     <logger name="uk.gov" level="DEBUG"/>
 
-    <root level="DEBUG">
+    <root level="${logger.application:-INFO}">
         <appender-ref ref="STDOUT"/>
     </root>
 </configuration>
