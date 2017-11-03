@@ -57,10 +57,6 @@ class DependenciesDataSource @Inject()(teamsAndRepositoriesDataSource: TeamsAndR
     override val gh = gitOpenClient
 
     override def resolveTag(version: String) = s"$tagPrefix$version"
-
-    override lazy val isOpen = true
-
-    override val toString = "GithubOpen"
   }
 
   object GithubEnterprise extends Github(buildFiles) {
@@ -68,8 +64,6 @@ class DependenciesDataSource @Inject()(teamsAndRepositoriesDataSource: TeamsAndR
     override val gh = gitEnterpriseClient
 
     override def resolveTag(version: String) = s"$tagPrefix$version"
-
-    override val toString = "GithubEnterprise"
   }
 
   lazy val githubEnterprise = GithubEnterprise
@@ -223,15 +217,15 @@ class DependenciesDataSource @Inject()(teamsAndRepositoriesDataSource: TeamsAndR
       remainingGithubs match {
         case github :: xs =>
 
-          logger.debug(s"searching ${github} for dependencies of $repositoryName")
+          logger.debug(s"searching ${github.gh} for dependencies of $repositoryName")
           val mayBeGithubSearchResults = github.findVersionsForMultipleArtifacts(repositoryName, curatedDependencyConfig, maybeLastCommitDate)
 
           if (mayBeGithubSearchResults.isEmpty) {
-            logger.debug(s"github (${github}) search returned no results for $repositoryName")
+            logger.debug(s"github (${github.gh}) search returned no results for $repositoryName")
             searchRemainingGitHubs(xs)
           }
           else {
-            logger.debug(s"github (${github}) search returned these results for $repositoryName: ${mayBeGithubSearchResults.get}")
+            logger.debug(s"github (${github.gh}) search returned these results for $repositoryName: ${mayBeGithubSearchResults.get}")
             mayBeGithubSearchResults
           }
         case Nil => None
