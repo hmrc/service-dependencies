@@ -19,9 +19,10 @@ package uk.gov.hmrc.servicedependencies.service
 import java.util.Date
 
 import com.google.inject.{Inject, Singleton}
+import com.kenshoo.play.metrics.Metrics
 import org.slf4j.LoggerFactory
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import uk.gov.hmrc.githubclient.{APIRateLimitExceededException, GithubApiClient}
+import uk.gov.hmrc.githubclient.{APIRateLimitExceededException, GithubApiClient, GithubClientMetrics}
 import uk.gov.hmrc.servicedependencies._
 import uk.gov.hmrc.servicedependencies.config.ServiceDependenciesConfig
 import uk.gov.hmrc.servicedependencies.config.model.{CuratedDependencyConfig, SbtPluginConfig}
@@ -35,12 +36,22 @@ import scala.util.{Failure, Success}
 @Singleton
 class DependenciesDataSource @Inject()(teamsAndRepositoriesDataSource: TeamsAndRepositoriesDataSource,
                                        config: ServiceDependenciesConfig,
-                                       timestampGenerator: TimestampGenerator) {
+                                       timestampGenerator: TimestampGenerator,
+                                       metrics: Metrics) {
 
   lazy val logger = LoggerFactory.getLogger(this.getClass)
 
-  lazy val gitEnterpriseClient: GithubApiClient = GithubApiClient(config.githubApiEnterpriseConfig.apiUrl, config.githubApiEnterpriseConfig.key)
-  lazy val gitOpenClient: GithubApiClient = GithubApiClient(config.githubApiOpenConfig.apiUrl, config.githubApiOpenConfig.key)
+  class GithubMetrics(override val metricName: String) extends GithubClientMetrics {
+
+    val registry = metrics.defaultRegistry
+
+    override def increment(name: String): Unit = {
+      registry.counter(name).inc()
+    }
+  }
+
+  lazy val gitEnterpriseClient: GithubApiClient = GithubApiClient(config.githubApiEnterpriseConfig.apiUrl, config.githubApiEnterpriseConfig.key, new GithubMetrics("github.enterprise"))
+  lazy val gitOpenClient: GithubApiClient = GithubApiClient(config.githubApiOpenConfig.apiUrl, config.githubApiOpenConfig.key, new GithubMetrics("github.open"))
 
   val buildFiles = Seq(
     "project/AppDependencies.scala",

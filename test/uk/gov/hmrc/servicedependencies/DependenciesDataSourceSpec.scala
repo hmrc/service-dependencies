@@ -19,6 +19,7 @@ package uk.gov.hmrc.servicedependencies
 import java.time.LocalDateTime
 import java.util.{Base64, Date}
 
+import com.kenshoo.play.metrics.{DisabledMetrics, Metrics}
 import org.eclipse.egit.github.core.client.RequestException
 import org.eclipse.egit.github.core.service.RepositoryService
 import org.eclipse.egit.github.core.{Repository, RepositoryContents, RequestError}
@@ -283,8 +284,7 @@ class DependenciesDataSourceSpec extends FreeSpec with Matchers with ScalaFuture
     when(mockedRepositoryService.getRepository(any(), any())).thenReturn(mockedRepository)
     when(mockedRepository.getPushedAt).thenReturn(nowAsDate)
 
-
-    val dataSource = new DependenciesDataSource(teamsAndRepositoriesStub(Seq("repo1", "repo2", "repo3")), getMockedConfig(), testTimestampGenerator) {
+    val dataSource = new DependenciesDataSource(teamsAndRepositoriesStub(Seq("repo1", "repo2", "repo3")), getMockedConfig(), testTimestampGenerator, new DisabledMetrics()) {
 
       override lazy val gitEnterpriseClient = mockedGithubEnterpriseApiClient
       override lazy val gitOpenClient = mockedGithubOpenApiClient
@@ -535,7 +535,7 @@ class DependenciesDataSourceSpec extends FreeSpec with Matchers with ScalaFuture
   private def prepareUnderTestClass(stubbedGithubs: Seq[Github], repositories: Seq[String]): DependenciesDataSource = {
     val mockedDependenciesConfig: ServiceDependenciesConfig = getMockedConfig()
 
-    val dependenciesDataSource = new DependenciesDataSource(teamsAndRepositoriesStub(repositories), mockedDependenciesConfig, testTimestampGenerator) {
+    val dependenciesDataSource = new DependenciesDataSource(teamsAndRepositoriesStub(repositories), mockedDependenciesConfig, testTimestampGenerator, new DisabledMetrics()) {
       override protected[servicedependencies] lazy val githubs = stubbedGithubs
     }
     dependenciesDataSource
