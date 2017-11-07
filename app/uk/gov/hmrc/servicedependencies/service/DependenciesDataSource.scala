@@ -26,6 +26,7 @@ import uk.gov.hmrc.githubclient.{APIRateLimitExceededException, GithubApiClient,
 import uk.gov.hmrc.servicedependencies._
 import uk.gov.hmrc.servicedependencies.config.ServiceDependenciesConfig
 import uk.gov.hmrc.servicedependencies.config.model.{CuratedDependencyConfig, SbtPluginConfig}
+import uk.gov.hmrc.servicedependencies.connector.TeamsAndRepositoriesConnector
 import uk.gov.hmrc.servicedependencies.model._
 import uk.gov.hmrc.servicedependencies.util.Max
 
@@ -34,7 +35,7 @@ import scala.concurrent.Future
 import scala.util.{Failure, Success}
 
 @Singleton
-class DependenciesDataSource @Inject()(teamsAndRepositoriesDataSource: TeamsAndRepositoriesDataSource,
+class DependenciesDataSource @Inject()(teamsAndRepositoriesDataSource: TeamsAndRepositoriesConnector,
                                        config: ServiceDependenciesConfig,
                                        timestampGenerator: TimestampGenerator,
                                        metrics: Metrics) {

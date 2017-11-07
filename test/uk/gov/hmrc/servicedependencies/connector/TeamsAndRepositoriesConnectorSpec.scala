@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.servicedependencies
+package uk.gov.hmrc.servicedependencies.connector
 
 import com.github.tomakehurst.wiremock.client.WireMock._
 import org.scalatest.concurrent.{IntegrationPatience, ScalaFutures}
@@ -22,10 +22,10 @@ import org.scalatest.mock.MockitoSugar
 import org.scalatest.{BeforeAndAfterAll, FreeSpec, MustMatchers}
 import org.scalatestplus.play.OneAppPerSuite
 import play.api.Configuration
+import uk.gov.hmrc.servicedependencies.WireMockConfig
 import uk.gov.hmrc.servicedependencies.config.ServiceDependenciesConfig
-import uk.gov.hmrc.servicedependencies.service.TeamsAndRepositoriesDataSource
 
-class TeamsAndRepositoriesDataSourceSpec
+class TeamsAndRepositoriesConnectorSpec
   extends FreeSpec
   with MustMatchers
   with ScalaFutures
@@ -83,7 +83,7 @@ class TeamsAndRepositoriesDataSourceSpec
 
   "Retrieving a list of teams for a repository" - {
     "correctly parse json response" in {
-      val services = new TeamsAndRepositoriesDataSource(stubbedConfig)
+      val services = new TeamsAndRepositoriesConnector(stubbedConfig)
 
       val teams = services.getTeamsForRepository("test-repo").futureValue
       teams mustBe Seq("PlatOps", "Webops")
@@ -92,7 +92,7 @@ class TeamsAndRepositoriesDataSourceSpec
 
   "Retrieving a list of teams for all services" - {
     "correctly parse json response" in {
-      val services = new TeamsAndRepositoriesDataSource(stubbedConfig)
+      val services = new TeamsAndRepositoriesConnector(stubbedConfig)
 
       val teams = services.getTeamsForServices().futureValue
       teams mustBe Map(
@@ -103,7 +103,7 @@ class TeamsAndRepositoriesDataSourceSpec
 
   "Retrieving a list of all repositories" - {
     "correctly parse json response" in {
-      val services = new TeamsAndRepositoriesDataSource(stubbedConfig)
+      val services = new TeamsAndRepositoriesConnector(stubbedConfig)
 
       val repositories = services.getAllRepositories().futureValue
       repositories mustBe Seq("test-repo", "another-repo")

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.servicedependencies.service
+package uk.gov.hmrc.servicedependencies.connector
 
 import com.google.inject.{Inject, Singleton}
 import uk.gov.hmrc.HttpClient
@@ -23,7 +23,7 @@ import uk.gov.hmrc.servicedependencies.config.ServiceDependenciesConfig
 import scala.concurrent.Future
 
 @Singleton
-class TeamsAndRepositoriesDataSource @Inject() (serviceConfiguration: ServiceDependenciesConfig) {
+class TeamsAndRepositoriesConnector @Inject()(serviceConfiguration: ServiceDependenciesConfig) {
 
   val teamsAndRepositoriesApiBase = serviceConfiguration.teamsAndRepositoriesServiceUrl
 

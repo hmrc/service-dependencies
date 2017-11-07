@@ -14,12 +14,19 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.servicedependencies
+package uk.gov.hmrc.servicedependencies.util
 
-import org.scalatest.concurrent.ScalaFutures
-import org.scalatest.time.{Millis, Seconds, Span}
+import org.scalatest.{FreeSpec, MustMatchers}
+import uk.gov.hmrc.servicedependencies.model.Version
 
-trait DefaultPatienceConfig {
-  self : ScalaFutures =>
-  implicit override val patienceConfig = PatienceConfig(timeout = Span(5, Seconds), interval = Span(5, Millis))
+class PluginsSbtFileVersionParserSpec extends FreeSpec with MustMatchers {
+
+  val targetArtifact = "sbt-plugin"
+
+  "Parses sbt-plugin version in line" in {
+    val fileContents = """addSbtPlugin("com.typesafe.play" % "sbt-plugin" % "2.3.10")}""".stripMargin
+
+    PluginsSbtFileVersionParser.parse(fileContents, targetArtifact) mustBe Some(Version(2, 3, 10))
+  }
+
 }

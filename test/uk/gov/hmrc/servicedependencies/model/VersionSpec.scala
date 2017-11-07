@@ -14,10 +14,9 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.servicedependencies
+package uk.gov.hmrc.servicedependencies.model
 
 import org.scalatest.{FreeSpec, MustMatchers}
-import uk.gov.hmrc.servicedependencies.model.Version
 
 class VersionSpec
   extends FreeSpec

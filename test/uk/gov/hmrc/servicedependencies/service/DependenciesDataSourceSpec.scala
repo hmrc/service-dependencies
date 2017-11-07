@@ -14,12 +14,12 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.servicedependencies
+package uk.gov.hmrc.servicedependencies.service
 
 import java.time.LocalDateTime
 import java.util.{Base64, Date}
 
-import com.kenshoo.play.metrics.{DisabledMetrics, Metrics}
+import com.kenshoo.play.metrics.DisabledMetrics
 import org.eclipse.egit.github.core.client.RequestException
 import org.eclipse.egit.github.core.service.RepositoryService
 import org.eclipse.egit.github.core.{Repository, RepositoryContents, RequestError}
@@ -29,11 +29,12 @@ import org.scalatest.concurrent.{IntegrationPatience, ScalaFutures}
 import org.scalatest.mock.MockitoSugar
 import org.scalatest.{FreeSpec, Matchers, OptionValues}
 import uk.gov.hmrc.githubclient.{APIRateLimitExceededException, ExtendedContentsService, GithubApiClient}
+import uk.gov.hmrc.servicedependencies.Github
 import uk.gov.hmrc.servicedependencies.TestHelpers.toDate
 import uk.gov.hmrc.servicedependencies.config._
 import uk.gov.hmrc.servicedependencies.config.model.{CuratedDependencyConfig, OtherDependencyConfig, SbtPluginConfig}
+import uk.gov.hmrc.servicedependencies.connector.TeamsAndRepositoriesConnector
 import uk.gov.hmrc.servicedependencies.model._
-import uk.gov.hmrc.servicedependencies.service._
 
 import scala.collection.JavaConverters.seqAsJavaListConverter
 import scala.collection.mutable.ListBuffer
@@ -542,7 +543,7 @@ class DependenciesDataSourceSpec extends FreeSpec with Matchers with ScalaFuture
   }
 
 
-  private def teamsAndRepositoriesStub(repositories: Seq[String]) = new TeamsAndRepositoriesDataSource(mock[ServiceDependenciesConfig]) {
+  private def teamsAndRepositoriesStub(repositories: Seq[String]) = new TeamsAndRepositoriesConnector(mock[ServiceDependenciesConfig]) {
     override def getTeamsForRepository(repositoryName: String): Future[Seq[String]] = ???
 
     override def getTeamsForServices(): Future[Map[String, Seq[String]]] =
