@@ -29,11 +29,13 @@ import org.scalatest.concurrent.{IntegrationPatience, ScalaFutures}
 import org.scalatest.mock.MockitoSugar
 import org.scalatest.{FreeSpec, Matchers, OptionValues}
 import uk.gov.hmrc.githubclient.{APIRateLimitExceededException, ExtendedContentsService, GithubApiClient}
+import uk.gov.hmrc.http.HeaderCarrier
+import uk.gov.hmrc.play.bootstrap.http.HttpClient
 import uk.gov.hmrc.servicedependencies.Github
 import uk.gov.hmrc.servicedependencies.TestHelpers.toDate
 import uk.gov.hmrc.servicedependencies.config._
 import uk.gov.hmrc.servicedependencies.config.model.{CuratedDependencyConfig, OtherDependencyConfig, SbtPluginConfig}
-import uk.gov.hmrc.servicedependencies.connector.TeamsAndRepositoriesConnector
+import uk.gov.hmrc.servicedependencies.connector.{TeamsAndRepositoriesConnector, model}
 import uk.gov.hmrc.servicedependencies.model._
 
 import scala.collection.JavaConverters.seqAsJavaListConverter
@@ -46,6 +48,8 @@ class DependenciesDataSourceSpec extends FreeSpec with Matchers with ScalaFuture
   val testTimestampGenerator = new TimestampGenerator {
     override def now = stubbedTime
   }
+
+  implicit val hc = HeaderCarrier()
 
   type FindVersionsForMultipleArtifactsF = (String, Seq[String]) => GithubSearchResults
 
@@ -543,13 +547,14 @@ class DependenciesDataSourceSpec extends FreeSpec with Matchers with ScalaFuture
   }
 
 
-  private def teamsAndRepositoriesStub(repositories: Seq[String]) = new TeamsAndRepositoriesConnector(mock[ServiceDependenciesConfig]) {
-    override def getTeamsForRepository(repositoryName: String): Future[Seq[String]] = ???
+  private def teamsAndRepositoriesStub(repositories: Seq[String]) = new TeamsAndRepositoriesConnector(mock[HttpClient], mock[ServiceDependenciesConfig]) {
 
-    override def getTeamsForServices(): Future[Map[String, Seq[String]]] =
+    override def getRepository(repositoryName: String)(implicit hc: HeaderCarrier): Future[model.Repository] = ???
+
+    override def getTeamsForServices()(implicit hc: HeaderCarrier) : Future[Map[String, Seq[String]]] =
       Future.successful(serviceTeams)
 
-    override def getAllRepositories(): Future[Seq[String]] =
+    override def getAllRepositories()(implicit hc: HeaderCarrier): Future[Seq[String]] =
       Future.successful(repositories)
   }
 

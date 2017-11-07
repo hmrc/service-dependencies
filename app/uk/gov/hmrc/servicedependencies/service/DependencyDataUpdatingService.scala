@@ -19,6 +19,7 @@ package uk.gov.hmrc.servicedependencies.service
 import com.google.inject.{Inject, Singleton}
 import org.slf4j.LoggerFactory
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
+import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.lock.LockFormats.Lock
 import uk.gov.hmrc.servicedependencies.config.CuratedDependencyConfigProvider
 import uk.gov.hmrc.servicedependencies.controller.model.{Dependencies, Dependency}
@@ -70,7 +71,7 @@ class DependencyDataUpdatingService @Inject()(curatedDependencyConfigProvider: C
     }
   }
 
-  def reloadCurrentDependenciesDataForAllRepositories(): Future[Seq[MongoRepositoryDependencies]] = {
+  def reloadCurrentDependenciesDataForAllRepositories()(implicit hc: HeaderCarrier): Future[Seq[MongoRepositoryDependencies]] = {
     logger.debug("reloading current dependencies data for all repositories...")
     runMongoUpdate(repositoryDependencyMongoLock) {
       for {

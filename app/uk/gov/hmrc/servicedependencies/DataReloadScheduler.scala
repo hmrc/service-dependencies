@@ -24,8 +24,9 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import uk.gov.hmrc.servicedependencies.service.UpdateScheduler
 
 import scala.concurrent.Future
-
 import javax.inject.Inject
+
+import uk.gov.hmrc.http.HeaderCarrier
 
 @Singleton
 class DataReloadScheduler @Inject()(app: Application, configuration: Configuration, updateScheduler: UpdateScheduler, applicationLifecycle: ApplicationLifecycle) {
@@ -38,13 +39,15 @@ class DataReloadScheduler @Inject()(app: Application, configuration: Configurati
 
   Logger.info(s"Starting microservice : $appName : in mode : ${app.mode}")
 
+  implicit val hc: HeaderCarrier = HeaderCarrier()
+
   scheduleRepositoryDependencyDataReloadSchedule(app)
   scheduleLibraryVersionDataReloadSchedule(app)
   scheduleSbtPluginVersionDataReloadSchedule(app)
 
   import scala.concurrent.duration._
 
-  private def scheduleRepositoryDependencyDataReloadSchedule(app: Application) = {
+  private def scheduleRepositoryDependencyDataReloadSchedule(app: Application)(implicit hc: HeaderCarrier) = {
     val maybeReloadInterval = app.configuration.getInt(repositoryDependenciesReloadIntervalKey)
 
     maybeReloadInterval.fold {
@@ -56,7 +59,7 @@ class DataReloadScheduler @Inject()(app: Application, configuration: Configurati
     }
   }
 
-  private def scheduleLibraryVersionDataReloadSchedule(app: Application) = {
+  private def scheduleLibraryVersionDataReloadSchedule(app: Application)(implicit hc: HeaderCarrier) = {
     val maybeReloadInterval = app.configuration.getInt(libraryReloadIntervalKey)
 
     maybeReloadInterval.fold {
@@ -68,7 +71,7 @@ class DataReloadScheduler @Inject()(app: Application, configuration: Configurati
     }
   }
 
-  private def scheduleSbtPluginVersionDataReloadSchedule(app: Application) = {
+  private def scheduleSbtPluginVersionDataReloadSchedule(app: Application)(implicit hc: HeaderCarrier) = {
     val maybeReloadInterval = app.configuration.getInt(sbtPluginReloadIntervalKey)
 
     maybeReloadInterval.fold {

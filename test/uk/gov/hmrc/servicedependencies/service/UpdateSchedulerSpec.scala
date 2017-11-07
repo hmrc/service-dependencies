@@ -22,6 +22,7 @@ import org.scalatest.mock.MockitoSugar
 import org.scalatest.{BeforeAndAfterEach, FunSpec, Matchers}
 import org.scalatestplus.play.OneAppPerTest
 import play.libs.Akka
+import uk.gov.hmrc.http.HeaderCarrier
 
 import scala.concurrent.duration._
 
@@ -36,6 +37,7 @@ class UpdateSchedulerSpec extends FunSpec
     def resetCallCount: Unit = count = 0
   }
 
+  implicit val hc = HeaderCarrier()
 
   def schedulerF(dependencyDataUpdatingService: DependencyDataUpdatingService) = new UpdateScheduler(Akka.system(), dependencyDataUpdatingService)
 

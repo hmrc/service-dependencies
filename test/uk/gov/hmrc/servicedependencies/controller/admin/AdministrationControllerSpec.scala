@@ -16,6 +16,7 @@
 
 package uk.gov.hmrc.servicedependencies.controller.admin
 
+import org.mockito.ArgumentMatchers.any
 import org.mockito.Mockito.{verify, when}
 import org.scalatest.concurrent.{IntegrationPatience, ScalaFutures}
 import org.scalatest.mock.MockitoSugar
@@ -43,13 +44,13 @@ class AdministrationControllerSpec
     "should call the reloadLibraryDependencyDataForAllRepositories on the service" in {
       val mockedLibraryDependencyDataUpdatingService = mock[DependencyDataUpdatingService]
 
-      when(mockedLibraryDependencyDataUpdatingService.reloadCurrentDependenciesDataForAllRepositories())
+      when(mockedLibraryDependencyDataUpdatingService.reloadCurrentDependenciesDataForAllRepositories()(any()))
         .thenReturn(Future.successful(Seq.empty[MongoRepositoryDependencies]))
 
       val controller = new AdministrationController(mockedLibraryDependencyDataUpdatingService)
       controller.reloadLibraryDependenciesForAllRepositories().apply(FakeRequest())
 
-      verify(mockedLibraryDependencyDataUpdatingService).reloadCurrentDependenciesDataForAllRepositories()
+      verify(mockedLibraryDependencyDataUpdatingService).reloadCurrentDependenciesDataForAllRepositories()(any())
     }
   }
 }

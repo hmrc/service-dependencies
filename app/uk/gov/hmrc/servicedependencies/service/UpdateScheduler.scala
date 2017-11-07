@@ -20,7 +20,7 @@ import akka.actor.{ActorSystem, Cancellable}
 import com.google.inject.{Inject, Singleton}
 import play.Logger
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import uk.gov.hmrc.servicedependencies.controller.ServiceDependenciesController
+import uk.gov.hmrc.http.HeaderCarrier
 
 import scala.concurrent.duration.{FiniteDuration, _}
 
@@ -28,8 +28,7 @@ import scala.concurrent.duration.{FiniteDuration, _}
 @Singleton
 class UpdateScheduler @Inject()(actorSystem: ActorSystem, dependencyDataUpdatingService: DependencyDataUpdatingService) {
 
-
-  def startUpdatingLibraryDependencyData(interval: FiniteDuration): Cancellable = {
+  def startUpdatingLibraryDependencyData(interval: FiniteDuration)(implicit hc: HeaderCarrier): Cancellable = {
     Logger.info(s"Initialising libraryDependencyDataReloader update every $interval")
 
     val scheduler = actorSystem.scheduler.schedule(100 milliseconds, interval) {
@@ -39,7 +38,7 @@ class UpdateScheduler @Inject()(actorSystem: ActorSystem, dependencyDataUpdating
     scheduler
   }
 
-  def startUpdatingLibraryData(interval: FiniteDuration): Cancellable = {
+  def startUpdatingLibraryData(interval: FiniteDuration)(implicit hc: HeaderCarrier): Cancellable = {
     Logger.info(s"Initialising libraryDataReloader update every $interval")
 
     val scheduler = actorSystem.scheduler.schedule(100 milliseconds, interval) {
@@ -49,7 +48,7 @@ class UpdateScheduler @Inject()(actorSystem: ActorSystem, dependencyDataUpdating
     scheduler
   }
 
-  def startUpdatingSbtPluingVersionData(interval: FiniteDuration): Cancellable = {
+  def startUpdatingSbtPluingVersionData(interval: FiniteDuration)(implicit hc: HeaderCarrier): Cancellable = {
     Logger.info(s"Initialising SbtPluginDataReloader update every $interval")
 
     val scheduler = actorSystem.scheduler.schedule(100 milliseconds, interval) {

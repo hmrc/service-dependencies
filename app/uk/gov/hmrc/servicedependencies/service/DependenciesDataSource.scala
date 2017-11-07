@@ -23,6 +23,7 @@ import com.kenshoo.play.metrics.Metrics
 import org.slf4j.LoggerFactory
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import uk.gov.hmrc.githubclient.{APIRateLimitExceededException, GithubApiClient, GithubClientMetrics}
+import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.servicedependencies._
 import uk.gov.hmrc.servicedependencies.config.ServiceDependenciesConfig
 import uk.gov.hmrc.servicedependencies.config.model.{CuratedDependencyConfig, SbtPluginConfig}
@@ -119,7 +120,7 @@ class DependenciesDataSource @Inject()(teamsAndRepositoriesDataSource: TeamsAndR
 
   def persistDependenciesForAllRepositories(curatedDependencyConfig: CuratedDependencyConfig,
                                             currentDependencyEntries: Seq[MongoRepositoryDependencies],
-                                            persisterF: (MongoRepositoryDependencies) => Future[MongoRepositoryDependencies]): Future[Seq[MongoRepositoryDependencies]] = {
+                                            persisterF: (MongoRepositoryDependencies) => Future[MongoRepositoryDependencies])(implicit hc: HeaderCarrier): Future[Seq[MongoRepositoryDependencies]] = {
 
     val eventualAllRepos: Future[Seq[String]] = teamsAndRepositoriesDataSource.getAllRepositories()
 

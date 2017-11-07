@@ -23,6 +23,7 @@ import org.scalatest.mock.MockitoSugar
 import org.scalatest.{BeforeAndAfterEach, FunSpec, Matchers, OptionValues}
 import org.scalatestplus.play.OneAppPerTest
 import reactivemongo.api.DB
+import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.mongo.Awaiting
 import uk.gov.hmrc.servicedependencies.config.CuratedDependencyConfigProvider
 import uk.gov.hmrc.servicedependencies.config.model.{CuratedDependencyConfig, OtherDependencyConfig, SbtPluginConfig}
@@ -111,18 +112,18 @@ class DependencyDataUpdatingServiceSpec extends FunSpec with MockitoSugar with M
       val mongoRepositoryDependencies = Seq(MongoRepositoryDependencies("repoXyz", Nil, Nil, Nil, None))
 
       when(underTest.repositoryLibraryDependenciesRepository.getAllEntries).thenReturn(Future.successful(mongoRepositoryDependencies))
-      when(underTest.dependenciesDataSource.persistDependenciesForAllRepositories(any(), any(), any())).thenReturn(Future.successful(mongoRepositoryDependencies))
+      when(underTest.dependenciesDataSource.persistDependenciesForAllRepositories(any(), any(), any())(any())).thenReturn(Future.successful(mongoRepositoryDependencies))
 
-      underTest.testDependencyUpdatingService.reloadCurrentDependenciesDataForAllRepositories().futureValue shouldBe mongoRepositoryDependencies
+      underTest.testDependencyUpdatingService.reloadCurrentDependenciesDataForAllRepositories()(HeaderCarrier()).futureValue shouldBe mongoRepositoryDependencies
 
       //!@ TODO: how do we verify the persister function being called (last param)?
-      verify(underTest.dependenciesDataSource, times(1)).persistDependenciesForAllRepositories(eqTo(underTest.testDependencyUpdatingService.curatedDependencyConfig), eqTo(mongoRepositoryDependencies), any())
+      verify(underTest.dependenciesDataSource, times(1)).persistDependenciesForAllRepositories(eqTo(underTest.testDependencyUpdatingService.curatedDependencyConfig), eqTo(mongoRepositoryDependencies), any())(any())
     }
 
     it("should not call the dependency update function if the mongo is locked") {
       val underTest = new TestDependencyDataUpdatingService(denyingTestMongoLockBuilder, curatedDependencyConfig)
 
-      a[RuntimeException] should be thrownBy underTest.testDependencyUpdatingService.reloadCurrentDependenciesDataForAllRepositories()
+      a[RuntimeException] should be thrownBy underTest.testDependencyUpdatingService.reloadCurrentDependenciesDataForAllRepositories()(HeaderCarrier())
 
       verifyZeroInteractions(underTest.repositoryLibraryDependenciesRepository)
 

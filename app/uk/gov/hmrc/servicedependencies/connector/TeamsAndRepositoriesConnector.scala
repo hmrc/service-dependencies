@@ -17,28 +17,29 @@
 package uk.gov.hmrc.servicedependencies.connector
 
 import com.google.inject.{Inject, Singleton}
-import uk.gov.hmrc.HttpClient
+import uk.gov.hmrc.http.HeaderCarrier
+import uk.gov.hmrc.play.bootstrap.http.HttpClient
 import uk.gov.hmrc.servicedependencies.config.ServiceDependenciesConfig
+import uk.gov.hmrc.servicedependencies.connector.model.Repository
 
 import scala.concurrent.Future
+import uk.gov.hmrc.play.http.logging.MdcLoggingExecutionContext._
 
 @Singleton
-class TeamsAndRepositoriesConnector @Inject()(serviceConfiguration: ServiceDependenciesConfig) {
+class TeamsAndRepositoriesConnector @Inject()(httpClient: HttpClient, serviceConfiguration: ServiceDependenciesConfig) {
 
   val teamsAndRepositoriesApiBase = serviceConfiguration.teamsAndRepositoriesServiceUrl
 
-  def getTeamsForRepository(repositoryName: String): Future[Seq[String]] =
-    HttpClient.getWithParsing[List[String]](s"$teamsAndRepositoriesApiBase/api/repositories/$repositoryName"){json =>
-      (json \ "teamNames").as[List[String]]
-    }
+  implicit val formats = Repository.f
 
-  def getTeamsForServices(): Future[Map[String, Seq[String]]] =
-    HttpClient.getWithParsing[Map[String, Seq[String]]](s"$teamsAndRepositoriesApiBase/api/services?teamDetails=true") { json =>
-      json.as[Map[String, Seq[String]]]
-    }
+  def getRepository(repositoryName: String)(implicit hc: HeaderCarrier): Future[Repository] =
+    httpClient.GET[Repository](s"$teamsAndRepositoriesApiBase/api/repositories/$repositoryName")
 
-  def getAllRepositories(): Future[Seq[String]] =
-    HttpClient.getWithParsing[Seq[String]](s"$teamsAndRepositoriesApiBase/api/repositories") { json =>
-    (json \\ "name").map(_.as[String])// this is the json: http://catalogue.tax.service.gov.uk/api/repositories
-  }
+  def getTeamsForServices()(implicit hc: HeaderCarrier): Future[Map[String, Seq[String]]] =
+    httpClient.GET[Map[String, Seq[String]]](s"$teamsAndRepositoriesApiBase/api/services?teamDetails=true")
+
+  def getAllRepositories()(implicit hc: HeaderCarrier): Future[Seq[String]] =
+    httpClient.GET(s"$teamsAndRepositoriesApiBase/api/repositories") map { response =>
+      (response.json \\ "name").map(_.as[String])
+    }
 }

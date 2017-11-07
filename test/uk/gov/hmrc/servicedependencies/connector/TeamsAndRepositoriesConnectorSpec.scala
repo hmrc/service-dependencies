@@ -22,6 +22,10 @@ import org.scalatest.mock.MockitoSugar
 import org.scalatest.{BeforeAndAfterAll, FreeSpec, MustMatchers}
 import org.scalatestplus.play.OneAppPerSuite
 import play.api.Configuration
+import uk.gov.hmrc.http._
+import uk.gov.hmrc.http.hooks.HttpHook
+import uk.gov.hmrc.play.bootstrap.http.HttpClient
+import uk.gov.hmrc.play.http.ws.WSHttp
 import uk.gov.hmrc.servicedependencies.WireMockConfig
 import uk.gov.hmrc.servicedependencies.config.ServiceDependenciesConfig
 
@@ -36,12 +40,15 @@ class TeamsAndRepositoriesConnectorSpec
 
   val wireMock = new WireMockConfig(8080)
 
+  implicit val hc = HeaderCarrier()
+
   override protected def beforeAll(): Unit = {
     wireMock.start()
 
     stubRepositories("test-repo")
     stubAllRepositories()
     stubServices()
+
   }
 
   private def stubRepositories(repositoryName: String) = {
@@ -81,18 +88,22 @@ class TeamsAndRepositoriesConnectorSpec
     override lazy val teamsAndRepositoriesServiceUrl = wireMock.host()
   }
 
-  "Retrieving a list of teams for a repository" - {
-    "correctly parse json response" in {
-      val services = new TeamsAndRepositoriesConnector(stubbedConfig)
+  val httpClient = new HttpClient with WSHttp {
+    override val hooks: Seq[HttpHook] = NoneRequired
+  }
 
-      val teams = services.getTeamsForRepository("test-repo").futureValue
-      teams mustBe Seq("PlatOps", "Webops")
+  "Retrieving a repository" - {
+    "correctly parse json response" in {
+      val services = new TeamsAndRepositoriesConnector(httpClient, stubbedConfig)
+
+      val repository = services.getRepository("test-repo").futureValue
+      repository.teamNames mustBe Seq("PlatOps", "Webops")
     }
   }
 
   "Retrieving a list of teams for all services" - {
     "correctly parse json response" in {
-      val services = new TeamsAndRepositoriesConnector(stubbedConfig)
+      val services = new TeamsAndRepositoriesConnector(httpClient, stubbedConfig)
 
       val teams = services.getTeamsForServices().futureValue
       teams mustBe Map(
@@ -103,7 +114,7 @@ class TeamsAndRepositoriesConnectorSpec
 
   "Retrieving a list of all repositories" - {
     "correctly parse json response" in {
-      val services = new TeamsAndRepositoriesConnector(stubbedConfig)
+      val services = new TeamsAndRepositoriesConnector(httpClient, stubbedConfig)
 
       val repositories = services.getAllRepositories().futureValue
       repositories mustBe Seq("test-repo", "another-repo")

@@ -14,12 +14,15 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc
+package uk.gov.hmrc.servicedependencies.connector.model
 
-import java.util.concurrent.Executors
+import org.joda.time.DateTime
+import play.api.libs.json.Json
 
-import scala.concurrent.{ExecutionContext, ExecutionContextExecutor}
+case class GithubInstance(name: String, displayName: String)
+case class Repository(name: String, lastActive: DateTime, teamNames: Seq[String], githubUrls: Seq[GithubInstance])
 
-object BlockingIOExecutionContext {
-  implicit val executionContext: ExecutionContextExecutor = ExecutionContext.fromExecutor(Executors.newFixedThreadPool(10))
+object Repository {
+  implicit val gi = Json.format[GithubInstance]
+  implicit val f = Json.format[Repository]
 }
