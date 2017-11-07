@@ -21,9 +21,9 @@ import org.slf4j.LoggerFactory
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import uk.gov.hmrc.lock.LockFormats.Lock
 import uk.gov.hmrc.servicedependencies.config.CuratedDependencyConfigProvider
+import uk.gov.hmrc.servicedependencies.controller.model.{Dependencies, Dependency}
 import uk.gov.hmrc.servicedependencies.model._
 import uk.gov.hmrc.servicedependencies.presistence._
-import uk.gov.hmrc.servicedependencies.{LibraryDependencyState, OtherDependencyState, RepositoryDependencies, SbtPluginDependencyState}
 
 import scala.concurrent.Future
 
@@ -106,7 +106,7 @@ class DependencyDataUpdatingService @Inject()(curatedDependencyConfigProvider: C
       val latestVersion = mayBeExternalSbtPlugin.map(_.version.getOrElse(throw new RuntimeException(s"External sbt plugin ($mayBeExternalSbtPlugin) must specify the (latest) version")))
         .orElse(sbtPluginReferences.find(mlv => mlv.sbtPluginName == sbtPluginDependency.sbtPluginName).flatMap(_.version))
 
-      SbtPluginDependencyState(
+      Dependency(
         sbtPluginDependency.sbtPluginName,
         sbtPluginDependency.currentVersion,
         latestVersion,
@@ -117,34 +117,34 @@ class DependencyDataUpdatingService @Inject()(curatedDependencyConfigProvider: C
   }
 
 
-  def getDependencyVersionsForRepository(repositoryName: String): Future[Option[RepositoryDependencies]] =
+  def getDependencyVersionsForRepository(repositoryName: String): Future[Option[Dependencies]] =
     for {
       dependencies <- repositoryLibraryDependenciesRepository.getForRepository(repositoryName)
       libraryReferences <- libraryVersionRepository.getAllEntries
       sbtPluginReferences <- sbtPluginVersionRepository.getAllEntries
     } yield
       dependencies.map { dep =>
-        RepositoryDependencies(
+        Dependencies(
           repositoryName,
-          dep.libraryDependencies.map(d => LibraryDependencyState(d.libraryName, d.currentVersion, libraryReferences.find(mlv => mlv.libraryName == d.libraryName).flatMap(_.version))),
+          dep.libraryDependencies.map(d => Dependency(d.libraryName, d.currentVersion, libraryReferences.find(mlv => mlv.libraryName == d.libraryName).flatMap(_.version))),
           getSbtPluginDependencyState(dep, sbtPluginReferences),
-          dep.otherDependencies.map(other => OtherDependencyState(other.name, other.currentVersion, curatedDependencyConfig.otherDependencies.find(_.name == "sbt").flatMap(_.latestVersion))),
+          dep.otherDependencies.map(other => Dependency(other.name, other.currentVersion, curatedDependencyConfig.otherDependencies.find(_.name == "sbt").flatMap(_.latestVersion))),
           dep.lastGitUpdateDate
         )
       }
 
-  def getDependencyVersionsForAllRepositories(): Future[Seq[RepositoryDependencies]] =
+  def getDependencyVersionsForAllRepositories(): Future[Seq[Dependencies]] =
     for {
       allDependencies <- repositoryLibraryDependenciesRepository.getAllEntries
       libraryReferences <- libraryVersionRepository.getAllEntries
       sbtPluginReferences <- sbtPluginVersionRepository.getAllEntries
     } yield
       allDependencies.map { dep =>
-        RepositoryDependencies(
+        Dependencies(
           dep.repositoryName,
-          dep.libraryDependencies.map(d => LibraryDependencyState(d.libraryName, d.currentVersion, libraryReferences.find(mlv => mlv.libraryName == d.libraryName).flatMap(_.version))),
+          dep.libraryDependencies.map(d => Dependency(d.libraryName, d.currentVersion, libraryReferences.find(mlv => mlv.libraryName == d.libraryName).flatMap(_.version))),
           getSbtPluginDependencyState(dep, sbtPluginReferences),
-          dep.otherDependencies.map(other => OtherDependencyState(other.name, other.currentVersion, curatedDependencyConfig.otherDependencies.find(_.name == "sbt").flatMap(_.latestVersion))),
+          dep.otherDependencies.map(other => Dependency(other.name, other.currentVersion, curatedDependencyConfig.otherDependencies.find(_.name == "sbt").flatMap(_.latestVersion))),
           dep.lastGitUpdateDate
 
         )

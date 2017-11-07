@@ -20,7 +20,7 @@ import akka.actor.{ActorSystem, Cancellable}
 import com.google.inject.{Inject, Singleton}
 import play.Logger
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import uk.gov.hmrc.servicedependencies.ServiceDependenciesController
+import uk.gov.hmrc.servicedependencies.controller.ServiceDependenciesController
 
 import scala.concurrent.duration.{FiniteDuration, _}
 

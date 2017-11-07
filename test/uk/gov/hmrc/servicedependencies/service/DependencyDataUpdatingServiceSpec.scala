@@ -21,14 +21,12 @@ import org.mockito.Mockito._
 import org.scalatest.concurrent.{IntegrationPatience, ScalaFutures}
 import org.scalatest.mock.MockitoSugar
 import org.scalatest.{BeforeAndAfterEach, FunSpec, Matchers, OptionValues}
-import org.scalatestplus.play.{OneAppPerSuite, OneAppPerTest}
-import play.api.Application
-import play.api.inject.guice.GuiceApplicationBuilder
+import org.scalatestplus.play.OneAppPerTest
 import reactivemongo.api.DB
 import uk.gov.hmrc.mongo.Awaiting
+import uk.gov.hmrc.servicedependencies.config.CuratedDependencyConfigProvider
 import uk.gov.hmrc.servicedependencies.config.model.{CuratedDependencyConfig, OtherDependencyConfig, SbtPluginConfig}
-import uk.gov.hmrc.servicedependencies.config.{CuratedDependencyConfigProvider, ServiceDependenciesConfig}
-import uk.gov.hmrc.servicedependencies._
+import uk.gov.hmrc.servicedependencies.controller.model.{Dependencies, Dependency}
 import uk.gov.hmrc.servicedependencies.model._
 import uk.gov.hmrc.servicedependencies.presistence._
 
@@ -163,13 +161,13 @@ class DependencyDataUpdatingServiceSpec extends FunSpec with MockitoSugar with M
 
       verify(underTest.repositoryLibraryDependenciesRepository, times(1)).getForRepository(repositoryName)
 
-      maybeDependencies.value shouldBe RepositoryDependencies(repositoryName = repositoryName,
-        libraryDependenciesState = Seq(
-          LibraryDependencyState("lib1", Version(1, 0, 0), Some(Version(1, 1, 0))),
-          LibraryDependencyState("lib2", Version(2, 0, 0), Some(Version(2, 1, 0)))
+      maybeDependencies.value shouldBe Dependencies(repositoryName = repositoryName,
+        libraryDependencies = Seq(
+          Dependency("lib1", Version(1, 0, 0), Some(Version(1, 1, 0))),
+          Dependency("lib2", Version(2, 0, 0), Some(Version(2, 1, 0)))
         ),
-        sbtPluginsDependenciesState = Nil,
-        otherDependenciesState = Nil,
+        sbtPluginsDependencies = Nil,
+        otherDependencies = Nil,
         None
       )
 
@@ -202,11 +200,11 @@ class DependencyDataUpdatingServiceSpec extends FunSpec with MockitoSugar with M
 
       verify(underTest.repositoryLibraryDependenciesRepository, times(1)).getForRepository(repositoryName)
 
-      maybeDependencies.value shouldBe RepositoryDependencies(repositoryName,
+      maybeDependencies.value shouldBe Dependencies(repositoryName,
         Nil,
         Seq(
-          SbtPluginDependencyState("plugin1", Version(1, 0, 0), Some(Version(3, 1, 0)), false),
-          SbtPluginDependencyState("plugin2", Version(2, 0, 0), Some(Version(4, 1, 0)), false)
+          Dependency("plugin1", Version(1, 0, 0), Some(Version(3, 1, 0)), false),
+          Dependency("plugin2", Version(2, 0, 0), Some(Version(4, 1, 0)), false)
         ),
         Nil,
         None
@@ -247,13 +245,13 @@ class DependencyDataUpdatingServiceSpec extends FunSpec with MockitoSugar with M
 
       verify(underTest.repositoryLibraryDependenciesRepository, times(1)).getForRepository(repositoryName)
 
-      maybeDependencies.value shouldBe RepositoryDependencies(repositoryName = repositoryName,
-        libraryDependenciesState = Nil,
-        sbtPluginsDependenciesState = Seq(
-          SbtPluginDependencyState("internal-plugin", Version(1, 0, 0), Some(Version(3, 1, 0)), false),
-          SbtPluginDependencyState("external-plugin", Version(2, 0, 0), Some(Version(11, 22, 33)), true)
+      maybeDependencies.value shouldBe Dependencies(repositoryName = repositoryName,
+        libraryDependencies = Nil,
+        sbtPluginsDependencies = Seq(
+          Dependency("internal-plugin", Version(1, 0, 0), Some(Version(3, 1, 0)), false),
+          Dependency("external-plugin", Version(2, 0, 0), Some(Version(11, 22, 33)), true)
         ),
-        otherDependenciesState = Nil,
+        otherDependencies = Nil,
         None
       )
 
@@ -305,13 +303,13 @@ class DependencyDataUpdatingServiceSpec extends FunSpec with MockitoSugar with M
 
       verify(underTest.repositoryLibraryDependenciesRepository, times(1)).getForRepository(repositoryName)
 
-      maybeDependencies.value shouldBe RepositoryDependencies(repositoryName = repositoryName,
-        libraryDependenciesState = Seq(
-          LibraryDependencyState("lib1", Version(1, 0, 0), None),
-          LibraryDependencyState("lib2", Version(2, 0, 0), None)
+      maybeDependencies.value shouldBe Dependencies(repositoryName = repositoryName,
+        libraryDependencies = Seq(
+          Dependency("lib1", Version(1, 0, 0), None),
+          Dependency("lib2", Version(2, 0, 0), None)
         ),
-        sbtPluginsDependenciesState = Nil,
-        otherDependenciesState = Nil,
+        sbtPluginsDependencies = Nil,
+        otherDependencies = Nil,
         None
       )
 
@@ -381,27 +379,27 @@ class DependencyDataUpdatingServiceSpec extends FunSpec with MockitoSugar with M
       verify(underTest.repositoryLibraryDependenciesRepository, times(1)).getAllEntries
 
       maybeDependencies should contain theSameElementsAs Seq(
-        RepositoryDependencies(repositoryName = repository1,
-          libraryDependenciesState = Seq(
-            LibraryDependencyState("lib1", Version(1, 1, 0), Some(Version(3, 0, 0))),
-            LibraryDependencyState("lib2", Version(1, 2, 0), Some(Version(4, 0, 0)))
-          ), sbtPluginsDependenciesState = Seq(
-            SbtPluginDependencyState("plugin1", Version(10, 1, 0), Some(Version(30, 0, 0)), false),
-            SbtPluginDependencyState("plugin2", Version(10, 2, 0), Some(Version(40, 0, 0)), false)
-          ), otherDependenciesState = Seq(
-            OtherDependencyState("sbt", Version(0, 13, 1), Some(Version(100, 10, 1)))
+        Dependencies(repositoryName = repository1,
+          libraryDependencies = Seq(
+            Dependency("lib1", Version(1, 1, 0), Some(Version(3, 0, 0))),
+            Dependency("lib2", Version(1, 2, 0), Some(Version(4, 0, 0)))
+          ), sbtPluginsDependencies = Seq(
+            Dependency("plugin1", Version(10, 1, 0), Some(Version(30, 0, 0)), false),
+            Dependency("plugin2", Version(10, 2, 0), Some(Version(40, 0, 0)), false)
+          ), otherDependencies = Seq(
+            Dependency("sbt", Version(0, 13, 1), Some(Version(100, 10, 1)))
           ),
           None
         ),
-        RepositoryDependencies(repositoryName = repository2,
-          libraryDependenciesState = Seq(
-            LibraryDependencyState("lib1", Version(2, 1, 0), Some(Version(3, 0, 0))),
-            LibraryDependencyState("lib2", Version(2, 2, 0), Some(Version(4, 0, 0)))
-          ), sbtPluginsDependenciesState = Seq(
-            SbtPluginDependencyState("plugin1", Version(20, 1, 0), Some(Version(30, 0, 0)), false),
-            SbtPluginDependencyState("plugin2", Version(20, 2, 0), Some(Version(40, 0, 0)), false)
-          ), otherDependenciesState = Seq(
-            OtherDependencyState("sbt", Version(0, 13, 2), Some(Version(100, 10, 1)))
+        Dependencies(repositoryName = repository2,
+          libraryDependencies = Seq(
+            Dependency("lib1", Version(2, 1, 0), Some(Version(3, 0, 0))),
+            Dependency("lib2", Version(2, 2, 0), Some(Version(4, 0, 0)))
+          ), sbtPluginsDependencies = Seq(
+            Dependency("plugin1", Version(20, 1, 0), Some(Version(30, 0, 0)), false),
+            Dependency("plugin2", Version(20, 2, 0), Some(Version(40, 0, 0)), false)
+          ), otherDependencies = Seq(
+            Dependency("sbt", Version(0, 13, 2), Some(Version(100, 10, 1)))
           ),
           None
         )

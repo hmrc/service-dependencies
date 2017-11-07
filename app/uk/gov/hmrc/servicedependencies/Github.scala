@@ -175,10 +175,8 @@ abstract class Github(val buildFilePaths: Seq[String]) {
       else transformF(results.get(0))
     }
     catch {
-      case (ex: APIRateLimitExceededException) =>
-          throw ex
-      case _ =>
-          Map.empty
+      case (ex: APIRateLimitExceededException) => throw ex
+      case _: Throwable => Map.empty
     }
 
 

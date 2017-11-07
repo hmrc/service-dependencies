@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.servicedependencies
+package uk.gov.hmrc.servicedependencies.controller
 
 import org.mockito.ArgumentMatchers.any
 import org.mockito.Mockito
@@ -27,6 +27,7 @@ import play.api.Configuration
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
 import uk.gov.hmrc.servicedependencies.config.ServiceDependenciesConfig
+import uk.gov.hmrc.servicedependencies.controller.model.Dependencies
 import uk.gov.hmrc.servicedependencies.model.{MongoLibraryVersion, MongoRepositoryDependencies, Version}
 import uk.gov.hmrc.servicedependencies.service._
 
@@ -47,33 +48,16 @@ class ServiceDependenciesControllerSpec
     "should get dependency versions for a repository using the service" in new Setup {
       val mockedLibraryDependencyDataUpdatingService = mock[DependencyDataUpdatingService]
       val repoName = "repo1"
-      val repositoryDependencies = RepositoryDependencies(repoName, Nil, Nil, Nil, None)
+      val repositoryDependencies = Dependencies(repoName, Nil, Nil, Nil, None)
 
       when(mockedLibraryDependencyDataUpdatingService.getDependencyVersionsForRepository(any()))
         .thenReturn(Future.successful(Some(repositoryDependencies)))
 
       val result = makeServiceDependenciesImpl(mockedLibraryDependencyDataUpdatingService).getDependencyVersionsForRepository(repoName).apply(FakeRequest())
-      val maybeRepositoryDependencies = contentAsJson(result).asOpt[RepositoryDependencies]
+      val maybeRepositoryDependencies = contentAsJson(result).asOpt[Dependencies]
 
       maybeRepositoryDependencies.value shouldBe repositoryDependencies
       Mockito.verify(mockedLibraryDependencyDataUpdatingService).getDependencyVersionsForRepository(repoName)
-    }
-
-  }
-
-  "reloadLibraryDependenciesForAllRepositories" - {
-    "should call the reloadLibraryDependencyDataForAllRepositories on the service" in new Setup {
-      val mockedLibraryDependencyDataUpdatingService = mock[DependencyDataUpdatingService]
-      val repoName = "repo1"
-
-
-      when(mockedLibraryDependencyDataUpdatingService.reloadCurrentDependenciesDataForAllRepositories())
-        .thenReturn(Future.successful(Seq.empty[MongoRepositoryDependencies]))
-
-      val controller = makeServiceDependenciesImpl(mockedLibraryDependencyDataUpdatingService)
-      controller.reloadLibraryDependenciesForAllRepositories().apply(FakeRequest())
-
-      Mockito.verify(mockedLibraryDependencyDataUpdatingService).reloadCurrentDependenciesDataForAllRepositories()
     }
 
   }
@@ -103,16 +87,16 @@ class ServiceDependenciesControllerSpec
     "should get all dependencies using the service" in new Setup {
       val mockedLibraryDependencyDataUpdatingService = mock[DependencyDataUpdatingService]
       val libraryDependencies = Seq(
-        RepositoryDependencies("repo1", Nil, Nil, Nil, None),
-        RepositoryDependencies("repo2", Nil, Nil, Nil, None),
-        RepositoryDependencies("repo3", Nil, Nil, Nil, None)
+        Dependencies("repo1", Nil, Nil, Nil, None),
+        Dependencies("repo2", Nil, Nil, Nil, None),
+        Dependencies("repo3", Nil, Nil, Nil, None)
       )
       when(mockedLibraryDependencyDataUpdatingService.getDependencyVersionsForAllRepositories()).thenReturn(Future.successful(
         libraryDependencies
       ))
 
       val result = makeServiceDependenciesImpl(mockedLibraryDependencyDataUpdatingService).dependencies().apply(FakeRequest())
-      val repositoryLibraryDependencies = contentAsJson(result).as[Seq[RepositoryDependencies]]
+      val repositoryLibraryDependencies = contentAsJson(result).as[Seq[Dependencies]]
 
       repositoryLibraryDependencies.size shouldBe 3
       repositoryLibraryDependencies should contain theSameElementsAs libraryDependencies
