@@ -55,11 +55,11 @@ class DependenciesDataSource @Inject()(teamsAndRepositoriesDataSource: TeamsAndR
 
   val buildFiles = Seq(
     "project/AppDependencies.scala",
-    "build.sbt",
     "project/MicroServiceBuild.scala",
     "project/FrontendBuild.scala",
     "project/StubServiceBuild.scala",
-    "project/HmrcBuild.scala"
+    "project/HmrcBuild.scala",
+    "build.sbt"
   )
 
 
@@ -137,33 +137,29 @@ class DependenciesDataSource @Inject()(teamsAndRepositoriesDataSource: TeamsAndR
           val maybeLastGitUpdateDate = currentDependencyEntries.find(_.repositoryName == repoName).flatMap(_.lastGitUpdateDate)
           val errorOrDependencies: Either[APIRateLimitExceededException, Option[DependenciesFromGitHub]] = getDependenciesFromGitHub(repoName, curatedDependencyConfig, maybeLastGitUpdateDate)
 
-          if (errorOrDependencies.isLeft) {
-            logger.error(s"Something went wrong: ${errorOrDependencies.left.get.getMessage}")
-            // error (only rate limiting should be bubbled up to here) => short circuit
-            logger.error("terminating current run because ===>", errorOrDependencies.left.get)
-            acc
-          } else {
-            errorOrDependencies.right.get match {
-              case None =>
-                //!@persisterF(MongoRepositoryDependencies(repoName, Nil, Nil, Nil, maybeLastGitUpdateDate))
-                logger.info(s"No dependencies found for: $repoName")
-                getDependencies(xs, acc)
-              case Some(dependencies) =>
-                val repositoryLibraryDependencies =
-                  MongoRepositoryDependencies(
-                    repositoryName = repoName,
-                    libraryDependencies = dependencies.libraries,
-                    sbtPluginDependencies = dependencies.sbtPlugins,
-                    otherDependencies = dependencies.otherDependencies,
-                    lastGitUpdateDate = dependencies.lastGitUpdateDate,
-                    updateDate = timestampGenerator.now)
-                if (isRepositoryUpdated(dependencies, maybeLastGitUpdateDate))
-                  persisterF(repositoryLibraryDependencies)
-                getDependencies(xs, acc :+ repositoryLibraryDependencies)
-            }
+          errorOrDependencies match {
+            case Left(error) =>
+              logger.error(s"Something went wrong: ${error.getMessage}")
+              // error (only rate limiting should be bubbled up to here) => short circuit
+              logger.error("terminating current run because ===>", error)
+              acc
+            case Right(None) =>
+              logger.info(s"No dependencies found for: $repoName")
+              getDependencies(xs, acc)
 
+            case Right(Some(dependencies)) =>
+              val repositoryLibraryDependencies =
+                MongoRepositoryDependencies(
+                  repositoryName = repoName,
+                  libraryDependencies = dependencies.libraries,
+                  sbtPluginDependencies = dependencies.sbtPlugins,
+                  otherDependencies = dependencies.otherDependencies,
+                  lastGitUpdateDate = dependencies.lastGitUpdateDate,
+                  updateDate = timestampGenerator.now)
+              if (isRepositoryUpdated(dependencies, maybeLastGitUpdateDate))
+                persisterF(repositoryLibraryDependencies)
+              getDependencies(xs, acc :+ repositoryLibraryDependencies)
           }
-
         case Nil =>
           acc
       }

@@ -60,8 +60,7 @@ class DependencyDataUpdatingService @Inject()(curatedDependencyConfigProvider: C
   }
 
 
-  def
-  reloadLatestLibraryVersions(): Future[Seq[MongoLibraryVersion]] = {
+  def reloadLatestLibraryVersions(): Future[Seq[MongoLibraryVersion]] = {
     runMongoUpdate(libraryMongoLock) {
       val latestLibraryVersions = dependenciesDataSource.getLatestLibrariesVersions(curatedDependencyConfig.libraries)
 
