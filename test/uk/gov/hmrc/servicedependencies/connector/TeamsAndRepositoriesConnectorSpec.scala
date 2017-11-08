@@ -21,7 +21,7 @@ import org.scalatest.concurrent.{IntegrationPatience, ScalaFutures}
 import org.scalatest.mock.MockitoSugar
 import org.scalatest.{BeforeAndAfterAll, FreeSpec, MustMatchers}
 import org.scalatestplus.play.OneAppPerSuite
-import play.api.Configuration
+import play.api.{Configuration, Environment}
 import uk.gov.hmrc.http._
 import uk.gov.hmrc.http.hooks.HttpHook
 import uk.gov.hmrc.play.bootstrap.http.HttpClient
@@ -84,7 +84,7 @@ class TeamsAndRepositoriesConnectorSpec
     scala.io.Source.fromInputStream(getClass.getResourceAsStream(filename)).mkString
   }
 
-  def stubbedConfig = new ServiceDependenciesConfig(Configuration()) {
+  def stubbedConfig = new ServiceDependenciesConfig(Configuration(), Environment.simple()) {
     override lazy val teamsAndRepositoriesServiceUrl = wireMock.host()
   }
 

@@ -20,16 +20,18 @@ import java.io.File
 import java.nio.file.Path
 
 import com.google.inject.{Inject, Singleton}
-import play.api.{Configuration, Play}
-import uk.gov.hmrc.play.bootstrap.config.BaseUrl
+import play.api.Mode.Mode
+import play.api.{Configuration, Environment, Play}
+import uk.gov.hmrc.play.config.ServicesConfig
 
 import scala.concurrent.duration._
 import scala.io.Source
 
 
-
 @Singleton
-class ServiceDependenciesConfig @Inject()(override val configuration: Configuration) extends BaseUrl  {
+class ServiceDependenciesConfig @Inject()(override val runModeConfiguration: Configuration, environment: Environment) extends ServicesConfig {
+
+  override protected def mode: Mode = environment.mode
 
   private val cacheDurationConfigPath = "cache.timeout.duration"
   private val githubOpenConfigKey = "github.open.api"
@@ -43,7 +45,7 @@ class ServiceDependenciesConfig @Inject()(override val configuration: Configurat
 
 
   def cacheDuration: FiniteDuration = {
-    configuration.getMilliseconds(cacheDurationConfigPath).map(_.milliseconds).getOrElse(defaultTimeout)
+    runModeConfiguration.getMilliseconds(cacheDurationConfigPath).map(_.milliseconds).getOrElse(defaultTimeout)
   }
 
 
@@ -57,6 +59,7 @@ class ServiceDependenciesConfig @Inject()(override val configuration: Configurat
   lazy val githubApiEnterpriseConfig = option(gitEnterpriseConfig).getOrElse(GitApiConfig.fromFile(s"${System.getProperty("user.home")}/.github/.githubenterprise"))
 
   private def optionalConfig(path: String) = Play.current.configuration.getString(s"$path")
+
   private def option(config: String => Option[String]): Option[GitApiConfig] =
     for {
       host <- config("host")
@@ -91,7 +94,7 @@ class ConfigFile(filePath: Path) {
       Source.fromFile(filePath.toFile)
         .getLines().toSeq
         .map(_.split("="))
-        .map { case Array(key, value) => key.trim -> value.trim}.toMap
+        .map { case Array(key, value) => key.trim -> value.trim }.toMap
     } catch {
       case e: Exception => Map.empty
     }

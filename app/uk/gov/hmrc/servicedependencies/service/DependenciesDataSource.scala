@@ -123,13 +123,23 @@ class DependenciesDataSource @Inject()(teamsAndRepositoriesConnector: TeamsAndRe
 
     val eventualAllRepos: Future[Seq[String]] = teamsAndRepositoriesConnector.getAllRepositories()
 
+    def serialiseFutures[A, B](l: Iterable[A])(fn: A => Future[B]): Future[List[B]] =
+      l.foldLeft(Future(List.empty[B])) {
+        (previousFuture, next) ⇒
+          for {
+            previousResults ← previousFuture
+            next ← fn(next)
+          } yield previousResults :+ next
+      }
+
     val orderedRepos: Future[Seq[Repository]] = eventualAllRepos.flatMap { repos =>
       val updatedLastOrdered = currentDependencyEntries.sortBy(_.updateDate.getMillis).map(_.repositoryName)
       val newRepos = repos.filterNot(r => currentDependencyEntries.exists(_.repositoryName == r))
       val allRepos = newRepos ++ updatedLastOrdered
-      Future.sequence(allRepos.map(repoName => teamsAndRepositoriesConnector.getRepository(repoName)))
-    }
 
+      // I need this to avoid hitting teams-and-repositories with thousands of simultaneous calls.
+      serialiseFutures(allRepos)(teamsAndRepositoriesConnector.getRepository)
+    }
 
     @tailrec
     def getDependencies(remainingRepos: Seq[Repository], acc: Seq[MongoRepositoryDependencies]): Seq[MongoRepositoryDependencies] = {
