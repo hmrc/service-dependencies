@@ -30,6 +30,7 @@ private object AppDependencies {
     "uk.gov.hmrc" %% "github-client" % githubClientVersion,
     "uk.gov.hmrc" %% "play-reactivemongo" % playReactivemongoVersion,
     "uk.gov.hmrc" %% "mongo-lock" % "5.0.0",
+    "uk.gov.hmrc" %% "time" % "3.1.0",
     "org.typelevel" %% "cats" % "0.9.0"
   )
 

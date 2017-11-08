@@ -17,6 +17,7 @@
 package uk.gov.hmrc.servicedependencies.presistence
 
 import com.google.inject.{Inject, Singleton}
+import org.joda.time.{DateTime, DateTimeZone}
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json.Json
 import play.modules.reactivemongo.ReactiveMongoComponent
@@ -82,9 +83,9 @@ class RepositoryLibraryDependenciesRepository @Inject()(mongo: ReactiveMongoComp
 
   def clearAllData: Future[Boolean] = super.removeAll().map(_.ok)
 
-  def clearAllGithubLastUpdateDates: Future[Seq[MongoRepositoryDependencies]] = {
+  def clearUpdateDates: Future[Seq[MongoRepositoryDependencies]] = {
     getAllEntries.flatMap { es =>
-      Future.sequence(es.map(mrd => update(mrd.copy(lastGitUpdateDate = None))))
+      Future.sequence(es.map(mrd => update(mrd.copy(updateDate = new DateTime(0, DateTimeZone.UTC)))))
     }
   }
 }

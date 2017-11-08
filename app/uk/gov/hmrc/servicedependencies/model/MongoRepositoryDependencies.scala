@@ -16,9 +16,10 @@
 
 package uk.gov.hmrc.servicedependencies.model
 
-import java.util.Date
-
+import org.joda.time.DateTime
 import play.api.libs.json.Json
+import uk.gov.hmrc.mongo.json.ReactiveMongoFormats
+import uk.gov.hmrc.time.DateTimeUtils
 
 case class LibraryDependency(libraryName: String, currentVersion:Version)
 object LibraryDependency {
@@ -40,10 +41,10 @@ case class MongoRepositoryDependencies(repositoryName: String,
                                        libraryDependencies: Seq[LibraryDependency],
                                        sbtPluginDependencies: Seq[SbtPluginDependency] = Nil,
                                        otherDependencies: Seq[OtherDependency],
-                                       lastGitUpdateDate: Option[Date],
-                                       updateDate: Long = new Date().getTime)
+                                       updateDate: DateTime = DateTimeUtils.now)
 object MongoRepositoryDependencies {
 
+  implicit val dtf = ReactiveMongoFormats.dateTimeFormats
   implicit val format = Json.format[MongoRepositoryDependencies]
 }
 

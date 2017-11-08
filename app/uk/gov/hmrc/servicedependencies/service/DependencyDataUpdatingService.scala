@@ -25,6 +25,7 @@ import uk.gov.hmrc.servicedependencies.config.CuratedDependencyConfigProvider
 import uk.gov.hmrc.servicedependencies.controller.model.{Dependencies, Dependency}
 import uk.gov.hmrc.servicedependencies.model._
 import uk.gov.hmrc.servicedependencies.presistence._
+import uk.gov.hmrc.time.DateTimeUtils
 
 import scala.concurrent.Future
 
@@ -36,11 +37,12 @@ class DependencyDataUpdatingService @Inject()(curatedDependencyConfigProvider: C
                                               sbtPluginVersionRepository: SbtPluginVersionRepository,
                                               locksRepository: LocksRepository,
                                               mongoLocks: MongoLocks,
-                                              dependenciesDataSource: DependenciesDataSource,
-                                              timestampGenerator: TimestampGenerator) {
+                                              dependenciesDataSource: DependenciesDataSource) {
 
 
   lazy val logger = LoggerFactory.getLogger(this.getClass)
+
+  def now = DateTimeUtils.now
 
   def repositoryDependencyMongoLock: MongoLock = mongoLocks.repositoryDependencyMongoLock
 
@@ -55,7 +57,7 @@ class DependencyDataUpdatingService @Inject()(curatedDependencyConfigProvider: C
       val sbtPluginVersions = dependenciesDataSource.getLatestSbtPluginVersions(curatedDependencyConfig.sbtPlugins)
 
       Future.sequence(sbtPluginVersions.map { x =>
-        sbtPluginVersionRepository.update(MongoSbtPluginVersion(x.sbtPluginName, x.version, timestampGenerator.now))
+        sbtPluginVersionRepository.update(MongoSbtPluginVersion(x.sbtPluginName, x.version, now))
       })
     }
   }
@@ -66,7 +68,7 @@ class DependencyDataUpdatingService @Inject()(curatedDependencyConfigProvider: C
       val latestLibraryVersions = dependenciesDataSource.getLatestLibrariesVersions(curatedDependencyConfig.libraries)
 
       Future.sequence(latestLibraryVersions.map { x =>
-        libraryVersionRepository.update(MongoLibraryVersion(x.libraryName, x.version, timestampGenerator.now))
+        libraryVersionRepository.update(MongoLibraryVersion(x.libraryName, x.version, now))
       })
     }
   }
@@ -76,7 +78,7 @@ class DependencyDataUpdatingService @Inject()(curatedDependencyConfigProvider: C
     runMongoUpdate(repositoryDependencyMongoLock) {
       for {
         currentDependencyEntries <- repositoryLibraryDependenciesRepository.getAllEntries
-        libraryDependencies <- dependenciesDataSource.persistDependenciesForAllRepositories(curatedDependencyConfig, currentDependencyEntries, repositoryLibraryDependenciesRepository.update)
+        libraryDependencies <- dependenciesDataSource.persistDependenciesForAllRepositories(curatedDependencyConfig, currentDependencyEntries)
       } yield libraryDependencies
 
     }
@@ -130,7 +132,7 @@ class DependencyDataUpdatingService @Inject()(curatedDependencyConfigProvider: C
           dep.libraryDependencies.map(d => Dependency(d.libraryName, d.currentVersion, libraryReferences.find(mlv => mlv.libraryName == d.libraryName).flatMap(_.version))),
           getSbtPluginDependencyState(dep, sbtPluginReferences),
           dep.otherDependencies.map(other => Dependency(other.name, other.currentVersion, curatedDependencyConfig.otherDependencies.find(_.name == "sbt").flatMap(_.latestVersion))),
-          dep.lastGitUpdateDate
+          dep.updateDate
         )
       }
 
@@ -146,7 +148,7 @@ class DependencyDataUpdatingService @Inject()(curatedDependencyConfigProvider: C
           dep.libraryDependencies.map(d => Dependency(d.libraryName, d.currentVersion, libraryReferences.find(mlv => mlv.libraryName == d.libraryName).flatMap(_.version))),
           getSbtPluginDependencyState(dep, sbtPluginReferences),
           dep.otherDependencies.map(other => Dependency(other.name, other.currentVersion, curatedDependencyConfig.otherDependencies.find(_.name == "sbt").flatMap(_.latestVersion))),
-          dep.lastGitUpdateDate
+          dep.updateDate
 
         )
       }
@@ -173,6 +175,6 @@ class DependencyDataUpdatingService @Inject()(curatedDependencyConfigProvider: C
     locksRepository.getAllEntries
   }
 
-  def clearAllGithubLastUpdateDates =
-    repositoryLibraryDependenciesRepository.clearAllGithubLastUpdateDates
+  def clearUpdateDates =
+    repositoryLibraryDependenciesRepository.clearUpdateDates
 }

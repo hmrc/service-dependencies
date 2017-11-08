@@ -16,20 +16,28 @@
 
 package uk.gov.hmrc.servicedependencies.controller.model
 
-import java.util.Date
-
+import org.joda.time.DateTime
 import play.api.libs.json.Json
+import uk.gov.hmrc.http.controllers.RestFormats
 import uk.gov.hmrc.servicedependencies.model.Version
 
-case class Dependency(name: String, currentVersion: Version, latestVersion: Option[Version], isExternal: Boolean = false)
+case class Dependency(
+                       name: String,
+                       currentVersion: Version,
+                       latestVersion: Option[Version],
+                       isExternal: Boolean = false
+                     )
 
-case class Dependencies(repositoryName: String,
-                        libraryDependencies: Seq[Dependency],
-                        sbtPluginsDependencies: Seq[Dependency],
-                        otherDependencies: Seq[Dependency],
-                        lastGitUpdateDate: Option[Date])
+case class Dependencies(
+                         repositoryName: String,
+                         libraryDependencies: Seq[Dependency],
+                         sbtPluginsDependencies: Seq[Dependency],
+                         otherDependencies: Seq[Dependency],
+                         lastUpdated: DateTime
+                       )
 
 object Dependencies {
+  implicit val dtr = RestFormats.dateTimeFormats
   implicit val osf = Json.format[Dependency]
   implicit val format = Json.format[Dependencies]
 }

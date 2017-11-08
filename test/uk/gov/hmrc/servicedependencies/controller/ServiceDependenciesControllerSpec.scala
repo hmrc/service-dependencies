@@ -30,6 +30,7 @@ import uk.gov.hmrc.servicedependencies.config.ServiceDependenciesConfig
 import uk.gov.hmrc.servicedependencies.controller.model.Dependencies
 import uk.gov.hmrc.servicedependencies.model.{MongoLibraryVersion, MongoRepositoryDependencies, Version}
 import uk.gov.hmrc.servicedependencies.service._
+import uk.gov.hmrc.time.DateTimeUtils
 
 import scala.concurrent.Future
 
@@ -48,7 +49,7 @@ class ServiceDependenciesControllerSpec
     "should get dependency versions for a repository using the service" in new Setup {
       val mockedLibraryDependencyDataUpdatingService = mock[DependencyDataUpdatingService]
       val repoName = "repo1"
-      val repositoryDependencies = Dependencies(repoName, Nil, Nil, Nil, None)
+      val repositoryDependencies = Dependencies(repoName, Nil, Nil, Nil, DateTimeUtils.now)
 
       when(mockedLibraryDependencyDataUpdatingService.getDependencyVersionsForRepository(any()))
         .thenReturn(Future.successful(Some(repositoryDependencies)))
@@ -66,9 +67,9 @@ class ServiceDependenciesControllerSpec
     "should get all the curated libraries using the service" in new Setup {
       val mockedLibraryDependencyDataUpdatingService = mock[DependencyDataUpdatingService]
       val libraryVersions = Seq(
-        MongoLibraryVersion("lib1", Some(Version(1, 0, 0)), 1234l),
-        MongoLibraryVersion("lib2", Some(Version(2, 0, 0)), 1234l),
-        MongoLibraryVersion("lib3", Some(Version(3, 0, 0)), 1234l)
+        MongoLibraryVersion("lib1", Some(Version(1, 0, 0)), DateTimeUtils.now),
+        MongoLibraryVersion("lib2", Some(Version(2, 0, 0)), DateTimeUtils.now),
+        MongoLibraryVersion("lib3", Some(Version(3, 0, 0)), DateTimeUtils.now)
       )
       when(mockedLibraryDependencyDataUpdatingService.getAllCuratedLibraries()).thenReturn(Future.successful(
         libraryVersions
@@ -87,9 +88,9 @@ class ServiceDependenciesControllerSpec
     "should get all dependencies using the service" in new Setup {
       val mockedLibraryDependencyDataUpdatingService = mock[DependencyDataUpdatingService]
       val libraryDependencies = Seq(
-        Dependencies("repo1", Nil, Nil, Nil, None),
-        Dependencies("repo2", Nil, Nil, Nil, None),
-        Dependencies("repo3", Nil, Nil, Nil, None)
+        Dependencies("repo1", Nil, Nil, Nil, DateTimeUtils.now),
+        Dependencies("repo2", Nil, Nil, Nil, DateTimeUtils.now),
+        Dependencies("repo3", Nil, Nil, Nil, DateTimeUtils.now)
       )
       when(mockedLibraryDependencyDataUpdatingService.getDependencyVersionsForAllRepositories()).thenReturn(Future.successful(
         libraryDependencies

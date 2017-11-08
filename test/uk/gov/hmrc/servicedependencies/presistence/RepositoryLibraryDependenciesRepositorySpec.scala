@@ -36,6 +36,7 @@ package uk.gov.hmrc.servicedependencies.presistence
 
 import java.time.LocalDateTime
 
+import org.joda.time.{DateTime, DateTimeZone}
 import org.mockito.Mockito.when
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.mock.MockitoSugar
@@ -45,8 +46,8 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.modules.reactivemongo.ReactiveMongoComponent
 import uk.gov.hmrc.mongo.{MongoConnector, MongoSpecSupport}
 import uk.gov.hmrc.play.test.UnitSpec
-import uk.gov.hmrc.servicedependencies.TestHelpers._
 import uk.gov.hmrc.servicedependencies.model.{LibraryDependency, MongoRepositoryDependencies, Version}
+import uk.gov.hmrc.time.DateTimeUtils
 
 class RepositoryLibraryDependenciesRepositorySpec extends UnitSpec with LoneElement with MongoSpecSupport with ScalaFutures with OptionValues with BeforeAndAfterEach with OneAppPerTest with MockitoSugar {
 
@@ -69,7 +70,7 @@ class RepositoryLibraryDependenciesRepositorySpec extends UnitSpec with LoneElem
   "update" should {
     "inserts correctly" in {
 
-      val repositoryLibraryDependencies = MongoRepositoryDependencies("some-repo", Seq(LibraryDependency("some-lib", Version(1, 0, 2))), Nil, Nil, None)
+      val repositoryLibraryDependencies = MongoRepositoryDependencies("some-repo", Seq(LibraryDependency("some-lib", Version(1, 0, 2))), Nil, Nil, DateTimeUtils.now)
       await(mongoRepositoryLibraryDependenciesRepository.update(repositoryLibraryDependencies))
 
       await(mongoRepositoryLibraryDependenciesRepository.getAllEntries) shouldBe Seq(repositoryLibraryDependencies)
@@ -77,7 +78,7 @@ class RepositoryLibraryDependenciesRepositorySpec extends UnitSpec with LoneElem
 
     "updates correctly (based on repository name)" in {
 
-      val repositoryLibraryDependencies = MongoRepositoryDependencies("some-repo", Seq(LibraryDependency("some-lib", Version(1, 0, 2))), Nil, Nil, None)
+      val repositoryLibraryDependencies = MongoRepositoryDependencies("some-repo", Seq(LibraryDependency("some-lib", Version(1, 0, 2))), Nil, Nil, DateTimeUtils.now)
       val newRepositoryLibraryDependencies = repositoryLibraryDependencies.copy(libraryDependencies = repositoryLibraryDependencies.libraryDependencies :+ LibraryDependency("some-other-lib", Version(8, 4, 2)) )
       await(mongoRepositoryLibraryDependenciesRepository.update(repositoryLibraryDependencies))
 
@@ -89,8 +90,8 @@ class RepositoryLibraryDependenciesRepositorySpec extends UnitSpec with LoneElem
 
   "getForRepository" should {
     "get back the correct record" in {
-      val repositoryLibraryDependencies1 = MongoRepositoryDependencies("some-repo1", Seq(LibraryDependency("some-lib1", Version(1, 0, 2))), Nil, Nil, None)
-      val repositoryLibraryDependencies2 = MongoRepositoryDependencies("some-repo2", Seq(LibraryDependency("some-lib2", Version(11, 0, 22))), Nil, Nil, None)
+      val repositoryLibraryDependencies1 = MongoRepositoryDependencies("some-repo1", Seq(LibraryDependency("some-lib1", Version(1, 0, 2))), Nil, Nil, DateTimeUtils.now)
+      val repositoryLibraryDependencies2 = MongoRepositoryDependencies("some-repo2", Seq(LibraryDependency("some-lib2", Version(11, 0, 22))), Nil, Nil, DateTimeUtils.now)
 
       await(mongoRepositoryLibraryDependenciesRepository.update(repositoryLibraryDependencies1))
       await(mongoRepositoryLibraryDependenciesRepository.update(repositoryLibraryDependencies2))
@@ -103,7 +104,7 @@ class RepositoryLibraryDependenciesRepositorySpec extends UnitSpec with LoneElem
   "clearAllDependencyEntries" should {
     "deletes everything" in {
 
-      val repositoryLibraryDependencies = MongoRepositoryDependencies("some-repo", Seq(LibraryDependency("some-lib", Version(1, 0, 2))), Nil, Nil, None)
+      val repositoryLibraryDependencies = MongoRepositoryDependencies("some-repo", Seq(LibraryDependency("some-lib", Version(1, 0, 2))), Nil, Nil, DateTimeUtils.now)
 
       await(mongoRepositoryLibraryDependenciesRepository.update(repositoryLibraryDependencies))
 
@@ -115,25 +116,26 @@ class RepositoryLibraryDependenciesRepositorySpec extends UnitSpec with LoneElem
     }
   }
 
-  "clearAllGithubLastUpdateDates" should {
-    "resets the last update dates to None" in {
+  "clearUpdateDates" should {
+    "resets the last update dates to January 1, 1970" in {
 
-      val someDate = Some(toDate(LocalDateTime.now()))
+      val t1 = DateTimeUtils.now
+      val t2 = DateTimeUtils.now.plusDays(1)
       val repositoryLibraryDependencies1 =
-        MongoRepositoryDependencies("some-repo", Seq(LibraryDependency("some-lib2", Version(1, 0, 2))), Nil, Nil, someDate)
+        MongoRepositoryDependencies("some-repo", Seq(LibraryDependency("some-lib2", Version(1, 0, 2))), Nil, Nil, t1)
       val repositoryLibraryDependencies2 =
-        MongoRepositoryDependencies("some-other-repo", Seq(LibraryDependency("some-lib2", Version(1, 0, 2))), Nil, Nil, someDate)
+        MongoRepositoryDependencies("some-other-repo", Seq(LibraryDependency("some-lib2", Version(1, 0, 2))), Nil, Nil, t2)
 
       await(mongoRepositoryLibraryDependenciesRepository.update(repositoryLibraryDependencies1))
       await(mongoRepositoryLibraryDependenciesRepository.update(repositoryLibraryDependencies2))
 
       val mongoRepositoryDependencieses = await(mongoRepositoryLibraryDependenciesRepository.getAllEntries)
       mongoRepositoryDependencieses should have size 2
-      mongoRepositoryDependencieses.map(_.lastGitUpdateDate) should contain theSameElementsAs Seq(someDate, someDate)
+      mongoRepositoryDependencieses.map(_.updateDate) should contain theSameElementsAs Seq(t1, t2)
 
-      await(mongoRepositoryLibraryDependenciesRepository.clearAllGithubLastUpdateDates)
+      await(mongoRepositoryLibraryDependenciesRepository.clearUpdateDates)
 
-      await(mongoRepositoryLibraryDependenciesRepository.getAllEntries).map(_.lastGitUpdateDate) should contain theSameElementsAs Seq(None, None)
+      await(mongoRepositoryLibraryDependenciesRepository.getAllEntries).map(_.updateDate) should contain theSameElementsAs Seq(new DateTime(0, DateTimeZone.UTC), new DateTime(0, DateTimeZone.UTC))
     }
   }
 }

@@ -57,9 +57,9 @@ class AdministrationController @Inject()(dependencyDataUpdatingService: Dependen
       dependencyDataUpdatingService.dropCollection(collection).map(_ => Ok(s"$collection dropped"))
   }
 
-  def clearAllGithubLastUpdateDates = Action.async {
+  def clearUpdateDates = Action.async {
     implicit request =>
-      dependencyDataUpdatingService.clearAllGithubLastUpdateDates.map(rs => Ok(s"${rs.size} records updated"))
+      dependencyDataUpdatingService.clearUpdateDates.map(rs => Ok(s"${rs.size} records updated"))
   }
 
 }

@@ -35,48 +35,19 @@ abstract class Github(val buildFilePaths: Seq[String]) {
 
   def gh: GithubApiClient
 
-  def resolveTag(version: String): String
+  def resolveTag(version: String): String =s"$tagPrefix$version"
 
   val tagPrefix: String
 
   lazy val logger = LoggerFactory.getLogger(this.getClass)
 
+  def findVersionsForMultipleArtifacts(repoName: String, curatedDependencyConfig: CuratedDependencyConfig): GithubSearchResults = {
 
-  def findVersionsForMultipleArtifacts(repoName: String,
-                                       curatedDependencyConfig: CuratedDependencyConfig,
-                                       storedLastUpdateDateO: Option[Date]): Option[GithubSearchResults] = {
-
-    def performGithubSearch(maybeLastGitUpdateDate: Option[Date]): Option[GithubSearchResults] = {
-      Some(GithubSearchResults(
-        sbtPlugins = searchPluginSbtFileForMultipleArtifacts(repoName, curatedDependencyConfig.sbtPlugins),
-        libraries = searchBuildFilesForMultipleArtifacts(repoName, curatedDependencyConfig.libraries),
-        others = searchForOtherSpecifiedDependencies(repoName, curatedDependencyConfig.otherDependencies),
-        lastGitUpdateDate = maybeLastGitUpdateDate))
-    }
-
-
-    val maybeLastGitUpdateDate: Option[Date] = getLastGithubPushDate(repoName)
-
-    maybeLastGitUpdateDate.fold {
-      logger.debug(s"no previous push date found for $repoName")
-      Option.empty[GithubSearchResults]
-    } { lastGitPushDate =>
-      storedLastUpdateDateO.fold {
-        logger.debug(s"No previous record for repository ($repoName) detected in database. processing...")
-        performGithubSearch(maybeLastGitUpdateDate)
-      } { storedLastUpdateDate =>
-        if (lastGitPushDate.after(storedLastUpdateDate)) {
-          logger.debug(s"Changes to repository ($repoName) detected. processing...")
-          performGithubSearch(maybeLastGitUpdateDate)
-        } else {
-          logger.debug(s"No changes for repository ($repoName). Skipping....")
-          //!@Some(GithubSearchResults(sbtPlugins = Map.empty, libraries = Map.empty, others = Map.empty, lastGitUpdateDate = maybeLastGitUpdateDate))
-          Option.empty[GithubSearchResults]
-        }
-      }
-    }
-
-
+    GithubSearchResults(
+      sbtPlugins = searchPluginSbtFileForMultipleArtifacts(repoName, curatedDependencyConfig.sbtPlugins),
+      libraries = searchBuildFilesForMultipleArtifacts(repoName, curatedDependencyConfig.libraries),
+      others = searchForOtherSpecifiedDependencies(repoName, curatedDependencyConfig.otherDependencies)
+    )
   }
 
   protected def getLastGithubPushDate(repoName: String): Option[Date] = {

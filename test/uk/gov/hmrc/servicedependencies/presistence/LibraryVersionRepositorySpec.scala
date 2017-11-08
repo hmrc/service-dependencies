@@ -46,6 +46,7 @@ import uk.gov.hmrc.mongo.{MongoConnector, MongoSpecSupport}
 import uk.gov.hmrc.play.test.UnitSpec
 import uk.gov.hmrc.servicedependencies.model.{MongoLibraryVersion, Version}
 import uk.gov.hmrc.servicedependencies.presistence.LibraryVersionRepository
+import uk.gov.hmrc.time.DateTimeUtils
 
 class LibraryVersionRepositorySpec extends UnitSpec with LoneElement with MongoSpecSupport with ScalaFutures with OptionValues with BeforeAndAfterEach with OneAppPerTest with MockitoSugar {
 
@@ -66,7 +67,7 @@ class LibraryVersionRepositorySpec extends UnitSpec with LoneElement with MongoS
   "update" should {
     "inserts correctly" in {
 
-      val libraryVersion = MongoLibraryVersion("some-library", Some(Version(1, 0, 2)))
+      val libraryVersion = MongoLibraryVersion("some-library", Some(Version(1, 0, 2)), DateTimeUtils.now)
       await(mongoLibraryVersions.update(libraryVersion))
 
       await(mongoLibraryVersions.getAllEntries) shouldBe Seq(libraryVersion)
@@ -74,7 +75,7 @@ class LibraryVersionRepositorySpec extends UnitSpec with LoneElement with MongoS
 
     "updates correctly (based on library name)" in {
 
-      val libraryVersion = MongoLibraryVersion("some-library", Some(Version(1, 0, 2)))
+      val libraryVersion = MongoLibraryVersion("some-library", Some(Version(1, 0, 2)), DateTimeUtils.now)
       val newLibraryVersion = libraryVersion.copy(version = Some(Version(1, 0, 5)))
       await(mongoLibraryVersions.update(libraryVersion))
 
@@ -87,7 +88,7 @@ class LibraryVersionRepositorySpec extends UnitSpec with LoneElement with MongoS
   "clearAllDependencyEntries" should {
     "deletes everything" in {
 
-      val libraryVersion = MongoLibraryVersion("some-library", Some(Version(1, 0, 2)))
+      val libraryVersion = MongoLibraryVersion("some-library", Some(Version(1, 0, 2)), DateTimeUtils.now)
       await(mongoLibraryVersions.update(libraryVersion))
 
       await(mongoLibraryVersions.getAllEntries) should have size 1

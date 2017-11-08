@@ -44,6 +44,7 @@ import play.modules.reactivemongo.ReactiveMongoComponent
 import uk.gov.hmrc.mongo.{MongoConnector, MongoSpecSupport}
 import uk.gov.hmrc.play.test.UnitSpec
 import uk.gov.hmrc.servicedependencies.model.{MongoSbtPluginVersion, Version}
+import uk.gov.hmrc.time.DateTimeUtils
 
 class SbtPluginVersionRepositorySpec extends UnitSpec with LoneElement with MongoSpecSupport with ScalaFutures with OptionValues with BeforeAndAfterEach with OneAppPerTest with MockitoSugar {
 
@@ -63,7 +64,7 @@ class SbtPluginVersionRepositorySpec extends UnitSpec with LoneElement with Mong
   "update" should {
     "inserts correctly" in {
 
-      val sbtPluginVersion = MongoSbtPluginVersion("some-sbtPlugin", Some(Version(1, 0, 2)))
+      val sbtPluginVersion = MongoSbtPluginVersion("some-sbtPlugin", Some(Version(1, 0, 2)), DateTimeUtils.now)
       await(mongoSbtPluginVersions.update(sbtPluginVersion))
 
       await(mongoSbtPluginVersions.getAllEntries) shouldBe Seq(sbtPluginVersion)
@@ -71,7 +72,7 @@ class SbtPluginVersionRepositorySpec extends UnitSpec with LoneElement with Mong
 
     "updates correctly (based on sbtPlugin name)" in {
 
-      val sbtPluginVersion = MongoSbtPluginVersion("some-sbtPlugin", Some(Version(1, 0, 2)))
+      val sbtPluginVersion = MongoSbtPluginVersion("some-sbtPlugin", Some(Version(1, 0, 2)), DateTimeUtils.now)
       val newSbtPluginVersion = sbtPluginVersion.copy(version = Some(Version(1, 0, 5)))
       await(mongoSbtPluginVersions.update(sbtPluginVersion))
 
@@ -84,7 +85,7 @@ class SbtPluginVersionRepositorySpec extends UnitSpec with LoneElement with Mong
   "clearAllDependencyEntries" should {
     "deletes everything" in {
 
-      val sbtPluginVersion = MongoSbtPluginVersion("some-sbtPlugin", Some(Version(1, 0, 2)))
+      val sbtPluginVersion = MongoSbtPluginVersion("some-sbtPlugin", Some(Version(1, 0, 2)), DateTimeUtils.now)
       await(mongoSbtPluginVersions.update(sbtPluginVersion))
 
       await(mongoSbtPluginVersions.getAllEntries) should have size 1
