@@ -26,7 +26,7 @@ import org.mockito.{ArgumentCaptor, Mockito}
 import org.scalatest.concurrent.{IntegrationPatience, ScalaFutures}
 import org.scalatest.mock.MockitoSugar
 import org.scalatest.{FreeSpec, Matchers, OptionValues}
-import uk.gov.hmrc.githubclient.{APIRateLimitExceededException, GithubApiClient}
+import uk.gov.hmrc.githubclient.APIRateLimitExceededException
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.play.bootstrap.http.HttpClient
 import uk.gov.hmrc.servicedependencies.Github
@@ -39,8 +39,8 @@ import uk.gov.hmrc.servicedependencies.presistence.RepositoryLibraryDependencies
 import uk.gov.hmrc.time.DateTimeUtils
 
 import scala.collection.JavaConversions._
-import scala.concurrent.Future
 import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.Future
 
 class DependenciesDataSourceSpec extends FreeSpec with Matchers with ScalaFutures with MockitoSugar with IntegrationPatience with OptionValues {
 
@@ -166,7 +166,7 @@ class DependenciesDataSourceSpec extends FreeSpec with Matchers with ScalaFuture
       var callCount = 0
       override def github: Github = new GithubStub(Map()) {
         override def findVersionsForMultipleArtifacts(repoName: String, curatedDependencyConfig: CuratedDependencyConfig): GithubSearchResults = {
-          if (callCount >= 2) {
+          if (repoName == repo3.name) {
             val requestError = mock[RequestError]
             when(requestError.getMessage).thenReturn("rate limit exceeded")
             throw new APIRateLimitExceededException(new RequestException(requestError, 403))
@@ -179,7 +179,9 @@ class DependenciesDataSourceSpec extends FreeSpec with Matchers with ScalaFuture
       }
 
       when(repositoryLibraryDependenciesRepository.update(any())).thenReturn(Future.successful(mock[MongoRepositoryDependencies]))
-      dependenciesDataSource.persistDependenciesForAllRepositories(curatedDependencyConfig, Nil).futureValue
+      intercept[Exception] {
+        dependenciesDataSource.persistDependenciesForAllRepositories(curatedDependencyConfig, Nil).futureValue
+      }
 
       callCount shouldBe 2
     }

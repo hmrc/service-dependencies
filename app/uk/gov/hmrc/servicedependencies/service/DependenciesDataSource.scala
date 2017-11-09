@@ -21,7 +21,7 @@ import com.kenshoo.play.metrics.Metrics
 import org.joda.time.DateTime
 import org.slf4j.LoggerFactory
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import uk.gov.hmrc.githubclient.{APIRateLimitExceededException, GithubApiClient, GithubClientMetrics}
+import uk.gov.hmrc.githubclient.{GithubApiClient, GithubClientMetrics}
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.servicedependencies._
 import uk.gov.hmrc.servicedependencies.config.ServiceDependenciesConfig
@@ -33,9 +33,7 @@ import uk.gov.hmrc.servicedependencies.presistence.RepositoryLibraryDependencies
 import uk.gov.hmrc.servicedependencies.util.Max
 import uk.gov.hmrc.time.DateTimeUtils
 
-import scala.annotation.tailrec
 import scala.concurrent.Future
-import scala.util.{Failure, Success}
 
 @Singleton
 class DependenciesDataSource @Inject()(teamsAndRepositoriesConnector: TeamsAndRepositoriesConnector,
@@ -72,13 +70,16 @@ class DependenciesDataSource @Inject()(teamsAndRepositoriesConnector: TeamsAndRe
   object GithubOpen extends Github(buildFiles) {
     override val tagPrefix = "v"
     override lazy val gh = gitOpenClient
+
     override def toString: String = "GitHub.com"
   }
 
   object GithubEnterprise extends Github(buildFiles) {
     override val tagPrefix = "release/"
     override lazy val gh = gitEnterpriseClient
+
     override def resolveTag(version: String) = s"$tagPrefix$version"
+
     override def toString: String = "Github Enterprise"
   }
 
@@ -119,11 +120,11 @@ class DependenciesDataSource @Inject()(teamsAndRepositoriesConnector: TeamsAndRe
 
   def persistDependenciesForAllRepositories(curatedDependencyConfig: CuratedDependencyConfig,
                                             currentDependencyEntries: Seq[MongoRepositoryDependencies]
-                                            )(implicit hc: HeaderCarrier): Future[Seq[MongoRepositoryDependencies]] = {
+                                           )(implicit hc: HeaderCarrier): Future[Seq[MongoRepositoryDependencies]] = {
 
     val eventualAllRepos: Future[Seq[String]] = teamsAndRepositoriesConnector.getAllRepositories()
 
-    def serialiseFutures[A, B](l: Iterable[A])(fn: A => Future[B]): Future[List[B]] =
+    def serialiseFutures[A, B](l: Iterable[A])(fn: A => Future[B]): Future[Seq[B]] =
       l.foldLeft(Future(List.empty[B])) {
         (previousFuture, next) ⇒
           for {
@@ -132,61 +133,40 @@ class DependenciesDataSource @Inject()(teamsAndRepositoriesConnector: TeamsAndRe
           } yield previousResults :+ next
       }
 
-    val orderedRepos: Future[Seq[Repository]] = eventualAllRepos.flatMap { repos =>
-      val updatedLastOrdered = currentDependencyEntries.sortBy(_.updateDate.getMillis).map(_.repositoryName)
-      val newRepos = repos.filterNot(r => currentDependencyEntries.exists(_.repositoryName == r))
-      val allRepos = newRepos ++ updatedLastOrdered
-
-      // I need this to avoid hitting teams-and-repositories with thousands of simultaneous calls.
-      serialiseFutures(allRepos)(teamsAndRepositoriesConnector.getRepository)
+    val orderedRepos: Future[Seq[String]] = eventualAllRepos.map { repos =>
+      val updatedLastOrdered: Seq[String] = currentDependencyEntries.sortBy(_.updateDate.getMillis).map(_.repositoryName)
+      val newRepos: Seq[String] = repos.filterNot(r => currentDependencyEntries.exists(_.repositoryName == r))
+      newRepos ++ updatedLastOrdered
     }
 
-    @tailrec
-    def getDependencies(remainingRepos: Seq[Repository], acc: Seq[MongoRepositoryDependencies]): Seq[MongoRepositoryDependencies] = {
+    def getRepoAndUpdate(repositoryName: String): Future[Option[MongoRepositoryDependencies]] = {
+      teamsAndRepositoriesConnector.getRepository(repositoryName).map(updateDependencies)
+    }
 
-      remainingRepos match {
-        case repository :: xs =>
-          val repoName = repository.name
-          logger.info(s"Updating dependencies for: $repoName")
-          val lastUpdated: DateTime = currentDependencyEntries.find(_.repositoryName == repoName).map(_.updateDate).getOrElse(new DateTime(0))
-          if (lastUpdated.isAfter(repository.lastActive)) {
-            logger.debug(s"No changes for repository ($repoName). Skipping....")
-            getDependencies(xs, acc)
-          } else {
-            val errorOrDependencies: Either[APIRateLimitExceededException, DependenciesFromGitHub] = getDependenciesFromGitHub(repository, curatedDependencyConfig)
+    def updateDependencies(repository: Repository): Option[MongoRepositoryDependencies] = {
+      val repoName = repository.name
+      logger.info(s"Updating dependencies for: $repoName")
+      val lastUpdated: DateTime = currentDependencyEntries.find(_.repositoryName == repoName).map(_.updateDate).getOrElse(new DateTime(0))
+      if (lastUpdated.isAfter(repository.lastActive)) {
+        logger.debug(s"No changes for repository ($repoName). Skipping....")
+        None
+      } else {
+        val dependencies: DependenciesFromGitHub = getDependenciesFromGitHub(repository, curatedDependencyConfig)
 
-            errorOrDependencies match {
-              case Left(error) =>
-                logger.error(s"Something went wrong: ${error.getMessage}")
-                // error (only rate limiting should be bubbled up to here) => short circuit
-                logger.error("terminating current run because ===>", error)
-                acc
+        val repositoryLibraryDependencies =
+          MongoRepositoryDependencies(
+            repositoryName = repoName,
+            libraryDependencies = dependencies.libraries,
+            sbtPluginDependencies = dependencies.sbtPlugins,
+            otherDependencies = dependencies.otherDependencies,
+            updateDate = now)
+        repositoryLibraryDependenciesRepository.update(repositoryLibraryDependencies)
+        Some(repositoryLibraryDependencies)
 
-              case Right(dependencies) =>
-                val repositoryLibraryDependencies =
-                  MongoRepositoryDependencies(
-                    repositoryName = repoName,
-                    libraryDependencies = dependencies.libraries,
-                    sbtPluginDependencies = dependencies.sbtPlugins,
-                    otherDependencies = dependencies.otherDependencies,
-                    updateDate = now)
-                repositoryLibraryDependenciesRepository.update(repositoryLibraryDependencies)
-                getDependencies(xs, acc :+ repositoryLibraryDependencies)
-            }
-          }
-        case Nil =>
-          acc
       }
     }
 
-    orderedRepos.map(r => getDependencies(r.toList, Nil)).andThen { case s =>
-      s match {
-        case Failure(x) => logger.error("Error!", x)
-        case Success(g) =>
-          logger.debug(s"finished ordering with ${g.mkString(", ")}")
-      }
-      s
-    }
+    orderedRepos.flatMap(serialiseFutures(_)(getRepoAndUpdate).map(_.flatten))
 
   }
 
@@ -194,10 +174,8 @@ class DependenciesDataSource @Inject()(teamsAndRepositoriesConnector: TeamsAndRe
                                     sbtPlugins: Seq[SbtPluginDependency],
                                     otherDependencies: Seq[OtherDependency])
 
-  import cats.syntax.either._
-
   private def getDependenciesFromGitHub(repository: Repository,
-                                        curatedDependencyConfig: CuratedDependencyConfig): Either[APIRateLimitExceededException, DependenciesFromGitHub] = {
+                                        curatedDependencyConfig: CuratedDependencyConfig): DependenciesFromGitHub = {
 
     def getLibraryDependencies(githubSearchResults: GithubSearchResults) = githubSearchResults.libraries.foldLeft(Seq.empty[LibraryDependency]) {
       case (acc, (library, mayBeVersion)) =>
@@ -215,14 +193,12 @@ class DependenciesDataSource @Inject()(teamsAndRepositoriesConnector: TeamsAndRe
     }
 
     // caching the rate limiting exception
-    Either.catchOnly[APIRateLimitExceededException] {
-      val searchResults = searchGithubsForArtifacts(repository, curatedDependencyConfig)
-      DependenciesFromGitHub(
-        getLibraryDependencies(searchResults),
-        getPluginDependencies(searchResults),
-        getOtherDependencies(searchResults)
-      )
-    }
+    val searchResults = searchGithubsForArtifacts(repository, curatedDependencyConfig)
+    DependenciesFromGitHub(
+      getLibraryDependencies(searchResults),
+      getPluginDependencies(searchResults),
+      getOtherDependencies(searchResults)
+    )
   }
 
 

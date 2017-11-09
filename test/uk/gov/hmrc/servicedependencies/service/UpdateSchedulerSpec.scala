@@ -22,9 +22,12 @@ import org.scalatest.mock.MockitoSugar
 import org.scalatest.{BeforeAndAfterEach, FunSpec, Matchers}
 import org.scalatestplus.play.OneAppPerTest
 import play.libs.Akka
+import uk.gov.hmrc.githubclient.APIRateLimitExceededException
 import uk.gov.hmrc.http.HeaderCarrier
 
+import scala.concurrent.Future
 import scala.concurrent.duration._
+import scala.concurrent.ExecutionContext.Implicits.global
 
 class UpdateSchedulerSpec extends FunSpec
   with MockitoSugar
@@ -44,6 +47,9 @@ class UpdateSchedulerSpec extends FunSpec
   describe("Scheduler") {
     it("should schedule startUpdatingLibraryData based on configured interval") {
       val dependencyDataUpdatingService = mock[DependencyDataUpdatingService]
+      Mockito.when(dependencyDataUpdatingService.reloadLatestLibraryVersions()).thenReturn(Future(Seq.empty))
+
+
       val scheduler = schedulerF(dependencyDataUpdatingService)
       scheduler.startUpdatingLibraryData(100 milliseconds)
       Thread.sleep(1000)
@@ -52,8 +58,23 @@ class UpdateSchedulerSpec extends FunSpec
       verify(dependencyDataUpdatingService, Mockito.atMost(11)).reloadLatestLibraryVersions
     }
 
+    it("should recover from failures") {
+      val dependencyDataUpdatingService = mock[DependencyDataUpdatingService]
+      val scheduler = schedulerF(dependencyDataUpdatingService)
+
+      Mockito.when(dependencyDataUpdatingService.reloadCurrentDependenciesDataForAllRepositories()).thenThrow(APIRateLimitExceededException(new RuntimeException("API limit")))
+
+      scheduler.startUpdatingLibraryDependencyData(100 milliseconds)
+      Thread.sleep(1000)
+
+      verify(dependencyDataUpdatingService, Mockito.atLeast(8)).reloadCurrentDependenciesDataForAllRepositories
+      verify(dependencyDataUpdatingService, Mockito.atMost(11)).reloadCurrentDependenciesDataForAllRepositories
+    }
+
     it("should schedule reloadLibraryDependencyDataForAllRepositories based on configured interval") {
       val dependencyDataUpdatingService = mock[DependencyDataUpdatingService]
+      Mockito.when(dependencyDataUpdatingService.reloadCurrentDependenciesDataForAllRepositories()).thenReturn(Future(Seq.empty))
+
       val scheduler = schedulerF(dependencyDataUpdatingService)
       scheduler.startUpdatingLibraryDependencyData(100 milliseconds)
       Thread.sleep(1000)
@@ -65,6 +86,8 @@ class UpdateSchedulerSpec extends FunSpec
 
     it("should schedule reloadSbtPluginVersionData For AllRepositories based on configured interval") {
       val dependencyDataUpdatingService = mock[DependencyDataUpdatingService]
+      Mockito.when(dependencyDataUpdatingService.reloadLatestSbtPluginVersions()).thenReturn(Future(Seq.empty))
+
       val scheduler = schedulerF(dependencyDataUpdatingService)
       scheduler.startUpdatingSbtPluingVersionData(100 milliseconds)
       Thread.sleep(1000)

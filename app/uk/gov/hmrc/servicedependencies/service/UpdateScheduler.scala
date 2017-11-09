@@ -22,7 +22,9 @@ import play.Logger
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import uk.gov.hmrc.http.HeaderCarrier
 
+import scala.concurrent.Future
 import scala.concurrent.duration.{FiniteDuration, _}
+import scala.util.{Success, Try}
 
 
 @Singleton
@@ -32,7 +34,9 @@ class UpdateScheduler @Inject()(actorSystem: ActorSystem, dependencyDataUpdating
     Logger.info(s"Initialising libraryDependencyDataReloader update every $interval")
 
     val scheduler = actorSystem.scheduler.schedule(100 milliseconds, interval) {
-      dependencyDataUpdatingService.reloadCurrentDependenciesDataForAllRepositories()
+      run(dependencyDataUpdatingService.reloadCurrentDependenciesDataForAllRepositories()).recover{
+        case e: Throwable => Logger.error(s"Library dependencies update interrupted because: ${e.getMessage}")
+      }
     }
 
     scheduler
@@ -42,7 +46,9 @@ class UpdateScheduler @Inject()(actorSystem: ActorSystem, dependencyDataUpdating
     Logger.info(s"Initialising libraryDataReloader update every $interval")
 
     val scheduler = actorSystem.scheduler.schedule(100 milliseconds, interval) {
-      dependencyDataUpdatingService.reloadLatestLibraryVersions()
+      run(dependencyDataUpdatingService.reloadLatestLibraryVersions()).recover{
+        case e: Throwable => Logger.error(s"Libraries version update interrupted because: ${e.getMessage}")
+      }
     }
 
     scheduler
@@ -52,10 +58,18 @@ class UpdateScheduler @Inject()(actorSystem: ActorSystem, dependencyDataUpdating
     Logger.info(s"Initialising SbtPluginDataReloader update every $interval")
 
     val scheduler = actorSystem.scheduler.schedule(100 milliseconds, interval) {
-      dependencyDataUpdatingService.reloadLatestSbtPluginVersions()
+      run(dependencyDataUpdatingService.reloadLatestSbtPluginVersions()).recover{
+        case e: Throwable => Logger.error(s"Sbt Plugins version update interrupted because: ${e.getMessage}")
+      }
     }
 
     scheduler
+  }
+
+  def run[B](fn: => Future[B]): Future[B] =
+    Try(fn) match {
+    case Success(result) => result
+    case scala.util.Failure(throwable) => Future.failed(throwable)
   }
 
 }
