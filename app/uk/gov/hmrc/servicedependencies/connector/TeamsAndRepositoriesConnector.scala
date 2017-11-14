@@ -32,8 +32,8 @@ class TeamsAndRepositoriesConnector @Inject()(httpClient: HttpClient, serviceCon
 
   implicit val formats = Repository.f
 
-  def getRepository(repositoryName: String)(implicit hc: HeaderCarrier): Future[Repository] =
-    httpClient.GET[Repository](s"$teamsAndRepositoriesApiBase/api/repositories/$repositoryName")
+  def getRepository(repositoryName: String)(implicit hc: HeaderCarrier): Future[Option[Repository]] =
+    httpClient.GET[Option[Repository]](s"$teamsAndRepositoriesApiBase/api/repositories/$repositoryName")
 
   def getTeamsForServices()(implicit hc: HeaderCarrier): Future[Map[String, Seq[String]]] =
     httpClient.GET[Map[String, Seq[String]]](s"$teamsAndRepositoriesApiBase/api/services?teamDetails=true")

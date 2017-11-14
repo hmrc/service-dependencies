@@ -122,7 +122,7 @@ class DependenciesDataSource @Inject()(teamsAndRepositoriesConnector: TeamsAndRe
                                             currentDependencyEntries: Seq[MongoRepositoryDependencies]
                                            )(implicit hc: HeaderCarrier): Future[Seq[MongoRepositoryDependencies]] = {
 
-    val eventualAllRepos: Future[Seq[String]] = teamsAndRepositoriesConnector.getAllRepositories()
+    val allRepositories: Future[Seq[String]] = teamsAndRepositoriesConnector.getAllRepositories()
 
     def serialiseFutures[A, B](l: Iterable[A])(fn: A => Future[B]): Future[Seq[B]] =
       l.foldLeft(Future(List.empty[B])) {
@@ -133,14 +133,8 @@ class DependenciesDataSource @Inject()(teamsAndRepositoriesConnector: TeamsAndRe
           } yield previousResults :+ next
       }
 
-    val orderedRepos: Future[Seq[String]] = eventualAllRepos.map { repos =>
-      val updatedLastOrdered: Seq[String] = currentDependencyEntries.sortBy(_.updateDate.getMillis).map(_.repositoryName)
-      val newRepos: Seq[String] = repos.filterNot(r => currentDependencyEntries.exists(_.repositoryName == r))
-      newRepos ++ updatedLastOrdered
-    }
-
     def getRepoAndUpdate(repositoryName: String): Future[Option[MongoRepositoryDependencies]] = {
-      teamsAndRepositoriesConnector.getRepository(repositoryName).map(updateDependencies)
+      teamsAndRepositoriesConnector.getRepository(repositoryName).map(maybeRepository => maybeRepository.flatMap(updateDependencies))
     }
 
     def updateDependencies(repository: Repository): Option[MongoRepositoryDependencies] = {
@@ -166,7 +160,7 @@ class DependenciesDataSource @Inject()(teamsAndRepositoriesConnector: TeamsAndRe
       }
     }
 
-    orderedRepos.flatMap(serialiseFutures(_)(getRepoAndUpdate).map(_.flatten))
+    allRepositories.flatMap(serialiseFutures(_)(getRepoAndUpdate).map(_.flatten))
 
   }
 

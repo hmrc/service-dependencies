@@ -46,6 +46,7 @@ class TeamsAndRepositoriesConnectorSpec
     wireMock.start()
 
     stubRepositories("test-repo")
+    stubRepositoriesWith404("non-existing-test-repo")
     stubAllRepositories()
     stubServices()
 
@@ -57,6 +58,13 @@ class TeamsAndRepositoriesConnectorSpec
         aResponse()
           .withStatus(200)
           .withBody(loadFileAsString(s"/teams-and-repositories/repository.json"))))
+  }
+
+  private def stubRepositoriesWith404(repositoryName: String) = {
+    wireMock.stub(get(urlEqualTo(s"/api/repositories/$repositoryName"))
+      .willReturn(
+        aResponse()
+          .withStatus(404)))
   }
 
   private def stubAllRepositories() = {
@@ -97,7 +105,14 @@ class TeamsAndRepositoriesConnectorSpec
       val services = new TeamsAndRepositoriesConnector(httpClient, stubbedConfig)
 
       val repository = services.getRepository("test-repo").futureValue
-      repository.teamNames mustBe Seq("PlatOps", "Webops")
+      repository.get.teamNames mustBe Seq("PlatOps", "Webops")
+    }
+
+    "handle 404 - repository not found" in {
+      val services = new TeamsAndRepositoriesConnector(httpClient, stubbedConfig)
+
+      val repository = services.getRepository("non-existing-test-repo").futureValue
+      repository mustBe None
     }
   }
 

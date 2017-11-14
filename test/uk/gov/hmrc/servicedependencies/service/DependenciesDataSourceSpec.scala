@@ -22,6 +22,8 @@ import org.eclipse.egit.github.core.client.RequestException
 import org.joda.time.DateTime
 import org.mockito.ArgumentMatchers.any
 import org.mockito.Mockito.when
+import org.mockito.invocation.InvocationOnMock
+import org.mockito.stubbing.Answer
 import org.mockito.{ArgumentCaptor, Mockito}
 import org.scalatest.concurrent.{IntegrationPatience, ScalaFutures}
 import org.scalatest.mock.MockitoSugar
@@ -32,7 +34,7 @@ import uk.gov.hmrc.play.bootstrap.http.HttpClient
 import uk.gov.hmrc.servicedependencies.Github
 import uk.gov.hmrc.servicedependencies.config._
 import uk.gov.hmrc.servicedependencies.config.model.{CuratedDependencyConfig, OtherDependencyConfig, SbtPluginConfig}
-import uk.gov.hmrc.servicedependencies.connector.model.GithubInstance
+import uk.gov.hmrc.servicedependencies.connector.model.{GithubInstance, Repository}
 import uk.gov.hmrc.servicedependencies.connector.{TeamsAndRepositoriesConnector, model}
 import uk.gov.hmrc.servicedependencies.model._
 import uk.gov.hmrc.servicedependencies.presistence.RepositoryLibraryDependenciesRepository
@@ -142,6 +144,30 @@ class DependenciesDataSourceSpec extends FreeSpec with Matchers with ScalaFuture
       val currentDependencyEntries = Seq(MongoRepositoryDependencies("repo1", Nil, Nil, Nil, timeInThePast.plusMinutes(1)))
       dependenciesDataSource.persistDependenciesForAllRepositories(curatedDependencyConfig, currentDependencyEntries).futureValue
 
+    }
+
+    "should NOT terminate with exception when the repository is not found in teams-and-repositories" in new TestCase {
+
+
+      override def repositories: Seq[model.Repository] = Seq(repo1, repo2)
+
+      when(teamsAndRepositoriesConnector.getRepository(any())(any())).thenAnswer(new Answer[Future[Option[Repository]]] {
+        override def answer(invocation: InvocationOnMock): Future[Option[Repository]] = {
+          if( invocation.getArgument[String](0) == repo2.name) {
+            Future(Some(repo2))
+          } else {
+            Future(None)
+          }
+        }
+      })
+
+      val captor: ArgumentCaptor[MongoRepositoryDependencies] = ArgumentCaptor.forClass(classOf[MongoRepositoryDependencies])
+      dependenciesDataSource.persistDependenciesForAllRepositories(curatedDependencyConfig, Nil).futureValue
+      Mockito.verify(repositoryLibraryDependenciesRepository, Mockito.times(1)).update(captor.capture())
+
+      val allStoredDependencies: List[MongoRepositoryDependencies] = captor.getAllValues.toList
+      allStoredDependencies.size should be(1)
+      allStoredDependencies(0).repositoryName shouldBe repo2.name
     }
 
 
@@ -270,27 +296,10 @@ class DependenciesDataSourceSpec extends FreeSpec with Matchers with ScalaFuture
     }
   }
 
-  private def teamsAndRepositoriesStub(repositories: Seq[model.Repository]) = new TeamsAndRepositoriesConnector(mock[HttpClient], mock[ServiceDependenciesConfig]) {
-
-    val teamNames = Seq("PlatOps", "WebOps")
-
-    override def getRepository(repositoryName: String)(implicit hc: HeaderCarrier): Future[model.Repository] = Future(repositories.find(_.name == repositoryName).get)
-
-    override def getTeamsForServices()(implicit hc: HeaderCarrier): Future[Map[String, Seq[String]]] =
-      Future.successful(Map(
-        "service1" -> teamNames,
-        "service2" -> teamNames,
-        "service3" -> teamNames))
-
-    override def getAllRepositories()(implicit hc: HeaderCarrier): Future[Seq[String]] =
-      Future.successful(repositories.map(_.name))
-  }
-
   trait TestCase {
 
     def repositories: Seq[model.Repository]
 
-    val repositoryLibraryDependenciesRepository: RepositoryLibraryDependenciesRepository = mock[RepositoryLibraryDependenciesRepository]
 
     val repo1 = model.Repository("repo1", timeInThePast, Seq("PlatOps"), Seq(GithubInstance("github-com", "Github")))
     val repo2 = model.Repository("repo2", timeInThePast, Seq("PlatOps"), Seq(GithubInstance("github-com", "Github")))
@@ -336,6 +345,16 @@ class DependenciesDataSourceSpec extends FreeSpec with Matchers with ScalaFuture
     when(mockedDependenciesConfig.githubApiEnterpriseConfig).thenReturn(mockedGitApiConfig)
     when(mockedDependenciesConfig.githubApiOpenConfig).thenReturn(mockedGitApiConfig)
 
+    val repositoryLibraryDependenciesRepository = mock[RepositoryLibraryDependenciesRepository]
+
+    val teamsAndRepositoriesConnector = mock[TeamsAndRepositoriesConnector]
+    when(teamsAndRepositoriesConnector.getTeamsForServices()(any())).thenReturn(Future.successful(Map("service1" -> Seq("PlatOps", "WebOps"))))
+    when(teamsAndRepositoriesConnector.getAllRepositories()(any())).thenReturn(Future.successful(repositories.map(_.name)))
+    when(teamsAndRepositoriesConnector.getRepository(any())(any())).thenAnswer(new Answer[Future[Option[Repository]]] {
+      override def answer(invocation: InvocationOnMock): Future[Option[Repository]] = {
+        Future(repositories.find(_.name == invocation.getArgument[String](0)))
+      }
+    })
 
     def github: Github = new GithubStub(Map()) {
 
@@ -345,7 +364,7 @@ class DependenciesDataSourceSpec extends FreeSpec with Matchers with ScalaFuture
         lookupTable(repoName)
     }
 
-    val dependenciesDataSource = new DependenciesDataSource(teamsAndRepositoriesStub(repositories), mockedDependenciesConfig, repositoryLibraryDependenciesRepository, new DisabledMetrics()) {
+    val dependenciesDataSource = new DependenciesDataSource(teamsAndRepositoriesConnector, mockedDependenciesConfig, repositoryLibraryDependenciesRepository, new DisabledMetrics()) {
 
       override lazy val githubEnterprise = github
       override lazy val githubOpen = github
