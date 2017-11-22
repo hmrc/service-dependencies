@@ -19,13 +19,13 @@ private object AppDependencies {
   private val githubClientVersion = "1.21.0"
   private val mockitoVersion = "2.2.6"
   private val wireMockVersion = "1.55"
-  private val scalaTestPlusPlayVersion = "1.5.1"
+  private val scalaTestPlusPlayVersion = "2.0.1"
   private val playReactivemongoVersion = "6.0.0"
 
 
   val compile = Seq(
     ws,
-    "uk.gov.hmrc" %% "bootstrap-play-25" % "0.14.0",
+    "uk.gov.hmrc" %% "bootstrap-play-25" % "1.0.0",
     "uk.gov.hmrc" %% "play-url-binders" % playUrlBindersVersion,
     "uk.gov.hmrc" %% "github-client" % githubClientVersion,
     "uk.gov.hmrc" %% "play-reactivemongo" % playReactivemongoVersion,
@@ -42,7 +42,7 @@ private object AppDependencies {
   object Test {
     def apply() = new TestDependencies {
       override lazy val test = Seq(
-        "uk.gov.hmrc" %% "hmrctest" % "2.4.0" % scope,
+        "uk.gov.hmrc" %% "hmrctest" % "3.0.0" % scope,
       "org.scalatest" %% "scalatest" % scalaTestVersion % scope,
         "uk.gov.hmrc" %% "reactivemongo-test" % "3.0.0" % scope,
         "org.mockito" % "mockito-core" % mockitoVersion % scope,

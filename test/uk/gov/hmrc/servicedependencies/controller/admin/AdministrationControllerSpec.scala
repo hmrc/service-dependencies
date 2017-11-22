@@ -19,7 +19,7 @@ package uk.gov.hmrc.servicedependencies.controller.admin
 import org.mockito.ArgumentMatchers.any
 import org.mockito.Mockito.{verify, when}
 import org.scalatest.concurrent.{IntegrationPatience, ScalaFutures}
-import org.scalatest.mock.MockitoSugar
+import org.scalatest.mockito.MockitoSugar
 import org.scalatest.{BeforeAndAfterEach, FreeSpec, Matchers, OptionValues}
 import org.scalatestplus.play.OneServerPerSuite
 import play.api.test.FakeRequest

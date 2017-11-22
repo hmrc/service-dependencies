@@ -18,7 +18,7 @@ package uk.gov.hmrc.servicedependencies.service
 
 import org.mockito.Mockito
 import org.mockito.Mockito.verify
-import org.scalatest.mock.MockitoSugar
+import org.scalatest.mockito.MockitoSugar
 import org.scalatest.{BeforeAndAfterEach, FunSpec, Matchers}
 import org.scalatestplus.play.OneAppPerTest
 import play.libs.Akka
