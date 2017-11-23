@@ -22,7 +22,7 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json.Json
 import play.modules.reactivemongo.ReactiveMongoComponent
 import reactivemongo.api.indexes.{Index, IndexType}
-import reactivemongo.bson.{BSONDocument, BSONObjectID}
+import reactivemongo.bson.{BSONDocument, BSONObjectID, BSONRegex}
 import reactivemongo.play.json.ImplicitBSONHandlers._
 import uk.gov.hmrc.mongo.ReactiveRepository
 import uk.gov.hmrc.servicedependencies.model._
@@ -67,7 +67,7 @@ class RepositoryLibraryDependenciesRepository @Inject()(mongo: ReactiveMongoComp
 
   def getForRepository(repositoryName: String): Future[Option[MongoRepositoryDependencies]] = {
     withTimerAndCounter("mongo.read") {
-      find("repositoryName" -> BSONDocument("$eq" -> repositoryName)) map {
+      find("repositoryName" -> BSONRegex("^" + repositoryName + "$", "i")) map {
         case data if data.size > 1 => throw new RuntimeException(s"There should only be '1' record per repository! for $repositoryName there are ${data.size}")
         case data => data.headOption
       }

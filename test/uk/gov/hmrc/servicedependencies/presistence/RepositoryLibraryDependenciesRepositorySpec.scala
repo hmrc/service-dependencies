@@ -99,6 +99,25 @@ class RepositoryLibraryDependenciesRepositorySpec extends UnitSpec with LoneElem
       await(mongoRepositoryLibraryDependenciesRepository.getForRepository("some-repo1")) shouldBe Some(repositoryLibraryDependencies1)
     }
 
+    "finds the repository when the name is of different case" in {
+      val repositoryLibraryDependencies1 = MongoRepositoryDependencies("some-repo1", Seq(LibraryDependency("some-lib1", Version(1, 0, 2))), Nil, Nil, DateTimeUtils.now)
+      val repositoryLibraryDependencies2 = MongoRepositoryDependencies("some-repo2", Seq(LibraryDependency("some-lib2", Version(11, 0, 22))), Nil, Nil, DateTimeUtils.now)
+
+      await(mongoRepositoryLibraryDependenciesRepository.update(repositoryLibraryDependencies1))
+      await(mongoRepositoryLibraryDependenciesRepository.update(repositoryLibraryDependencies2))
+
+      await(mongoRepositoryLibraryDependenciesRepository.getForRepository("SOME-REPO1")) shouldBe defined
+    }
+
+    "not find a repository with partial name" in {
+      val repositoryLibraryDependencies1 = MongoRepositoryDependencies("some-repo1", Seq(LibraryDependency("some-lib1", Version(1, 0, 2))), Nil, Nil, DateTimeUtils.now)
+      val repositoryLibraryDependencies2 = MongoRepositoryDependencies("some-repo2", Seq(LibraryDependency("some-lib2", Version(11, 0, 22))), Nil, Nil, DateTimeUtils.now)
+
+      await(mongoRepositoryLibraryDependenciesRepository.update(repositoryLibraryDependencies1))
+      await(mongoRepositoryLibraryDependenciesRepository.update(repositoryLibraryDependencies2))
+
+      await(mongoRepositoryLibraryDependenciesRepository.getForRepository("some-repo")) shouldBe None
+    }
   }
 
   "clearAllDependencyEntries" should {
