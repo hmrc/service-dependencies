@@ -79,6 +79,20 @@ class GithubSpec extends WordSpec with Matchers with MockitoSugar with OptionVal
       results.libraries shouldBe Map("play-ui" -> Some(Version(1, 3, 0)),  "play-health" -> Some(Version("0.5.0")))
     }
 
+
+    "does not fail if the project folder does not exist" in new TestSetup {
+
+      when(mockContentsService.getContents(any(), is("project")))
+        .thenThrow(new RuntimeException("404 not found"))
+
+      when(mockContentsService.getContents(any(), is(buildSbtFile)))
+        .thenReturn(List(new RepositoryContents().setContent(loadFileAsBase64String("/github/contents_sbt-build_file_with_play_frontend.build.txt"))).asJava)
+
+      github.findVersionsForMultipleArtifacts(repoName, CuratedDependencyConfig(Nil, Seq("play-frontend", "play-ui", "play-health"), Nil)).libraries shouldBe
+        Map("play-frontend" -> Some(Version(1, 1, 1)), "play-ui" -> Some(Version(2, 2, 2)), "play-health" -> Some(Version(8, 8, 8)))
+    }
+
+
     "return artifacts versions correctly for a repository's sbt.build file" in new TestSetup {
 
       when(mockContentsService.getContents(any(), is(buildSbtFile)))

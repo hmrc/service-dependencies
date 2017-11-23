@@ -24,7 +24,7 @@ import org.eclipse.egit.github.core.{IRepositoryIdProvider, RepositoryContents}
 import org.slf4j.LoggerFactory
 import uk.gov.hmrc.githubclient.{APIRateLimitExceededException, GithubApiClient}
 import uk.gov.hmrc.servicedependencies.config.model.{CuratedDependencyConfig, OtherDependencyConfig, SbtPluginConfig}
-import uk.gov.hmrc.servicedependencies.model.{GithubSearchResults, SbtPluginDependency, Version}
+import uk.gov.hmrc.servicedependencies.model.{GithubSearchResults, Version}
 import uk.gov.hmrc.servicedependencies.util.{Max, VersionParser}
 
 import scala.annotation.tailrec
@@ -35,7 +35,7 @@ abstract class Github {
 
   def gh: GithubApiClient
 
-  def resolveTag(version: String): String =s"$tagPrefix$version"
+  def resolveTag(version: String): String = s"$tagPrefix$version"
 
   val tagPrefix: String
 
@@ -90,11 +90,7 @@ abstract class Github {
       }
     }
 
-    import collection.JavaConversions._
-    val buildFilePaths: List[RepositoryContents] = gh.contentsService.getContents(repositoryId(serviceName, org), "project").toList
-    val localPaths: List[String] = buildFilePaths.map(_.getPath).filter(_.endsWith(".scala")) :+ "build.sbt"
-
-    searchRemainingBuildFiles(localPaths)
+    searchRemainingBuildFiles(performProjectDirectorySearch(serviceName) :+ "build.sbt")
   }
 
   private def getCurrentSbtVersion(repositoryName: String): Option[Version] =
@@ -111,6 +107,16 @@ abstract class Github {
     VersionParser.parse(parseFileContents(response), artifacts)
   }
 
+  private def performProjectDirectorySearch(repoName: String): Seq[String] = try {
+    import collection.JavaConversions._
+    val buildFilePaths: List[RepositoryContents] = gh.contentsService.getContents(repositoryId(repoName, org), "project").toList
+    buildFilePaths.map(_.getPath).filter(_.endsWith(".scala"))
+  }
+  catch {
+    case (ex: APIRateLimitExceededException) => throw ex
+    case _: Throwable => Seq.empty
+  }
+
   private def performSearchForMultipleArtifacts(repoName: String,
                                                 filePath: String,
                                                 transformF: (RepositoryContents) => Map[String, Option[Version]]): Map[String, Option[Version]] =
@@ -125,15 +131,6 @@ abstract class Github {
     }
 
 
-  private def searchPluginSbtFile(serviceName: String, artifact: String, version: String) =
-    performSearch(serviceName, Some(version), "project/plugins.sbt", parsePluginsSbtFile(_, artifact))
-
-  private def parseBuildFile(response: RepositoryContents, artifact: String): Option[Version] =
-    VersionParser.parse(parseFileContents(response), artifact)
-
-  private def parsePluginsSbtFile(response: RepositoryContents, artifact: String): Option[Version] =
-    VersionParser.parse(parseFileContents(response), artifact)
-
   private def performSearch(serviceName: String, mayBeVersion: Option[String], filePath: String, transformF: (RepositoryContents) => Option[Version]): Option[Version] =
     try {
       val results = mayBeVersion.fold(gh.contentsService.getContents(repositoryId(serviceName, "HMRC"), filePath)) { version =>
@@ -143,7 +140,7 @@ abstract class Github {
       else transformF(results.get(0))
     }
     catch {
-      case (ex: RequestException) => None
+      case (_: RequestException) => None
     }
 
 
