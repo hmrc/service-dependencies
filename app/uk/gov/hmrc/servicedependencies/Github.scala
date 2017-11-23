@@ -30,7 +30,7 @@ import uk.gov.hmrc.servicedependencies.util.{Max, VersionParser}
 import scala.annotation.tailrec
 import scala.util.{Failure, Success, Try}
 
-abstract class Github(val buildFilePaths: Seq[String]) {
+abstract class Github {
   private val org = "HMRC"
 
   def gh: GithubApiClient
@@ -59,16 +59,6 @@ abstract class Github(val buildFilePaths: Seq[String]) {
     }
   }
 
-  def findArtifactVersion(serviceName: String, artifact: String, versionOption: Option[String]): Option[Version] = {
-    versionOption match {
-      case Some(version) =>
-        val result = searchPluginSbtFile(serviceName, artifact, version)
-        if (result.nonEmpty) result
-        else searchBuildFiles(serviceName, artifact, version)
-      case None => None
-    }
-  }
-
   def findLatestVersion(repoName: String): Option[Version] = {
 
     val allVersions = Try(gh.releaseService.getTags(org, repoName).map(_.name)).recover {
@@ -83,26 +73,6 @@ abstract class Github(val buildFilePaths: Seq[String]) {
     Max.maxOf(maybeVersions)
   }
 
-
-  private def searchBuildFiles(serviceName: String, artifact: String, version: String): Option[Version] = {
-    @tailrec
-    def searchRemainingBuildFiles(remainingFiles: Seq[String]): Option[Version] = {
-      remainingFiles match {
-        case filePath :: xs =>
-          val maybeVersion = performSearch(serviceName, Some(version), filePath, parseBuildFile(_, artifact))
-          maybeVersion match {
-            case None =>
-              searchRemainingBuildFiles(xs)
-            case Some(v) => Some(v)
-          }
-        case Nil => None
-      }
-    }
-
-    searchRemainingBuildFiles(buildFilePaths)
-  }
-
-
   private def searchBuildFilesForMultipleArtifacts(serviceName: String, artifacts: Seq[String]): Map[String, Option[Version]] = {
 
     @tailrec
@@ -111,7 +81,7 @@ abstract class Github(val buildFilePaths: Seq[String]) {
         case filePath :: xs =>
 
           val versionsMap = performSearchForMultipleArtifacts(serviceName, filePath, parseFileForMultipleArtifacts(_, artifacts))
-          if (versionsMap.isEmpty)
+          if (!versionsMap.exists(_._2.isDefined))
             searchRemainingBuildFiles(xs)
           else
             versionsMap
@@ -120,7 +90,11 @@ abstract class Github(val buildFilePaths: Seq[String]) {
       }
     }
 
-    searchRemainingBuildFiles(buildFilePaths)
+    import collection.JavaConversions._
+    val buildFilePaths: List[RepositoryContents] = gh.contentsService.getContents(repositoryId(serviceName, org), "project").toList
+    val localPaths: List[String] = buildFilePaths.map(_.getPath).filter(_.endsWith(".scala")) :+ "build.sbt"
+
+    searchRemainingBuildFiles(localPaths)
   }
 
   private def getCurrentSbtVersion(repositoryName: String): Option[Version] =

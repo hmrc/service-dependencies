@@ -55,22 +55,13 @@ class DependenciesDataSourceSpec extends FreeSpec with Matchers with ScalaFuture
   class GithubStub(
                     val lookupMap: Map[String, Option[String]],
                     val repositoryAndVersions: Map[String, Version] = Map.empty
-                  ) extends Github(Seq()) {
+                  ) extends Github {
 
     override val gh = null
 
     override def resolveTag(version: String) = version
 
     override val tagPrefix: String = "?-?"
-
-    override def findArtifactVersion(serviceName: String, artifact: String, versionOption: Option[String]): Option[Version] = {
-      versionOption match {
-        case Some(version) =>
-          lookupMap.get(s"$serviceName-$version").map(version =>
-            version.map(Version.parse)).getOrElse(None)
-        case None => None
-      }
-    }
 
     override def findLatestVersion(repoName: String): Option[Version] = {
       repositoryAndVersions.get(repoName)

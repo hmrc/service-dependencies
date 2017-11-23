@@ -57,24 +57,14 @@ class DependenciesDataSource @Inject()(teamsAndRepositoriesConnector: TeamsAndRe
   lazy val gitEnterpriseClient: GithubApiClient = GithubApiClient(config.githubApiEnterpriseConfig.apiUrl, config.githubApiEnterpriseConfig.key, new GithubMetrics("github.enterprise"))
   lazy val gitOpenClient: GithubApiClient = GithubApiClient(config.githubApiOpenConfig.apiUrl, config.githubApiOpenConfig.key, new GithubMetrics("github.open"))
 
-  val buildFiles = Seq(
-    "project/AppDependencies.scala",
-    "project/MicroServiceBuild.scala",
-    "project/FrontendBuild.scala",
-    "project/StubServiceBuild.scala",
-    "project/HmrcBuild.scala",
-    "build.sbt"
-  )
-
-
-  object GithubOpen extends Github(buildFiles) {
+  object GithubOpen extends Github {
     override val tagPrefix = "v"
     override lazy val gh = gitOpenClient
 
     override def toString: String = "GitHub.com"
   }
 
-  object GithubEnterprise extends Github(buildFiles) {
+  object GithubEnterprise extends Github {
     override val tagPrefix = "release/"
     override lazy val gh = gitEnterpriseClient
 
