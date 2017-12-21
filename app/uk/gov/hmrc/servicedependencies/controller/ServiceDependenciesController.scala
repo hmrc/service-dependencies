@@ -50,11 +50,6 @@ class ServiceDependenciesController @Inject()(configuration: Configuration,
       dependencyDataUpdatingService.getDependencyVersionsForAllRepositories().map(dependencies => Ok(Json.toJson(dependencies)))
   }
 
-  def locks() = Action.async {
-    implicit request =>
-      dependencyDataUpdatingService.locks().map(locks => Ok(Json.toJson(locks)))
-  }
-
 }
 
 

@@ -17,8 +17,8 @@
 package uk.gov.hmrc.servicedependencies.controller.admin
 
 import javax.inject.{Inject, Singleton}
-
 import play.api.Logger
+import play.api.libs.json.Json
 import play.api.mvc.Action
 import uk.gov.hmrc.play.bootstrap.controller.BaseController
 import uk.gov.hmrc.play.http.logging.MdcLoggingExecutionContext._
@@ -60,6 +60,11 @@ class AdministrationController @Inject()(dependencyDataUpdatingService: Dependen
   def clearUpdateDates = Action.async {
     implicit request =>
       dependencyDataUpdatingService.clearUpdateDates.map(rs => Ok(s"${rs.size} records updated"))
+  }
+
+  def mongoLocks() = Action.async {
+    implicit request =>
+      dependencyDataUpdatingService.locks().map(locks => Ok(Json.toJson(locks)))
   }
 
 }
