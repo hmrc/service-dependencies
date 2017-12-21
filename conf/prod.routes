@@ -1,5 +1,6 @@
 # Add all the application routes to the app.routes file
-->         /api/service-dependencies  app.Routes
+->         /                          app.Routes
 ->         /                          health.Routes
+->         /api/admin/dependencies    admin.Routes
 
 GET        /admin/metrics             @com.kenshoo.play.metrics.MetricsController.metrics

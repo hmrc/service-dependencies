@@ -1,12 +1,5 @@
-# service-dependencies routes
-GET         /dependencies                      @uk.gov.hmrc.servicedependencies.controller.ServiceDependenciesController.dependencies()
-GET         /dependencies/:repository          @uk.gov.hmrc.servicedependencies.controller.ServiceDependenciesController.getDependencyVersionsForRepository(repository)
+GET     /api/dependencies                      @uk.gov.hmrc.servicedependencies.controller.ServiceDependenciesController.dependencies()
+GET     /api/dependencies/:repository          @uk.gov.hmrc.servicedependencies.controller.ServiceDependenciesController.getDependencyVersionsForRepository(repository)
 
 
-# Administration routes
-GET         /admin/reloadLibraryVersions             @uk.gov.hmrc.servicedependencies.controller.admin.AdministrationController.reloadLibraryVersions()
-GET         /admin/reloadSbtPluginVersions           @uk.gov.hmrc.servicedependencies.controller.admin.AdministrationController.reloadSbtPluginVersions()
-GET         /admin/reloadDependencies                @uk.gov.hmrc.servicedependencies.controller.admin.AdministrationController.reloadLibraryDependenciesForAllRepositories()
-POST        /admin/dropCollection/:collection        @uk.gov.hmrc.servicedependencies.controller.admin.AdministrationController.dropCollection(collection)
-POST        /admin/clearUpdateDates                  @uk.gov.hmrc.servicedependencies.controller.admin.AdministrationController.clearUpdateDates
-GET         /admin/mongoLocks                       @uk.gov.hmrc.servicedependencies.controller.admin.AdministrationController.mongoLocks()
+
