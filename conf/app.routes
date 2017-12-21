@@ -1,8 +1,6 @@
 # service-dependencies routes
 GET         /dependencies                      @uk.gov.hmrc.servicedependencies.controller.ServiceDependenciesController.dependencies()
 GET         /dependencies/:repository          @uk.gov.hmrc.servicedependencies.controller.ServiceDependenciesController.getDependencyVersionsForRepository(repository)
-GET         /libraries                         @uk.gov.hmrc.servicedependencies.controller.ServiceDependenciesController.libraries()
-GET         /sbtPlugins                        @uk.gov.hmrc.servicedependencies.controller.ServiceDependenciesController.sbtPlugins()
 GET         /locks                             @uk.gov.hmrc.servicedependencies.controller.ServiceDependenciesController.locks()
 
 

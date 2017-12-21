@@ -153,12 +153,6 @@ class DependencyDataUpdatingService @Inject()(curatedDependencyConfigProvider: C
         )
       }
 
-  def getAllCuratedLibraries(): Future[Seq[MongoLibraryVersion]] =
-    libraryVersionRepository.getAllEntries
-
-  def getAllCuratedSbtPlugins(): Future[Seq[MongoSbtPluginVersion]] =
-    sbtPluginVersionRepository.getAllEntries
-
   def getAllRepositoriesDependencies(): Future[Seq[MongoRepositoryDependencies]] =
     repositoryLibraryDependenciesRepository.getAllEntries
 

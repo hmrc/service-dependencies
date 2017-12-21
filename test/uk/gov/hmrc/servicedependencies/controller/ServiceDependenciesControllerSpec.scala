@@ -63,27 +63,6 @@ class ServiceDependenciesControllerSpec
 
   }
 
-  "get libraries" - {
-    "should get all the curated libraries using the service" in new Setup {
-      val mockedLibraryDependencyDataUpdatingService = mock[DependencyDataUpdatingService]
-      val libraryVersions = Seq(
-        MongoLibraryVersion("lib1", Some(Version(1, 0, 0)), DateTimeUtils.now),
-        MongoLibraryVersion("lib2", Some(Version(2, 0, 0)), DateTimeUtils.now),
-        MongoLibraryVersion("lib3", Some(Version(3, 0, 0)), DateTimeUtils.now)
-      )
-      when(mockedLibraryDependencyDataUpdatingService.getAllCuratedLibraries()).thenReturn(Future.successful(
-        libraryVersions
-      ))
-
-      val result = makeServiceDependenciesImpl(mockedLibraryDependencyDataUpdatingService).libraries().apply(FakeRequest())
-      val mongoLibraryVersions = contentAsJson(result).as[Seq[MongoLibraryVersion]]
-
-      mongoLibraryVersions.size shouldBe 3
-      mongoLibraryVersions should contain theSameElementsAs libraryVersions
-    }
-
-  }
-
   "get dependencies" - {
     "should get all dependencies using the service" in new Setup {
       val mockedLibraryDependencyDataUpdatingService = mock[DependencyDataUpdatingService]

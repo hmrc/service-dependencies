@@ -50,18 +50,6 @@ class ServiceDependenciesController @Inject()(configuration: Configuration,
       dependencyDataUpdatingService.getDependencyVersionsForAllRepositories().map(dependencies => Ok(Json.toJson(dependencies)))
   }
 
-
-  def libraries() = Action.async {
-    implicit request =>
-      dependencyDataUpdatingService.getAllCuratedLibraries().map(versions => Ok(Json.toJson(versions)))
-  }
-
-
-  def sbtPlugins() = Action.async {
-    implicit request =>
-      dependencyDataUpdatingService.getAllCuratedSbtPlugins().map(versions => Ok(Json.toJson(versions)))
-  }
-
   def locks() = Action.async {
     implicit request =>
       dependencyDataUpdatingService.locks().map(locks => Ok(Json.toJson(locks)))
