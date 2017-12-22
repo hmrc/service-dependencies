@@ -84,19 +84,17 @@ class DependencyDataUpdatingService @Inject()(curatedDependencyConfigProvider: C
     }
   }
 
-  private def runMongoUpdate[T](mongoLock: MongoLock)(f: => Future[T]) =
+  private def runMongoUpdate[T](mongoLock: MongoLock)(f: => Future[Seq[T]]) =
     mongoLock.tryLock {
       logger.debug(s"Starting mongo update for ${mongoLock.lockId}")
       f
     } map {
-      _.getOrElse {
-        val message = s"Mongo is locked for ${mongoLock.lockId}"
-        logger.error(message)
-        throw new RuntimeException(message)
-      }
-    } map { r =>
-      logger.debug(s"mongo update completed ${mongoLock.lockId}")
-      r
+      case Some(r) =>
+        logger.debug(s"mongo update completed ${mongoLock.lockId}")
+        r
+      case None =>
+        logger.debug(s"Mongo is locked for ${mongoLock.lockId}... skipping update")
+        Seq.empty
     }
 
   def getSbtPluginDependencyState(repositoryDependencies: MongoRepositoryDependencies, sbtPluginReferences: Seq[MongoSbtPluginVersion]) = {
