@@ -18,10 +18,9 @@ package uk.gov.hmrc.servicedependencies.util
 
 object Max {
 
-  def maxOf[A](s: Seq[Option[A]])(implicit cmp: Ordering[Option[A]]): Option[A] = {
+  def maxOf[A](s: Seq[Option[A]])(implicit cmp: Ordering[Option[A]]): Option[A] =
     s match {
       case Nil => None
-      case xs => xs.max
+      case xs  => xs.max
     }
-  }
 }

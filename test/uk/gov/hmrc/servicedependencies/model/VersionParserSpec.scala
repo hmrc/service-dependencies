@@ -98,8 +98,11 @@ class VersionParserSpec extends FreeSpec with MustMatchers {
                       |    }.test
                       |  }""".stripMargin
 
-    VersionParser.parse(buildFile, Seq("play-frontend", "play-backend", "play-middle")) must contain theSameElementsAs Seq(
-      "play-frontend" -> Some(Version(1, 2, 3)), "play-backend" -> Some(Version(3, 5, 5)), "play-middle" -> Some(Version(6, 8, 8))
+    VersionParser
+      .parse(buildFile, Seq("play-frontend", "play-backend", "play-middle")) must contain theSameElementsAs Seq(
+      "play-frontend" -> Some(Version(1, 2, 3)),
+      "play-backend"  -> Some(Version(3, 5, 5)),
+      "play-middle"   -> Some(Version(6, 8, 8))
     )
   }
 
@@ -113,8 +116,11 @@ class VersionParserSpec extends FreeSpec with MustMatchers {
                       |    }.test
                       |  }""".stripMargin
 
-    VersionParser.parse(buildFile, Seq("play-frontend", "play-backend", "play-middle")) must contain theSameElementsAs Seq(
-      "play-frontend" -> Some(Version(1, 2, 3)), "play-backend" -> Some(Version(3, 5, 5)), "play-middle" -> None
+    VersionParser
+      .parse(buildFile, Seq("play-frontend", "play-backend", "play-middle")) must contain theSameElementsAs Seq(
+      "play-frontend" -> Some(Version(1, 2, 3)),
+      "play-backend"  -> Some(Version(3, 5, 5)),
+      "play-middle"   -> None
     )
   }
 
@@ -129,8 +135,8 @@ class VersionParserSpec extends FreeSpec with MustMatchers {
   }
 
   "Parsing a build.properties file returns the sbt version" in {
-    VersionParser.parsePropertyFile("sbt.version=1.2.3", "sbt.version") mustBe Some(Version(1,2,3))
-    VersionParser.parsePropertyFile(" sbt.version = 1.2.3 ", "sbt.version") mustBe Some(Version(1,2,3))
+    VersionParser.parsePropertyFile("sbt.version=1.2.3", "sbt.version") mustBe Some(Version(1, 2, 3))
+    VersionParser.parsePropertyFile(" sbt.version = 1.2.3 ", "sbt.version") mustBe Some(Version(1, 2, 3))
   }
 
   "Parsing build.properties file returns None for sbt version if the 'sbt.version' is not defined" in {

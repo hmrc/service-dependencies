@@ -28,17 +28,15 @@ import uk.gov.hmrc.servicedependencies.presistence._
 import uk.gov.hmrc.time.DateTimeUtils
 
 import scala.concurrent.Future
-
-
 @Singleton
-class DependencyDataUpdatingService @Inject()(curatedDependencyConfigProvider: CuratedDependencyConfigProvider,
-                                              repositoryLibraryDependenciesRepository: RepositoryLibraryDependenciesRepository,
-                                              libraryVersionRepository: LibraryVersionRepository,
-                                              sbtPluginVersionRepository: SbtPluginVersionRepository,
-                                              locksRepository: LocksRepository,
-                                              mongoLocks: MongoLocks,
-                                              dependenciesDataSource: DependenciesDataSource) {
-
+class DependencyDataUpdatingService @Inject()(
+  curatedDependencyConfigProvider: CuratedDependencyConfigProvider,
+  repositoryLibraryDependenciesRepository: RepositoryLibraryDependenciesRepository,
+  libraryVersionRepository: LibraryVersionRepository,
+  sbtPluginVersionRepository: SbtPluginVersionRepository,
+  locksRepository: LocksRepository,
+  mongoLocks: MongoLocks,
+  dependenciesDataSource: DependenciesDataSource) {
 
   lazy val logger = LoggerFactory.getLogger(this.getClass)
 
@@ -52,7 +50,7 @@ class DependencyDataUpdatingService @Inject()(curatedDependencyConfigProvider: C
 
   lazy val curatedDependencyConfig = curatedDependencyConfigProvider.curatedDependencyConfig
 
-  def reloadLatestSbtPluginVersions(): Future[Seq[MongoSbtPluginVersion]] = {
+  def reloadLatestSbtPluginVersions(): Future[Seq[MongoSbtPluginVersion]] =
     runMongoUpdate(sbtPluginMongoLock) {
       val sbtPluginVersions = dependenciesDataSource.getLatestSbtPluginVersions(curatedDependencyConfig.sbtPlugins)
 
@@ -60,10 +58,8 @@ class DependencyDataUpdatingService @Inject()(curatedDependencyConfigProvider: C
         sbtPluginVersionRepository.update(MongoSbtPluginVersion(x.sbtPluginName, x.version, now))
       })
     }
-  }
 
-
-  def reloadLatestLibraryVersions(): Future[Seq[MongoLibraryVersion]] = {
+  def reloadLatestLibraryVersions(): Future[Seq[MongoLibraryVersion]] =
     runMongoUpdate(libraryMongoLock) {
       val latestLibraryVersions = dependenciesDataSource.getLatestLibrariesVersions(curatedDependencyConfig.libraries)
 
@@ -71,14 +67,16 @@ class DependencyDataUpdatingService @Inject()(curatedDependencyConfigProvider: C
         libraryVersionRepository.update(MongoLibraryVersion(x.libraryName, x.version, now))
       })
     }
-  }
 
-  def reloadCurrentDependenciesDataForAllRepositories()(implicit hc: HeaderCarrier): Future[Seq[MongoRepositoryDependencies]] = {
+  def reloadCurrentDependenciesDataForAllRepositories()(
+    implicit hc: HeaderCarrier): Future[Seq[MongoRepositoryDependencies]] = {
     logger.debug("reloading current dependencies data for all repositories...")
     runMongoUpdate(repositoryDependencyMongoLock) {
       for {
         currentDependencyEntries <- repositoryLibraryDependenciesRepository.getAllEntries
-        libraryDependencies <- dependenciesDataSource.persistDependenciesForAllRepositories(curatedDependencyConfig, currentDependencyEntries)
+        libraryDependencies <- dependenciesDataSource.persistDependenciesForAllRepositories(
+                                curatedDependencyConfig,
+                                currentDependencyEntries)
       } yield libraryDependencies
 
     }
@@ -97,15 +95,19 @@ class DependencyDataUpdatingService @Inject()(curatedDependencyConfigProvider: C
         Seq.empty
     }
 
-  def getSbtPluginDependencyState(repositoryDependencies: MongoRepositoryDependencies, sbtPluginReferences: Seq[MongoSbtPluginVersion]) = {
-
+  def getSbtPluginDependencyState(
+    repositoryDependencies: MongoRepositoryDependencies,
+    sbtPluginReferences: Seq[MongoSbtPluginVersion]) =
     repositoryDependencies.sbtPluginDependencies.map { sbtPluginDependency =>
-
       val mayBeExternalSbtPlugin = curatedDependencyConfig.sbtPlugins
         .find(pluginConfig => pluginConfig.name == sbtPluginDependency.sbtPluginName && pluginConfig.isExternal())
 
-      val latestVersion = mayBeExternalSbtPlugin.map(_.version.getOrElse(throw new RuntimeException(s"External sbt plugin ($mayBeExternalSbtPlugin) must specify the (latest) version")))
-        .orElse(sbtPluginReferences.find(mlv => mlv.sbtPluginName == sbtPluginDependency.sbtPluginName).flatMap(_.version))
+      val latestVersion = mayBeExternalSbtPlugin
+        .map(
+          _.version.getOrElse(throw new RuntimeException(
+            s"External sbt plugin ($mayBeExternalSbtPlugin) must specify the (latest) version")))
+        .orElse(
+          sbtPluginReferences.find(mlv => mlv.sbtPluginName == sbtPluginDependency.sbtPluginName).flatMap(_.version))
 
       Dependency(
         sbtPluginDependency.sbtPluginName,
@@ -115,39 +117,55 @@ class DependencyDataUpdatingService @Inject()(curatedDependencyConfigProvider: C
       )
     }
 
-  }
-
-
   def getDependencyVersionsForRepository(repositoryName: String): Future[Option[Dependencies]] =
     for {
-      dependencies <- repositoryLibraryDependenciesRepository.getForRepository(repositoryName)
-      libraryReferences <- libraryVersionRepository.getAllEntries
+      dependencies        <- repositoryLibraryDependenciesRepository.getForRepository(repositoryName)
+      libraryReferences   <- libraryVersionRepository.getAllEntries
       sbtPluginReferences <- sbtPluginVersionRepository.getAllEntries
     } yield
       dependencies.map { dep =>
         Dependencies(
           repositoryName,
-          dep.libraryDependencies.map(d => Dependency(d.libraryName, d.currentVersion, libraryReferences.find(mlv => mlv.libraryName == d.libraryName).flatMap(_.version))),
+          dep.libraryDependencies.map(
+            d =>
+              Dependency(
+                d.libraryName,
+                d.currentVersion,
+                libraryReferences.find(mlv => mlv.libraryName == d.libraryName).flatMap(_.version))),
           getSbtPluginDependencyState(dep, sbtPluginReferences),
-          dep.otherDependencies.map(other => Dependency(other.name, other.currentVersion, curatedDependencyConfig.otherDependencies.find(_.name == "sbt").flatMap(_.latestVersion))),
+          dep.otherDependencies.map(
+            other =>
+              Dependency(
+                other.name,
+                other.currentVersion,
+                curatedDependencyConfig.otherDependencies.find(_.name == "sbt").flatMap(_.latestVersion))),
           dep.updateDate
         )
       }
 
   def getDependencyVersionsForAllRepositories(): Future[Seq[Dependencies]] =
     for {
-      allDependencies <- repositoryLibraryDependenciesRepository.getAllEntries
-      libraryReferences <- libraryVersionRepository.getAllEntries
+      allDependencies     <- repositoryLibraryDependenciesRepository.getAllEntries
+      libraryReferences   <- libraryVersionRepository.getAllEntries
       sbtPluginReferences <- sbtPluginVersionRepository.getAllEntries
     } yield
       allDependencies.map { dep =>
         Dependencies(
           dep.repositoryName,
-          dep.libraryDependencies.map(d => Dependency(d.libraryName, d.currentVersion, libraryReferences.find(mlv => mlv.libraryName == d.libraryName).flatMap(_.version))),
+          dep.libraryDependencies.map(
+            d =>
+              Dependency(
+                d.libraryName,
+                d.currentVersion,
+                libraryReferences.find(mlv => mlv.libraryName == d.libraryName).flatMap(_.version))),
           getSbtPluginDependencyState(dep, sbtPluginReferences),
-          dep.otherDependencies.map(other => Dependency(other.name, other.currentVersion, curatedDependencyConfig.otherDependencies.find(_.name == "sbt").flatMap(_.latestVersion))),
+          dep.otherDependencies.map(
+            other =>
+              Dependency(
+                other.name,
+                other.currentVersion,
+                curatedDependencyConfig.otherDependencies.find(_.name == "sbt").flatMap(_.latestVersion))),
           dep.updateDate
-
         )
       }
 
@@ -156,16 +174,14 @@ class DependencyDataUpdatingService @Inject()(curatedDependencyConfigProvider: C
 
   def dropCollection(collectionName: String) = collectionName match {
     case "repositoryLibraryDependencies" => repositoryLibraryDependenciesRepository.clearAllData
-    case "libraryVersions" => libraryVersionRepository.clearAllData
-    case "sbtPluginVersions" => sbtPluginVersionRepository.clearAllData
-    case "locks" => locksRepository.clearAllData
-    case anythingElse => throw new RuntimeException(s"dropping $anythingElse collection is not supported")
+    case "libraryVersions"               => libraryVersionRepository.clearAllData
+    case "sbtPluginVersions"             => sbtPluginVersionRepository.clearAllData
+    case "locks"                         => locksRepository.clearAllData
+    case anythingElse                    => throw new RuntimeException(s"dropping $anythingElse collection is not supported")
   }
 
-
-  def locks(): Future[Seq[Lock]] = {
+  def locks(): Future[Seq[Lock]] =
     locksRepository.getAllEntries
-  }
 
   def clearUpdateDates =
     repositoryLibraryDependenciesRepository.clearUpdateDates

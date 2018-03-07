@@ -25,15 +25,12 @@ import uk.gov.hmrc.lock.LockFormats.Lock
 import uk.gov.hmrc.mongo.ReactiveRepository
 
 import scala.concurrent.Future
-
-
 @Singleton
 class LocksRepository @Inject()(mongo: ReactiveMongoComponent)
-  extends ReactiveRepository[Lock, BSONObjectID](
-    collectionName = "locks",
-    mongo = mongo.mongoConnector.db,
-    domainFormat = LockFormats.format) {
-
+    extends ReactiveRepository[Lock, BSONObjectID](
+      collectionName = "locks",
+      mongo          = mongo.mongoConnector.db,
+      domainFormat   = LockFormats.format) {
 
   def getAllEntries: Future[Seq[Lock]] = findAll()
 

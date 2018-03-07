@@ -36,10 +36,11 @@ import uk.gov.hmrc.time.DateTimeUtils
 import scala.concurrent.Future
 
 @Singleton
-class DependenciesDataSource @Inject()(teamsAndRepositoriesConnector: TeamsAndRepositoriesConnector,
-                                       config: ServiceDependenciesConfig,
-                                       repositoryLibraryDependenciesRepository: RepositoryLibraryDependenciesRepository,
-                                       metrics: Metrics) {
+class DependenciesDataSource @Inject()(
+  teamsAndRepositoriesConnector: TeamsAndRepositoriesConnector,
+  config: ServiceDependenciesConfig,
+  repositoryLibraryDependenciesRepository: RepositoryLibraryDependenciesRepository,
+  metrics: Metrics) {
 
   lazy val logger = LoggerFactory.getLogger(this.getClass)
 
@@ -49,24 +50,27 @@ class DependenciesDataSource @Inject()(teamsAndRepositoriesConnector: TeamsAndRe
 
     lazy val registry = metrics.defaultRegistry
 
-    override def increment(name: String): Unit = {
+    override def increment(name: String): Unit =
       registry.counter(name).inc()
-    }
   }
 
-  lazy val gitEnterpriseClient: GithubApiClient = GithubApiClient(config.githubApiEnterpriseConfig.apiUrl, config.githubApiEnterpriseConfig.key, new GithubMetrics("github.enterprise"))
-  lazy val gitOpenClient: GithubApiClient = GithubApiClient(config.githubApiOpenConfig.apiUrl, config.githubApiOpenConfig.key, new GithubMetrics("github.open"))
+  lazy val gitEnterpriseClient: GithubApiClient = GithubApiClient(
+    config.githubApiEnterpriseConfig.apiUrl,
+    config.githubApiEnterpriseConfig.key,
+    new GithubMetrics("github.enterprise"))
+  lazy val gitOpenClient: GithubApiClient =
+    GithubApiClient(config.githubApiOpenConfig.apiUrl, config.githubApiOpenConfig.key, new GithubMetrics("github.open"))
 
   object GithubOpen extends Github {
     override val tagPrefix = "v"
-    override lazy val gh = gitOpenClient
+    override lazy val gh   = gitOpenClient
 
     override def toString: String = "GitHub.com"
   }
 
   object GithubEnterprise extends Github {
     override val tagPrefix = "release/"
-    override lazy val gh = gitEnterpriseClient
+    override lazy val gh   = gitEnterpriseClient
 
     override def resolveTag(version: String) = s"$tagPrefix$version"
 
@@ -74,22 +78,19 @@ class DependenciesDataSource @Inject()(teamsAndRepositoriesConnector: TeamsAndRe
   }
 
   lazy val githubEnterprise: Github = GithubEnterprise
-  lazy val githubOpen: Github = GithubOpen
+  lazy val githubOpen: Github       = GithubOpen
 
   protected[servicedependencies] lazy val githubs = Seq(githubOpen, githubEnterprise)
 
   def githubForRepository(r: Repository): Github =
     if (r.githubUrls.map(_.name).contains("github-com")) githubOpen else githubEnterprise
 
-
   def getLatestSbtPluginVersions(sbtPlugins: Seq[SbtPluginConfig]): Seq[SbtPluginVersion] = {
 
     def getLatestSbtPluginVersion(sbtPluginConfig: SbtPluginConfig): Option[Version] =
       Max.maxOf(githubs.map(gh => gh.findLatestVersion(sbtPluginConfig.name)))
 
-    sbtPlugins.map(sbtPluginConfig =>
-      sbtPluginConfig -> getLatestSbtPluginVersion(sbtPluginConfig)
-    ).map {
+    sbtPlugins.map(sbtPluginConfig => sbtPluginConfig -> getLatestSbtPluginVersion(sbtPluginConfig)).map {
       case (sbtPluginConfig, version) => SbtPluginVersion(sbtPluginConfig.name, version)
     }
 
@@ -100,54 +101,55 @@ class DependenciesDataSource @Inject()(teamsAndRepositoriesConnector: TeamsAndRe
     def getLatestLibraryVersion(lib: String): Option[Version] =
       Max.maxOf(githubs.map(gh => gh.findLatestVersion(lib)))
 
-    libraries.map(lib =>
-      lib -> getLatestLibraryVersion(lib)
-    ).map {
+    libraries.map(lib => lib -> getLatestLibraryVersion(lib)).map {
       case (lib, version) => LibraryVersion(lib, version)
     }
   }
 
-
-  def persistDependenciesForAllRepositories(curatedDependencyConfig: CuratedDependencyConfig,
-                                            currentDependencyEntries: Seq[MongoRepositoryDependencies]
-                                           )(implicit hc: HeaderCarrier): Future[Seq[MongoRepositoryDependencies]] = {
+  def persistDependenciesForAllRepositories(
+    curatedDependencyConfig: CuratedDependencyConfig,
+    currentDependencyEntries: Seq[MongoRepositoryDependencies])(
+    implicit hc: HeaderCarrier): Future[Seq[MongoRepositoryDependencies]] = {
 
     val allRepositories: Future[Seq[String]] = teamsAndRepositoriesConnector.getAllRepositories()
 
     def serialiseFutures[A, B](l: Iterable[A])(fn: A => Future[B]): Future[Seq[B]] =
-      l.foldLeft(Future(List.empty[B])) {
-        (previousFuture, next) ⇒
-          for {
-            previousResults ← previousFuture
-            next ← fn(next)
-          } yield previousResults :+ next
+      l.foldLeft(Future(List.empty[B])) { (previousFuture, next) ⇒
+        for {
+          previousResults ← previousFuture
+          next ← fn(next)
+        } yield previousResults :+ next
       }
 
-    def getRepoAndUpdate(repositoryName: String): Future[Option[MongoRepositoryDependencies]] = {
-      teamsAndRepositoriesConnector.getRepository(repositoryName).map(maybeRepository => maybeRepository.flatMap(updateDependencies))
-    }
+    def getRepoAndUpdate(repositoryName: String): Future[Option[MongoRepositoryDependencies]] =
+      teamsAndRepositoriesConnector
+        .getRepository(repositoryName)
+        .map(maybeRepository => maybeRepository.flatMap(updateDependencies))
 
     def updateDependencies(repository: Repository): Option[MongoRepositoryDependencies] = {
 
-      def getLibraryDependencies(githubSearchResults: GithubSearchResults) = githubSearchResults.libraries.foldLeft(Seq.empty[LibraryDependency]) {
-        case (acc, (library, mayBeVersion)) =>
-          mayBeVersion.fold(acc)(currentVersion => acc :+ LibraryDependency(library, currentVersion))
-      }
+      def getLibraryDependencies(githubSearchResults: GithubSearchResults) =
+        githubSearchResults.libraries.foldLeft(Seq.empty[LibraryDependency]) {
+          case (acc, (library, mayBeVersion)) =>
+            mayBeVersion.fold(acc)(currentVersion => acc :+ LibraryDependency(library, currentVersion))
+        }
 
-      def getPluginDependencies(githubSearchResults: GithubSearchResults) = githubSearchResults.sbtPlugins.foldLeft(Seq.empty[SbtPluginDependency]) {
-        case (acc, (plugin, mayBeVersion)) =>
-          mayBeVersion.fold(acc)(currentVersion => acc :+ SbtPluginDependency(plugin, currentVersion))
-      }
+      def getPluginDependencies(githubSearchResults: GithubSearchResults) =
+        githubSearchResults.sbtPlugins.foldLeft(Seq.empty[SbtPluginDependency]) {
+          case (acc, (plugin, mayBeVersion)) =>
+            mayBeVersion.fold(acc)(currentVersion => acc :+ SbtPluginDependency(plugin, currentVersion))
+        }
 
-      def getOtherDependencies(githubSearchResults: GithubSearchResults) = githubSearchResults.others.foldLeft(Seq.empty[OtherDependency]) {
-        case (acc, ("sbt", mayBeVersion)) =>
-          mayBeVersion.fold(acc)(currentVersion => acc :+ OtherDependency("sbt", currentVersion))
-      }
-
+      def getOtherDependencies(githubSearchResults: GithubSearchResults) =
+        githubSearchResults.others.foldLeft(Seq.empty[OtherDependency]) {
+          case (acc, ("sbt", mayBeVersion)) =>
+            mayBeVersion.fold(acc)(currentVersion => acc :+ OtherDependency("sbt", currentVersion))
+        }
 
       val repoName = repository.name
       logger.info(s"Updating dependencies for: $repoName")
-      val lastUpdated: DateTime = currentDependencyEntries.find(_.repositoryName == repoName).map(_.updateDate).getOrElse(new DateTime(0))
+      val lastUpdated: DateTime =
+        currentDependencyEntries.find(_.repositoryName == repoName).map(_.updateDate).getOrElse(new DateTime(0))
       if (lastUpdated.isAfter(repository.lastActive)) {
         logger.debug(s"No changes for repository ($repoName). Skipping....")
         None
@@ -167,11 +169,12 @@ class DependenciesDataSource @Inject()(teamsAndRepositoriesConnector: TeamsAndRe
 
             val repositoryLibraryDependencies =
               MongoRepositoryDependencies(
-                repositoryName = repoName,
-                libraryDependencies = getLibraryDependencies(searchResults),
+                repositoryName        = repoName,
+                libraryDependencies   = getLibraryDependencies(searchResults),
                 sbtPluginDependencies = getPluginDependencies(searchResults),
-                otherDependencies = getOtherDependencies(searchResults),
-                updateDate = now)
+                otherDependencies     = getOtherDependencies(searchResults),
+                updateDate            = now
+              )
 
             repositoryLibraryDependenciesRepository.update(repositoryLibraryDependencies)
 

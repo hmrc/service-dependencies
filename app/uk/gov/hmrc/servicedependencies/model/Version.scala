@@ -20,10 +20,8 @@ import play.api.libs.json.{JsPath, Json, Reads}
 
 import play.api.libs.functional.syntax._
 
-
-
 case class Version(major: Int, minor: Int, patch: Int) {
-  def <(other: Version) = {
+  def <(other: Version) =
     if (major == other.major)
       if (minor == other.minor)
         patch < other.patch
@@ -31,7 +29,6 @@ case class Version(major: Int, minor: Int, patch: Int) {
         minor < other.minor
     else
       major < other.major
-  }
 
   override def toString: String = s"$major.$minor.$patch"
 }
@@ -39,22 +36,18 @@ case class Version(major: Int, minor: Int, patch: Int) {
 object Version {
   implicit val format = Json.format[Version]
 
-
   def apply(version: String): Version =
     parse(version)
 
   def parse(s: String) = {
     val split = s.split("\\.")
-    Version(Integer.parseInt(split(0)),
-    Integer.parseInt(split(1)),
-    Integer.parseInt(split(2)))
+    Version(Integer.parseInt(split(0)), Integer.parseInt(split(1)), Integer.parseInt(split(2)))
   }
 
   implicit val ord = Ordering.by(unapply)
 
   implicit class VersionExtensions(v: String) {
-    def asVersion(): Version = {
+    def asVersion(): Version =
       Version(v)
-    }
   }
 }

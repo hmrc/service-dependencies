@@ -31,11 +31,11 @@ import play.modules.reactivemongo.ReactiveMongoComponent
 import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
-class LibraryVersionRepository @Inject() (mongo: ReactiveMongoComponent)
-  extends ReactiveRepository[MongoLibraryVersion, BSONObjectID](
-    collectionName = "libraryVersions",
-    mongo = mongo.mongoConnector.db,
-    domainFormat = MongoLibraryVersion.format) {
+class LibraryVersionRepository @Inject()(mongo: ReactiveMongoComponent)
+    extends ReactiveRepository[MongoLibraryVersion, BSONObjectID](
+      collectionName = "libraryVersions",
+      mongo          = mongo.mongoConnector.db,
+      domainFormat   = MongoLibraryVersion.format) {
 
   override def ensureIndexes(implicit ec: ExecutionContext = defaultContext): Future[Seq[Boolean]] =
     localEnsureIndexes
@@ -43,20 +43,25 @@ class LibraryVersionRepository @Inject() (mongo: ReactiveMongoComponent)
   private def localEnsureIndexes =
     Future.sequence(
       Seq(
-        collection.indexesManager(defaultContext).ensure(Index(Seq("libraryName" -> IndexType.Hashed), name = Some("libraryNameIdx"), unique = true))
+        collection
+          .indexesManager(defaultContext)
+          .ensure(Index(Seq("libraryName" -> IndexType.Hashed), name = Some("libraryNameIdx"), unique = true))
       )
     )
 
   def update(libraryVersion: MongoLibraryVersion): Future[MongoLibraryVersion] = {
 
-
     logger.debug(s"writing $libraryVersion")
     withTimerAndCounter("mongo.update") {
       for {
-        update <- collection.update(selector = Json.obj("libraryName" -> Json.toJson(libraryVersion.libraryName)), update = libraryVersion, upsert = true)
-      } yield update match {
-        case _ => libraryVersion
-      }
+        update <- collection.update(
+                   selector = Json.obj("libraryName" -> Json.toJson(libraryVersion.libraryName)),
+                   update   = libraryVersion,
+                   upsert   = true)
+      } yield
+        update match {
+          case _ => libraryVersion
+        }
     } recover {
       case lastError => throw new RuntimeException(s"failed to persist LibraryVersion: $libraryVersion", lastError)
     }

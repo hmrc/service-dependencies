@@ -32,8 +32,6 @@ package uk.gov.hmrc.servicedependencies.presistence
  * limitations under the License.
  */
 
-
-
 import org.mockito.Mockito.when
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.mockito.MockitoSugar
@@ -46,7 +44,15 @@ import uk.gov.hmrc.play.test.UnitSpec
 import uk.gov.hmrc.servicedependencies.model.{MongoSbtPluginVersion, Version}
 import uk.gov.hmrc.time.DateTimeUtils
 
-class SbtPluginVersionRepositorySpec extends UnitSpec with LoneElement with MongoSpecSupport with ScalaFutures with OptionValues with BeforeAndAfterEach with OneAppPerTest with MockitoSugar {
+class SbtPluginVersionRepositorySpec
+    extends UnitSpec
+    with LoneElement
+    with MongoSpecSupport
+    with ScalaFutures
+    with OptionValues
+    with BeforeAndAfterEach
+    with OneAppPerTest
+    with MockitoSugar {
 
   val reactiveMongoComponent = new ReactiveMongoComponent {
     val mockedMongoConnector = mock[MongoConnector]
@@ -72,7 +78,7 @@ class SbtPluginVersionRepositorySpec extends UnitSpec with LoneElement with Mong
 
     "updates correctly (based on sbtPlugin name)" in {
 
-      val sbtPluginVersion = MongoSbtPluginVersion("some-sbtPlugin", Some(Version(1, 0, 2)), DateTimeUtils.now)
+      val sbtPluginVersion    = MongoSbtPluginVersion("some-sbtPlugin", Some(Version(1, 0, 2)), DateTimeUtils.now)
       val newSbtPluginVersion = sbtPluginVersion.copy(version = Some(Version(1, 0, 5)))
       await(mongoSbtPluginVersions.update(sbtPluginVersion))
 

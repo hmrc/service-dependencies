@@ -25,46 +25,49 @@ import uk.gov.hmrc.play.http.logging.MdcLoggingExecutionContext._
 import uk.gov.hmrc.servicedependencies.service.DependencyDataUpdatingService
 
 @Singleton
-class AdministrationController @Inject()(dependencyDataUpdatingService: DependencyDataUpdatingService) extends BaseController {
+class AdministrationController @Inject()(dependencyDataUpdatingService: DependencyDataUpdatingService)
+    extends BaseController {
 
-  def reloadLibraryDependenciesForAllRepositories() = Action {
-    implicit request =>
-      dependencyDataUpdatingService.reloadCurrentDependenciesDataForAllRepositories().map(_ => Logger.debug(s"""${">" * 10} done ${"<" * 10}""")).onFailure {
+  def reloadLibraryDependenciesForAllRepositories() = Action { implicit request =>
+    dependencyDataUpdatingService
+      .reloadCurrentDependenciesDataForAllRepositories()
+      .map(_ => Logger.debug(s"""${">" * 10} done ${"<" * 10}"""))
+      .onFailure {
         case ex => throw new RuntimeException("reload of dependencies failed", ex)
       }
-      Ok("Done")
+    Ok("Done")
   }
 
-
-  def reloadLibraryVersions() = Action {
-    implicit request =>
-      dependencyDataUpdatingService.reloadLatestLibraryVersions().map(_ => println(s"""${">" * 10} done ${"<" * 10}""")).onFailure {
+  def reloadLibraryVersions() = Action { implicit request =>
+    dependencyDataUpdatingService
+      .reloadLatestLibraryVersions()
+      .map(_ => println(s"""${">" * 10} done ${"<" * 10}"""))
+      .onFailure {
         case ex => throw new RuntimeException("reload of libraries failed", ex)
       }
-      Ok("Done")
+    Ok("Done")
   }
 
-  def reloadSbtPluginVersions() = Action {
-    implicit request =>
-      dependencyDataUpdatingService.reloadLatestSbtPluginVersions().map(_ => println(s"""${">" * 10} done ${"<" * 10}""")).onFailure {
+  def reloadSbtPluginVersions() = Action { implicit request =>
+    dependencyDataUpdatingService
+      .reloadLatestSbtPluginVersions()
+      .map(_ => println(s"""${">" * 10} done ${"<" * 10}"""))
+      .onFailure {
         case ex => throw new RuntimeException("reload of sbt plugins failed", ex)
       }
-      Ok("Done")
+    Ok("Done")
   }
 
-  def dropCollection(collection: String) = Action.async {
-    implicit request =>
-      dependencyDataUpdatingService.dropCollection(collection).map(_ => Ok(s"$collection dropped"))
+  def dropCollection(collection: String) = Action.async { implicit request =>
+    dependencyDataUpdatingService.dropCollection(collection).map(_ => Ok(s"$collection dropped"))
   }
 
-  def clearUpdateDates = Action.async {
-    implicit request =>
-      dependencyDataUpdatingService.clearUpdateDates.map(rs => Ok(s"${rs.size} records updated"))
+  def clearUpdateDates = Action.async { implicit request =>
+    dependencyDataUpdatingService.clearUpdateDates.map(rs => Ok(s"${rs.size} records updated"))
   }
 
-  def mongoLocks() = Action.async {
-    implicit request =>
-      dependencyDataUpdatingService.locks().map(locks => Ok(Json.toJson(locks)))
+  def mongoLocks() = Action.async { implicit request =>
+    dependencyDataUpdatingService.locks().map(locks => Ok(Json.toJson(locks)))
   }
 
 }

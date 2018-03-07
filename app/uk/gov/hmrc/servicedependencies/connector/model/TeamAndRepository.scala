@@ -24,5 +24,5 @@ case class Repository(name: String, lastActive: DateTime, teamNames: Seq[String]
 
 object Repository {
   implicit val gi = Json.format[GithubInstance]
-  implicit val f = Json.format[Repository]
+  implicit val f  = Json.format[Repository]
 }

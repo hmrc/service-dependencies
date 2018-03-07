@@ -20,29 +20,27 @@ import play.api.libs.functional.syntax._
 import play.api.libs.json.{JsPath, Json, Reads}
 import uk.gov.hmrc.servicedependencies.model.Version
 
-
-
 case class OtherDependencyConfig(name: String, latestVersion: Option[Version])
 
-case class CuratedDependencyConfig(sbtPlugins: Seq[SbtPluginConfig],
-                                   libraries: Seq[String],
-                                   otherDependencies: Seq[OtherDependencyConfig])
+case class CuratedDependencyConfig(
+  sbtPlugins: Seq[SbtPluginConfig],
+  libraries: Seq[String],
+  otherDependencies: Seq[OtherDependencyConfig])
 object CuratedDependencyConfig {
 
   implicit val otherReader: Reads[OtherDependencyConfig] =
     ((JsPath \ "name").read[String] and
-      (JsPath \ "latestVersion").readNullable[String])((name, version) => OtherDependencyConfig(name, version.map(Version.parse)))
+      (JsPath \ "latestVersion").readNullable[String])((name, version) =>
+      OtherDependencyConfig(name, version.map(Version.parse)))
 
   implicit val pluginsReader: Reads[SbtPluginConfig] = (
     (JsPath \ "org").read[String] and
       (JsPath \ "name").read[String] and
       (JsPath \ "version").readNullable[String]
-    )((org, name, version) => SbtPluginConfig(org, name, version.map(Version.parse)))
-
+  )((org, name, version) => SbtPluginConfig(org, name, version.map(Version.parse)))
 
   implicit val configReader = Json.reads[CuratedDependencyConfig]
 }
-
 
 case class SbtPluginConfig(org: String, name: String, version: Option[Version]) {
   def isInternal() = version.isEmpty

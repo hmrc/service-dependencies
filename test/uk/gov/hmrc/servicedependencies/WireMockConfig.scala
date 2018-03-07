@@ -21,23 +21,20 @@ import com.github.tomakehurst.wiremock.client.{MappingBuilder, WireMock}
 import com.github.tomakehurst.wiremock.core.WireMockConfiguration._
 
 class WireMockConfig(stubPort: Int) {
-  val stubHost = "localhost"
+  val stubHost                       = "localhost"
   var wireMockServer: WireMockServer = new WireMockServer(wireMockConfig().port(stubPort))
 
   def host() = s"http://$stubHost:$stubPort"
 
-  def start() = {
+  def start() =
     if (!wireMockServer.isRunning) {
       wireMockServer.start()
       WireMock.configureFor(stubHost, stubPort)
     }
-  }
 
-  def stop() = {
+  def stop() =
     wireMockServer.stop()
-  }
 
-  def stub(mapping: MappingBuilder) = {
+  def stub(mapping: MappingBuilder) =
     wireMockServer.stubFor(mapping)
-  }
 }

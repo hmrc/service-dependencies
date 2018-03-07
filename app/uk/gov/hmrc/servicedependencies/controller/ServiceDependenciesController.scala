@@ -29,25 +29,28 @@ import uk.gov.hmrc.servicedependencies.service._
 import uk.gov.hmrc.play.http.logging.MdcLoggingExecutionContext._
 
 @Singleton
-class ServiceDependenciesController @Inject()(configuration: Configuration,
-                                              dependencyDataUpdatingService: DependencyDataUpdatingService,
-                                              config: ServiceDependenciesConfig) extends BaseController {
+class ServiceDependenciesController @Inject()(
+  configuration: Configuration,
+  dependencyDataUpdatingService: DependencyDataUpdatingService,
+  config: ServiceDependenciesConfig)
+    extends BaseController {
 
   val logger = LoggerFactory.getLogger(this.getClass)
 
   implicit val dependenciesFormat = Dependencies.format
 
-  def getDependencyVersionsForRepository(repositoryName: String) = Action.async {
-    implicit request =>
-      dependencyDataUpdatingService.getDependencyVersionsForRepository(repositoryName)
-        .map(maybeRepositoryDependencies =>
-          maybeRepositoryDependencies.fold(
-            NotFound(s"$repositoryName not found"))(repoDependencies => Ok(Json.toJson(repoDependencies))))
+  def getDependencyVersionsForRepository(repositoryName: String) = Action.async { implicit request =>
+    dependencyDataUpdatingService
+      .getDependencyVersionsForRepository(repositoryName)
+      .map(maybeRepositoryDependencies =>
+        maybeRepositoryDependencies.fold(NotFound(s"$repositoryName not found"))(repoDependencies =>
+          Ok(Json.toJson(repoDependencies))))
   }
 
-  def dependencies() = Action.async {
-    implicit request =>
-      dependencyDataUpdatingService.getDependencyVersionsForAllRepositories().map(dependencies => Ok(Json.toJson(dependencies)))
+  def dependencies() = Action.async { implicit request =>
+    dependencyDataUpdatingService
+      .getDependencyVersionsForAllRepositories()
+      .map(dependencies => Ok(Json.toJson(dependencies)))
   }
 
 }

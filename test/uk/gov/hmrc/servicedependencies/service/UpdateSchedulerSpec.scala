@@ -29,26 +29,23 @@ import scala.concurrent.Future
 import scala.concurrent.duration._
 import scala.concurrent.ExecutionContext.Implicits.global
 
-class UpdateSchedulerSpec extends FunSpec
-  with MockitoSugar
-  with Matchers
-  with OneAppPerTest with BeforeAndAfterEach {
+class UpdateSchedulerSpec extends FunSpec with MockitoSugar with Matchers with OneAppPerTest with BeforeAndAfterEach {
 
   trait Counter {
-    var count = 0
-    def getCallCount: Int = count
+    var count                = 0
+    def getCallCount: Int    = count
     def resetCallCount: Unit = count = 0
   }
 
   implicit val hc = HeaderCarrier()
 
-  def schedulerF(dependencyDataUpdatingService: DependencyDataUpdatingService) = new UpdateScheduler(Akka.system(), dependencyDataUpdatingService)
+  def schedulerF(dependencyDataUpdatingService: DependencyDataUpdatingService) =
+    new UpdateScheduler(Akka.system(), dependencyDataUpdatingService)
 
   describe("Scheduler") {
     it("should schedule startUpdatingLibraryData based on configured interval") {
       val dependencyDataUpdatingService = mock[DependencyDataUpdatingService]
       Mockito.when(dependencyDataUpdatingService.reloadLatestLibraryVersions()).thenReturn(Future(Seq.empty))
-
 
       val scheduler = schedulerF(dependencyDataUpdatingService)
       scheduler.startUpdatingLibraryData(100 milliseconds)
@@ -60,9 +57,11 @@ class UpdateSchedulerSpec extends FunSpec
 
     it("should recover from failures") {
       val dependencyDataUpdatingService = mock[DependencyDataUpdatingService]
-      val scheduler = schedulerF(dependencyDataUpdatingService)
+      val scheduler                     = schedulerF(dependencyDataUpdatingService)
 
-      Mockito.when(dependencyDataUpdatingService.reloadCurrentDependenciesDataForAllRepositories()).thenThrow(APIRateLimitExceededException(new RuntimeException("API limit")))
+      Mockito
+        .when(dependencyDataUpdatingService.reloadCurrentDependenciesDataForAllRepositories())
+        .thenThrow(APIRateLimitExceededException(new RuntimeException("API limit")))
 
       scheduler.startUpdatingLibraryDependencyData(100 milliseconds)
       Thread.sleep(1000)
@@ -73,7 +72,9 @@ class UpdateSchedulerSpec extends FunSpec
 
     it("should schedule reloadLibraryDependencyDataForAllRepositories based on configured interval") {
       val dependencyDataUpdatingService = mock[DependencyDataUpdatingService]
-      Mockito.when(dependencyDataUpdatingService.reloadCurrentDependenciesDataForAllRepositories()).thenReturn(Future(Seq.empty))
+      Mockito
+        .when(dependencyDataUpdatingService.reloadCurrentDependenciesDataForAllRepositories())
+        .thenReturn(Future(Seq.empty))
 
       val scheduler = schedulerF(dependencyDataUpdatingService)
       scheduler.startUpdatingLibraryDependencyData(100 milliseconds)

@@ -22,20 +22,22 @@ import play.api.libs.json.Json
 import uk.gov.hmrc.servicedependencies.config.model.CuratedDependencyConfig
 
 @Singleton
-class CuratedDependencyConfigProvider @Inject() (configuration: Configuration) {
+class CuratedDependencyConfigProvider @Inject()(configuration: Configuration) {
 
   lazy val curatedDependencyConfig: CuratedDependencyConfig = {
     val curatedDependencyConfigFilePathO = configuration.getString("curated.config.path")
 
-    curatedDependencyConfigFilePathO.map{ configFilePath =>
-      val stream = getClass.getResourceAsStream(configFilePath)
-      val json = try {
-        Json.parse(stream)
-      } finally {
-        stream.close()
+    curatedDependencyConfigFilePathO
+      .map { configFilePath =>
+        val stream = getClass.getResourceAsStream(configFilePath)
+        val json = try {
+          Json.parse(stream)
+        } finally {
+          stream.close()
+        }
+        json.as[CuratedDependencyConfig]
       }
-      json.as[CuratedDependencyConfig]
-    }.getOrElse(throw new RuntimeException("config value not found: curated.config.path"))
+      .getOrElse(throw new RuntimeException("config value not found: curated.config.path"))
 
   }
 

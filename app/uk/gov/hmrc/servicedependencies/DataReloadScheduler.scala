@@ -29,13 +29,17 @@ import javax.inject.Inject
 import uk.gov.hmrc.http.HeaderCarrier
 
 @Singleton
-class DataReloadScheduler @Inject()(app: Application, configuration: Configuration, updateScheduler: UpdateScheduler, applicationLifecycle: ApplicationLifecycle) {
-  lazy val appName = "service-dependencies"
+class DataReloadScheduler @Inject()(
+  app: Application,
+  configuration: Configuration,
+  updateScheduler: UpdateScheduler,
+  applicationLifecycle: ApplicationLifecycle) {
+  lazy val appName                          = "service-dependencies"
   lazy val loggerDateFormat: Option[String] = configuration.getString("logger.json.dateformat")
 
   val repositoryDependenciesReloadIntervalKey = "dependency.reload.intervalminutes"
-  val libraryReloadIntervalKey = "library.reload.intervalminutes"
-  val sbtPluginReloadIntervalKey = "sbtPlugin.reload.intervalminutes"
+  val libraryReloadIntervalKey                = "library.reload.intervalminutes"
+  val sbtPluginReloadIntervalKey              = "sbtPlugin.reload.intervalminutes"
 
   Logger.info(s"Starting microservice : $appName : in mode : ${app.mode}")
 

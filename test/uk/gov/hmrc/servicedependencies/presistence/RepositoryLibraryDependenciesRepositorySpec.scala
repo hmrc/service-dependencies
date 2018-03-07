@@ -32,8 +32,6 @@ package uk.gov.hmrc.servicedependencies.presistence
  * limitations under the License.
  */
 
-
-
 import java.time.LocalDateTime
 
 import org.joda.time.{DateTime, DateTimeZone}
@@ -49,9 +47,15 @@ import uk.gov.hmrc.play.test.UnitSpec
 import uk.gov.hmrc.servicedependencies.model.{LibraryDependency, MongoRepositoryDependencies, Version}
 import uk.gov.hmrc.time.DateTimeUtils
 
-class RepositoryLibraryDependenciesRepositorySpec extends UnitSpec with LoneElement with MongoSpecSupport with ScalaFutures with OptionValues with BeforeAndAfterEach with OneAppPerTest with MockitoSugar {
-
-
+class RepositoryLibraryDependenciesRepositorySpec
+    extends UnitSpec
+    with LoneElement
+    with MongoSpecSupport
+    with ScalaFutures
+    with OptionValues
+    with BeforeAndAfterEach
+    with OneAppPerTest
+    with MockitoSugar {
 
   val reactiveMongoComponent = new ReactiveMongoComponent {
     val mockedMongoConnector = mock[MongoConnector]
@@ -59,7 +63,6 @@ class RepositoryLibraryDependenciesRepositorySpec extends UnitSpec with LoneElem
 
     override def mongoConnector = mockedMongoConnector
   }
-
 
   val mongoRepositoryLibraryDependenciesRepository = new RepositoryLibraryDependenciesRepository(reactiveMongoComponent)
 
@@ -70,7 +73,12 @@ class RepositoryLibraryDependenciesRepositorySpec extends UnitSpec with LoneElem
   "update" should {
     "inserts correctly" in {
 
-      val repositoryLibraryDependencies = MongoRepositoryDependencies("some-repo", Seq(LibraryDependency("some-lib", Version(1, 0, 2))), Nil, Nil, DateTimeUtils.now)
+      val repositoryLibraryDependencies = MongoRepositoryDependencies(
+        "some-repo",
+        Seq(LibraryDependency("some-lib", Version(1, 0, 2))),
+        Nil,
+        Nil,
+        DateTimeUtils.now)
       await(mongoRepositoryLibraryDependenciesRepository.update(repositoryLibraryDependencies))
 
       await(mongoRepositoryLibraryDependenciesRepository.getAllEntries) shouldBe Seq(repositoryLibraryDependencies)
@@ -78,8 +86,16 @@ class RepositoryLibraryDependenciesRepositorySpec extends UnitSpec with LoneElem
 
     "updates correctly (based on repository name)" in {
 
-      val repositoryLibraryDependencies = MongoRepositoryDependencies("some-repo", Seq(LibraryDependency("some-lib", Version(1, 0, 2))), Nil, Nil, DateTimeUtils.now)
-      val newRepositoryLibraryDependencies = repositoryLibraryDependencies.copy(libraryDependencies = repositoryLibraryDependencies.libraryDependencies :+ LibraryDependency("some-other-lib", Version(8, 4, 2)) )
+      val repositoryLibraryDependencies = MongoRepositoryDependencies(
+        "some-repo",
+        Seq(LibraryDependency("some-lib", Version(1, 0, 2))),
+        Nil,
+        Nil,
+        DateTimeUtils.now)
+      val newRepositoryLibraryDependencies = repositoryLibraryDependencies.copy(
+        libraryDependencies = repositoryLibraryDependencies.libraryDependencies :+ LibraryDependency(
+          "some-other-lib",
+          Version(8, 4, 2)))
       await(mongoRepositoryLibraryDependenciesRepository.update(repositoryLibraryDependencies))
 
       await(mongoRepositoryLibraryDependenciesRepository.update(newRepositoryLibraryDependencies))
@@ -90,18 +106,39 @@ class RepositoryLibraryDependenciesRepositorySpec extends UnitSpec with LoneElem
 
   "getForRepository" should {
     "get back the correct record" in {
-      val repositoryLibraryDependencies1 = MongoRepositoryDependencies("some-repo1", Seq(LibraryDependency("some-lib1", Version(1, 0, 2))), Nil, Nil, DateTimeUtils.now)
-      val repositoryLibraryDependencies2 = MongoRepositoryDependencies("some-repo2", Seq(LibraryDependency("some-lib2", Version(11, 0, 22))), Nil, Nil, DateTimeUtils.now)
+      val repositoryLibraryDependencies1 = MongoRepositoryDependencies(
+        "some-repo1",
+        Seq(LibraryDependency("some-lib1", Version(1, 0, 2))),
+        Nil,
+        Nil,
+        DateTimeUtils.now)
+      val repositoryLibraryDependencies2 = MongoRepositoryDependencies(
+        "some-repo2",
+        Seq(LibraryDependency("some-lib2", Version(11, 0, 22))),
+        Nil,
+        Nil,
+        DateTimeUtils.now)
 
       await(mongoRepositoryLibraryDependenciesRepository.update(repositoryLibraryDependencies1))
       await(mongoRepositoryLibraryDependenciesRepository.update(repositoryLibraryDependencies2))
 
-      await(mongoRepositoryLibraryDependenciesRepository.getForRepository("some-repo1")) shouldBe Some(repositoryLibraryDependencies1)
+      await(mongoRepositoryLibraryDependenciesRepository.getForRepository("some-repo1")) shouldBe Some(
+        repositoryLibraryDependencies1)
     }
 
     "finds the repository when the name is of different case" in {
-      val repositoryLibraryDependencies1 = MongoRepositoryDependencies("some-repo1", Seq(LibraryDependency("some-lib1", Version(1, 0, 2))), Nil, Nil, DateTimeUtils.now)
-      val repositoryLibraryDependencies2 = MongoRepositoryDependencies("some-repo2", Seq(LibraryDependency("some-lib2", Version(11, 0, 22))), Nil, Nil, DateTimeUtils.now)
+      val repositoryLibraryDependencies1 = MongoRepositoryDependencies(
+        "some-repo1",
+        Seq(LibraryDependency("some-lib1", Version(1, 0, 2))),
+        Nil,
+        Nil,
+        DateTimeUtils.now)
+      val repositoryLibraryDependencies2 = MongoRepositoryDependencies(
+        "some-repo2",
+        Seq(LibraryDependency("some-lib2", Version(11, 0, 22))),
+        Nil,
+        Nil,
+        DateTimeUtils.now)
 
       await(mongoRepositoryLibraryDependenciesRepository.update(repositoryLibraryDependencies1))
       await(mongoRepositoryLibraryDependenciesRepository.update(repositoryLibraryDependencies2))
@@ -110,8 +147,18 @@ class RepositoryLibraryDependenciesRepositorySpec extends UnitSpec with LoneElem
     }
 
     "not find a repository with partial name" in {
-      val repositoryLibraryDependencies1 = MongoRepositoryDependencies("some-repo1", Seq(LibraryDependency("some-lib1", Version(1, 0, 2))), Nil, Nil, DateTimeUtils.now)
-      val repositoryLibraryDependencies2 = MongoRepositoryDependencies("some-repo2", Seq(LibraryDependency("some-lib2", Version(11, 0, 22))), Nil, Nil, DateTimeUtils.now)
+      val repositoryLibraryDependencies1 = MongoRepositoryDependencies(
+        "some-repo1",
+        Seq(LibraryDependency("some-lib1", Version(1, 0, 2))),
+        Nil,
+        Nil,
+        DateTimeUtils.now)
+      val repositoryLibraryDependencies2 = MongoRepositoryDependencies(
+        "some-repo2",
+        Seq(LibraryDependency("some-lib2", Version(11, 0, 22))),
+        Nil,
+        Nil,
+        DateTimeUtils.now)
 
       await(mongoRepositoryLibraryDependenciesRepository.update(repositoryLibraryDependencies1))
       await(mongoRepositoryLibraryDependenciesRepository.update(repositoryLibraryDependencies2))
@@ -123,7 +170,12 @@ class RepositoryLibraryDependenciesRepositorySpec extends UnitSpec with LoneElem
   "clearAllDependencyEntries" should {
     "deletes everything" in {
 
-      val repositoryLibraryDependencies = MongoRepositoryDependencies("some-repo", Seq(LibraryDependency("some-lib", Version(1, 0, 2))), Nil, Nil, DateTimeUtils.now)
+      val repositoryLibraryDependencies = MongoRepositoryDependencies(
+        "some-repo",
+        Seq(LibraryDependency("some-lib", Version(1, 0, 2))),
+        Nil,
+        Nil,
+        DateTimeUtils.now)
 
       await(mongoRepositoryLibraryDependenciesRepository.update(repositoryLibraryDependencies))
 
@@ -143,18 +195,26 @@ class RepositoryLibraryDependenciesRepositorySpec extends UnitSpec with LoneElem
       val repositoryLibraryDependencies1 =
         MongoRepositoryDependencies("some-repo", Seq(LibraryDependency("some-lib2", Version(1, 0, 2))), Nil, Nil, t1)
       val repositoryLibraryDependencies2 =
-        MongoRepositoryDependencies("some-other-repo", Seq(LibraryDependency("some-lib2", Version(1, 0, 2))), Nil, Nil, t2)
+        MongoRepositoryDependencies(
+          "some-other-repo",
+          Seq(LibraryDependency("some-lib2", Version(1, 0, 2))),
+          Nil,
+          Nil,
+          t2)
 
       await(mongoRepositoryLibraryDependenciesRepository.update(repositoryLibraryDependencies1))
       await(mongoRepositoryLibraryDependenciesRepository.update(repositoryLibraryDependencies2))
 
       val mongoRepositoryDependencieses = await(mongoRepositoryLibraryDependenciesRepository.getAllEntries)
-      mongoRepositoryDependencieses should have size 2
+      mongoRepositoryDependencieses                   should have size 2
       mongoRepositoryDependencieses.map(_.updateDate) should contain theSameElementsAs Seq(t1, t2)
 
       await(mongoRepositoryLibraryDependenciesRepository.clearUpdateDates)
 
-      await(mongoRepositoryLibraryDependenciesRepository.getAllEntries).map(_.updateDate) should contain theSameElementsAs Seq(new DateTime(0, DateTimeZone.UTC), new DateTime(0, DateTimeZone.UTC))
+      await(mongoRepositoryLibraryDependenciesRepository.getAllEntries)
+        .map(_.updateDate) should contain theSameElementsAs Seq(
+        new DateTime(0, DateTimeZone.UTC),
+        new DateTime(0, DateTimeZone.UTC))
     }
   }
 }

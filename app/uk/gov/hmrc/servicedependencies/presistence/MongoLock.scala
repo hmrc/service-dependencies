@@ -22,7 +22,6 @@ import play.modules.reactivemongo.ReactiveMongoComponent
 import reactivemongo.api.{DB, DefaultDB}
 import uk.gov.hmrc.lock.{LockKeeper, LockMongoRepository, LockRepository}
 
-
 class MongoLock(db: () => DB, lockId_ : String) extends LockKeeper {
   override val forceLockReleaseAfter: Duration = Duration.standardMinutes(60)
 
@@ -30,13 +29,11 @@ class MongoLock(db: () => DB, lockId_ : String) extends LockKeeper {
 
   override def lockId: String = lockId_
 }
-
-
 @Singleton
 class MongoLocks @Inject()(mongo: ReactiveMongoComponent) {
   private val db = mongo.mongoConnector.db
 
   val repositoryDependencyMongoLock = new MongoLock(db, "repository-dependencies-data-reload-job")
-  val libraryMongoLock = new MongoLock(db, "libraries-data-reload-job")
-  val sbtPluginMongoLock = new MongoLock(db, "sbt-plugin-data-reload-job")
+  val libraryMongoLock              = new MongoLock(db, "libraries-data-reload-job")
+  val sbtPluginMongoLock            = new MongoLock(db, "sbt-plugin-data-reload-job")
 }

@@ -29,25 +29,22 @@ import uk.gov.hmrc.servicedependencies.model._
 import uk.gov.hmrc.servicedependencies.util.FutureHelpers.withTimerAndCounter
 
 import scala.concurrent.{ExecutionContext, Future}
-
-
 @Singleton
 class RepositoryLibraryDependenciesRepository @Inject()(mongo: ReactiveMongoComponent)
-  extends ReactiveRepository[MongoRepositoryDependencies, BSONObjectID](
-    collectionName = "repositoryLibraryDependencies",
-    mongo = mongo.mongoConnector.db,
-    domainFormat = MongoRepositoryDependencies.format) {
+    extends ReactiveRepository[MongoRepositoryDependencies, BSONObjectID](
+      collectionName = "repositoryLibraryDependencies",
+      mongo          = mongo.mongoConnector.db,
+      domainFormat   = MongoRepositoryDependencies.format) {
 
   override def ensureIndexes(implicit ec: ExecutionContext): Future[Seq[Boolean]] = localEnsureIndexes
 
-
-  private def localEnsureIndexes = {
+  private def localEnsureIndexes =
     Future.sequence(
       Seq(
-        collection.indexesManager.ensure(Index(Seq("repositoryName" -> IndexType.Hashed), name = Some("RepositoryNameIdx"), unique = true))
+        collection.indexesManager.ensure(
+          Index(Seq("repositoryName" -> IndexType.Hashed), name = Some("RepositoryNameIdx"), unique = true))
       )
     )
-  }
 
   def update(repositoryLibraryDependencies: MongoRepositoryDependencies): Future[MongoRepositoryDependencies] = {
 
@@ -55,37 +52,41 @@ class RepositoryLibraryDependenciesRepository @Inject()(mongo: ReactiveMongoComp
 
     withTimerAndCounter("mongo.update") {
       for {
-        update <- collection.update(selector = Json.obj("repositoryName" -> Json.toJson(repositoryLibraryDependencies.repositoryName)), update = repositoryLibraryDependencies, upsert = true)
-      } yield update match {
-        case _ => repositoryLibraryDependencies
-      }
+        update <- collection.update(
+                   selector = Json.obj("repositoryName" -> Json.toJson(repositoryLibraryDependencies.repositoryName)),
+                   update   = repositoryLibraryDependencies,
+                   upsert   = true)
+      } yield
+        update match {
+          case _ => repositoryLibraryDependencies
+        }
     } recover {
-      case lastError => throw new RuntimeException(s"failed to persist RepositoryLibraryDependencies: $repositoryLibraryDependencies", lastError)
+      case lastError =>
+        throw new RuntimeException(
+          s"failed to persist RepositoryLibraryDependencies: $repositoryLibraryDependencies",
+          lastError)
     }
   }
 
-
-  def getForRepository(repositoryName: String): Future[Option[MongoRepositoryDependencies]] = {
+  def getForRepository(repositoryName: String): Future[Option[MongoRepositoryDependencies]] =
     withTimerAndCounter("mongo.read") {
       find("repositoryName" -> BSONRegex("^" + repositoryName + "$", "i")) map {
-        case data if data.size > 1 => throw new RuntimeException(s"There should only be '1' record per repository! for $repositoryName there are ${data.size}")
+        case data if data.size > 1 =>
+          throw new RuntimeException(
+            s"There should only be '1' record per repository! for $repositoryName there are ${data.size}")
         case data => data.headOption
       }
     }
-
-  }
 
   def getAllEntries: Future[Seq[MongoRepositoryDependencies]] = {
     logger.debug("retrieving getAll current dependencies")
     findAll()
   }
 
-
   def clearAllData: Future[Boolean] = super.removeAll().map(_.ok)
 
-  def clearUpdateDates: Future[Seq[MongoRepositoryDependencies]] = {
+  def clearUpdateDates: Future[Seq[MongoRepositoryDependencies]] =
     getAllEntries.flatMap { es =>
       Future.sequence(es.map(mrd => update(mrd.copy(updateDate = new DateTime(0, DateTimeZone.UTC)))))
     }
-  }
 }

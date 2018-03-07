@@ -23,42 +23,38 @@ object VersionParser {
     val propertyRegex = ("^\\s*" + key.replaceAll("\\.", "\\\\.") + """\s*=\s*(\d+\.\d+\.\d+)\s*$""").r.unanchored
     contents match {
       case propertyRegex(version) => Some(Version.parse(version.replaceAll("\"", "")))
-      case _ => None
+      case _                      => None
     }
   }
 
-
-  def parse(fileContent: String, artifacts: Seq[String]): Map[String, Option[Version]] = {
+  def parse(fileContent: String, artifacts: Seq[String]): Map[String, Option[Version]] =
     artifacts.map(artifact => artifact -> parse(fileContent, artifact)).toMap
-  }
 
-  
   def parseReleaseVersion(tagPrefix: String, tag: String): Option[Version] = {
     val tagRegex = ("^" + tagPrefix + """(\d+\.\d+\.\d+)$""").r.unanchored
     tag match {
       case tagRegex(version) => Some(Version.parse(version.replaceAll("\"", "")))
-      case _ => None
+      case _                 => None
     }
   }
 
   def parse(fileContent: String, artifact: String): Option[Version] = {
 
-    val stringVersion = ("\"" + artifact + "\"" + """\s*%\s*("\d+\.\d+\.\d+")""").r.unanchored
+    val stringVersion   = ("\"" + artifact + "\"" + """\s*%\s*("\d+\.\d+\.\d+")""").r.unanchored
     val variableVersion = ("\"" + artifact + "\"" + """\s*%\s*(\w*)""").r.unanchored
 
     fileContent match {
-      case stringVersion(version) => Some(Version.parse(version.replaceAll("\"", "")))
+      case stringVersion(version)    => Some(Version.parse(version.replaceAll("\"", "")))
       case variableVersion(variable) => extractVersionInVariable(fileContent, variable)
-      case _ => None
+      case _                         => None
     }
   }
-
 
   private def extractVersionInVariable(file: String, variable: String): Option[Version] = {
     val variableRegex = (variable + """\s*=\s*("\d+\.\d+\.\d+")""").r.unanchored
     file match {
       case variableRegex(value) => Some(Version.parse(value.replaceAll("\"", "")))
-      case _ => None
+      case _                    => None
     }
   }
 }
@@ -70,7 +66,7 @@ object PluginsSbtFileVersionParser {
 
     fileContent match {
       case stringVersion(version) => Some(Version.parse(version))
-      case _ => None
+      case _                      => None
     }
   }
 }

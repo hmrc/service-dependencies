@@ -31,11 +31,10 @@ import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
 class SbtPluginVersionRepository @Inject()(mongo: ReactiveMongoComponent)
-  extends ReactiveRepository[MongoSbtPluginVersion, BSONObjectID](
-    collectionName = "sbtPluginVersions",
-    mongo = mongo.mongoConnector.db,
-    domainFormat = MongoSbtPluginVersion.format) {
-
+    extends ReactiveRepository[MongoSbtPluginVersion, BSONObjectID](
+      collectionName = "sbtPluginVersions",
+      mongo          = mongo.mongoConnector.db,
+      domainFormat   = MongoSbtPluginVersion.format) {
 
   override def ensureIndexes(implicit ec: ExecutionContext = defaultContext): Future[Seq[Boolean]] =
     localEnsureIndexes
@@ -43,20 +42,25 @@ class SbtPluginVersionRepository @Inject()(mongo: ReactiveMongoComponent)
   private def localEnsureIndexes =
     Future.sequence(
       Seq(
-        collection.indexesManager(defaultContext).ensure(Index(Seq("sbtPluginName" -> IndexType.Hashed), name = Some("sbtPluginNameIdx"), unique = true))
+        collection
+          .indexesManager(defaultContext)
+          .ensure(Index(Seq("sbtPluginName" -> IndexType.Hashed), name = Some("sbtPluginNameIdx"), unique = true))
       )
     )
 
   def update(sbtPluginVersion: MongoSbtPluginVersion): Future[MongoSbtPluginVersion] = {
 
-
     logger.debug(s"writing $sbtPluginVersion")
     withTimerAndCounter("mongo.update") {
       for {
-        update <- collection.update(selector = Json.obj("sbtPluginName" -> Json.toJson(sbtPluginVersion.sbtPluginName)), update = sbtPluginVersion, upsert = true)
-      } yield update match {
-        case _ => sbtPluginVersion
-      }
+        update <- collection.update(
+                   selector = Json.obj("sbtPluginName" -> Json.toJson(sbtPluginVersion.sbtPluginName)),
+                   update   = sbtPluginVersion,
+                   upsert   = true)
+      } yield
+        update match {
+          case _ => sbtPluginVersion
+        }
     } recover {
       case lastError => throw new RuntimeException(s"failed to persist SbtPluginVersion: $sbtPluginVersion", lastError)
     }

@@ -30,13 +30,13 @@ import uk.gov.hmrc.servicedependencies.WireMockConfig
 import uk.gov.hmrc.servicedependencies.config.ServiceDependenciesConfig
 
 class TeamsAndRepositoriesConnectorSpec
-  extends FreeSpec
-  with MustMatchers
-  with ScalaFutures
-  with IntegrationPatience
-  with BeforeAndAfterAll
-  with OneAppPerSuite
-  with MockitoSugar {
+    extends FreeSpec
+    with MustMatchers
+    with ScalaFutures
+    with IntegrationPatience
+    with BeforeAndAfterAll
+    with OneAppPerSuite
+    with MockitoSugar {
 
   val wireMock = new WireMockConfig(8080)
 
@@ -52,45 +52,41 @@ class TeamsAndRepositoriesConnectorSpec
 
   }
 
-  private def stubRepositories(repositoryName: String) = {
-    wireMock.stub(get(urlEqualTo(s"/api/repositories/$repositoryName"))
-      .willReturn(
-        aResponse()
-          .withStatus(200)
-          .withBody(loadFileAsString(s"/teams-and-repositories/repository.json"))))
-  }
+  private def stubRepositories(repositoryName: String) =
+    wireMock.stub(
+      get(urlEqualTo(s"/api/repositories/$repositoryName"))
+        .willReturn(
+          aResponse()
+            .withStatus(200)
+            .withBody(loadFileAsString(s"/teams-and-repositories/repository.json"))))
 
-  private def stubRepositoriesWith404(repositoryName: String) = {
-    wireMock.stub(get(urlEqualTo(s"/api/repositories/$repositoryName"))
-      .willReturn(
-        aResponse()
+  private def stubRepositoriesWith404(repositoryName: String) =
+    wireMock.stub(
+      get(urlEqualTo(s"/api/repositories/$repositoryName"))
+        .willReturn(aResponse()
           .withStatus(404)))
-  }
 
-  private def stubAllRepositories() = {
+  private def stubAllRepositories() =
+    wireMock.stub(
+      get(urlEqualTo(s"/api/repositories"))
+        .willReturn(
+          aResponse()
+            .withStatus(200)
+            .withBody(loadFileAsString(s"/teams-and-repositories/repositories.json"))))
 
-    wireMock.stub(get(urlEqualTo(s"/api/repositories"))
-      .willReturn(
-        aResponse()
-          .withStatus(200)
-          .withBody(loadFileAsString(s"/teams-and-repositories/repositories.json"))))
-  }
+  private def stubServices() =
+    wireMock.stub(
+      get(urlEqualTo(s"/api/services?teamDetails=true"))
+        .willReturn(
+          aResponse()
+            .withStatus(200)
+            .withBody(loadFileAsString(s"/teams-and-repositories/service-teams.json"))))
 
-  private def stubServices() = {
-    wireMock.stub(get(urlEqualTo(s"/api/services?teamDetails=true"))
-      .willReturn(
-        aResponse()
-          .withStatus(200)
-          .withBody(loadFileAsString(s"/teams-and-repositories/service-teams.json"))))
-  }
-
-  override protected def afterAll(): Unit = {
+  override protected def afterAll(): Unit =
     wireMock.stop()
-  }
 
-  private def loadFileAsString(filename: String): String = {
+  private def loadFileAsString(filename: String): String =
     scala.io.Source.fromInputStream(getClass.getResourceAsStream(filename)).mkString
-  }
 
   def stubbedConfig = new ServiceDependenciesConfig(Configuration(), Environment.simple()) {
     override lazy val teamsAndRepositoriesServiceUrl = wireMock.host()
@@ -121,9 +117,7 @@ class TeamsAndRepositoriesConnectorSpec
       val services = new TeamsAndRepositoriesConnector(httpClient, stubbedConfig)
 
       val teams = services.getTeamsForServices().futureValue
-      teams mustBe Map(
-        "test-repo" -> Seq("PlatOps", "WebOps"),
-        "another-repo" -> Seq("PlatOps"))
+      teams mustBe Map("test-repo" -> Seq("PlatOps", "WebOps"), "another-repo" -> Seq("PlatOps"))
     }
   }
 

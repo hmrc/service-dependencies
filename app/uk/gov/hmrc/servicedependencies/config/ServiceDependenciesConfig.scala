@@ -26,37 +26,35 @@ import uk.gov.hmrc.play.config.ServicesConfig
 
 import scala.concurrent.duration._
 import scala.io.Source
-
-
 @Singleton
-class ServiceDependenciesConfig @Inject()(override val runModeConfiguration: Configuration, environment: Environment) extends ServicesConfig {
+class ServiceDependenciesConfig @Inject()(override val runModeConfiguration: Configuration, environment: Environment)
+    extends ServicesConfig {
 
   override protected def mode: Mode = environment.mode
 
-  private val cacheDurationConfigPath = "cache.timeout.duration"
-  private val githubOpenConfigKey = "github.open.api"
+  private val cacheDurationConfigPath   = "cache.timeout.duration"
+  private val githubOpenConfigKey       = "github.open.api"
   private val githubEnterpriseConfigKey = "github.enterprise.api"
-  private val releaseServiceUrlKey = "releases.api.url"
-  private val targetArtifactsKey = "target.artifacts"
+  private val releaseServiceUrlKey      = "releases.api.url"
+  private val targetArtifactsKey        = "target.artifacts"
 
   private val defaultTimeout = 1 day
 
   lazy val targetArtifact = optionalConfig(s"$targetArtifactsKey").getOrElse("sbt-plugin")
 
-
-  def cacheDuration: FiniteDuration = {
+  def cacheDuration: FiniteDuration =
     runModeConfiguration.getMilliseconds(cacheDurationConfigPath).map(_.milliseconds).getOrElse(defaultTimeout)
-  }
 
-
-  lazy val releasesServiceUrl = optionalConfig(s"$releaseServiceUrlKey").get
+  lazy val releasesServiceUrl                     = optionalConfig(s"$releaseServiceUrlKey").get
   lazy val teamsAndRepositoriesServiceUrl: String = baseUrl("teams-and-repositories")
 
-  private val gitOpenConfig = (key: String) => optionalConfig(s"$githubOpenConfigKey.$key")
+  private val gitOpenConfig       = (key: String) => optionalConfig(s"$githubOpenConfigKey.$key")
   private val gitEnterpriseConfig = (key: String) => optionalConfig(s"$githubEnterpriseConfigKey.$key")
 
-  lazy val githubApiOpenConfig = option(gitOpenConfig).getOrElse(GitApiConfig.fromFile(s"${System.getProperty("user.home")}/.github/.credentials"))
-  lazy val githubApiEnterpriseConfig = option(gitEnterpriseConfig).getOrElse(GitApiConfig.fromFile(s"${System.getProperty("user.home")}/.github/.githubenterprise"))
+  lazy val githubApiOpenConfig =
+    option(gitOpenConfig).getOrElse(GitApiConfig.fromFile(s"${System.getProperty("user.home")}/.github/.credentials"))
+  lazy val githubApiEnterpriseConfig = option(gitEnterpriseConfig).getOrElse(
+    GitApiConfig.fromFile(s"${System.getProperty("user.home")}/.github/.githubenterprise"))
 
   private def optionalConfig(path: String) = Play.current.configuration.getString(s"$path")
 
@@ -64,25 +62,24 @@ class ServiceDependenciesConfig @Inject()(override val runModeConfiguration: Con
     for {
       host <- config("host")
       user <- config("user")
-      key <- config("key")
+      key  <- config("key")
     } yield GitApiConfig(user, key, host)
-
 
 }
 
 case class GitApiConfig(user: String, key: String, apiUrl: String)
 
 object GitApiConfig {
-  def fromFile(configFilePath: String): GitApiConfig = {
-    findGithubCredsInFile(new File(configFilePath).toPath).getOrElse(throw new RuntimeException(s"could not find github credential in file : $configFilePath"))
-  }
+  def fromFile(configFilePath: String): GitApiConfig =
+    findGithubCredsInFile(new File(configFilePath).toPath)
+      .getOrElse(throw new RuntimeException(s"could not find github credential in file : $configFilePath"))
 
   private def findGithubCredsInFile(file: Path): Option[GitApiConfig] = {
     val conf = new ConfigFile(file)
 
     for {
-      user <- conf.get("user")
-      token <- conf.get("token")
+      user   <- conf.get("user")
+      token  <- conf.get("token")
       apiUrl <- conf.get("api-url")
     } yield GitApiConfig(user, token, apiUrl)
   }
@@ -91,10 +88,13 @@ object GitApiConfig {
 class ConfigFile(filePath: Path) {
   private val kvMap: Map[String, String] =
     try {
-      Source.fromFile(filePath.toFile)
-        .getLines().toSeq
+      Source
+        .fromFile(filePath.toFile)
+        .getLines()
+        .toSeq
         .map(_.split("="))
-        .map { case Array(key, value) => key.trim -> value.trim }.toMap
+        .map { case Array(key, value) => key.trim -> value.trim }
+        .toMap
     } catch {
       case e: Exception => Map.empty
     }

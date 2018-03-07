@@ -28,9 +28,8 @@ import uk.gov.hmrc.servicedependencies.service.DependencyDataUpdatingService
 
 import scala.concurrent.Future
 
-
 class AdministrationControllerSpec
-  extends FreeSpec
+    extends FreeSpec
     with BeforeAndAfterEach
     with OneServerPerSuite
     with Matchers
@@ -38,7 +37,6 @@ class AdministrationControllerSpec
     with ScalaFutures
     with IntegrationPatience
     with OptionValues {
-
 
   "reloadLibraryDependenciesForAllRepositories" - {
     "should call the reloadLibraryDependencyDataForAllRepositories on the service" in {

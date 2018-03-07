@@ -25,7 +25,8 @@ class CuratedDependencyConfigProviderSpec extends FunSpec with Matchers with Opt
 
   describe("config loader") {
     it("should load the config") {
-      val curatedDependencyConfigProvider = new CuratedDependencyConfigProvider(Configuration("curated.config.path" -> "/config/test-config.json"))
+      val curatedDependencyConfigProvider =
+        new CuratedDependencyConfigProvider(Configuration("curated.config.path" -> "/config/test-config.json"))
 
       curatedDependencyConfigProvider.curatedDependencyConfig shouldBe CuratedDependencyConfig(
         sbtPlugins = Seq(
@@ -33,9 +34,10 @@ class CuratedDependencyConfigProviderSpec extends FunSpec with Matchers with Opt
           SbtPluginConfig("com.example.external", "external-plugin", Some(Version("1.4.0")))
         ),
         libraries = List(
-          "lib1", "lib2"
+          "lib1",
+          "lib2"
         ),
-        otherDependencies = Seq(OtherDependencyConfig("sbt" , Some(Version("0.13.11"))))
+        otherDependencies = Seq(OtherDependencyConfig("sbt", Some(Version("0.13.11"))))
       )
     }
   }

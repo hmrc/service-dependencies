@@ -16,7 +16,6 @@
 
 package uk.gov.hmrc.cataloguefrontend.events
 
-
 /*
  * Copyright 2017 HM Revenue & Customs
  *
@@ -33,8 +32,6 @@ package uk.gov.hmrc.cataloguefrontend.events
  * limitations under the License.
  */
 
-
-
 import org.mockito.Mockito.when
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.mockito.MockitoSugar
@@ -48,7 +45,15 @@ import uk.gov.hmrc.servicedependencies.model.{MongoLibraryVersion, Version}
 import uk.gov.hmrc.servicedependencies.presistence.LibraryVersionRepository
 import uk.gov.hmrc.time.DateTimeUtils
 
-class LibraryVersionRepositorySpec extends UnitSpec with LoneElement with MongoSpecSupport with ScalaFutures with OptionValues with BeforeAndAfterEach with OneAppPerTest with MockitoSugar {
+class LibraryVersionRepositorySpec
+    extends UnitSpec
+    with LoneElement
+    with MongoSpecSupport
+    with ScalaFutures
+    with OptionValues
+    with BeforeAndAfterEach
+    with OneAppPerTest
+    with MockitoSugar {
 
   val reactiveMongoComponent = new ReactiveMongoComponent {
     val mockedMongoConnector = mock[MongoConnector]
@@ -56,7 +61,6 @@ class LibraryVersionRepositorySpec extends UnitSpec with LoneElement with MongoS
 
     override def mongoConnector = mockedMongoConnector
   }
-
 
   val mongoLibraryVersions = new LibraryVersionRepository(reactiveMongoComponent)
 
@@ -75,7 +79,7 @@ class LibraryVersionRepositorySpec extends UnitSpec with LoneElement with MongoS
 
     "updates correctly (based on library name)" in {
 
-      val libraryVersion = MongoLibraryVersion("some-library", Some(Version(1, 0, 2)), DateTimeUtils.now)
+      val libraryVersion    = MongoLibraryVersion("some-library", Some(Version(1, 0, 2)), DateTimeUtils.now)
       val newLibraryVersion = libraryVersion.copy(version = Some(Version(1, 0, 5)))
       await(mongoLibraryVersions.update(libraryVersion))
 

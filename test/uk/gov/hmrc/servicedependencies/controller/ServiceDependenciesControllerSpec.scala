@@ -35,7 +35,7 @@ import uk.gov.hmrc.time.DateTimeUtils
 import scala.concurrent.Future
 
 class ServiceDependenciesControllerSpec
-  extends FreeSpec
+    extends FreeSpec
     with BeforeAndAfterEach
     with OneServerPerSuite
     with Matchers
@@ -43,18 +43,19 @@ class ServiceDependenciesControllerSpec
     with ScalaFutures
     with IntegrationPatience
     with OptionValues {
-  
 
   "getDependencyVersionsForRepository" - {
     "should get dependency versions for a repository using the service" in new Setup {
       val mockedLibraryDependencyDataUpdatingService = mock[DependencyDataUpdatingService]
-      val repoName = "repo1"
-      val repositoryDependencies = Dependencies(repoName, Nil, Nil, Nil, DateTimeUtils.now)
+      val repoName                                   = "repo1"
+      val repositoryDependencies                     = Dependencies(repoName, Nil, Nil, Nil, DateTimeUtils.now)
 
       when(mockedLibraryDependencyDataUpdatingService.getDependencyVersionsForRepository(any()))
         .thenReturn(Future.successful(Some(repositoryDependencies)))
 
-      val result = makeServiceDependenciesImpl(mockedLibraryDependencyDataUpdatingService).getDependencyVersionsForRepository(repoName).apply(FakeRequest())
+      val result = makeServiceDependenciesImpl(mockedLibraryDependencyDataUpdatingService)
+        .getDependencyVersionsForRepository(repoName)
+        .apply(FakeRequest())
       val maybeRepositoryDependencies = contentAsJson(result).asOpt[Dependencies]
 
       maybeRepositoryDependencies.value shouldBe repositoryDependencies
@@ -71,23 +72,27 @@ class ServiceDependenciesControllerSpec
         Dependencies("repo2", Nil, Nil, Nil, DateTimeUtils.now),
         Dependencies("repo3", Nil, Nil, Nil, DateTimeUtils.now)
       )
-      when(mockedLibraryDependencyDataUpdatingService.getDependencyVersionsForAllRepositories()).thenReturn(Future.successful(
-        libraryDependencies
-      ))
+      when(mockedLibraryDependencyDataUpdatingService.getDependencyVersionsForAllRepositories()).thenReturn(
+        Future.successful(
+          libraryDependencies
+        ))
 
-      val result = makeServiceDependenciesImpl(mockedLibraryDependencyDataUpdatingService).dependencies().apply(FakeRequest())
+      val result =
+        makeServiceDependenciesImpl(mockedLibraryDependencyDataUpdatingService).dependencies().apply(FakeRequest())
       val repositoryLibraryDependencies = contentAsJson(result).as[Seq[Dependencies]]
 
       repositoryLibraryDependencies.size shouldBe 3
-      repositoryLibraryDependencies should contain theSameElementsAs libraryDependencies
+      repositoryLibraryDependencies      should contain theSameElementsAs libraryDependencies
     }
 
   }
 
-
   trait Setup {
     def makeServiceDependenciesImpl(libraryDependencyUpdatingService: DependencyDataUpdatingService) =
-      new ServiceDependenciesController(Configuration(), libraryDependencyUpdatingService, mock[ServiceDependenciesConfig])
+      new ServiceDependenciesController(
+        Configuration(),
+        libraryDependencyUpdatingService,
+        mock[ServiceDependenciesConfig])
   }
 
 }

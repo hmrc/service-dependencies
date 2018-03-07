@@ -43,27 +43,30 @@ abstract class Github {
 
   lazy val logger = LoggerFactory.getLogger(this.getClass)
 
-  def findVersionsForMultipleArtifacts(repoName: String, curatedDependencyConfig: CuratedDependencyConfig): Either[GithubSearchError, GithubSearchResults] = {
+  def findVersionsForMultipleArtifacts(
+    repoName: String,
+    curatedDependencyConfig: CuratedDependencyConfig): Either[GithubSearchError, GithubSearchResults] =
     try {
-      Right(GithubSearchResults(
-        sbtPlugins = searchPluginSbtFileForMultipleArtifacts(repoName, curatedDependencyConfig.sbtPlugins),
-        libraries = searchBuildFilesForMultipleArtifacts(repoName, curatedDependencyConfig.libraries),
-        others = searchForOtherSpecifiedDependencies(repoName, curatedDependencyConfig.otherDependencies)
-      ))
+      Right(
+        GithubSearchResults(
+          sbtPlugins = searchPluginSbtFileForMultipleArtifacts(repoName, curatedDependencyConfig.sbtPlugins),
+          libraries  = searchBuildFilesForMultipleArtifacts(repoName, curatedDependencyConfig.libraries),
+          others     = searchForOtherSpecifiedDependencies(repoName, curatedDependencyConfig.otherDependencies)
+        ))
     } catch {
-      case ex: Throwable if ex.getMessage.toLowerCase.contains("api rate limit exceeded") => throw APIRateLimitExceededException(ex)
-      case ex: Throwable => Left(GithubSearchError(s"Unable to find dependencies for $repoName. Reason: ${ex.getMessage}", ex))
+      case ex: Throwable if ex.getMessage.toLowerCase.contains("api rate limit exceeded") =>
+        throw APIRateLimitExceededException(ex)
+      case ex: Throwable =>
+        Left(GithubSearchError(s"Unable to find dependencies for $repoName. Reason: ${ex.getMessage}", ex))
     }
-  }
 
-  protected def getLastGithubPushDate(repoName: String): Option[Date] = {
+  protected def getLastGithubPushDate(repoName: String): Option[Date] =
     Try(gh.repositoryService.getRepository(org, repoName).getPushedAt) match {
       case Success(date) => Some(date)
       case Failure(t) =>
         logger.error(s"getLastGithubPushDate failed for $repoName:", t)
         None
     }
-  }
 
   def findLatestVersion(repoName: String): Option[Version] = {
 
@@ -79,14 +82,16 @@ abstract class Github {
     Max.maxOf(maybeVersions)
   }
 
-  private def searchBuildFilesForMultipleArtifacts(serviceName: String, artifacts: Seq[String]): Map[String, Option[Version]] = {
+  private def searchBuildFilesForMultipleArtifacts(
+    serviceName: String,
+    artifacts: Seq[String]): Map[String, Option[Version]] = {
 
     @tailrec
-    def searchRemainingBuildFiles(remainingBuildFiles: Seq[String]): Map[String, Option[Version]] = {
+    def searchRemainingBuildFiles(remainingBuildFiles: Seq[String]): Map[String, Option[Version]] =
       remainingBuildFiles match {
         case filePath :: xs =>
-
-          val versionsMap = performSearchForMultipleArtifacts(serviceName, filePath, parseFileForMultipleArtifacts(_, artifacts))
+          val versionsMap =
+            performSearchForMultipleArtifacts(serviceName, filePath, parseFileForMultipleArtifacts(_, artifacts))
           if (!versionsMap.exists(_._2.isDefined))
             searchRemainingBuildFiles(xs)
           else
@@ -94,7 +99,6 @@ abstract class Github {
 
         case Nil => Map.empty
       }
-    }
 
     searchRemainingBuildFiles(performProjectDirectorySearch(serviceName) :+ "build.sbt")
   }
@@ -105,30 +109,40 @@ abstract class Github {
     else VersionParser.parsePropertyFile(parseFileContents(version.head), "sbt.version")
   }
 
-  private def searchForOtherSpecifiedDependencies(serviceName: String, otherDependencies: Seq[OtherDependencyConfig]): Map[String, Option[Version]] = {
-    otherDependencies.find(_.name == "sbt").map(_ => Map("sbt" -> getCurrentSbtVersion(serviceName))).getOrElse(Map.empty)
-  }
+  private def searchForOtherSpecifiedDependencies(
+    serviceName: String,
+    otherDependencies: Seq[OtherDependencyConfig]): Map[String, Option[Version]] =
+    otherDependencies
+      .find(_.name == "sbt")
+      .map(_ => Map("sbt" -> getCurrentSbtVersion(serviceName)))
+      .getOrElse(Map.empty)
 
-  private def searchPluginSbtFileForMultipleArtifacts(serviceName: String, sbtPluginConfigs: Seq[SbtPluginConfig]): Map[String, Option[Version]] =
-    performSearchForMultipleArtifacts(serviceName, "project/plugins.sbt", parseFileForMultipleArtifacts(_, sbtPluginConfigs.map(_.name)))
+  private def searchPluginSbtFileForMultipleArtifacts(
+    serviceName: String,
+    sbtPluginConfigs: Seq[SbtPluginConfig]): Map[String, Option[Version]] =
+    performSearchForMultipleArtifacts(
+      serviceName,
+      "project/plugins.sbt",
+      parseFileForMultipleArtifacts(_, sbtPluginConfigs.map(_.name)))
 
-  private def parseFileForMultipleArtifacts(response: RepositoryContents, artifacts: Seq[String]): Map[String, Option[Version]] = {
+  private def parseFileForMultipleArtifacts(
+    response: RepositoryContents,
+    artifacts: Seq[String]): Map[String, Option[Version]] =
     VersionParser.parse(parseFileContents(response), artifacts)
-  }
 
   private def performProjectDirectorySearch(repoName: String): Seq[String] = {
     val buildFilePaths: List[RepositoryContents] = getContentsOrEmpty(repoName, "project")
     buildFilePaths.map(_.getPath).filter(_.endsWith(".scala"))
   }
 
-  private def performSearchForMultipleArtifacts(repoName: String,
-                                                filePath: String,
-                                                transformF: (RepositoryContents) => Map[String, Option[Version]]): Map[String, Option[Version]] = {
+  private def performSearchForMultipleArtifacts(
+    repoName: String,
+    filePath: String,
+    transformF: (RepositoryContents) => Map[String, Option[Version]]): Map[String, Option[Version]] = {
     val results = getContentsOrEmpty(repoName, filePath)
     if (results.isEmpty) Map.empty
     else transformF(results.head)
   }
-
 
   private def repositoryId(repoName: String, orgName: String): IRepositoryIdProvider =
     new IRepositoryIdProvider {
@@ -142,8 +156,7 @@ abstract class Github {
 
     import scala.collection.JavaConversions._
 
-    try { gh.contentsService.getContents(repositoryId(repoName, org), path).toList }
-    catch {
+    try { gh.contentsService.getContents(repositoryId(repoName, org), path).toList } catch {
       case ex: RequestException if ex.getStatus == 404 => List.empty
     }
   }
