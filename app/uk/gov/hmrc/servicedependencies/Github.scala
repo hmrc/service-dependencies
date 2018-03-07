@@ -1,5 +1,5 @@
 /*
- * Copyright 2017 HM Revenue & Customs
+ * Copyright 2018 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -30,6 +30,8 @@ import uk.gov.hmrc.servicedependencies.util.{Max, VersionParser}
 import scala.annotation.tailrec
 import scala.util.{Failure, Success, Try}
 
+case class GithubSearchError(message: String, throwable: Throwable)
+
 abstract class Github {
   private val org = "HMRC"
 
@@ -41,13 +43,17 @@ abstract class Github {
 
   lazy val logger = LoggerFactory.getLogger(this.getClass)
 
-  def findVersionsForMultipleArtifacts(repoName: String, curatedDependencyConfig: CuratedDependencyConfig): GithubSearchResults = {
-
-    GithubSearchResults(
-      sbtPlugins = searchPluginSbtFileForMultipleArtifacts(repoName, curatedDependencyConfig.sbtPlugins),
-      libraries = searchBuildFilesForMultipleArtifacts(repoName, curatedDependencyConfig.libraries),
-      others = searchForOtherSpecifiedDependencies(repoName, curatedDependencyConfig.otherDependencies)
-    )
+  def findVersionsForMultipleArtifacts(repoName: String, curatedDependencyConfig: CuratedDependencyConfig): Either[GithubSearchError, GithubSearchResults] = {
+    try {
+      Right(GithubSearchResults(
+        sbtPlugins = searchPluginSbtFileForMultipleArtifacts(repoName, curatedDependencyConfig.sbtPlugins),
+        libraries = searchBuildFilesForMultipleArtifacts(repoName, curatedDependencyConfig.libraries),
+        others = searchForOtherSpecifiedDependencies(repoName, curatedDependencyConfig.otherDependencies)
+      ))
+    } catch {
+      case ex: Throwable if ex.getMessage.toLowerCase.contains("api rate limit exceeded") => throw APIRateLimitExceededException(ex)
+      case ex: Throwable => Left(GithubSearchError(s"Unable to find dependencies for $repoName. Reason: ${ex.getMessage}", ex))
+    }
   }
 
   protected def getLastGithubPushDate(repoName: String): Option[Date] = {
@@ -93,8 +99,11 @@ abstract class Github {
     searchRemainingBuildFiles(performProjectDirectorySearch(serviceName) :+ "build.sbt")
   }
 
-  private def getCurrentSbtVersion(repositoryName: String): Option[Version] =
-    performSearch(repositoryName, None, "project/build.properties", rc => VersionParser.parsePropertyFile(parseFileContents(rc), "sbt.version"))
+  private def getCurrentSbtVersion(repositoryName: String): Option[Version] = {
+    val version = getContentsOrEmpty(repositoryName, "project/build.properties")
+    if (version.isEmpty) None
+    else VersionParser.parsePropertyFile(parseFileContents(version.head), "sbt.version")
+  }
 
   private def searchForOtherSpecifiedDependencies(serviceName: String, otherDependencies: Seq[OtherDependencyConfig]): Map[String, Option[Version]] = {
     otherDependencies.find(_.name == "sbt").map(_ => Map("sbt" -> getCurrentSbtVersion(serviceName))).getOrElse(Map.empty)
@@ -107,41 +116,18 @@ abstract class Github {
     VersionParser.parse(parseFileContents(response), artifacts)
   }
 
-  private def performProjectDirectorySearch(repoName: String): Seq[String] = try {
-    import collection.JavaConversions._
-    val buildFilePaths: List[RepositoryContents] = gh.contentsService.getContents(repositoryId(repoName, org), "project").toList
+  private def performProjectDirectorySearch(repoName: String): Seq[String] = {
+    val buildFilePaths: List[RepositoryContents] = getContentsOrEmpty(repoName, "project")
     buildFilePaths.map(_.getPath).filter(_.endsWith(".scala"))
-  }
-  catch {
-    case (ex: APIRateLimitExceededException) => throw ex
-    case _: Throwable => Seq.empty
   }
 
   private def performSearchForMultipleArtifacts(repoName: String,
                                                 filePath: String,
-                                                transformF: (RepositoryContents) => Map[String, Option[Version]]): Map[String, Option[Version]] =
-    try {
-      val results = gh.contentsService.getContents(repositoryId(repoName, org), filePath)
-      if (results.isEmpty) Map.empty
-      else transformF(results.get(0))
-    }
-    catch {
-      case (ex: APIRateLimitExceededException) => throw ex
-      case _: Throwable => Map.empty
-    }
-
-
-  private def performSearch(serviceName: String, mayBeVersion: Option[String], filePath: String, transformF: (RepositoryContents) => Option[Version]): Option[Version] =
-    try {
-      val results = mayBeVersion.fold(gh.contentsService.getContents(repositoryId(serviceName, "HMRC"), filePath)) { version =>
-        gh.contentsService.getContents(repositoryId(serviceName, "HMRC"), filePath, resolveTag(version))
-      }
-      if (results.isEmpty) None
-      else transformF(results.get(0))
-    }
-    catch {
-      case (_: RequestException) => None
-    }
+                                                transformF: (RepositoryContents) => Map[String, Option[Version]]): Map[String, Option[Version]] = {
+    val results = getContentsOrEmpty(repoName, filePath)
+    if (results.isEmpty) Map.empty
+    else transformF(results.head)
+  }
 
 
   private def repositoryId(repoName: String, orgName: String): IRepositoryIdProvider =
@@ -151,4 +137,14 @@ abstract class Github {
 
   private def parseFileContents(response: RepositoryContents): String =
     new String(Base64.decodeBase64(response.getContent.replaceAll("\n", "")))
+
+  private def getContentsOrEmpty(repoName: String, path: String): List[RepositoryContents] = {
+
+    import scala.collection.JavaConversions._
+
+    try { gh.contentsService.getContents(repositoryId(repoName, org), path).toList }
+    catch {
+      case ex: RequestException if ex.getStatus == 404 => List.empty
+    }
+  }
 }

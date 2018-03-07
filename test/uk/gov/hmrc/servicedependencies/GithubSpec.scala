@@ -1,5 +1,5 @@
 /*
- * Copyright 2017 HM Revenue & Customs
+ * Copyright 2018 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -42,7 +42,7 @@ class GithubSpec extends WordSpec with Matchers with MockitoSugar with OptionVal
       github.findVersionsForMultipleArtifacts(repoName, CuratedDependencyConfig(Seq(
         SbtPluginConfig("bla", "sbt-plugin", None),
         SbtPluginConfig("bla", "sbt-auto-build", None)
-      ), Nil, Nil)).sbtPlugins shouldBe
+      ), Nil, Nil)).right.get.sbtPlugins shouldBe
         Map("sbt-plugin" -> Some(Version(2, 3, 10)), "sbt-auto-build" -> Some(Version(1,3,0)))
     }
 
@@ -51,7 +51,7 @@ class GithubSpec extends WordSpec with Matchers with MockitoSugar with OptionVal
       when(mockContentsService.getContents(any(), is(buildPropertiesFile)))
         .thenReturn(List(new RepositoryContents().setContent(loadFileAsBase64String("/github/build.properties"))).asJava)
 
-      github.findVersionsForMultipleArtifacts(repoName, CuratedDependencyConfig(Nil, Nil, Seq(OtherDependencyConfig("sbt" , Some(Version(1,2,3)))))).others shouldBe
+      github.findVersionsForMultipleArtifacts(repoName, CuratedDependencyConfig(Nil, Nil, Seq(OtherDependencyConfig("sbt" , Some(Version(1,2,3)))))).right.get.others shouldBe
         Map("sbt" -> Some(Version(0, 13, 15)))
     }
 
@@ -75,21 +75,35 @@ class GithubSpec extends WordSpec with Matchers with MockitoSugar with OptionVal
           "play-health"
         ), Nil))
 
-      results.sbtPlugins shouldBe Map("sbt-plugin" -> Some(Version(2, 3, 10)), "sbt-auto-build" -> Some(Version(1,3,0)))
-      results.libraries shouldBe Map("play-ui" -> Some(Version(1, 3, 0)),  "play-health" -> Some(Version("0.5.0")))
+      results.right.get.sbtPlugins shouldBe Map("sbt-plugin" -> Some(Version(2, 3, 10)), "sbt-auto-build" -> Some(Version(1,3,0)))
+      results.right.get.libraries shouldBe Map("play-ui" -> Some(Version(1, 3, 0)),  "play-health" -> Some(Version("0.5.0")))
     }
 
 
     "does not fail if the project folder does not exist" in new TestSetup {
 
       when(mockContentsService.getContents(any(), is("project")))
-        .thenThrow(new RuntimeException("404 not found"))
+        .thenThrow(new RequestException(new RequestError(), 404))
 
       when(mockContentsService.getContents(any(), is(buildSbtFile)))
         .thenReturn(List(new RepositoryContents().setContent(loadFileAsBase64String("/github/contents_sbt-build_file_with_play_frontend.build.txt"))).asJava)
 
-      github.findVersionsForMultipleArtifacts(repoName, CuratedDependencyConfig(Nil, Seq("play-frontend", "play-ui", "play-health"), Nil)).libraries shouldBe
+      github.findVersionsForMultipleArtifacts(repoName, CuratedDependencyConfig(Nil, Seq("play-frontend", "play-ui", "play-health"), Nil)).right.get.libraries shouldBe
         Map("play-frontend" -> Some(Version(1, 1, 1)), "play-ui" -> Some(Version(2, 2, 2)), "play-health" -> Some(Version(8, 8, 8)))
+    }
+
+
+    "does not return an empty list of dependencies but fails when an http error occurs" in new TestSetup {
+
+      private val exception = new RequestException(new RequestError(), 500)
+      when(mockContentsService.getContents(any(), is("project")))
+        .thenThrow(exception)
+
+      when(mockContentsService.getContents(any(), is(buildSbtFile)))
+        .thenReturn(List(new RepositoryContents().setContent(loadFileAsBase64String("/github/contents_sbt-build_file_with_play_frontend.build.txt"))).asJava)
+
+      github.findVersionsForMultipleArtifacts(repoName, CuratedDependencyConfig(Nil, Seq("play-frontend", "play-ui", "play-health"), Nil)).left.get shouldBe
+        GithubSearchError("Unable to find dependencies for citizen-auth-frontend. Reason: 500", exception)
     }
 
 
@@ -98,7 +112,7 @@ class GithubSpec extends WordSpec with Matchers with MockitoSugar with OptionVal
       when(mockContentsService.getContents(any(), is(buildSbtFile)))
         .thenReturn(List(new RepositoryContents().setContent(loadFileAsBase64String("/github/contents_sbt-build_file_with_play_frontend.build.txt"))).asJava)
 
-      github.findVersionsForMultipleArtifacts(repoName, CuratedDependencyConfig(Nil, Seq("play-frontend", "play-ui", "play-health"), Nil)).libraries shouldBe
+      github.findVersionsForMultipleArtifacts(repoName, CuratedDependencyConfig(Nil, Seq("play-frontend", "play-ui", "play-health"), Nil)).right.get.libraries shouldBe
         Map("play-frontend" -> Some(Version(1, 1, 1)), "play-ui" -> Some(Version(2, 2, 2)), "play-health" -> Some(Version(8, 8, 8)))
     }
 
@@ -112,7 +126,7 @@ class GithubSpec extends WordSpec with Matchers with MockitoSugar with OptionVal
       when(mockContentsService.getContents(any(), is(appDependenciesFile)))
         .thenReturn(List(new RepositoryContents().setContent(loadFileAsBase64String("/github/contents_appDependencies.scala.txt"))).asJava)
 
-      github.findVersionsForMultipleArtifacts(repoName, CuratedDependencyConfig(Nil, Seq("play-frontend", "play-ui", "play-health"), Nil)).libraries shouldBe
+      github.findVersionsForMultipleArtifacts(repoName, CuratedDependencyConfig(Nil, Seq("play-frontend", "play-ui", "play-health"), Nil)).right.get.libraries shouldBe
         Map("play-frontend" -> None, "play-ui" -> Some(Version(7, 4, 0)), "play-health" -> Some(Version(2, 1, 0)))
     }
 
@@ -126,7 +140,7 @@ class GithubSpec extends WordSpec with Matchers with MockitoSugar with OptionVal
       when(mockContentsService.getContents(any(), is(buildSbtFile)))
         .thenReturn(List(new RepositoryContents().setContent(loadFileAsBase64String("/github/contents_sbt-build_file_with_play_frontend.build.txt"))).asJava)
 
-      github.findVersionsForMultipleArtifacts(repoName, CuratedDependencyConfig(Nil, Seq("play-frontend", "play-ui", "play-health"), Nil)).libraries shouldBe
+      github.findVersionsForMultipleArtifacts(repoName, CuratedDependencyConfig(Nil, Seq("play-frontend", "play-ui", "play-health"), Nil)).right.get.libraries shouldBe
         Map("play-frontend" -> Some(Version(1, 1, 1)), "play-ui" -> Some(Version(2, 2, 2)), "play-health" -> Some(Version(8, 8, 8)))
     }
 
@@ -140,7 +154,7 @@ class GithubSpec extends WordSpec with Matchers with MockitoSugar with OptionVal
       when(mockContentsService.getContents(any(), is(buildSbtFile)))
         .thenReturn(List(new RepositoryContents().setContent("")).asJava)
 
-      github.findVersionsForMultipleArtifacts(repoName, CuratedDependencyConfig(Nil, Seq("play-frontend", "play-ui", "play-health"), Nil)).libraries shouldBe
+      github.findVersionsForMultipleArtifacts(repoName, CuratedDependencyConfig(Nil, Seq("play-frontend", "play-ui", "play-health"), Nil)).right.get.libraries shouldBe
         Map("play-frontend" -> None, "play-ui" -> Some(Version(7, 4, 0)), "play-health" -> Some(Version(2, 1, 0)))
     }
 
@@ -151,7 +165,7 @@ class GithubSpec extends WordSpec with Matchers with MockitoSugar with OptionVal
       when(mockContentsService.getContents(any(), is(appDependenciesFile)))
         .thenReturn(List(new RepositoryContents().setContent(loadFileAsBase64String("/github/contents_appDependencies.scala.txt"))).asJava)
 
-      github.findVersionsForMultipleArtifacts(repoName, CuratedDependencyConfig(Nil, Seq("play-frontend", "play-ui", "play-health"), Nil)).libraries shouldBe
+      github.findVersionsForMultipleArtifacts(repoName, CuratedDependencyConfig(Nil, Seq("play-frontend", "play-ui", "play-health"), Nil)).right.get.libraries shouldBe
         Map("play-frontend" -> None, "play-ui" -> Some(Version(7, 4, 0)), "play-health" -> Some(Version(2, 1, 0)))
     }
 
@@ -162,7 +176,7 @@ class GithubSpec extends WordSpec with Matchers with MockitoSugar with OptionVal
       when(mockContentsService.getContents(any(), is(microServiceBuildFile)))
         .thenReturn(List(new RepositoryContents().setContent(loadFileAsBase64String("/github/contents_build_file_with_play_frontend.sbt.txt"))).asJava)
 
-      github.findVersionsForMultipleArtifacts(repoName, CuratedDependencyConfig(Nil, Seq("play-ui", "non-existing"), Nil)).libraries shouldBe
+      github.findVersionsForMultipleArtifacts(repoName, CuratedDependencyConfig(Nil, Seq("play-ui", "non-existing"), Nil)).right.get.libraries shouldBe
         Map("play-ui" -> Some(Version(1, 3, 0)), "non-existing" -> None)
     }
 
@@ -171,7 +185,7 @@ class GithubSpec extends WordSpec with Matchers with MockitoSugar with OptionVal
       when(mockContentsService.getContents(any(), is(microServiceBuildFile)))
         .thenReturn(List(new RepositoryContents().setContent(loadFileAsBase64String("/github/contents_build_file_with_play_frontend.sbt.txt"))).asJava)
 
-      github.findVersionsForMultipleArtifacts(repoName, CuratedDependencyConfig(Nil, Seq.empty[String], Nil)).libraries shouldBe
+      github.findVersionsForMultipleArtifacts(repoName, CuratedDependencyConfig(Nil, Seq.empty[String], Nil)).right.get.libraries shouldBe
         Map.empty[String, Option[Version]]
     }
   }

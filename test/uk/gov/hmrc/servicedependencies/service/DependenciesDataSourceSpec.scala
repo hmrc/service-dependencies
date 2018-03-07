@@ -1,5 +1,5 @@
 /*
- * Copyright 2017 HM Revenue & Customs
+ * Copyright 2018 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -31,7 +31,7 @@ import org.scalatest.{FreeSpec, Matchers, OptionValues}
 import uk.gov.hmrc.githubclient.APIRateLimitExceededException
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.play.bootstrap.http.HttpClient
-import uk.gov.hmrc.servicedependencies.Github
+import uk.gov.hmrc.servicedependencies.{Github, GithubSearchError}
 import uk.gov.hmrc.servicedependencies.config._
 import uk.gov.hmrc.servicedependencies.config.model.{CuratedDependencyConfig, OtherDependencyConfig, SbtPluginConfig}
 import uk.gov.hmrc.servicedependencies.connector.model.{GithubInstance, Repository}
@@ -182,7 +182,7 @@ class DependenciesDataSourceSpec extends FreeSpec with Matchers with ScalaFuture
 
       var callCount = 0
       override def github: Github = new GithubStub(Map()) {
-        override def findVersionsForMultipleArtifacts(repoName: String, curatedDependencyConfig: CuratedDependencyConfig): GithubSearchResults = {
+        override def findVersionsForMultipleArtifacts(repoName: String, curatedDependencyConfig: CuratedDependencyConfig): Either[GithubSearchError, GithubSearchResults] = {
           if (repoName == repo3.name) {
             val requestError = mock[RequestError]
             when(requestError.getMessage).thenReturn("rate limit exceeded")
@@ -191,7 +191,7 @@ class DependenciesDataSourceSpec extends FreeSpec with Matchers with ScalaFuture
 
           callCount += 1
 
-          lookupTable(repoName)
+          Right(lookupTable(repoName))
         }
       }
 
@@ -351,8 +351,8 @@ class DependenciesDataSourceSpec extends FreeSpec with Matchers with ScalaFuture
 
       override def findLatestVersion(repoName: String): Option[Version] = super.findLatestVersion(repoName)
 
-      override def findVersionsForMultipleArtifacts(repoName: String, curatedDependencyConfig: CuratedDependencyConfig): GithubSearchResults =
-        lookupTable(repoName)
+      override def findVersionsForMultipleArtifacts(repoName: String, curatedDependencyConfig: CuratedDependencyConfig): Either[GithubSearchError, GithubSearchResults] =
+        Right(lookupTable(repoName))
     }
 
     val dependenciesDataSource = new DependenciesDataSource(teamsAndRepositoriesConnector, mockedDependenciesConfig, repositoryLibraryDependenciesRepository, new DisabledMetrics()) {
@@ -365,5 +365,3 @@ class DependenciesDataSourceSpec extends FreeSpec with Matchers with ScalaFuture
   }
 
 }
-
-

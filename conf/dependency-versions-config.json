@@ -71,7 +71,7 @@
   ],
    "otherDependencies": [
       {
-         "name": "sbt", "latestVersion": "0.13.15"
+         "name": "sbt", "latestVersion": "0.13.17"
       }
    ]
 

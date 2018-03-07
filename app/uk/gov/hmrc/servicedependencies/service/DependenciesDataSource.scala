@@ -1,5 +1,5 @@
 /*
- * Copyright 2017 HM Revenue & Customs
+ * Copyright 2018 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -128,6 +128,23 @@ class DependenciesDataSource @Inject()(teamsAndRepositoriesConnector: TeamsAndRe
     }
 
     def updateDependencies(repository: Repository): Option[MongoRepositoryDependencies] = {
+
+      def getLibraryDependencies(githubSearchResults: GithubSearchResults) = githubSearchResults.libraries.foldLeft(Seq.empty[LibraryDependency]) {
+        case (acc, (library, mayBeVersion)) =>
+          mayBeVersion.fold(acc)(currentVersion => acc :+ LibraryDependency(library, currentVersion))
+      }
+
+      def getPluginDependencies(githubSearchResults: GithubSearchResults) = githubSearchResults.sbtPlugins.foldLeft(Seq.empty[SbtPluginDependency]) {
+        case (acc, (plugin, mayBeVersion)) =>
+          mayBeVersion.fold(acc)(currentVersion => acc :+ SbtPluginDependency(plugin, currentVersion))
+      }
+
+      def getOtherDependencies(githubSearchResults: GithubSearchResults) = githubSearchResults.others.foldLeft(Seq.empty[OtherDependency]) {
+        case (acc, ("sbt", mayBeVersion)) =>
+          mayBeVersion.fold(acc)(currentVersion => acc :+ OtherDependency("sbt", currentVersion))
+      }
+
+
       val repoName = repository.name
       logger.info(s"Updating dependencies for: $repoName")
       val lastUpdated: DateTime = currentDependencyEntries.find(_.repositoryName == repoName).map(_.updateDate).getOrElse(new DateTime(0))
@@ -135,67 +152,36 @@ class DependenciesDataSource @Inject()(teamsAndRepositoriesConnector: TeamsAndRe
         logger.debug(s"No changes for repository ($repoName). Skipping....")
         None
       } else {
-        val dependencies: DependenciesFromGitHub = getDependenciesFromGitHub(repository, curatedDependencyConfig)
+        val github = githubForRepository(repository)
 
-        val repositoryLibraryDependencies =
-          MongoRepositoryDependencies(
-            repositoryName = repoName,
-            libraryDependencies = dependencies.libraries,
-            sbtPluginDependencies = dependencies.sbtPlugins,
-            otherDependencies = dependencies.otherDependencies,
-            updateDate = now)
-        repositoryLibraryDependenciesRepository.update(repositoryLibraryDependencies)
-        Some(repositoryLibraryDependencies)
+        logger.debug(s"searching ${github.gh} for dependencies of ${repository.name}")
+
+        val dependencies = github.findVersionsForMultipleArtifacts(repository.name, curatedDependencyConfig)
+
+        dependencies match {
+          case Left(errorMessage) =>
+            logger.error(s"Skipping dependencies update for $repoName, reason: $errorMessage")
+            None
+          case Right(searchResults) =>
+            logger.debug(s"github (${github.gh}) search returned these results for ${repository.name}: $searchResults")
+
+            val repositoryLibraryDependencies =
+              MongoRepositoryDependencies(
+                repositoryName = repoName,
+                libraryDependencies = getLibraryDependencies(searchResults),
+                sbtPluginDependencies = getPluginDependencies(searchResults),
+                otherDependencies = getOtherDependencies(searchResults),
+                updateDate = now)
+
+            repositoryLibraryDependenciesRepository.update(repositoryLibraryDependencies)
+
+            Some(repositoryLibraryDependencies)
+        }
 
       }
     }
 
     allRepositories.flatMap(serialiseFutures(_)(getRepoAndUpdate).map(_.flatten))
-
-  }
-
-  case class DependenciesFromGitHub(libraries: Seq[LibraryDependency],
-                                    sbtPlugins: Seq[SbtPluginDependency],
-                                    otherDependencies: Seq[OtherDependency])
-
-  private def getDependenciesFromGitHub(repository: Repository,
-                                        curatedDependencyConfig: CuratedDependencyConfig): DependenciesFromGitHub = {
-
-    def getLibraryDependencies(githubSearchResults: GithubSearchResults) = githubSearchResults.libraries.foldLeft(Seq.empty[LibraryDependency]) {
-      case (acc, (library, mayBeVersion)) =>
-        mayBeVersion.fold(acc)(currentVersion => acc :+ LibraryDependency(library, currentVersion))
-    }
-
-    def getPluginDependencies(githubSearchResults: GithubSearchResults) = githubSearchResults.sbtPlugins.foldLeft(Seq.empty[SbtPluginDependency]) {
-      case (acc, (plugin, mayBeVersion)) =>
-        mayBeVersion.fold(acc)(currentVersion => acc :+ SbtPluginDependency(plugin, currentVersion))
-    }
-
-    def getOtherDependencies(githubSearchResults: GithubSearchResults) = githubSearchResults.others.foldLeft(Seq.empty[OtherDependency]) {
-      case (acc, ("sbt", mayBeVersion)) =>
-        mayBeVersion.fold(acc)(currentVersion => acc :+ OtherDependency("sbt", currentVersion))
-    }
-
-    // caching the rate limiting exception
-    val searchResults = searchGithubsForArtifacts(repository, curatedDependencyConfig)
-    DependenciesFromGitHub(
-      getLibraryDependencies(searchResults),
-      getPluginDependencies(searchResults),
-      getOtherDependencies(searchResults)
-    )
-  }
-
-
-  private def searchGithubsForArtifacts(repository: Repository,
-                                        curatedDependencyConfig: CuratedDependencyConfig): GithubSearchResults = {
-
-    val github = githubForRepository(repository)
-
-    logger.debug(s"searching ${github.gh} for dependencies of ${repository.name}")
-
-    val result = github.findVersionsForMultipleArtifacts(repository.name, curatedDependencyConfig)
-    logger.debug(s"github (${github.gh}) search returned these results for ${repository.name}: $result")
-    result
 
   }
 
