@@ -124,14 +124,19 @@ class VersionParserSpec extends FreeSpec with MustMatchers {
     )
   }
 
-  "Parses release version correctly" in {
+  "Parses PRIVATE release version correctly" in {
     val tag = "release/1.0.1"
-    VersionParser.parseReleaseVersion("release/", tag) mustBe Some(Version(1, 0, 1))
+    VersionParser.parseReleaseVersion(tag) mustBe Some(Version(1, 0, 1))
+  }
+
+  "Parses PUBLIC release version correctly" in {
+    val tag = "v1.0.1"
+    VersionParser.parseReleaseVersion(tag) mustBe Some(Version(1, 0, 1))
   }
 
   "Parsing an invalid release version returns None" in {
-    val tag = "release/1.0.1"
-    VersionParser.parseReleaseVersion("non-release/", tag) mustBe None
+    val tag = "sthElse/1.0.1"
+    VersionParser.parseReleaseVersion(tag) mustBe None
   }
 
   "Parsing a build.properties file returns the sbt version" in {

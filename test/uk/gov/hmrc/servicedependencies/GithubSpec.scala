@@ -288,7 +288,7 @@ class GithubSpec extends WordSpec with Matchers with MockitoSugar with OptionVal
   "Finding latest library version" should {
     val repoName = "some-cool-repo"
 
-    "get the latest released library version correctly" in new TestSetup {
+    "get the latest released PRIVATE library version correctly" in new TestSetup {
       when(mockedReleaseService.getTags("HMRC", repoName)).thenReturn(
         List(
           GhRepoTag("release/1.10.1"),
@@ -300,8 +300,19 @@ class GithubSpec extends WordSpec with Matchers with MockitoSugar with OptionVal
       github.findLatestVersion(repoName).value shouldBe Version(4, 10, 19)
     }
 
-    "ignore the tags that are not valid releases" in new TestSetup {
+    "get the latest released OPEN library version correctly" in new TestSetup {
+      when(mockedReleaseService.getTags("HMRC", repoName)).thenReturn(
+        List(
+          GhRepoTag("v1.10.1"),
+          GhRepoTag("v1.10.100"),
+          GhRepoTag("v2.10.19"),
+          GhRepoTag("v4.10.19"),
+          GhRepoTag("v4.10.2")))
 
+      github.findLatestVersion(repoName).value shouldBe Version(4, 10, 19)
+    }
+
+    "ignore the tags that are not valid releases" in new TestSetup {
       when(mockedReleaseService.getTags("HMRC", repoName)).thenReturn(
         List(
           GhRepoTag("not-release/1.10.1"),
@@ -344,16 +355,12 @@ class GithubSpec extends WordSpec with Matchers with MockitoSugar with OptionVal
     val appDependenciesFile   = "project/AppDependencies.scala"
     val repoName              = "citizen-auth-frontend"
 
-    val github = new Github {
-      override val tagPrefix = "release/"
-      override val gh        = mock[GithubApiClient]
+    val gh = mock[GithubApiClient]
 
-      override def resolveTag(version: String) = s"$tagPrefix$version"
-
-    }
+    val github = new Github(gh)
 
     val mockContentsService = mock[ExtendedContentsService]
-    when(github.gh.contentsService).thenReturn(mockContentsService)
+    when(gh.contentsService).thenReturn(mockContentsService)
 
     when(mockContentsService.getContents(any(), is("project")))
       .thenReturn(List[RepositoryContents]().asJava)
@@ -362,7 +369,7 @@ class GithubSpec extends WordSpec with Matchers with MockitoSugar with OptionVal
       .thenReturn(List[RepositoryContents]().asJava)
 
     val mockedReleaseService = mock[ReleaseService]
-    when(github.gh.releaseService).thenReturn(mockedReleaseService)
+    when(gh.releaseService).thenReturn(mockedReleaseService)
   }
 
   private def loadFileAsBase64String(filename: String): String = {

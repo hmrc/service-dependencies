@@ -30,7 +30,6 @@ import uk.gov.hmrc.servicedependencies.connector.TeamsAndRepositoriesConnector
 import uk.gov.hmrc.servicedependencies.connector.model.Repository
 import uk.gov.hmrc.servicedependencies.model._
 import uk.gov.hmrc.servicedependencies.presistence.RepositoryLibraryDependenciesRepository
-import uk.gov.hmrc.servicedependencies.util.Max
 import uk.gov.hmrc.time.DateTimeUtils
 
 import scala.concurrent.Future
@@ -54,41 +53,15 @@ class DependenciesDataSource @Inject()(
       registry.counter(name).inc()
   }
 
-  lazy val gitEnterpriseClient: GithubApiClient = GithubApiClient(
-    config.githubApiEnterpriseConfig.apiUrl,
-    config.githubApiEnterpriseConfig.key,
-    new GithubMetrics("github.enterprise"))
   lazy val gitOpenClient: GithubApiClient =
     GithubApiClient(config.githubApiOpenConfig.apiUrl, config.githubApiOpenConfig.key, new GithubMetrics("github.open"))
 
-  object GithubOpen extends Github {
-    override val tagPrefix = "v"
-    override lazy val gh   = gitOpenClient
-
-    override def toString: String = "GitHub.com"
-  }
-
-  object GithubEnterprise extends Github {
-    override val tagPrefix = "release/"
-    override lazy val gh   = gitEnterpriseClient
-
-    override def resolveTag(version: String) = s"$tagPrefix$version"
-
-    override def toString: String = "Github Enterprise"
-  }
-
-  lazy val githubEnterprise: Github = GithubEnterprise
-  lazy val githubOpen: Github       = GithubOpen
-
-  protected[servicedependencies] lazy val githubs = Seq(githubOpen, githubEnterprise)
-
-  def githubForRepository(r: Repository): Github =
-    if (r.githubUrls.map(_.name).contains("github-com")) githubOpen else githubEnterprise
+  lazy val github: Github = new Github(gitOpenClient)
 
   def getLatestSbtPluginVersions(sbtPlugins: Seq[SbtPluginConfig]): Seq[SbtPluginVersion] = {
 
     def getLatestSbtPluginVersion(sbtPluginConfig: SbtPluginConfig): Option[Version] =
-      Max.maxOf(githubs.map(gh => gh.findLatestVersion(sbtPluginConfig.name)))
+      github.findLatestVersion(sbtPluginConfig.name)
 
     sbtPlugins.map(sbtPluginConfig => sbtPluginConfig -> getLatestSbtPluginVersion(sbtPluginConfig)).map {
       case (sbtPluginConfig, version) => SbtPluginVersion(sbtPluginConfig.name, version)
@@ -99,7 +72,7 @@ class DependenciesDataSource @Inject()(
   def getLatestLibrariesVersions(libraries: Seq[String]): Seq[LibraryVersion] = {
 
     def getLatestLibraryVersion(lib: String): Option[Version] =
-      Max.maxOf(githubs.map(gh => gh.findLatestVersion(lib)))
+      github.findLatestVersion(lib)
 
     libraries.map(lib => lib -> getLatestLibraryVersion(lib)).map {
       case (lib, version) => LibraryVersion(lib, version)
@@ -154,9 +127,7 @@ class DependenciesDataSource @Inject()(
         logger.debug(s"No changes for repository ($repoName). Skipping....")
         None
       } else {
-        val github = githubForRepository(repository)
-
-        logger.debug(s"searching ${github.gh} for dependencies of ${repository.name}")
+        logger.debug(s"searching GitHub for dependencies of ${repository.name}")
 
         val dependencies = github.findVersionsForMultipleArtifacts(repository.name, curatedDependencyConfig)
 
@@ -165,7 +136,7 @@ class DependenciesDataSource @Inject()(
             logger.error(s"Skipping dependencies update for $repoName, reason: $errorMessage")
             None
           case Right(searchResults) =>
-            logger.debug(s"github (${github.gh}) search returned these results for ${repository.name}: $searchResults")
+            logger.debug(s"Github search returned these results for ${repository.name}: $searchResults")
 
             val repositoryLibraryDependencies =
               MongoRepositoryDependencies(

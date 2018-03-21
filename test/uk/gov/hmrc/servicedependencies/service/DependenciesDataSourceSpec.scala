@@ -30,14 +30,13 @@ import org.scalatest.mockito.MockitoSugar
 import org.scalatest.{FreeSpec, Matchers, OptionValues}
 import uk.gov.hmrc.githubclient.APIRateLimitExceededException
 import uk.gov.hmrc.http.HeaderCarrier
-import uk.gov.hmrc.play.bootstrap.http.HttpClient
-import uk.gov.hmrc.servicedependencies.{Github, GithubSearchError}
 import uk.gov.hmrc.servicedependencies.config._
 import uk.gov.hmrc.servicedependencies.config.model.{CuratedDependencyConfig, OtherDependencyConfig, SbtPluginConfig}
 import uk.gov.hmrc.servicedependencies.connector.model.{GithubInstance, Repository}
 import uk.gov.hmrc.servicedependencies.connector.{TeamsAndRepositoriesConnector, model}
 import uk.gov.hmrc.servicedependencies.model._
 import uk.gov.hmrc.servicedependencies.presistence.RepositoryLibraryDependenciesRepository
+import uk.gov.hmrc.servicedependencies.{Github, GithubSearchError}
 import uk.gov.hmrc.time.DateTimeUtils
 
 import scala.collection.JavaConversions._
@@ -60,17 +59,10 @@ class DependenciesDataSourceSpec
   class GithubStub(
     val lookupMap: Map[String, Option[String]],
     val repositoryAndVersions: Map[String, Version] = Map.empty
-  ) extends Github {
-
-    override val gh = null
-
-    override def resolveTag(version: String) = version
-
-    override val tagPrefix: String = "?-?"
+  ) extends Github(null) {
 
     override def findLatestVersion(repoName: String): Option[Version] =
       repositoryAndVersions.get(repoName)
-
   }
 
   "getDependenciesForAllRepositories" - {
@@ -186,28 +178,12 @@ class DependenciesDataSourceSpec
       allStoredDependencies(0).repositoryName shouldBe repo2.name
     }
 
-    "should return the github open results over enterprise when a repository exists in both" in new TestCase {
-
-      val repoOnBothGithub = repo1.copy(
-        githubUrls =
-          Seq(GithubInstance("github-com", "GitHub.com"), GithubInstance("github-enterprise", "Github Enterprise")))
-      val repoOnGithubEnterprise =
-        repo1.copy(githubUrls = Seq(GithubInstance("github-enterprise", "Github Enterprise")))
-      val repoOnGithubCOm = repo1.copy(githubUrls = Seq(GithubInstance("github-com", "GitHub.com")))
-
-      override def repositories: Seq[model.Repository] = Seq(repo1, repo2, repo3)
-
-      dependenciesDataSource.githubForRepository(repoOnBothGithub)       shouldBe dependenciesDataSource.githubOpen
-      dependenciesDataSource.githubForRepository(repoOnGithubEnterprise) shouldBe dependenciesDataSource.githubEnterprise
-      dependenciesDataSource.githubForRepository(repoOnGithubCOm)        shouldBe dependenciesDataSource.githubOpen
-    }
-
     "should short circuit operation when RequestException is thrown for api rate limiting reason" in new TestCase {
 
       override def repositories: Seq[model.Repository] = Seq(repo1, repo2, repo3, repo4)
 
       var callCount = 0
-      override def github: Github = new GithubStub(Map()) {
+      override def githubStub: Github = new GithubStub(Map()) {
         override def findVersionsForMultipleArtifacts(
           repoName: String,
           curatedDependencyConfig: CuratedDependencyConfig): Either[GithubSearchError, GithubSearchResults] = {
@@ -270,7 +246,7 @@ class DependenciesDataSourceSpec
     "should get the latest library version" in new TestCase {
       override def repositories: Seq[model.Repository] = Seq(repo1, repo2, repo3)
 
-      override def github =
+      override def githubStub =
         new GithubStub(
           Map(),
           Map("library1" -> Version(1, 0, 0), "library2" -> Version(2, 0, 0), "library3" -> Version(3, 0, 0)))
@@ -295,7 +271,7 @@ class DependenciesDataSourceSpec
     "should get the latest sbt plugin version" in new TestCase {
 
       override def repositories: Seq[model.Repository] = Seq(repo1, repo2, repo3)
-      override def github = new GithubStub(
+      override def githubStub = new GithubStub(
         lookupMap = Map(),
         repositoryAndVersions =
           Map("sbtplugin1" -> Version(1, 0, 0), "sbtplugin2" -> Version(2, 0, 0), "sbtplugin3" -> Version(3, 0, 0))
@@ -366,7 +342,6 @@ class DependenciesDataSourceSpec
     when(mockedGitApiConfig.key).thenReturn("key-12345")
 
     val mockedDependenciesConfig = mock[ServiceDependenciesConfig]
-    when(mockedDependenciesConfig.githubApiEnterpriseConfig).thenReturn(mockedGitApiConfig)
     when(mockedDependenciesConfig.githubApiOpenConfig).thenReturn(mockedGitApiConfig)
 
     val repositoryLibraryDependenciesRepository = mock[RepositoryLibraryDependenciesRepository]
@@ -381,7 +356,7 @@ class DependenciesDataSourceSpec
         Future(repositories.find(_.name == invocation.getArgument[String](0)))
     })
 
-    def github: Github = new GithubStub(Map()) {
+    def githubStub: Github = new GithubStub(Map()) {
 
       override def findLatestVersion(repoName: String): Option[Version] = super.findLatestVersion(repoName)
 
@@ -396,11 +371,8 @@ class DependenciesDataSourceSpec
       mockedDependenciesConfig,
       repositoryLibraryDependenciesRepository,
       new DisabledMetrics()) {
-
-      override lazy val githubEnterprise = github
-      override lazy val githubOpen       = github
-
-      override def now: DateTime = timeNow
+      override lazy val github: Github = githubStub
+      override def now: DateTime       = timeNow
     }
   }
 
