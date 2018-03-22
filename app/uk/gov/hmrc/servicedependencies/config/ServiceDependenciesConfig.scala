@@ -26,17 +26,17 @@ import uk.gov.hmrc.play.config.ServicesConfig
 
 import scala.concurrent.duration._
 import scala.io.Source
+
 @Singleton
 class ServiceDependenciesConfig @Inject()(override val runModeConfiguration: Configuration, environment: Environment)
     extends ServicesConfig {
 
   override protected def mode: Mode = environment.mode
 
-  private val cacheDurationConfigPath   = "cache.timeout.duration"
-  private val githubOpenConfigKey       = "github.open.api"
-  private val githubEnterpriseConfigKey = "github.enterprise.api"
-  private val releaseServiceUrlKey      = "releases.api.url"
-  private val targetArtifactsKey        = "target.artifacts"
+  private val cacheDurationConfigPath = "cache.timeout.duration"
+  private val githubOpenConfigKey     = "github.open.api"
+  private val releaseServiceUrlKey    = "releases.api.url"
+  private val targetArtifactsKey      = "target.artifacts"
 
   private val defaultTimeout = 1 day
 
@@ -48,15 +48,12 @@ class ServiceDependenciesConfig @Inject()(override val runModeConfiguration: Con
   lazy val releasesServiceUrl                     = optionalConfig(s"$releaseServiceUrlKey").get
   lazy val teamsAndRepositoriesServiceUrl: String = baseUrl("teams-and-repositories")
 
-  private val gitOpenConfig       = (key: String) => optionalConfig(s"$githubOpenConfigKey.$key")
-  private val gitEnterpriseConfig = (key: String) => optionalConfig(s"$githubEnterpriseConfigKey.$key")
+  private val gitOpenConfig = (key: String) => optionalConfig(s"$githubOpenConfigKey.$key")
 
   lazy val githubApiOpenConfig =
     option(gitOpenConfig).getOrElse(GitApiConfig.fromFile(s"${System.getProperty("user.home")}/.github/.credentials"))
-  lazy val githubApiEnterpriseConfig = option(gitEnterpriseConfig).getOrElse(
-    GitApiConfig.fromFile(s"${System.getProperty("user.home")}/.github/.githubenterprise"))
 
-  private def optionalConfig(path: String) = Play.current.configuration.getString(s"$path")
+  private def optionalConfig(path: String) = runModeConfiguration.getString(s"$path")
 
   private def option(config: String => Option[String]): Option[GitApiConfig] =
     for {

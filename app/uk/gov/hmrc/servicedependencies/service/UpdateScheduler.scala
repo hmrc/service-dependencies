@@ -24,7 +24,9 @@ import uk.gov.hmrc.http.HeaderCarrier
 
 import scala.concurrent.Future
 import scala.concurrent.duration.{FiniteDuration, _}
+import scala.language.postfixOps
 import scala.util.{Success, Try}
+
 @Singleton
 class UpdateScheduler @Inject()(
   actorSystem: ActorSystem,

@@ -28,6 +28,7 @@ import uk.gov.hmrc.servicedependencies.presistence._
 import uk.gov.hmrc.time.DateTimeUtils
 
 import scala.concurrent.Future
+
 @Singleton
 class DependencyDataUpdatingService @Inject()(
   curatedDependencyConfigProvider: CuratedDependencyConfigProvider,
@@ -36,7 +37,8 @@ class DependencyDataUpdatingService @Inject()(
   sbtPluginVersionRepository: SbtPluginVersionRepository,
   locksRepository: LocksRepository,
   mongoLocks: MongoLocks,
-  dependenciesDataSource: DependenciesDataSource) {
+  dependenciesDataSource: DependenciesDataSource
+) {
 
   lazy val logger = LoggerFactory.getLogger(this.getClass)
 

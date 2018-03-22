@@ -32,14 +32,9 @@ import scala.util.{Failure, Success, Try}
 
 case class GithubSearchError(message: String, throwable: Throwable)
 
-abstract class Github {
+class Github(val gh: GithubApiClient) {
+
   private val org = "HMRC"
-
-  def gh: GithubApiClient
-
-  def resolveTag(version: String): String = s"$tagPrefix$version"
-
-  val tagPrefix: String
 
   lazy val logger = LoggerFactory.getLogger(this.getClass)
 
@@ -77,7 +72,7 @@ abstract class Github {
     }.get
 
     val maybeVersions: Seq[Option[Version]] = allVersions.map { version =>
-      VersionParser.parseReleaseVersion(tagPrefix, version)
+      VersionParser.parseReleaseVersion(version)
     }
     Max.maxOf(maybeVersions)
   }

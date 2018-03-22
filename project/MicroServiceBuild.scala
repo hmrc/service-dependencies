@@ -1,7 +1,4 @@
 import sbt._
-import uk.gov.hmrc.SbtAutoBuildPlugin
-import uk.gov.hmrc.sbtdistributables.SbtDistributablesPlugin
-import uk.gov.hmrc.versioning.SbtGitVersioning
 
 object MicroServiceBuild extends Build with MicroService {
   override val appName                             = "service-dependencies"
@@ -9,12 +6,12 @@ object MicroServiceBuild extends Build with MicroService {
 }
 
 private object AppDependencies {
-  import play.sbt.PlayImport._
   import play.core.PlayVersion
+  import play.sbt.PlayImport._
 
   val compile = Seq(
     ws,
-    "uk.gov.hmrc"   %% "bootstrap-play-25"  % "1.4.0",
+    "uk.gov.hmrc"   %% "bootstrap-play-25"  % "1.5.0",
     "uk.gov.hmrc"   %% "play-url-binders"   % "2.1.0",
     "uk.gov.hmrc"   %% "github-client"      % "1.21.0",
     "uk.gov.hmrc"   %% "play-reactivemongo" % "6.0.0",
