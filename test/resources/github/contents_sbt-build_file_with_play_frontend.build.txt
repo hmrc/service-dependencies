@@ -21,7 +21,7 @@ val playHealthVersion = "8.8.8"
 libraryDependencies ++= Seq( "uk.gov.hmrc" %% "play-frontend" % playFrontendVersion,
                             "uk.gov.hmrc" %% "play-ui" % playUiVersion,
                             "uk.gov.hmrc" %% "play-health" % playHealthVersion,
-                            "org.reactivemongo" %% "reactivemongo" % "0.10.5.0.akka23",
+                            "org.reactivemongo" %% "reactivemongo" % "0.12.0",
                             "org.seleniumhq.selenium" % "selenium-java" % "2.43.1",
                             "org.seleniumhq.selenium" % "selenium-firefox-driver" % "2.43.1",
                             "com.typesafe.play" %% "play-json" % "2.3.0",
