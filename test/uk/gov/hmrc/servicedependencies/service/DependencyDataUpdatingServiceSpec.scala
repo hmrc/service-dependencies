@@ -30,9 +30,9 @@ import uk.gov.hmrc.servicedependencies.config.CuratedDependencyConfigProvider
 import uk.gov.hmrc.servicedependencies.config.model.{CuratedDependencyConfig, OtherDependencyConfig, SbtPluginConfig}
 import uk.gov.hmrc.servicedependencies.controller.model.{Dependencies, Dependency}
 import uk.gov.hmrc.servicedependencies.model._
-import uk.gov.hmrc.servicedependencies.presistence._
+import uk.gov.hmrc.servicedependencies.persistence._
+import uk.gov.hmrc.servicedependencies.persistence._
 import uk.gov.hmrc.time.DateTimeUtils
-
 import scala.concurrent.{ExecutionContext, Future}
 
 class DependencyDataUpdatingServiceSpec

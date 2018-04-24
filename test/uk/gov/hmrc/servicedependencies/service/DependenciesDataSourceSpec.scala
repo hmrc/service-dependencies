@@ -35,10 +35,9 @@ import uk.gov.hmrc.servicedependencies.config.model.{CuratedDependencyConfig, Ot
 import uk.gov.hmrc.servicedependencies.connector.model.{GithubInstance, Repository}
 import uk.gov.hmrc.servicedependencies.connector.{TeamsAndRepositoriesConnector, model}
 import uk.gov.hmrc.servicedependencies.model._
-import uk.gov.hmrc.servicedependencies.presistence.RepositoryLibraryDependenciesRepository
+import uk.gov.hmrc.servicedependencies.persistence.RepositoryLibraryDependenciesRepository
 import uk.gov.hmrc.servicedependencies.{Github, GithubSearchError}
 import uk.gov.hmrc.time.DateTimeUtils
-
 import scala.collection.JavaConversions._
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future

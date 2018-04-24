@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.servicedependencies.presistence
+package uk.gov.hmrc.servicedependencies.persistence
 
 /*
  * Copyright 2017 HM Revenue & Customs
@@ -33,7 +33,6 @@ package uk.gov.hmrc.servicedependencies.presistence
  */
 
 import java.time.LocalDateTime
-
 import org.joda.time.{DateTime, DateTimeZone}
 import org.mockito.Mockito.when
 import org.scalatest.concurrent.ScalaFutures
@@ -45,6 +44,7 @@ import play.modules.reactivemongo.ReactiveMongoComponent
 import uk.gov.hmrc.mongo.{MongoConnector, MongoSpecSupport}
 import uk.gov.hmrc.play.test.UnitSpec
 import uk.gov.hmrc.servicedependencies.model.{LibraryDependency, MongoRepositoryDependencies, Version}
+import uk.gov.hmrc.servicedependencies.persistence.RepositoryLibraryDependenciesRepository
 import uk.gov.hmrc.time.DateTimeUtils
 
 class RepositoryLibraryDependenciesRepositorySpec

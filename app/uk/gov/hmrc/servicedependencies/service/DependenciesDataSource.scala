@@ -29,9 +29,8 @@ import uk.gov.hmrc.servicedependencies.config.model.{CuratedDependencyConfig, Sb
 import uk.gov.hmrc.servicedependencies.connector.TeamsAndRepositoriesConnector
 import uk.gov.hmrc.servicedependencies.connector.model.Repository
 import uk.gov.hmrc.servicedependencies.model._
-import uk.gov.hmrc.servicedependencies.presistence.RepositoryLibraryDependenciesRepository
+import uk.gov.hmrc.servicedependencies.persistence.RepositoryLibraryDependenciesRepository
 import uk.gov.hmrc.time.DateTimeUtils
-
 import scala.concurrent.Future
 
 @Singleton
