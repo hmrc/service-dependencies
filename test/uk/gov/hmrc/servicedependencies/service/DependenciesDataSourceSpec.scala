@@ -296,11 +296,11 @@ class DependenciesDataSourceSpec
 
     def repositories: Seq[model.Repository]
 
-    val repo1 = model.Repository("repo1", timeInThePast, Seq("PlatOps"), Seq(GithubInstance("github-com", "Github")))
-    val repo2 = model.Repository("repo2", timeInThePast, Seq("PlatOps"), Seq(GithubInstance("github-com", "Github")))
-    val repo3 = model.Repository("repo3", timeInThePast, Seq("PlatOps"), Seq(GithubInstance("github-com", "Github")))
-    val repo4 = model.Repository("repo4", timeInThePast, Seq("PlatOps"), Seq(GithubInstance("github-com", "Github")))
-    val repo5 = model.Repository("repo5", timeInThePast, Seq("PlatOps"), Seq(GithubInstance("github-com", "Github")))
+    val repo1 = model.Repository("repo1", timeInThePast, Seq("PlatOps"), GithubInstance("github-com", "Github"))
+    val repo2 = model.Repository("repo2", timeInThePast, Seq("PlatOps"), GithubInstance("github-com", "Github"))
+    val repo3 = model.Repository("repo3", timeInThePast, Seq("PlatOps"), GithubInstance("github-com", "Github"))
+    val repo4 = model.Repository("repo4", timeInThePast, Seq("PlatOps"), GithubInstance("github-com", "Github"))
+    val repo5 = model.Repository("repo5", timeInThePast, Seq("PlatOps"), GithubInstance("github-com", "Github"))
 
     def lookupTable(repo: String) = repo match {
       case "repo1" =>

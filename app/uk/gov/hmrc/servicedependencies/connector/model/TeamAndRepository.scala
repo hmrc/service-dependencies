@@ -20,7 +20,7 @@ import org.joda.time.DateTime
 import play.api.libs.json.Json
 
 case class GithubInstance(name: String, displayName: String)
-case class Repository(name: String, lastActive: DateTime, teamNames: Seq[String], githubUrls: Seq[GithubInstance])
+case class Repository(name: String, lastActive: DateTime, teamNames: Seq[String], githubUrl: GithubInstance)
 
 object Repository {
   implicit val gi = Json.format[GithubInstance]
