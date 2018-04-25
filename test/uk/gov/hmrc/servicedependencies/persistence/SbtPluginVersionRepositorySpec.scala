@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.cataloguefrontend.events
+package uk.gov.hmrc.servicedependencies.persistence
 
 /*
  * Copyright 2017 HM Revenue & Customs
@@ -41,11 +41,11 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.modules.reactivemongo.ReactiveMongoComponent
 import uk.gov.hmrc.mongo.{MongoConnector, MongoSpecSupport}
 import uk.gov.hmrc.play.test.UnitSpec
-import uk.gov.hmrc.servicedependencies.model.{MongoLibraryVersion, Version}
-import uk.gov.hmrc.servicedependencies.presistence.LibraryVersionRepository
+import uk.gov.hmrc.servicedependencies.model.{MongoSbtPluginVersion, Version}
+import uk.gov.hmrc.servicedependencies.persistence.SbtPluginVersionRepository
 import uk.gov.hmrc.time.DateTimeUtils
 
-class LibraryVersionRepositorySpec
+class SbtPluginVersionRepositorySpec
     extends UnitSpec
     with LoneElement
     with MongoSpecSupport
@@ -62,44 +62,44 @@ class LibraryVersionRepositorySpec
     override def mongoConnector = mockedMongoConnector
   }
 
-  val mongoLibraryVersions = new LibraryVersionRepository(reactiveMongoComponent)
+  val mongoSbtPluginVersions = new SbtPluginVersionRepository(reactiveMongoComponent)
 
   override def beforeEach() {
-    await(mongoLibraryVersions.drop)
+    await(mongoSbtPluginVersions.drop)
   }
 
   "update" should {
     "inserts correctly" in {
 
-      val libraryVersion = MongoLibraryVersion("some-library", Some(Version(1, 0, 2)), DateTimeUtils.now)
-      await(mongoLibraryVersions.update(libraryVersion))
+      val sbtPluginVersion = MongoSbtPluginVersion("some-sbtPlugin", Some(Version(1, 0, 2)), DateTimeUtils.now)
+      await(mongoSbtPluginVersions.update(sbtPluginVersion))
 
-      await(mongoLibraryVersions.getAllEntries) shouldBe Seq(libraryVersion)
+      await(mongoSbtPluginVersions.getAllEntries) shouldBe Seq(sbtPluginVersion)
     }
 
-    "updates correctly (based on library name)" in {
+    "updates correctly (based on sbtPlugin name)" in {
 
-      val libraryVersion    = MongoLibraryVersion("some-library", Some(Version(1, 0, 2)), DateTimeUtils.now)
-      val newLibraryVersion = libraryVersion.copy(version = Some(Version(1, 0, 5)))
-      await(mongoLibraryVersions.update(libraryVersion))
+      val sbtPluginVersion    = MongoSbtPluginVersion("some-sbtPlugin", Some(Version(1, 0, 2)), DateTimeUtils.now)
+      val newSbtPluginVersion = sbtPluginVersion.copy(version = Some(Version(1, 0, 5)))
+      await(mongoSbtPluginVersions.update(sbtPluginVersion))
 
-      await(mongoLibraryVersions.update(newLibraryVersion))
+      await(mongoSbtPluginVersions.update(newSbtPluginVersion))
 
-      await(mongoLibraryVersions.getAllEntries) shouldBe Seq(newLibraryVersion)
+      await(mongoSbtPluginVersions.getAllEntries) shouldBe Seq(newSbtPluginVersion)
     }
   }
 
   "clearAllDependencyEntries" should {
     "deletes everything" in {
 
-      val libraryVersion = MongoLibraryVersion("some-library", Some(Version(1, 0, 2)), DateTimeUtils.now)
-      await(mongoLibraryVersions.update(libraryVersion))
+      val sbtPluginVersion = MongoSbtPluginVersion("some-sbtPlugin", Some(Version(1, 0, 2)), DateTimeUtils.now)
+      await(mongoSbtPluginVersions.update(sbtPluginVersion))
 
-      await(mongoLibraryVersions.getAllEntries) should have size 1
+      await(mongoSbtPluginVersions.getAllEntries) should have size 1
 
-      await(mongoLibraryVersions.clearAllData)
+      await(mongoSbtPluginVersions.clearAllData)
 
-      await(mongoLibraryVersions.getAllEntries) shouldBe Nil
+      await(mongoSbtPluginVersions.getAllEntries) shouldBe Nil
     }
   }
 }

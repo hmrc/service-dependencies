@@ -32,13 +32,12 @@ import uk.gov.hmrc.githubclient.APIRateLimitExceededException
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.servicedependencies.config._
 import uk.gov.hmrc.servicedependencies.config.model.{CuratedDependencyConfig, OtherDependencyConfig, SbtPluginConfig}
-import uk.gov.hmrc.servicedependencies.connector.model.{GithubInstance, Repository}
+import uk.gov.hmrc.servicedependencies.connector.model.Repository
 import uk.gov.hmrc.servicedependencies.connector.{TeamsAndRepositoriesConnector, model}
 import uk.gov.hmrc.servicedependencies.model._
-import uk.gov.hmrc.servicedependencies.presistence.RepositoryLibraryDependenciesRepository
+import uk.gov.hmrc.servicedependencies.persistence.RepositoryLibraryDependenciesRepository
 import uk.gov.hmrc.servicedependencies.{Github, GithubSearchError}
 import uk.gov.hmrc.time.DateTimeUtils
-
 import scala.collection.JavaConversions._
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
@@ -297,11 +296,11 @@ class DependenciesDataSourceSpec
 
     def repositories: Seq[model.Repository]
 
-    val repo1 = model.Repository("repo1", timeInThePast, Seq("PlatOps"), Seq(GithubInstance("github-com", "Github")))
-    val repo2 = model.Repository("repo2", timeInThePast, Seq("PlatOps"), Seq(GithubInstance("github-com", "Github")))
-    val repo3 = model.Repository("repo3", timeInThePast, Seq("PlatOps"), Seq(GithubInstance("github-com", "Github")))
-    val repo4 = model.Repository("repo4", timeInThePast, Seq("PlatOps"), Seq(GithubInstance("github-com", "Github")))
-    val repo5 = model.Repository("repo5", timeInThePast, Seq("PlatOps"), Seq(GithubInstance("github-com", "Github")))
+    val repo1 = model.Repository("repo1", timeInThePast, Seq("PlatOps"))
+    val repo2 = model.Repository("repo2", timeInThePast, Seq("PlatOps"))
+    val repo3 = model.Repository("repo3", timeInThePast, Seq("PlatOps"))
+    val repo4 = model.Repository("repo4", timeInThePast, Seq("PlatOps"))
+    val repo5 = model.Repository("repo5", timeInThePast, Seq("PlatOps"))
 
     def lookupTable(repo: String) = repo match {
       case "repo1" =>
