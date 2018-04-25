@@ -17,12 +17,10 @@
 package uk.gov.hmrc.servicedependencies.connector.model
 
 import org.joda.time.DateTime
-import play.api.libs.json.Json
+import play.api.libs.json.{Json, OFormat}
 
-case class GithubInstance(name: String, displayName: String)
-case class Repository(name: String, lastActive: DateTime, teamNames: Seq[String], githubUrl: GithubInstance)
+case class Repository(name: String, lastActive: DateTime, teamNames: Seq[String])
 
 object Repository {
-  implicit val gi = Json.format[GithubInstance]
-  implicit val f  = Json.format[Repository]
+  implicit val format: OFormat[Repository] = Json.format[Repository]
 }
