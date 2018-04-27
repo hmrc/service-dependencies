@@ -54,6 +54,7 @@
      "play-graphite",
      "play-hal",
      "play-partials",
+     "play-reactivemongo",
      "play-scheduling",
      "play-sso",
      "play-time",
