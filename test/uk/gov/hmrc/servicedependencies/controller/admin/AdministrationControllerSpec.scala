@@ -60,7 +60,7 @@ class AdministrationControllerSpec
         .thenReturn(Future.successful(Seq.empty[MongoRepositoryDependencies]))
 
       val controller = new AdministrationController(mockedLibraryDependencyDataUpdatingService)
-      controller.reloadLibraryDependenciesForAllRepositories(Some("true")).apply(FakeRequest())
+      controller.reloadLibraryDependenciesForAllRepositories(Some(true)).apply(FakeRequest())
 
       verify(mockedLibraryDependencyDataUpdatingService).reloadCurrentDependenciesDataForAllRepositories(eqTo(true))(
         any())
@@ -73,7 +73,7 @@ class AdministrationControllerSpec
         .thenReturn(Future.successful(Seq.empty[MongoRepositoryDependencies]))
 
       val controller = new AdministrationController(mockedLibraryDependencyDataUpdatingService)
-      controller.reloadLibraryDependenciesForAllRepositories(Some("false")).apply(FakeRequest())
+      controller.reloadLibraryDependenciesForAllRepositories(Some(false)).apply(FakeRequest())
 
       verify(mockedLibraryDependencyDataUpdatingService).reloadCurrentDependenciesDataForAllRepositories(eqTo(false))(
         any())
