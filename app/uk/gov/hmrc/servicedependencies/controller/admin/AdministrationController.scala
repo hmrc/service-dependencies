@@ -28,9 +28,9 @@ import uk.gov.hmrc.servicedependencies.service.DependencyDataUpdatingService
 class AdministrationController @Inject()(dependencyDataUpdatingService: DependencyDataUpdatingService)
     extends BaseController {
 
-  def reloadLibraryDependenciesForAllRepositories(force: Option[String] = None) = Action { implicit request =>
+  def reloadLibraryDependenciesForAllRepositories(force: Option[Boolean] = None) = Action { implicit request =>
     dependencyDataUpdatingService
-      .reloadCurrentDependenciesDataForAllRepositories(force = force.contains("true"))
+      .reloadCurrentDependenciesDataForAllRepositories(force = force.getOrElse(false))
       .map(_ => Logger.debug(s"""${">" * 10} done ${"<" * 10}"""))
       .onFailure {
         case ex => throw new RuntimeException("reload of dependencies failed", ex)
