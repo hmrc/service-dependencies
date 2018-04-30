@@ -121,7 +121,7 @@ class DependencyDataUpdatingServiceSpec
 
       when(underTest.repositoryLibraryDependenciesRepository.getAllEntries)
         .thenReturn(Future.successful(mongoRepositoryDependencies))
-      when(underTest.dependenciesDataSource.persistDependenciesForAllRepositories(any(), any())(any()))
+      when(underTest.dependenciesDataSource.persistDependenciesForAllRepositories(any(), any(), any())(any()))
         .thenReturn(Future.successful(mongoRepositoryDependencies))
 
       underTest.testDependencyUpdatingService
@@ -131,7 +131,29 @@ class DependencyDataUpdatingServiceSpec
       //!@ TODO: how do we verify the persister function being called (last param)?
       verify(underTest.dependenciesDataSource, times(1)).persistDependenciesForAllRepositories(
         eqTo(underTest.testDependencyUpdatingService.curatedDependencyConfig),
-        eqTo(mongoRepositoryDependencies))(any())
+        eqTo(mongoRepositoryDependencies),
+        eqTo(false))(any())
+    }
+
+    it("should force the peristence of updates if the 'force' flag is true") {
+      val underTest = new TestDependencyDataUpdatingService(noLockTestMongoLockBuilder, curatedDependencyConfig)
+
+      val mongoRepositoryDependencies = Seq(MongoRepositoryDependencies("repoXyz", Nil, Nil, Nil, timeForTest))
+
+      when(underTest.repositoryLibraryDependenciesRepository.getAllEntries)
+        .thenReturn(Future.successful(mongoRepositoryDependencies))
+      when(underTest.dependenciesDataSource.persistDependenciesForAllRepositories(any(), any(), any())(any()))
+        .thenReturn(Future.successful(mongoRepositoryDependencies))
+
+      underTest.testDependencyUpdatingService
+        .reloadCurrentDependenciesDataForAllRepositories(force = true)(HeaderCarrier())
+        .futureValue shouldBe mongoRepositoryDependencies
+
+      //!@ TODO: how do we verify the persister function being called (last param)?
+      verify(underTest.dependenciesDataSource, times(1)).persistDependenciesForAllRepositories(
+        eqTo(underTest.testDependencyUpdatingService.curatedDependencyConfig),
+        eqTo(mongoRepositoryDependencies),
+        eqTo(true))(any())
     }
 
     it("should not call the dependency update function if the mongo is locked") {

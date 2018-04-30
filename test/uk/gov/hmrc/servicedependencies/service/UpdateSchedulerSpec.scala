@@ -25,9 +25,9 @@ import play.libs.Akka
 import uk.gov.hmrc.githubclient.APIRateLimitExceededException
 import uk.gov.hmrc.http.HeaderCarrier
 
+import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.concurrent.duration._
-import scala.concurrent.ExecutionContext.Implicits.global
 
 class UpdateSchedulerSpec extends FunSpec with MockitoSugar with Matchers with OneAppPerTest with BeforeAndAfterEach {
 
@@ -66,8 +66,10 @@ class UpdateSchedulerSpec extends FunSpec with MockitoSugar with Matchers with O
       scheduler.startUpdatingLibraryDependencyData(100 milliseconds)
       Thread.sleep(1000)
 
-      verify(dependencyDataUpdatingService, Mockito.atLeast(8)).reloadCurrentDependenciesDataForAllRepositories
-      verify(dependencyDataUpdatingService, Mockito.atMost(11)).reloadCurrentDependenciesDataForAllRepositories
+      verify(dependencyDataUpdatingService, Mockito.atLeast(8))
+        .reloadCurrentDependenciesDataForAllRepositories(_: Boolean)
+      verify(dependencyDataUpdatingService, Mockito.atMost(11))
+        .reloadCurrentDependenciesDataForAllRepositories(_: Boolean)
     }
 
     it("should schedule reloadLibraryDependencyDataForAllRepositories based on configured interval") {
@@ -80,8 +82,8 @@ class UpdateSchedulerSpec extends FunSpec with MockitoSugar with Matchers with O
       scheduler.startUpdatingLibraryDependencyData(100 milliseconds)
       Thread.sleep(1000)
 
-      verify(dependencyDataUpdatingService, Mockito.atLeast(8)).reloadCurrentDependenciesDataForAllRepositories
-      verify(dependencyDataUpdatingService, Mockito.atMost(11)).reloadCurrentDependenciesDataForAllRepositories
+      verify(dependencyDataUpdatingService, Mockito.atLeast(8)).reloadCurrentDependenciesDataForAllRepositories()
+      verify(dependencyDataUpdatingService, Mockito.atMost(11)).reloadCurrentDependenciesDataForAllRepositories()
 
     }
 

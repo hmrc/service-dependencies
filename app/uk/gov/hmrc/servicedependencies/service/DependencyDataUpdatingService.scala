@@ -69,15 +69,16 @@ class DependencyDataUpdatingService @Inject()(
       })
     }
 
-  def reloadCurrentDependenciesDataForAllRepositories()(
+  def reloadCurrentDependenciesDataForAllRepositories(force: Boolean = false)(
     implicit hc: HeaderCarrier): Future[Seq[MongoRepositoryDependencies]] = {
-    logger.debug("reloading current dependencies data for all repositories...")
+    logger.debug(s"reloading current dependencies data for all repositories... (with force=$force)")
     runMongoUpdate(repositoryDependencyMongoLock) {
       for {
         currentDependencyEntries <- repositoryLibraryDependenciesRepository.getAllEntries
         libraryDependencies <- dependenciesDataSource.persistDependenciesForAllRepositories(
                                 curatedDependencyConfig,
-                                currentDependencyEntries)
+                                currentDependencyEntries,
+                                force = force)
       } yield libraryDependencies
 
     }

@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.servicedependencies.controller.admin
 
-import org.mockito.ArgumentMatchers.any
+import org.mockito.ArgumentMatchers.{any, eq => eqTo}
 import org.mockito.Mockito.{verify, when}
 import org.scalatest.concurrent.{IntegrationPatience, ScalaFutures}
 import org.scalatest.mockito.MockitoSugar
@@ -39,16 +39,44 @@ class AdministrationControllerSpec
     with OptionValues {
 
   "reloadLibraryDependenciesForAllRepositories" - {
+
     "should call the reloadLibraryDependencyDataForAllRepositories on the service" in {
       val mockedLibraryDependencyDataUpdatingService = mock[DependencyDataUpdatingService]
 
-      when(mockedLibraryDependencyDataUpdatingService.reloadCurrentDependenciesDataForAllRepositories()(any()))
+      when(mockedLibraryDependencyDataUpdatingService.reloadCurrentDependenciesDataForAllRepositories(any())(any()))
         .thenReturn(Future.successful(Seq.empty[MongoRepositoryDependencies]))
 
       val controller = new AdministrationController(mockedLibraryDependencyDataUpdatingService)
       controller.reloadLibraryDependenciesForAllRepositories().apply(FakeRequest())
 
-      verify(mockedLibraryDependencyDataUpdatingService).reloadCurrentDependenciesDataForAllRepositories()(any())
+      verify(mockedLibraryDependencyDataUpdatingService).reloadCurrentDependenciesDataForAllRepositories(eqTo(false))(
+        any())
+    }
+
+    "should accept an optional query parameter to force the dependencies to be reloaded" in {
+      val mockedLibraryDependencyDataUpdatingService = mock[DependencyDataUpdatingService]
+
+      when(mockedLibraryDependencyDataUpdatingService.reloadCurrentDependenciesDataForAllRepositories(any())(any()))
+        .thenReturn(Future.successful(Seq.empty[MongoRepositoryDependencies]))
+
+      val controller = new AdministrationController(mockedLibraryDependencyDataUpdatingService)
+      controller.reloadLibraryDependenciesForAllRepositories(Some("true")).apply(FakeRequest())
+
+      verify(mockedLibraryDependencyDataUpdatingService).reloadCurrentDependenciesDataForAllRepositories(eqTo(true))(
+        any())
+    }
+
+    "should not force dependencies if the force query parameter is set to false" in {
+      val mockedLibraryDependencyDataUpdatingService = mock[DependencyDataUpdatingService]
+
+      when(mockedLibraryDependencyDataUpdatingService.reloadCurrentDependenciesDataForAllRepositories(any())(any()))
+        .thenReturn(Future.successful(Seq.empty[MongoRepositoryDependencies]))
+
+      val controller = new AdministrationController(mockedLibraryDependencyDataUpdatingService)
+      controller.reloadLibraryDependenciesForAllRepositories(Some("false")).apply(FakeRequest())
+
+      verify(mockedLibraryDependencyDataUpdatingService).reloadCurrentDependenciesDataForAllRepositories(eqTo(false))(
+        any())
     }
   }
 }

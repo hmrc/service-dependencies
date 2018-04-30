@@ -150,8 +150,30 @@ class DependenciesDataSourceSpec
       dependenciesDataSource
         .persistDependenciesForAllRepositories(curatedDependencyConfig, currentDependencyEntries)
         .futureValue
-
     }
+
+    "should persist the dependency if the forced flag is true, even if there are no updates to the git repository" in new TestCase {
+      override def repositories: Seq[model.Repository] = Seq(repo1.copy(lastActive = timeInThePast), repo2, repo3)
+
+      val captor: ArgumentCaptor[MongoRepositoryDependencies] =
+        ArgumentCaptor.forClass(classOf[MongoRepositoryDependencies])
+
+      when(repositoryLibraryDependenciesRepository.update(any()))
+        .thenReturn(Future.successful(mock[MongoRepositoryDependencies]))
+
+      val currentDependencyEntries =
+          Seq(MongoRepositoryDependencies("repo1", Nil, Nil, Nil, timeInThePast.plusMinutes(1)))
+
+      dependenciesDataSource
+        .persistDependenciesForAllRepositories(curatedDependencyConfig, currentDependencyEntries, force = true)
+        .futureValue
+
+      Mockito.verify(repositoryLibraryDependenciesRepository, Mockito.times(3)).update(captor.capture())
+
+      val allStoredDependencies: List[MongoRepositoryDependencies] = captor.getAllValues.toList
+      allStoredDependencies.size should be(3)
+    }
+
 
     "should NOT terminate with exception when the repository is not found in teams-and-repositories" in new TestCase {
 

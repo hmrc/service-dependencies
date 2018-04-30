@@ -80,7 +80,8 @@ class DependenciesDataSource @Inject()(
 
   def persistDependenciesForAllRepositories(
     curatedDependencyConfig: CuratedDependencyConfig,
-    currentDependencyEntries: Seq[MongoRepositoryDependencies])(
+    currentDependencyEntries: Seq[MongoRepositoryDependencies],
+    force: Boolean = false)(
     implicit hc: HeaderCarrier): Future[Seq[MongoRepositoryDependencies]] = {
 
     val allRepositories: Future[Seq[String]] = teamsAndRepositoriesConnector.getAllRepositories()
@@ -122,7 +123,7 @@ class DependenciesDataSource @Inject()(
       logger.info(s"Updating dependencies for: $repoName")
       val lastUpdated: DateTime =
         currentDependencyEntries.find(_.repositoryName == repoName).map(_.updateDate).getOrElse(new DateTime(0))
-      if (lastUpdated.isAfter(repository.lastActive)) {
+      if (!force && lastUpdated.isAfter(repository.lastActive)) {
         logger.debug(s"No changes for repository ($repoName). Skipping....")
         None
       } else {
