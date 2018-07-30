@@ -49,6 +49,7 @@ class TeamsAndRepositoriesConnectorSpec
     stubRepositoriesWith404("non-existing-test-repo")
     stubAllRepositories()
     stubServices()
+    stubTeamsWithRepositories()
 
   }
 
@@ -81,6 +82,20 @@ class TeamsAndRepositoriesConnectorSpec
           aResponse()
             .withStatus(200)
             .withBody(loadFileAsString(s"/teams-and-repositories/service-teams.json"))))
+
+  private def stubTeamsWithRepositories() =
+    wireMock.stub(
+      get(urlEqualTo(s"/api/teams_with_repositories"))
+        .willReturn(
+          aResponse()
+            .withStatus(200)
+            .withBody(s"""
+                 |[
+                 |{ "name": "team A", "repos": { "Service": [ "service A", "service B" ]} }
+                 |]
+               """.stripMargin)
+        )
+    )
 
   override protected def afterAll(): Unit =
     wireMock.stop()
@@ -127,6 +142,17 @@ class TeamsAndRepositoriesConnectorSpec
 
       val repositories = services.getAllRepositories().futureValue
       repositories mustBe Seq("test-repo", "another-repo")
+    }
+  }
+
+  "Retrieving a list of all teams with repositories" - {
+    "correctly parse json response" in {
+      val services = new TeamsAndRepositoriesConnector(httpClient, stubbedConfig)
+
+      val teamsWithRepositories = services.getTeamsWithRepositories().futureValue
+      teamsWithRepositories mustBe Seq(
+        Team("team A", Some(Map("Service" -> Seq("service A", "service B"))))
+      )
     }
   }
 
