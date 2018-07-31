@@ -17,20 +17,31 @@
 package uk.gov.hmrc.servicedependencies.connector
 
 import com.google.inject.{Inject, Singleton}
+import play.api.libs.json.Json
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.play.bootstrap.http.HttpClient
 import uk.gov.hmrc.servicedependencies.config.ServiceDependenciesConfig
 import uk.gov.hmrc.servicedependencies.connector.model.Repository
-
 import scala.concurrent.Future
 import uk.gov.hmrc.play.http.logging.MdcLoggingExecutionContext._
+
+case class Team(
+  name: String,
+  repos: Option[Map[String, Seq[String]]]
+)
+
+object Team {
+  implicit val format = Json.format[Team]
+
+  def normalisedName(name: String): String = name.toLowerCase.replaceAll(" ", "_")
+}
 
 @Singleton
 class TeamsAndRepositoriesConnector @Inject()(httpClient: HttpClient, serviceConfiguration: ServiceDependenciesConfig) {
 
   val teamsAndRepositoriesApiBase = serviceConfiguration.teamsAndRepositoriesServiceUrl
 
-  implicit val formats = Repository.format  
+  implicit val formats = Repository.format
 
   def getRepository(repositoryName: String)(implicit hc: HeaderCarrier): Future[Option[Repository]] =
     httpClient.GET[Option[Repository]](s"$teamsAndRepositoriesApiBase/api/repositories/$repositoryName")
@@ -42,4 +53,7 @@ class TeamsAndRepositoriesConnector @Inject()(httpClient: HttpClient, serviceCon
     httpClient.GET(s"$teamsAndRepositoriesApiBase/api/repositories") map { response =>
       (response.json \\ "name").map(_.as[String])
     }
+
+  def getTeamsWithRepositories()(implicit hc: HeaderCarrier): Future[Seq[Team]] =
+    httpClient.GET[Seq[Team]](s"$teamsAndRepositoriesApiBase/api/teams_with_repositories")
 }

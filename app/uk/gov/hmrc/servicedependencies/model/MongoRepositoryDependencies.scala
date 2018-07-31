@@ -21,29 +21,20 @@ import play.api.libs.json.Json
 import uk.gov.hmrc.mongo.json.ReactiveMongoFormats
 import uk.gov.hmrc.time.DateTimeUtils
 
-case class LibraryDependency(libraryName: String, currentVersion: Version)
-object LibraryDependency {
-  implicit val format = Json.format[LibraryDependency]
-}
+case class MongoRepositoryDependency(name: String, currentVersion: Version)
 
-case class SbtPluginDependency(sbtPluginName: String, currentVersion: Version)
-object SbtPluginDependency {
-  implicit val format = Json.format[SbtPluginDependency]
-}
-
-case class OtherDependency(name: String, currentVersion: Version)
-object OtherDependency {
-  implicit val format = Json.format[OtherDependency]
+object MongoRepositoryDependency {
+  implicit val format = Json.format[MongoRepositoryDependency]
 }
 
 case class MongoRepositoryDependencies(
   repositoryName: String,
-  libraryDependencies: Seq[LibraryDependency],
-  sbtPluginDependencies: Seq[SbtPluginDependency] = Nil,
-  otherDependencies: Seq[OtherDependency],
+  libraryDependencies: Seq[MongoRepositoryDependency],
+  sbtPluginDependencies: Seq[MongoRepositoryDependency] = Nil,
+  otherDependencies: Seq[MongoRepositoryDependency],
   updateDate: DateTime = DateTimeUtils.now)
-object MongoRepositoryDependencies {
 
+object MongoRepositoryDependencies {
   implicit val dtf    = ReactiveMongoFormats.dateTimeFormats
   implicit val format = Json.format[MongoRepositoryDependencies]
 }

@@ -32,7 +32,6 @@ package uk.gov.hmrc.servicedependencies.persistence
  * limitations under the License.
  */
 
-import java.time.LocalDateTime
 import org.joda.time.{DateTime, DateTimeZone}
 import org.mockito.Mockito.when
 import org.scalatest.concurrent.ScalaFutures
@@ -43,8 +42,7 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.modules.reactivemongo.ReactiveMongoComponent
 import uk.gov.hmrc.mongo.{MongoConnector, MongoSpecSupport}
 import uk.gov.hmrc.play.test.UnitSpec
-import uk.gov.hmrc.servicedependencies.model.{LibraryDependency, MongoRepositoryDependencies, Version}
-import uk.gov.hmrc.servicedependencies.persistence.RepositoryLibraryDependenciesRepository
+import uk.gov.hmrc.servicedependencies.model.{MongoRepositoryDependencies, MongoRepositoryDependency, Version}
 import uk.gov.hmrc.time.DateTimeUtils
 
 class RepositoryLibraryDependenciesRepositorySpec
@@ -75,7 +73,7 @@ class RepositoryLibraryDependenciesRepositorySpec
 
       val repositoryLibraryDependencies = MongoRepositoryDependencies(
         "some-repo",
-        Seq(LibraryDependency("some-lib", Version(1, 0, 2))),
+        Seq(MongoRepositoryDependency("some-lib", Version(1, 0, 2))),
         Nil,
         Nil,
         DateTimeUtils.now)
@@ -88,12 +86,12 @@ class RepositoryLibraryDependenciesRepositorySpec
 
       val repositoryLibraryDependencies = MongoRepositoryDependencies(
         "some-repo",
-        Seq(LibraryDependency("some-lib", Version(1, 0, 2))),
+        Seq(MongoRepositoryDependency("some-lib", Version(1, 0, 2))),
         Nil,
         Nil,
         DateTimeUtils.now)
       val newRepositoryLibraryDependencies = repositoryLibraryDependencies.copy(
-        libraryDependencies = repositoryLibraryDependencies.libraryDependencies :+ LibraryDependency(
+        libraryDependencies = repositoryLibraryDependencies.libraryDependencies :+ MongoRepositoryDependency(
           "some-other-lib",
           Version(8, 4, 2)))
       await(mongoRepositoryLibraryDependenciesRepository.update(repositoryLibraryDependencies))
@@ -108,13 +106,13 @@ class RepositoryLibraryDependenciesRepositorySpec
     "get back the correct record" in {
       val repositoryLibraryDependencies1 = MongoRepositoryDependencies(
         "some-repo1",
-        Seq(LibraryDependency("some-lib1", Version(1, 0, 2))),
+        Seq(MongoRepositoryDependency("some-lib1", Version(1, 0, 2))),
         Nil,
         Nil,
         DateTimeUtils.now)
       val repositoryLibraryDependencies2 = MongoRepositoryDependencies(
         "some-repo2",
-        Seq(LibraryDependency("some-lib2", Version(11, 0, 22))),
+        Seq(MongoRepositoryDependency("some-lib2", Version(11, 0, 22))),
         Nil,
         Nil,
         DateTimeUtils.now)
@@ -129,13 +127,13 @@ class RepositoryLibraryDependenciesRepositorySpec
     "finds the repository when the name is of different case" in {
       val repositoryLibraryDependencies1 = MongoRepositoryDependencies(
         "some-repo1",
-        Seq(LibraryDependency("some-lib1", Version(1, 0, 2))),
+        Seq(MongoRepositoryDependency("some-lib1", Version(1, 0, 2))),
         Nil,
         Nil,
         DateTimeUtils.now)
       val repositoryLibraryDependencies2 = MongoRepositoryDependencies(
         "some-repo2",
-        Seq(LibraryDependency("some-lib2", Version(11, 0, 22))),
+        Seq(MongoRepositoryDependency("some-lib2", Version(11, 0, 22))),
         Nil,
         Nil,
         DateTimeUtils.now)
@@ -149,13 +147,13 @@ class RepositoryLibraryDependenciesRepositorySpec
     "not find a repository with partial name" in {
       val repositoryLibraryDependencies1 = MongoRepositoryDependencies(
         "some-repo1",
-        Seq(LibraryDependency("some-lib1", Version(1, 0, 2))),
+        Seq(MongoRepositoryDependency("some-lib1", Version(1, 0, 2))),
         Nil,
         Nil,
         DateTimeUtils.now)
       val repositoryLibraryDependencies2 = MongoRepositoryDependencies(
         "some-repo2",
-        Seq(LibraryDependency("some-lib2", Version(11, 0, 22))),
+        Seq(MongoRepositoryDependency("some-lib2", Version(11, 0, 22))),
         Nil,
         Nil,
         DateTimeUtils.now)
@@ -172,7 +170,7 @@ class RepositoryLibraryDependenciesRepositorySpec
 
       val repositoryLibraryDependencies = MongoRepositoryDependencies(
         "some-repo",
-        Seq(LibraryDependency("some-lib", Version(1, 0, 2))),
+        Seq(MongoRepositoryDependency("some-lib", Version(1, 0, 2))),
         Nil,
         Nil,
         DateTimeUtils.now)
@@ -193,11 +191,16 @@ class RepositoryLibraryDependenciesRepositorySpec
       val t1 = DateTimeUtils.now
       val t2 = DateTimeUtils.now.plusDays(1)
       val repositoryLibraryDependencies1 =
-        MongoRepositoryDependencies("some-repo", Seq(LibraryDependency("some-lib2", Version(1, 0, 2))), Nil, Nil, t1)
+        MongoRepositoryDependencies(
+          "some-repo",
+          Seq(MongoRepositoryDependency("some-lib2", Version(1, 0, 2))),
+          Nil,
+          Nil,
+          t1)
       val repositoryLibraryDependencies2 =
         MongoRepositoryDependencies(
           "some-other-repo",
-          Seq(LibraryDependency("some-lib2", Version(1, 0, 2))),
+          Seq(MongoRepositoryDependency("some-lib2", Version(1, 0, 2))),
           Nil,
           Nil,
           t2)

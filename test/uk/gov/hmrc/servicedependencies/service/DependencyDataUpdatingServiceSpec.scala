@@ -112,7 +112,7 @@ class DependencyDataUpdatingServiceSpec
 
   }
 
-  describe("reloadLibraryDependencyDataForAllRepositories") {
+  describe("reloadMongoRepositoryDependencyDataForAllRepositories") {
 
     it("should call the dependency update function to persist the dependencies") {
       val underTest = new TestDependencyDataUpdatingService(noLockTestMongoLockBuilder, curatedDependencyConfig)
@@ -174,8 +174,8 @@ class DependencyDataUpdatingServiceSpec
       val underTest = new TestDependencyDataUpdatingService(noLockTestMongoLockBuilder, curatedDependencyConfig)
 
       val libraryDependencies = Seq(
-        LibraryDependency("lib1", Version(1, 0, 0)),
-        LibraryDependency("lib2", Version(2, 0, 0))
+        MongoRepositoryDependency("lib1", Version(1, 0, 0)),
+        MongoRepositoryDependency("lib2", Version(2, 0, 0))
       )
       val repositoryName = "repoXYZ"
 
@@ -215,8 +215,8 @@ class DependencyDataUpdatingServiceSpec
       val underTest = new TestDependencyDataUpdatingService(noLockTestMongoLockBuilder, curatedDependencyConfig)
 
       val sbtPluginDependencies = Seq(
-        SbtPluginDependency("plugin1", Version(1, 0, 0)),
-        SbtPluginDependency("plugin2", Version(2, 0, 0))
+        MongoRepositoryDependency("plugin1", Version(1, 0, 0)),
+        MongoRepositoryDependency("plugin2", Version(2, 0, 0))
       )
       val repositoryName = "repoXYZ"
 
@@ -265,8 +265,8 @@ class DependencyDataUpdatingServiceSpec
       val underTest = new TestDependencyDataUpdatingService(noLockTestMongoLockBuilder, curatedDependencyConfig)
 
       val sbtPluginDependencies = Seq(
-        SbtPluginDependency("internal-plugin", Version(1, 0, 0)),
-        SbtPluginDependency("external-plugin", Version(2, 0, 0))
+        MongoRepositoryDependency("internal-plugin", Version(1, 0, 0)),
+        MongoRepositoryDependency("external-plugin", Version(2, 0, 0))
       )
       val repositoryName = "repoXYZ"
 
@@ -330,8 +330,8 @@ class DependencyDataUpdatingServiceSpec
       val underTest = new TestDependencyDataUpdatingService(noLockTestMongoLockBuilder, curatedDependencyConfig)
 
       val libraryDependencies = Seq(
-        LibraryDependency("lib1", Version(1, 0, 0)),
-        LibraryDependency("lib2", Version(2, 0, 0))
+        MongoRepositoryDependency("lib1", Version(1, 0, 0)),
+        MongoRepositoryDependency("lib2", Version(2, 0, 0))
       )
       val repositoryName = "repoXYZ"
 
@@ -372,30 +372,30 @@ class DependencyDataUpdatingServiceSpec
         curatedDependencyConfig.copy(otherDependencies = Seq(OtherDependencyConfig("sbt", Some(Version(100, 10, 1))))))
 
       val libraryDependencies1 = Seq(
-        LibraryDependency("lib1", Version(1, 1, 0)),
-        LibraryDependency("lib2", Version(1, 2, 0))
+        MongoRepositoryDependency("lib1", Version(1, 1, 0)),
+        MongoRepositoryDependency("lib2", Version(1, 2, 0))
       )
       val libraryDependencies2 = Seq(
-        LibraryDependency("lib1", Version(2, 1, 0)),
-        LibraryDependency("lib2", Version(2, 2, 0))
+        MongoRepositoryDependency("lib1", Version(2, 1, 0)),
+        MongoRepositoryDependency("lib2", Version(2, 2, 0))
       )
 
       val sbtPluginDependencies1 = Seq(
-        SbtPluginDependency("plugin1", Version(10, 1, 0)),
-        SbtPluginDependency("plugin2", Version(10, 2, 0))
+        MongoRepositoryDependency("plugin1", Version(10, 1, 0)),
+        MongoRepositoryDependency("plugin2", Version(10, 2, 0))
       )
 
       val sbtPluginDependencies2 = Seq(
-        SbtPluginDependency("plugin1", Version(20, 1, 0)),
-        SbtPluginDependency("plugin2", Version(20, 2, 0))
+        MongoRepositoryDependency("plugin1", Version(20, 1, 0)),
+        MongoRepositoryDependency("plugin2", Version(20, 2, 0))
       )
 
       val otherDependencies1 = Seq(
-        OtherDependency("sbt", Version(0, 13, 1))
+        MongoRepositoryDependency("sbt", Version(0, 13, 1))
       )
 
       val otherDependencies2 = Seq(
-        OtherDependency("sbt", Version(0, 13, 2))
+        MongoRepositoryDependency("sbt", Version(0, 13, 2))
       )
 
       val referenceLibraryVersions = Seq(

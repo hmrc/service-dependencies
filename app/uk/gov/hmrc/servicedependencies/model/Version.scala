@@ -31,6 +31,7 @@ case class Version(major: Int, minor: Int, patch: Int) {
       major < other.major
 
   override def toString: String = s"$major.$minor.$patch"
+  def normalise                 = s"${major}_${minor}_$patch"
 }
 
 object Version {

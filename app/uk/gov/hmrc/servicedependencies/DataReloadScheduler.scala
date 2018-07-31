@@ -82,7 +82,7 @@ class DataReloadScheduler @Inject()(
       Logger.warn(s"$sbtPluginReloadIntervalKey is missing. reload will be disabled")
     } { reloadInterval =>
       Logger.warn(s"sbtPluginReloadIntervalKey set to $reloadInterval minutes")
-      val cancellable = updateScheduler.startUpdatingSbtPluingVersionData(reloadInterval minutes)
+      val cancellable = updateScheduler.startUpdatingSbtPluginVersionData(reloadInterval minutes)
       applicationLifecycle.addStopHook(() => Future(cancellable.cancel()))
     }
   }

@@ -102,17 +102,16 @@ class DependencyDataUpdatingService @Inject()(
     sbtPluginReferences: Seq[MongoSbtPluginVersion]) =
     repositoryDependencies.sbtPluginDependencies.map { sbtPluginDependency =>
       val mayBeExternalSbtPlugin = curatedDependencyConfig.sbtPlugins
-        .find(pluginConfig => pluginConfig.name == sbtPluginDependency.sbtPluginName && pluginConfig.isExternal())
+        .find(pluginConfig => pluginConfig.name == sbtPluginDependency.name && pluginConfig.isExternal())
 
       val latestVersion = mayBeExternalSbtPlugin
         .map(
           _.version.getOrElse(throw new RuntimeException(
             s"External sbt plugin ($mayBeExternalSbtPlugin) must specify the (latest) version")))
-        .orElse(
-          sbtPluginReferences.find(mlv => mlv.sbtPluginName == sbtPluginDependency.sbtPluginName).flatMap(_.version))
+        .orElse(sbtPluginReferences.find(mlv => mlv.sbtPluginName == sbtPluginDependency.name).flatMap(_.version))
 
       Dependency(
-        sbtPluginDependency.sbtPluginName,
+        sbtPluginDependency.name,
         sbtPluginDependency.currentVersion,
         latestVersion,
         mayBeExternalSbtPlugin.isDefined
@@ -131,9 +130,9 @@ class DependencyDataUpdatingService @Inject()(
           dep.libraryDependencies.map(
             d =>
               Dependency(
-                d.libraryName,
+                d.name,
                 d.currentVersion,
-                libraryReferences.find(mlv => mlv.libraryName == d.libraryName).flatMap(_.version))),
+                libraryReferences.find(mlv => mlv.libraryName == d.name).flatMap(_.version))),
           getSbtPluginDependencyState(dep, sbtPluginReferences),
           dep.otherDependencies.map(
             other =>
@@ -157,9 +156,9 @@ class DependencyDataUpdatingService @Inject()(
           dep.libraryDependencies.map(
             d =>
               Dependency(
-                d.libraryName,
+                d.name,
                 d.currentVersion,
-                libraryReferences.find(mlv => mlv.libraryName == d.libraryName).flatMap(_.version))),
+                libraryReferences.find(mlv => mlv.libraryName == d.name).flatMap(_.version))),
           getSbtPluginDependencyState(dep, sbtPluginReferences),
           dep.otherDependencies.map(
             other =>
