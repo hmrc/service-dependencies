@@ -1,80 +1,89 @@
 {
   "sbtPlugins": [
-     {
-        "name": "sbt-auto-build",
-        "org": "uk.gov.hmrc"
-     },{
-        "name": "sbt-git-versioning",
-        "org": "uk.gov.hmrc",
-        "version": "0.10.0"
-     },{
-        "name": "sbt-distributables",
-        "org": "uk.gov.hmrc"
-     },{
-        "name": "hmrc-resolvers",
-        "org": "uk.gov.hmrc"
-     },{
-        "name": "sbt-git-stamp",
-        "org": "uk.gov.hmrc"
-     },{
-        "name": "sbt-settings",
-        "org": "uk.gov.hmrc"
-     },
-     {
-        "name": "sbt-plugin",
-        "org": "com.typesafe.play",
-        "version": "2.5.12"
-     }
+    {
+      "name": "sbt-auto-build",
+      "org": "uk.gov.hmrc"
+    },
+    {
+      "name": "sbt-git-versioning",
+      "org": "uk.gov.hmrc",
+      "version": "0.10.0"
+    },
+    {
+      "name": "sbt-distributables",
+      "org": "uk.gov.hmrc"
+    },
+    {
+      "name": "hmrc-resolvers",
+      "org": "uk.gov.hmrc"
+    },
+    {
+      "name": "sbt-git-stamp",
+      "org": "uk.gov.hmrc"
+    },
+    {
+      "name": "sbt-settings",
+      "org": "uk.gov.hmrc"
+    },
+    {
+      "name": "sbt-artifactory",
+      "org": "uk.gov.hmrc"
+    },
+    {
+      "name": "sbt-plugin",
+      "org": "com.typesafe.play",
+      "version": "2.5.12"
+    }
   ],
   "libraries": [
-     "auth-client",
-     "bootstrap-play-25",
-     "csp-client",
-     "domain",
-     "frontend-bootstrap",
-     "github-client",
-     "hmrctest",
-     "http-caching-client",
-     "http-exceptions",
-     "http-core",
-     "http-verbs",
-     "http-verbs-test",
-     "http-verbs-play-25",
-     "local-template-renderer",
-     "microservice-bootstrap",
-     "mongo-caching",
-     "mongo-lock",
-     "performance-test-runner",
-     "play-async",
-     "play-auditing",
-     "play-auth",
-     "play-authorisation",
-     "play-authorised-frontend",
-     "play-filters",
-     "play-json-logger",
-     "play-graphite",
-     "play-hal",
-     "play-partials",
-     "play-reactivemongo",
-     "play-scheduling",
-     "play-sso",
-     "play-time",
-     "play-ui",
-     "play-url-binders",
-     "reactive-circuit-breaker",
-     "reactivemongo",
-     "reactivemongo-json",
-     "reactivemongo-test",
-     "scala-webdriver",
-     "simple-reactivemongo",
-     "tax-year",
-     "time",
-     "zap-automation"
+    "auth-client",
+    "bootstrap-play-25",
+    "csp-client",
+    "domain",
+    "frontend-bootstrap",
+    "github-client",
+    "hmrctest",
+    "http-caching-client",
+    "http-exceptions",
+    "http-core",
+    "http-verbs",
+    "http-verbs-test",
+    "http-verbs-play-25",
+    "local-template-renderer",
+    "microservice-bootstrap",
+    "mongo-caching",
+    "mongo-lock",
+    "performance-test-runner",
+    "play-async",
+    "play-auditing",
+    "play-auth",
+    "play-authorisation",
+    "play-authorised-frontend",
+    "play-filters",
+    "play-json-logger",
+    "play-graphite",
+    "play-hal",
+    "play-partials",
+    "play-reactivemongo",
+    "play-scheduling",
+    "play-sso",
+    "play-time",
+    "play-ui",
+    "play-url-binders",
+    "reactive-circuit-breaker",
+    "reactivemongo",
+    "reactivemongo-json",
+    "reactivemongo-test",
+    "scala-webdriver",
+    "simple-reactivemongo",
+    "tax-year",
+    "time",
+    "zap-automation"
   ],
-   "otherDependencies": [
-      {
-         "name": "sbt", "latestVersion": "0.13.17"
-      }
-   ]
-
+  "otherDependencies": [
+    {
+      "name": "sbt",
+      "latestVersion": "0.13.17"
+    }
+  ]
 }
