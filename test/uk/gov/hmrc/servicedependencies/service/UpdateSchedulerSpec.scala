@@ -92,7 +92,7 @@ class UpdateSchedulerSpec extends FunSpec with MockitoSugar with Matchers with O
       Mockito.when(dependencyDataUpdatingService.reloadLatestSbtPluginVersions()).thenReturn(Future(Seq.empty))
 
       val scheduler = schedulerF(dependencyDataUpdatingService)
-      scheduler.startUpdatingSbtPluingVersionData(100 milliseconds)
+      scheduler.startUpdatingSbtPluginVersionData(100 milliseconds)
       Thread.sleep(1000)
 
       verify(dependencyDataUpdatingService, Mockito.atLeast(8)).reloadLatestSbtPluginVersions

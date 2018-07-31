@@ -32,6 +32,8 @@ case class Team(
 
 object Team {
   implicit val format = Json.format[Team]
+
+  def normalisedName(name: String): String = name.toLowerCase.replaceAll(" ", "_")
 }
 
 @Singleton

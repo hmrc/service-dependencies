@@ -15,6 +15,7 @@ private object AppDependencies {
     "uk.gov.hmrc"   %% "play-url-binders"   % "2.1.0",
     "uk.gov.hmrc"   %% "github-client"      % "1.21.0",
     "uk.gov.hmrc"   %% "play-reactivemongo" % "6.0.0",
+    "uk.gov.hmrc"   %% "metrix"             % "2.0.0",
     "uk.gov.hmrc"   %% "mongo-lock"         % "5.1.0",
     "uk.gov.hmrc"   %% "time"               % "3.1.0",
     "org.typelevel" %% "cats"               % "0.9.0"

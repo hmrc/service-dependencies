@@ -91,7 +91,7 @@ class TeamsAndRepositoriesConnectorSpec
             .withStatus(200)
             .withBody(s"""
                  |[
-                 |{ "name": "team A", "repos": { "Service": [ "service A", "service B" ]} }
+                 |{ "name": "team A", "repos": { "Service": [ "service A", "service B" ], "Library": [ "library A" ] } }
                  |]
                """.stripMargin)
         )
@@ -151,7 +151,7 @@ class TeamsAndRepositoriesConnectorSpec
 
       val teamsWithRepositories = services.getTeamsWithRepositories().futureValue
       teamsWithRepositories mustBe Seq(
-        Team("team A", Some(Map("Service" -> Seq("service A", "service B"))))
+        Team("team A", Some(Map("Service" -> Seq("service A", "service B"), "Library" -> Seq("library A"))))
       )
     }
   }

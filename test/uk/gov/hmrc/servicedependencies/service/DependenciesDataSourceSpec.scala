@@ -92,29 +92,29 @@ class DependenciesDataSourceSpec
       allStoredDependencies(0)
 
       allStoredDependencies(0).libraryDependencies should contain theSameElementsAs Seq(
-        LibraryDependency("library1", Version(1, 0, 1)))
+        MongoRepositoryDependency("library1", Version(1, 0, 1)))
       allStoredDependencies(1).libraryDependencies should contain theSameElementsAs Seq(
-        LibraryDependency("library1", Version(1, 0, 2)),
-        LibraryDependency("library2", Version(2, 0, 3)))
+        MongoRepositoryDependency("library1", Version(1, 0, 2)),
+        MongoRepositoryDependency("library2", Version(2, 0, 3)))
       allStoredDependencies(2).libraryDependencies should contain theSameElementsAs Seq(
-        LibraryDependency("library1", Version(1, 0, 3)),
-        LibraryDependency("library3", Version(3, 0, 4)))
+        MongoRepositoryDependency("library1", Version(1, 0, 3)),
+        MongoRepositoryDependency("library3", Version(3, 0, 4)))
 
       allStoredDependencies(0).sbtPluginDependencies should contain theSameElementsAs Seq(
-        SbtPluginDependency("plugin1", Version(100, 0, 1)))
+        MongoRepositoryDependency("plugin1", Version(100, 0, 1)))
       allStoredDependencies(1).sbtPluginDependencies should contain theSameElementsAs Seq(
-        SbtPluginDependency("plugin1", Version(100, 0, 2)),
-        SbtPluginDependency("plugin2", Version(200, 0, 3)))
+        MongoRepositoryDependency("plugin1", Version(100, 0, 2)),
+        MongoRepositoryDependency("plugin2", Version(200, 0, 3)))
       allStoredDependencies(2).sbtPluginDependencies should contain theSameElementsAs Seq(
-        SbtPluginDependency("plugin1", Version(100, 0, 3)),
-        SbtPluginDependency("plugin3", Version(300, 0, 4)))
+        MongoRepositoryDependency("plugin1", Version(100, 0, 3)),
+        MongoRepositoryDependency("plugin3", Version(300, 0, 4)))
 
       allStoredDependencies(0).otherDependencies should contain theSameElementsAs Seq(
-        OtherDependency("sbt", Version(1, 13, 100)))
+        MongoRepositoryDependency("sbt", Version(1, 13, 100)))
       allStoredDependencies(1).otherDependencies should contain theSameElementsAs Seq(
-        OtherDependency("sbt", Version(1, 13, 200)))
+        MongoRepositoryDependency("sbt", Version(1, 13, 200)))
       allStoredDependencies(2).otherDependencies should contain theSameElementsAs Seq(
-        OtherDependency("sbt", Version(1, 13, 300)))
+        MongoRepositoryDependency("sbt", Version(1, 13, 300)))
     }
 
     "should persist the empty dependencies (non-sbt - i.e: no library, no plugins and no other dependencies)" in new TestCase {
@@ -162,7 +162,7 @@ class DependenciesDataSourceSpec
         .thenReturn(Future.successful(mock[MongoRepositoryDependencies]))
 
       val currentDependencyEntries =
-          Seq(MongoRepositoryDependencies("repo1", Nil, Nil, Nil, timeInThePast.plusMinutes(1)))
+        Seq(MongoRepositoryDependencies("repo1", Nil, Nil, Nil, timeInThePast.plusMinutes(1)))
 
       dependenciesDataSource
         .persistDependenciesForAllRepositories(curatedDependencyConfig, currentDependencyEntries, force = true)
@@ -173,7 +173,6 @@ class DependenciesDataSourceSpec
       val allStoredDependencies: List[MongoRepositoryDependencies] = captor.getAllValues.toList
       allStoredDependencies.size should be(3)
     }
-
 
     "should NOT terminate with exception when the repository is not found in teams-and-repositories" in new TestCase {
 

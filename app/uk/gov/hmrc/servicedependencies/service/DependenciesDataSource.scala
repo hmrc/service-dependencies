@@ -81,8 +81,7 @@ class DependenciesDataSource @Inject()(
   def persistDependenciesForAllRepositories(
     curatedDependencyConfig: CuratedDependencyConfig,
     currentDependencyEntries: Seq[MongoRepositoryDependencies],
-    force: Boolean = false)(
-    implicit hc: HeaderCarrier): Future[Seq[MongoRepositoryDependencies]] = {
+    force: Boolean = false)(implicit hc: HeaderCarrier): Future[Seq[MongoRepositoryDependencies]] = {
 
     val allRepositories: Future[Seq[String]] = teamsAndRepositoriesConnector.getAllRepositories()
 
@@ -102,21 +101,21 @@ class DependenciesDataSource @Inject()(
     def updateDependencies(repository: Repository): Option[MongoRepositoryDependencies] = {
 
       def getLibraryDependencies(githubSearchResults: GithubSearchResults) =
-        githubSearchResults.libraries.foldLeft(Seq.empty[LibraryDependency]) {
+        githubSearchResults.libraries.foldLeft(Seq.empty[MongoRepositoryDependency]) {
           case (acc, (library, mayBeVersion)) =>
-            mayBeVersion.fold(acc)(currentVersion => acc :+ LibraryDependency(library, currentVersion))
+            mayBeVersion.fold(acc)(currentVersion => acc :+ MongoRepositoryDependency(library, currentVersion))
         }
 
       def getPluginDependencies(githubSearchResults: GithubSearchResults) =
-        githubSearchResults.sbtPlugins.foldLeft(Seq.empty[SbtPluginDependency]) {
+        githubSearchResults.sbtPlugins.foldLeft(Seq.empty[MongoRepositoryDependency]) {
           case (acc, (plugin, mayBeVersion)) =>
-            mayBeVersion.fold(acc)(currentVersion => acc :+ SbtPluginDependency(plugin, currentVersion))
+            mayBeVersion.fold(acc)(currentVersion => acc :+ MongoRepositoryDependency(plugin, currentVersion))
         }
 
       def getOtherDependencies(githubSearchResults: GithubSearchResults) =
-        githubSearchResults.others.foldLeft(Seq.empty[OtherDependency]) {
+        githubSearchResults.others.foldLeft(Seq.empty[MongoRepositoryDependency]) {
           case (acc, ("sbt", mayBeVersion)) =>
-            mayBeVersion.fold(acc)(currentVersion => acc :+ OtherDependency("sbt", currentVersion))
+            mayBeVersion.fold(acc)(currentVersion => acc :+ MongoRepositoryDependency("sbt", currentVersion))
         }
 
       val repoName = repository.name
