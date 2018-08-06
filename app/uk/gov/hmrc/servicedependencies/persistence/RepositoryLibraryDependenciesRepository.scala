@@ -42,7 +42,11 @@ class RepositoryLibraryDependenciesRepository @Inject()(mongo: ReactiveMongoComp
     Future.sequence(
       Seq(
         collection.indexesManager.ensure(
-          Index(Seq("repositoryName" -> IndexType.Hashed), name = Some("RepositoryNameIdx"), unique = true))
+          Index(
+            Seq("repositoryName" -> IndexType.Hashed),
+            name       = Some("RepositoryNameIdx"),
+            unique     = true,
+            background = true))
       )
     )
 

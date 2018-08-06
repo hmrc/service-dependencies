@@ -44,7 +44,12 @@ class SbtPluginVersionRepository @Inject()(mongo: ReactiveMongoComponent)
       Seq(
         collection
           .indexesManager(defaultContext)
-          .ensure(Index(Seq("sbtPluginName" -> IndexType.Hashed), name = Some("sbtPluginNameIdx"), unique = true))
+          .ensure(
+            Index(
+              Seq("sbtPluginName" -> IndexType.Hashed),
+              name       = Some("sbtPluginNameIdx"),
+              unique     = true,
+              background = true))
       )
     )
 

@@ -45,7 +45,12 @@ class LibraryVersionRepository @Inject()(mongo: ReactiveMongoComponent)
       Seq(
         collection
           .indexesManager(defaultContext)
-          .ensure(Index(Seq("libraryName" -> IndexType.Hashed), name = Some("libraryNameIdx"), unique = true))
+          .ensure(
+            Index(
+              Seq("libraryName" -> IndexType.Hashed),
+              name       = Some("libraryNameIdx"),
+              unique     = true,
+              background = true))
       )
     )
 
