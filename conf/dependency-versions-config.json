@@ -6,8 +6,7 @@
     },
     {
       "name": "sbt-git-versioning",
-      "org": "uk.gov.hmrc",
-      "version": "0.10.0"
+      "org": "uk.gov.hmrc"
     },
     {
       "name": "sbt-distributables",
