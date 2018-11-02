@@ -139,6 +139,18 @@ class VersionParserSpec extends FreeSpec with MustMatchers {
     VersionParser.parseReleaseVersion(tag) mustBe None
   }
 
+  "Parsing version ending with play version returns correct verson" in {
+    val buildFile = """  object Test {
+                      |    def apply() = new TestDependencies {
+                      |      override lazy val test = Seq(
+                      |        "uk.gov.hmrc" %% "simple-reactivemongo" % "7.0.0-play-26",
+                      |      )
+                      |    }.test
+                      |  }""".stripMargin
+
+    VersionParser.parse(buildFile, "simple-reactivemongo") mustBe Some(Version(7,0,0))
+  }
+
   "Parsing a build.properties file returns the sbt version" in {
     VersionParser.parsePropertyFile("sbt.version=1.2.3", "sbt.version") mustBe Some(Version(1, 2, 3))
     VersionParser.parsePropertyFile(" sbt.version = 1.2.3 ", "sbt.version") mustBe Some(Version(1, 2, 3))

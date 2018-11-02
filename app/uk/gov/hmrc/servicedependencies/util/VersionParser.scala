@@ -39,8 +39,7 @@ object VersionParser {
   }
 
   def parse(fileContent: String, artifact: String): Option[Version] = {
-
-    val stringVersion   = ("\"" + artifact + "\"" + """\s*%\s*("\d+\.\d+\.\d+")""").r.unanchored
+    val stringVersion   = ("\"" + artifact + "\"" + """\s*%\s*"(\d+\.\d+\.\d+).+""").r.unanchored
     val variableVersion = ("\"" + artifact + "\"" + """\s*%\s*(\w*)""").r.unanchored
 
     fileContent match {
