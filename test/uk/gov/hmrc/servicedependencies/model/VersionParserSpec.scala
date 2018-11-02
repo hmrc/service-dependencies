@@ -147,6 +147,17 @@ class VersionParserSpec extends FreeSpec with MustMatchers {
                       |      )
                       |    }.test
                       |  }""".stripMargin
+  }
+
+  "Parsing version from variable ending with play version returns correct verson" in {
+      val buildFile = """  object Test {
+                        |    val mongoVersion = "7.0.0-play-26"
+                        |    def apply() = new TestDependencies {
+                        |      override lazy val test = Seq(
+                        |        "uk.gov.hmrc" %% "simple-reactivemongo" % mongoVersion,
+                        |      )
+                        |    }.test
+                        |  }""".stripMargin
 
     VersionParser.parse(buildFile, "simple-reactivemongo") mustBe Some(Version(7,0,0))
   }

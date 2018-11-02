@@ -43,16 +43,16 @@ object VersionParser {
     val variableVersion = ("\"" + artifact + "\"" + """\s*%\s*(\w*)""").r.unanchored
 
     fileContent match {
-      case stringVersion(version)    => Some(Version.parse(version.replaceAll("\"", "")))
+      case stringVersion(version)    => Some(Version.parse(version))
       case variableVersion(variable) => extractVersionInVariable(fileContent, variable)
       case _                         => None
     }
   }
 
   private def extractVersionInVariable(file: String, variable: String): Option[Version] = {
-    val variableRegex = (variable + """\s*=\s*("\d+\.\d+\.\d+")""").r.unanchored
+    val variableRegex = (variable + """\s*=\s*"(\d+\.\d+\.\d+).+""").r.unanchored
     file match {
-      case variableRegex(value) => Some(Version.parse(value.replaceAll("\"", "")))
+      case variableRegex(value) => Some(Version.parse(value))
       case _                    => None
     }
   }
