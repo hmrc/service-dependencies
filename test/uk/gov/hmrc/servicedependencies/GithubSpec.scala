@@ -188,7 +188,7 @@ class GithubSpec extends WordSpec with Matchers with MockitoSugar with OptionVal
         .right
         .get
         .libraries shouldBe
-        Map("play-frontend" -> None, "play-ui" -> Some(Version(7, 4, 0)), "play-health" -> Some(Version(2, 1, 0)))
+        Map("play-frontend" -> None, "play-ui" -> Some(Version(7, 4, 0)), "play-health" -> Some(Version(2, 1, 0, Some("play-25"))))
     }
 
     "return artifacts versions correctly for a repository's dependency file when there is scala files in project with no dependencies but an sbt.build file with dependencies" in new TestSetup {
@@ -233,7 +233,7 @@ class GithubSpec extends WordSpec with Matchers with MockitoSugar with OptionVal
         .right
         .get
         .libraries shouldBe
-        Map("play-frontend" -> None, "play-ui" -> Some(Version(7, 4, 0)), "play-health" -> Some(Version(2, 1, 0)))
+        Map("play-frontend" -> None, "play-ui" -> Some(Version(7, 4, 0)), "play-health" -> Some(Version(2, 1, 0, Some("play-25"))))
     }
 
     "return artifacts versions correctly for a repository's appDependencies.scala file" in new TestSetup {
@@ -251,7 +251,7 @@ class GithubSpec extends WordSpec with Matchers with MockitoSugar with OptionVal
         .right
         .get
         .libraries shouldBe
-        Map("play-frontend" -> None, "play-ui" -> Some(Version(7, 4, 0)), "play-health" -> Some(Version(2, 1, 0)))
+        Map("play-frontend" -> None, "play-ui" -> Some(Version(7, 4, 0)), "play-health" -> Some(Version(2, 1, 0, Some("play-25"))))
     }
 
     "return None for artifacts that don't appear in the build file for a repository" in new TestSetup {

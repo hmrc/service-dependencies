@@ -39,7 +39,7 @@ object VersionParser {
   }
 
   def parse(fileContent: String, artifact: String): Option[Version] = {
-    val stringVersion   = ("\"" + artifact + "\"" + """\s*%\s*"(\d+\.\d+\.\d+).+""").r.unanchored
+    val stringVersion   = ("\"" + artifact + "\"" + """\s*%\s*"(\d+\.\d+\.\d+-?\S*)"""").r.unanchored
     val variableVersion = ("\"" + artifact + "\"" + """\s*%\s*(\w*)""").r.unanchored
 
     fileContent match {
@@ -50,7 +50,7 @@ object VersionParser {
   }
 
   private def extractVersionInVariable(file: String, variable: String): Option[Version] = {
-    val variableRegex = (variable + """\s*=\s*"(\d+\.\d+\.\d+).+""").r.unanchored
+    val variableRegex = (variable + """\s*=\s*"(\d+\.\d+\.\d+-?\S*)"""").r.unanchored
     file match {
       case variableRegex(value) => Some(Version.parse(value))
       case _                    => None
@@ -61,7 +61,7 @@ object VersionParser {
 object PluginsSbtFileVersionParser {
 
   def parse(fileContent: String, artifact: String): Option[Version] = {
-    val stringVersion = (s""".*"$artifact""" + """"\s*%\s*"(\d+\.\d+\.\d+)".*""").r.unanchored
+    val stringVersion = (s""".*"$artifact""" + """"\s*%\s*"(\d+\.\d+\.\d+-?\S*)".*""").r.unanchored
 
     fileContent match {
       case stringVersion(version) => Some(Version.parse(version))
