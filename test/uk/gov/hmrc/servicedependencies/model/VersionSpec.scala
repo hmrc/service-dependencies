@@ -17,6 +17,7 @@
 package uk.gov.hmrc.servicedependencies.model
 
 import org.scalatest.{FreeSpec, MustMatchers}
+import play.api.libs.json.Json
 
 class VersionSpec extends FreeSpec with MustMatchers {
 
@@ -42,17 +43,22 @@ class VersionSpec extends FreeSpec with MustMatchers {
 
   "Can be equal" in {
     Version(1, 2, 3) mustBe Version(1, 2, 3)
+    Version(1, 2, 3, Some("play-26")) mustBe Version(1, 2, 3, Some("play-26"))
   }
 
   "Can be parsed from strings" in {
     Version.parse("1.2.3") mustBe Version(1, 2, 3)
+    Version.parse("2.3.4-play-26") mustBe Version(2, 3, 4, Some("play-26"))
+    Version.parse("5.6.7-RC1") mustBe Version(5, 6, 7, Some("RC1"))
   }
 
   "Can be printed to strings" in {
     Version(1, 2, 3).toString mustBe "1.2.3"
+    Version(1,2,3, Some("play-26")).toString mustBe "1.2.3-play-26"
   }
 
   "apply should parse" in {
     Version("1.2.3") mustBe Version(1, 2, 3)
+    Version("1.2.3-SNAPSHOT") mustBe Version(1, 2, 3, Some("SNAPSHOT"))
   }
 }

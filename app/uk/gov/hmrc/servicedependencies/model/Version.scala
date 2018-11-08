@@ -16,11 +16,11 @@
 
 package uk.gov.hmrc.servicedependencies.model
 
-import play.api.libs.json.{JsPath, Json, Reads}
+import play.api.libs.json.Json
 
 import play.api.libs.functional.syntax._
 
-case class Version(major: Int, minor: Int, patch: Int) {
+case class Version(major: Int, minor: Int, patch: Int, suffix: Option[String] = None) {
   def <(other: Version) =
     if (major == other.major)
       if (minor == other.minor)
@@ -30,7 +30,7 @@ case class Version(major: Int, minor: Int, patch: Int) {
     else
       major < other.major
 
-  override def toString: String = s"$major.$minor.$patch"
+  override def toString: String = s"$major.$minor.$patch${suffix.map("-"+_).getOrElse("")}"
   def normalise                 = s"${major}_${minor}_$patch"
 }
 
@@ -40,9 +40,13 @@ object Version {
   def apply(version: String): Version =
     parse(version)
 
-  def parse(s: String) = {
-    val split = s.split("\\.")
-    Version(Integer.parseInt(split(0)), Integer.parseInt(split(1)), Integer.parseInt(split(2)))
+  def parse(s: String) : Version = {
+    val versionRegex = """(\d+)\.(\d+)\.(\d+)-?(.*)""".r.unanchored
+
+    s match {
+      case versionRegex(maj, min, patch, "")     => Version(Integer.parseInt(maj), Integer.parseInt(min), Integer.parseInt(patch))
+      case versionRegex(maj, min, patch, suffix) => Version(Integer.parseInt(maj), Integer.parseInt(min), Integer.parseInt(patch), Some(suffix))
+    }
   }
 
   implicit val ord = Ordering.by(unapply)
