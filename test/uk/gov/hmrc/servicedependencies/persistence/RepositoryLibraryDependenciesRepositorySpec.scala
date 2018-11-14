@@ -37,13 +37,15 @@ import org.mockito.Mockito.when
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.mockito.MockitoSugar
 import org.scalatest.{BeforeAndAfterEach, LoneElement, OptionValues}
-import org.scalatestplus.play.OneAppPerTest
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
+import org.scalatestplus.play.guice.GuiceOneAppPerSuite
 import play.modules.reactivemongo.ReactiveMongoComponent
 import uk.gov.hmrc.mongo.{MongoConnector, MongoSpecSupport}
 import uk.gov.hmrc.play.test.UnitSpec
 import uk.gov.hmrc.servicedependencies.model.{MongoRepositoryDependencies, MongoRepositoryDependency, Version}
+import uk.gov.hmrc.servicedependencies.util.FutureHelpers
 import uk.gov.hmrc.time.DateTimeUtils
+
+import scala.concurrent.ExecutionContext.Implicits.global
 
 class RepositoryLibraryDependenciesRepositorySpec
     extends UnitSpec
@@ -52,17 +54,17 @@ class RepositoryLibraryDependenciesRepositorySpec
     with ScalaFutures
     with OptionValues
     with BeforeAndAfterEach
-    with OneAppPerTest
+    with GuiceOneAppPerSuite
     with MockitoSugar {
 
-  val reactiveMongoComponent = new ReactiveMongoComponent {
-    val mockedMongoConnector = mock[MongoConnector]
-    when(mockedMongoConnector.db).thenReturn(mongo)
+  val mockMongoConnector         = mock[MongoConnector]
+  val mockReactiveMongoComponent = mock[ReactiveMongoComponent]
 
-    override def mongoConnector = mockedMongoConnector
-  }
+  when(mockMongoConnector.db).thenReturn(mongo)
+  when(mockReactiveMongoComponent.mongoConnector).thenReturn(mockMongoConnector)
 
-  val mongoRepositoryLibraryDependenciesRepository = new RepositoryLibraryDependenciesRepository(reactiveMongoComponent)
+  val futureHelper: FutureHelpers = app.injector.instanceOf[FutureHelpers]
+  val mongoRepositoryLibraryDependenciesRepository = new RepositoryLibraryDependenciesRepository(mockReactiveMongoComponent, futureHelper)
 
   override def beforeEach() {
     await(mongoRepositoryLibraryDependenciesRepository.drop)
@@ -82,6 +84,21 @@ class RepositoryLibraryDependenciesRepositorySpec
       await(mongoRepositoryLibraryDependenciesRepository.getAllEntries) shouldBe Seq(repositoryLibraryDependencies)
     }
 
+    "inserts correctly with suffix" in {
+
+      val repositoryLibraryDependencies = MongoRepositoryDependencies(
+        "some-repo",
+        Seq(MongoRepositoryDependency("some-lib", Version(1, 0, 2, Some("play-26")))),
+        Nil,
+        Nil,
+        DateTimeUtils.now)
+      await(mongoRepositoryLibraryDependenciesRepository.update(repositoryLibraryDependencies))
+
+      await(mongoRepositoryLibraryDependenciesRepository.getAllEntries) shouldBe Seq(repositoryLibraryDependencies)
+    }
+
+
+
     "updates correctly (based on repository name)" in {
 
       val repositoryLibraryDependencies = MongoRepositoryDependencies(
@@ -94,6 +111,25 @@ class RepositoryLibraryDependenciesRepositorySpec
         libraryDependencies = repositoryLibraryDependencies.libraryDependencies :+ MongoRepositoryDependency(
           "some-other-lib",
           Version(8, 4, 2)))
+      await(mongoRepositoryLibraryDependenciesRepository.update(repositoryLibraryDependencies))
+
+      await(mongoRepositoryLibraryDependenciesRepository.update(newRepositoryLibraryDependencies))
+
+      await(mongoRepositoryLibraryDependenciesRepository.getAllEntries) shouldBe Seq(newRepositoryLibraryDependencies)
+    }
+
+    "updates correctly (based on repository name) with suffix" in {
+
+      val repositoryLibraryDependencies = MongoRepositoryDependencies(
+        "some-repo",
+        Seq(MongoRepositoryDependency("some-lib", Version(1, 0, 2))),
+        Nil,
+        Nil,
+        DateTimeUtils.now)
+      val newRepositoryLibraryDependencies = repositoryLibraryDependencies.copy(
+        libraryDependencies = repositoryLibraryDependencies.libraryDependencies :+ MongoRepositoryDependency(
+          "some-other-lib",
+          Version(8, 4, 2, Some("play-26"))))
       await(mongoRepositoryLibraryDependenciesRepository.update(repositoryLibraryDependencies))
 
       await(mongoRepositoryLibraryDependenciesRepository.update(newRepositoryLibraryDependencies))

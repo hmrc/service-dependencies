@@ -28,7 +28,7 @@ import org.mockito.{ArgumentCaptor, Mockito}
 import org.scalatest.concurrent.{IntegrationPatience, ScalaFutures}
 import org.scalatest.mockito.MockitoSugar
 import org.scalatest.{FreeSpec, Matchers, OptionValues}
-import uk.gov.hmrc.githubclient.APIRateLimitExceededException
+import uk.gov.hmrc.githubclient.{APIRateLimitExceededException, GitApiConfig}
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.servicedependencies.config._
 import uk.gov.hmrc.servicedependencies.config.model.{CuratedDependencyConfig, OtherDependencyConfig, SbtPluginConfig}
@@ -38,6 +38,7 @@ import uk.gov.hmrc.servicedependencies.model._
 import uk.gov.hmrc.servicedependencies.persistence.RepositoryLibraryDependenciesRepository
 import uk.gov.hmrc.servicedependencies.{Github, GithubSearchError}
 import uk.gov.hmrc.time.DateTimeUtils
+
 import scala.collection.JavaConversions._
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
@@ -58,7 +59,7 @@ class DependenciesDataSourceSpec
   class GithubStub(
     val lookupMap: Map[String, Option[String]],
     val repositoryAndVersions: Map[String, Version] = Map.empty
-  ) extends Github(null) {
+  ) extends Github(null, null) {
 
     override def findLatestVersion(repoName: String): Option[Version] =
       repositoryAndVersions.get(repoName)

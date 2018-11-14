@@ -21,19 +21,18 @@ import org.slf4j.LoggerFactory
 import play.api.Configuration
 import play.api.libs.json.Json
 import play.api.mvc._
-import uk.gov.hmrc.play.bootstrap.controller.BaseController
+import uk.gov.hmrc.play.bootstrap.controller.BackendController
 import uk.gov.hmrc.servicedependencies.config.ServiceDependenciesConfig
 import uk.gov.hmrc.servicedependencies.controller.model.Dependencies
 import uk.gov.hmrc.servicedependencies.service._
-
-import uk.gov.hmrc.play.http.logging.MdcLoggingExecutionContext._
 
 @Singleton
 class ServiceDependenciesController @Inject()(
   configuration: Configuration,
   dependencyDataUpdatingService: DependencyDataUpdatingService,
-  config: ServiceDependenciesConfig)
-    extends BaseController {
+  config: ServiceDependenciesConfig,
+  cc: ControllerComponents)
+    extends BackendController(cc) {
 
   val logger = LoggerFactory.getLogger(this.getClass)
 

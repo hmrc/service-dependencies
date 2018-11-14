@@ -21,7 +21,8 @@ import org.mockito.Mockito.{verify, when}
 import org.scalatest.concurrent.{IntegrationPatience, ScalaFutures}
 import org.scalatest.mockito.MockitoSugar
 import org.scalatest.{BeforeAndAfterEach, FreeSpec, Matchers, OptionValues}
-import org.scalatestplus.play.OneServerPerSuite
+import play.api.test.Helpers._
+import org.scalatestplus.play.guice.GuiceOneServerPerSuite
 import play.api.test.FakeRequest
 import uk.gov.hmrc.servicedependencies.model.MongoRepositoryDependencies
 import uk.gov.hmrc.servicedependencies.service.DependencyDataUpdatingService
@@ -31,7 +32,7 @@ import scala.concurrent.Future
 class AdministrationControllerSpec
     extends FreeSpec
     with BeforeAndAfterEach
-    with OneServerPerSuite
+    with GuiceOneServerPerSuite
     with Matchers
     with MockitoSugar
     with ScalaFutures
@@ -46,7 +47,7 @@ class AdministrationControllerSpec
       when(mockedLibraryDependencyDataUpdatingService.reloadCurrentDependenciesDataForAllRepositories(any())(any()))
         .thenReturn(Future.successful(Seq.empty[MongoRepositoryDependencies]))
 
-      val controller = new AdministrationController(mockedLibraryDependencyDataUpdatingService)
+      val controller = new AdministrationController(mockedLibraryDependencyDataUpdatingService, stubControllerComponents())
       controller.reloadLibraryDependenciesForAllRepositories().apply(FakeRequest())
 
       verify(mockedLibraryDependencyDataUpdatingService).reloadCurrentDependenciesDataForAllRepositories(eqTo(false))(
@@ -59,7 +60,7 @@ class AdministrationControllerSpec
       when(mockedLibraryDependencyDataUpdatingService.reloadCurrentDependenciesDataForAllRepositories(any())(any()))
         .thenReturn(Future.successful(Seq.empty[MongoRepositoryDependencies]))
 
-      val controller = new AdministrationController(mockedLibraryDependencyDataUpdatingService)
+      val controller = new AdministrationController(mockedLibraryDependencyDataUpdatingService, stubControllerComponents())
       controller.reloadLibraryDependenciesForAllRepositories(Some(true)).apply(FakeRequest())
 
       verify(mockedLibraryDependencyDataUpdatingService).reloadCurrentDependenciesDataForAllRepositories(eqTo(true))(
@@ -72,7 +73,7 @@ class AdministrationControllerSpec
       when(mockedLibraryDependencyDataUpdatingService.reloadCurrentDependenciesDataForAllRepositories(any())(any()))
         .thenReturn(Future.successful(Seq.empty[MongoRepositoryDependencies]))
 
-      val controller = new AdministrationController(mockedLibraryDependencyDataUpdatingService)
+      val controller = new AdministrationController(mockedLibraryDependencyDataUpdatingService, stubControllerComponents())
       controller.reloadLibraryDependenciesForAllRepositories(Some(false)).apply(FakeRequest())
 
       verify(mockedLibraryDependencyDataUpdatingService).reloadCurrentDependenciesDataForAllRepositories(eqTo(false))(

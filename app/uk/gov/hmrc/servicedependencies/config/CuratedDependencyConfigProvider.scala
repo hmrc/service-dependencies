@@ -25,7 +25,7 @@ import uk.gov.hmrc.servicedependencies.config.model.CuratedDependencyConfig
 class CuratedDependencyConfigProvider @Inject()(configuration: Configuration) {
 
   lazy val curatedDependencyConfig: CuratedDependencyConfig = {
-    val curatedDependencyConfigFilePathO = configuration.getString("curated.config.path")
+    val curatedDependencyConfigFilePathO = configuration.getOptional[String]("curated.config.path")
 
     curatedDependencyConfigFilePathO
       .map { configFilePath =>

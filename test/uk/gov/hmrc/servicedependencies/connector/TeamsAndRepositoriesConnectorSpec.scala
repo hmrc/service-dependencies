@@ -16,18 +16,16 @@
 
 package uk.gov.hmrc.servicedependencies.connector
 
-import com.github.tomakehurst.wiremock.client.WireMock._
 import org.scalatest.concurrent.{IntegrationPatience, ScalaFutures}
 import org.scalatest.mockito.MockitoSugar
 import org.scalatest.{BeforeAndAfterAll, FreeSpec, MustMatchers}
-import org.scalatestplus.play.OneAppPerSuite
-import play.api.{Configuration, Environment}
+import org.scalatestplus.play.guice.GuiceOneAppPerSuite
+import play.api.inject.guice.GuiceApplicationBuilder
+import play.api.Application
 import uk.gov.hmrc.http._
-import uk.gov.hmrc.http.hooks.HttpHook
-import uk.gov.hmrc.play.bootstrap.http.HttpClient
-import uk.gov.hmrc.play.http.ws.WSHttp
+import uk.gov.hmrc.play.http.logging.MdcLoggingExecutionContext._
 import uk.gov.hmrc.servicedependencies.WireMockConfig
-import uk.gov.hmrc.servicedependencies.config.ServiceDependenciesConfig
+import com.github.tomakehurst.wiremock.client.WireMock._
 
 class TeamsAndRepositoriesConnectorSpec
     extends FreeSpec
@@ -35,12 +33,13 @@ class TeamsAndRepositoriesConnectorSpec
     with ScalaFutures
     with IntegrationPatience
     with BeforeAndAfterAll
-    with OneAppPerSuite
+    with GuiceOneAppPerSuite
     with MockitoSugar {
 
-  val wireMock = new WireMockConfig(8080)
-
   implicit val hc = HeaderCarrier()
+
+  val wireMock = new WireMockConfig()
+
 
   override protected def beforeAll(): Unit = {
     wireMock.start()
@@ -50,8 +49,61 @@ class TeamsAndRepositoriesConnectorSpec
     stubAllRepositories()
     stubServices()
     stubTeamsWithRepositories()
-
   }
+
+  override protected def afterAll(): Unit =
+    wireMock.stop()
+
+  override def fakeApplication(): Application =
+    new GuiceApplicationBuilder()
+      .configure("microservice.services.teams-and-repositories.port" -> wireMock.stubPort,
+        "play.http.requestHandler" -> "play.api.http.DefaultHttpRequestHandler").build()
+
+  private val services = app.injector.instanceOf[TeamsAndRepositoriesConnector]
+
+
+  "Retrieving a repository" - {
+    "correctly parse json response" in {
+
+      val repository = services.getRepository("test-repo").futureValue
+      repository.get.teamNames mustBe Seq("PlatOps", "Webops")
+    }
+
+    "handle 404 - repository not found" in {
+
+      val repository = services.getRepository("non-existing-test-repo").futureValue
+      repository mustBe None
+    }
+  }
+
+  "Retrieving a list of teams for all services" - {
+    "correctly parse json response" in {
+
+      val teams = services.getTeamsForServices().futureValue
+      teams mustBe Map("test-repo" -> Seq("PlatOps", "WebOps"), "another-repo" -> Seq("PlatOps"))
+    }
+  }
+
+  "Retrieving a list of all repositories" - {
+    "correctly parse json response" in {
+      val repositories = services.getAllRepositories().futureValue
+      repositories mustBe Seq("test-repo", "another-repo")
+    }
+  }
+
+  "Retrieving a list of all teams with repositories" - {
+    "correctly parse json response" in {
+
+      val teamsWithRepositories = services.getTeamsWithRepositories().futureValue
+      teamsWithRepositories mustBe Seq(
+        Team("team A", Some(Map("Service" -> Seq("service A", "service B"), "Library" -> Seq("library A"))))
+      )
+    }
+  }
+
+
+  private def loadFileAsString(filename: String): String =
+    scala.io.Source.fromInputStream(getClass.getResourceAsStream(filename)).mkString
 
   private def stubRepositories(repositoryName: String) =
     wireMock.stub(
@@ -90,70 +142,10 @@ class TeamsAndRepositoriesConnectorSpec
           aResponse()
             .withStatus(200)
             .withBody(s"""
-                 |[
-                 |{ "name": "team A", "repos": { "Service": [ "service A", "service B" ], "Library": [ "library A" ] } }
-                 |]
+                         |[
+                         |{ "name": "team A", "repos": { "Service": [ "service A", "service B" ], "Library": [ "library A" ] } }
+                         |]
                """.stripMargin)
         )
     )
-
-  override protected def afterAll(): Unit =
-    wireMock.stop()
-
-  private def loadFileAsString(filename: String): String =
-    scala.io.Source.fromInputStream(getClass.getResourceAsStream(filename)).mkString
-
-  def stubbedConfig = new ServiceDependenciesConfig(Configuration(), Environment.simple()) {
-    override lazy val teamsAndRepositoriesServiceUrl = wireMock.host()
-  }
-
-  val httpClient = new HttpClient with WSHttp {
-    override val hooks: Seq[HttpHook] = NoneRequired
-  }
-
-  "Retrieving a repository" - {
-    "correctly parse json response" in {
-      val services = new TeamsAndRepositoriesConnector(httpClient, stubbedConfig)
-
-      val repository = services.getRepository("test-repo").futureValue
-      repository.get.teamNames mustBe Seq("PlatOps", "Webops")
-    }
-
-    "handle 404 - repository not found" in {
-      val services = new TeamsAndRepositoriesConnector(httpClient, stubbedConfig)
-
-      val repository = services.getRepository("non-existing-test-repo").futureValue
-      repository mustBe None
-    }
-  }
-
-  "Retrieving a list of teams for all services" - {
-    "correctly parse json response" in {
-      val services = new TeamsAndRepositoriesConnector(httpClient, stubbedConfig)
-
-      val teams = services.getTeamsForServices().futureValue
-      teams mustBe Map("test-repo" -> Seq("PlatOps", "WebOps"), "another-repo" -> Seq("PlatOps"))
-    }
-  }
-
-  "Retrieving a list of all repositories" - {
-    "correctly parse json response" in {
-      val services = new TeamsAndRepositoriesConnector(httpClient, stubbedConfig)
-
-      val repositories = services.getAllRepositories().futureValue
-      repositories mustBe Seq("test-repo", "another-repo")
-    }
-  }
-
-  "Retrieving a list of all teams with repositories" - {
-    "correctly parse json response" in {
-      val services = new TeamsAndRepositoriesConnector(httpClient, stubbedConfig)
-
-      val teamsWithRepositories = services.getTeamsWithRepositories().futureValue
-      teamsWithRepositories mustBe Seq(
-        Team("team A", Some(Map("Service" -> Seq("service A", "service B"), "Library" -> Seq("library A"))))
-      )
-    }
-  }
-
 }

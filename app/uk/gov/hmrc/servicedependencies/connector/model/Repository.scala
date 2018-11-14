@@ -17,10 +17,14 @@
 package uk.gov.hmrc.servicedependencies.connector.model
 
 import org.joda.time.DateTime
-import play.api.libs.json.{Json, OFormat}
+import play.api.libs.json._
 
 case class Repository(name: String, lastActive: DateTime, teamNames: Seq[String])
 
 object Repository {
+
+  val pattern = "yyyy-MM-dd'T'HH:mm:ss.SSSZ"
+  implicit val dateFormat: Format[DateTime] = Format[DateTime](JodaReads.jodaDateReads(pattern), JodaWrites.jodaDateWrites(pattern))
+
   implicit val format: OFormat[Repository] = Json.format[Repository]
 }

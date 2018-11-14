@@ -20,8 +20,8 @@ import com.google.inject.{Inject, Singleton}
 import com.kenshoo.play.metrics.Metrics
 import org.joda.time.DateTime
 import org.slf4j.LoggerFactory
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import uk.gov.hmrc.githubclient.{GithubApiClient, GithubClientMetrics}
+import scala.concurrent.ExecutionContext.Implicits.global
+import uk.gov.hmrc.githubclient._
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.servicedependencies._
 import uk.gov.hmrc.servicedependencies.config.ServiceDependenciesConfig
@@ -52,10 +52,11 @@ class DependenciesDataSource @Inject()(
       registry.counter(name).inc()
   }
 
-  lazy val gitOpenClient: GithubApiClient =
-    GithubApiClient(config.githubApiOpenConfig.apiUrl, config.githubApiOpenConfig.key, new GithubMetrics("github.open"))
+  private lazy val client: ExtendedGitHubClient = ExtendedGitHubClient(config.githubApiOpenConfig.apiUrl, new GithubMetrics("github.open"))
+    .setOAuth2Token(config.githubApiOpenConfig.key)
+    .asInstanceOf[ExtendedGitHubClient]
 
-  lazy val github: Github = new Github(gitOpenClient)
+  lazy val github: Github = new Github(new ReleaseService(client), new ExtendedContentsService(client))
 
   def getLatestSbtPluginVersions(sbtPlugins: Seq[SbtPluginConfig]): Seq[SbtPluginVersion] = {
 

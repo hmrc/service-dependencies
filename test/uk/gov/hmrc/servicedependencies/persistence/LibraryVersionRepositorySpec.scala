@@ -36,14 +36,16 @@ import org.mockito.Mockito.when
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.mockito.MockitoSugar
 import org.scalatest.{BeforeAndAfterEach, LoneElement, OptionValues}
-import org.scalatestplus.play.OneAppPerTest
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
+import org.scalatestplus.play.guice.GuiceOneAppPerSuite
 import play.modules.reactivemongo.ReactiveMongoComponent
 import uk.gov.hmrc.mongo.{MongoConnector, MongoSpecSupport}
 import uk.gov.hmrc.play.test.UnitSpec
 import uk.gov.hmrc.servicedependencies.model.{MongoLibraryVersion, Version}
 import uk.gov.hmrc.servicedependencies.persistence.LibraryVersionRepository
+import uk.gov.hmrc.servicedependencies.util.FutureHelpers
 import uk.gov.hmrc.time.DateTimeUtils
+
+import scala.concurrent.ExecutionContext.Implicits.global
 
 class LibraryVersionRepositorySpec
     extends UnitSpec
@@ -52,7 +54,7 @@ class LibraryVersionRepositorySpec
     with ScalaFutures
     with OptionValues
     with BeforeAndAfterEach
-    with OneAppPerTest
+    with GuiceOneAppPerSuite
     with MockitoSugar {
 
   val reactiveMongoComponent = new ReactiveMongoComponent {
@@ -62,7 +64,9 @@ class LibraryVersionRepositorySpec
     override def mongoConnector = mockedMongoConnector
   }
 
-  val mongoLibraryVersions = new LibraryVersionRepository(reactiveMongoComponent)
+  val futureHelper: FutureHelpers = app.injector.instanceOf[FutureHelpers]
+
+  val mongoLibraryVersions = new LibraryVersionRepository(reactiveMongoComponent, futureHelper)
 
   override def beforeEach() {
     await(mongoLibraryVersions.drop)

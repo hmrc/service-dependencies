@@ -22,7 +22,7 @@ import org.mockito.Mockito._
 import org.scalatest.concurrent.{IntegrationPatience, ScalaFutures}
 import org.scalatest.mockito.MockitoSugar
 import org.scalatest.{BeforeAndAfterEach, FunSpec, Matchers, OptionValues}
-import org.scalatestplus.play.OneAppPerTest
+import org.scalatestplus.play.guice.GuiceOneAppPerTest
 import reactivemongo.api.DB
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.mongo.Awaiting
@@ -38,7 +38,7 @@ class DependencyDataUpdatingServiceSpec
     extends FunSpec
     with MockitoSugar
     with Matchers
-    with OneAppPerTest
+    with GuiceOneAppPerTest
     with BeforeAndAfterEach
     with Awaiting
     with OptionValues

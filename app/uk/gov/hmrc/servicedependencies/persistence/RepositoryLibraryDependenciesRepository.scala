@@ -18,19 +18,20 @@ package uk.gov.hmrc.servicedependencies.persistence
 
 import com.google.inject.{Inject, Singleton}
 import org.joda.time.{DateTime, DateTimeZone}
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
+
+import scala.concurrent.ExecutionContext.Implicits.global
 import play.api.libs.json.Json
 import play.modules.reactivemongo.ReactiveMongoComponent
 import reactivemongo.api.indexes.{Index, IndexType}
-import reactivemongo.bson.{BSONDocument, BSONObjectID, BSONRegex}
+import reactivemongo.bson.{BSONObjectID, BSONRegex}
 import reactivemongo.play.json.ImplicitBSONHandlers._
 import uk.gov.hmrc.mongo.ReactiveRepository
 import uk.gov.hmrc.servicedependencies.model._
-import uk.gov.hmrc.servicedependencies.util.FutureHelpers.withTimerAndCounter
+import uk.gov.hmrc.servicedependencies.util.FutureHelpers
 
 import scala.concurrent.{ExecutionContext, Future}
 @Singleton
-class RepositoryLibraryDependenciesRepository @Inject()(mongo: ReactiveMongoComponent)
+class RepositoryLibraryDependenciesRepository @Inject()(mongo: ReactiveMongoComponent, futureHelper: FutureHelpers)
     extends ReactiveRepository[MongoRepositoryDependencies, BSONObjectID](
       collectionName = "repositoryLibraryDependencies",
       mongo          = mongo.mongoConnector.db,
@@ -54,7 +55,7 @@ class RepositoryLibraryDependenciesRepository @Inject()(mongo: ReactiveMongoComp
 
     logger.info(s"writing to mongo: $repositoryLibraryDependencies")
 
-    withTimerAndCounter("mongo.update") {
+    futureHelper.withTimerAndCounter("mongo.update") {
       for {
         update <- collection.update(
                    selector = Json.obj("repositoryName" -> Json.toJson(repositoryLibraryDependencies.repositoryName)),
@@ -73,7 +74,7 @@ class RepositoryLibraryDependenciesRepository @Inject()(mongo: ReactiveMongoComp
   }
 
   def getForRepository(repositoryName: String): Future[Option[MongoRepositoryDependencies]] =
-    withTimerAndCounter("mongo.read") {
+    futureHelper.withTimerAndCounter("mongo.read") {
       find("repositoryName" -> BSONRegex("^" + repositoryName + "$", "i")) map {
         case data if data.size > 1 =>
           throw new RuntimeException(

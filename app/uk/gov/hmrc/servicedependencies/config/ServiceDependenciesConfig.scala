@@ -16,85 +16,36 @@
 
 package uk.gov.hmrc.servicedependencies.config
 
-import java.io.File
-import java.nio.file.Path
-
 import com.google.inject.{Inject, Singleton}
-import play.api.Mode.Mode
-import play.api.{Configuration, Environment, Play}
-import uk.gov.hmrc.play.config.ServicesConfig
-
-import scala.concurrent.duration._
-import scala.io.Source
+import play.api.{Configuration, Environment}
+import uk.gov.hmrc.githubclient.GitApiConfig
+import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
 
 @Singleton
-class ServiceDependenciesConfig @Inject()(override val runModeConfiguration: Configuration, environment: Environment)
-    extends ServicesConfig {
+class ServiceDependenciesConfig @Inject()(configuration: Configuration,
+                                          serviceConfig: ServicesConfig) {
 
-  override protected def mode: Mode = environment.mode
-
-  private val cacheDurationConfigPath = "cache.timeout.duration"
   private val githubOpenConfigKey     = "github.open.api"
   private val releaseServiceUrlKey    = "releases.api.url"
   private val targetArtifactsKey      = "target.artifacts"
 
-  private val defaultTimeout = 1 day
+  lazy val targetArtifact: String                 = configuration.getOptional[String](s"$targetArtifactsKey").getOrElse("sbt-plugin")
+  lazy val releasesServiceUrl: String             = configuration.get[String](s"$releaseServiceUrlKey")
+  lazy val teamsAndRepositoriesServiceUrl: String = serviceConfig.baseUrl("teams-and-repositories")
 
-  lazy val targetArtifact = optionalConfig(s"$targetArtifactsKey").getOrElse("sbt-plugin")
+  private val gitOpenConfig = (key: String) => configuration.getOptional[String](s"$githubOpenConfigKey.$key")
 
-  def cacheDuration: FiniteDuration =
-    runModeConfiguration.getMilliseconds(cacheDurationConfigPath).map(_.milliseconds).getOrElse(defaultTimeout)
-
-  lazy val releasesServiceUrl                     = optionalConfig(s"$releaseServiceUrlKey").get
-  lazy val teamsAndRepositoriesServiceUrl: String = baseUrl("teams-and-repositories")
-
-  private val gitOpenConfig = (key: String) => optionalConfig(s"$githubOpenConfigKey.$key")
+  lazy val localCredentialPath = s"${System.getProperty("user.home")}/.github/.credentials"
 
   lazy val githubApiOpenConfig =
-    option(gitOpenConfig).getOrElse(GitApiConfig.fromFile(s"${System.getProperty("user.home")}/.github/.credentials"))
+    parse(gitOpenConfig).getOrElse(GitApiConfig.fromFile(localCredentialPath))
 
-  private def optionalConfig(path: String) = runModeConfiguration.getString(s"$path")
 
-  private def option(config: String => Option[String]): Option[GitApiConfig] =
+  private def parse(config: String => Option[String]): Option[GitApiConfig] =
     for {
       host <- config("host")
       user <- config("user")
       key  <- config("key")
     } yield GitApiConfig(user, key, host)
 
-}
-
-case class GitApiConfig(user: String, key: String, apiUrl: String)
-
-object GitApiConfig {
-  def fromFile(configFilePath: String): GitApiConfig =
-    findGithubCredsInFile(new File(configFilePath).toPath)
-      .getOrElse(throw new RuntimeException(s"could not find github credential in file : $configFilePath"))
-
-  private def findGithubCredsInFile(file: Path): Option[GitApiConfig] = {
-    val conf = new ConfigFile(file)
-
-    for {
-      user   <- conf.get("user")
-      token  <- conf.get("token")
-      apiUrl <- conf.get("api-url")
-    } yield GitApiConfig(user, token, apiUrl)
-  }
-}
-
-class ConfigFile(filePath: Path) {
-  private val kvMap: Map[String, String] =
-    try {
-      Source
-        .fromFile(filePath.toFile)
-        .getLines()
-        .toSeq
-        .map(_.split("="))
-        .map { case Array(key, value) => key.trim -> value.trim }
-        .toMap
-    } catch {
-      case e: Exception => Map.empty
-    }
-
-  def get(path: String) = kvMap.get(path)
 }

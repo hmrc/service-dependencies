@@ -17,7 +17,7 @@
 package uk.gov.hmrc.servicedependencies.persistence
 
 import com.google.inject.{Inject, Singleton}
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
+import scala.concurrent.ExecutionContext.Implicits.global
 import play.api.libs.json.Json
 import play.modules.reactivemongo.ReactiveMongoComponent
 import reactivemongo.api.indexes.{Index, IndexType}
@@ -25,25 +25,25 @@ import reactivemongo.bson.BSONObjectID
 import reactivemongo.play.json.ImplicitBSONHandlers._
 import uk.gov.hmrc.mongo.ReactiveRepository
 import uk.gov.hmrc.servicedependencies.model._
-import uk.gov.hmrc.servicedependencies.util.FutureHelpers.withTimerAndCounter
+import uk.gov.hmrc.servicedependencies.util.FutureHelpers
 
 import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
-class SbtPluginVersionRepository @Inject()(mongo: ReactiveMongoComponent)
+class SbtPluginVersionRepository @Inject()(mongo: ReactiveMongoComponent, futureHelpers: FutureHelpers)
     extends ReactiveRepository[MongoSbtPluginVersion, BSONObjectID](
       collectionName = "sbtPluginVersions",
       mongo          = mongo.mongoConnector.db,
       domainFormat   = MongoSbtPluginVersion.format) {
 
-  override def ensureIndexes(implicit ec: ExecutionContext = defaultContext): Future[Seq[Boolean]] =
+  override def ensureIndexes(implicit ec: ExecutionContext): Future[Seq[Boolean]] =
     localEnsureIndexes
 
   private def localEnsureIndexes =
     Future.sequence(
       Seq(
         collection
-          .indexesManager(defaultContext)
+          .indexesManager
           .ensure(
             Index(
               Seq("sbtPluginName" -> IndexType.Hashed),
@@ -56,7 +56,7 @@ class SbtPluginVersionRepository @Inject()(mongo: ReactiveMongoComponent)
   def update(sbtPluginVersion: MongoSbtPluginVersion): Future[MongoSbtPluginVersion] = {
 
     logger.debug(s"writing $sbtPluginVersion")
-    withTimerAndCounter("mongo.update") {
+    futureHelpers.withTimerAndCounter("mongo.update") {
       for {
         update <- collection.update(
                    selector = Json.obj("sbtPluginName" -> Json.toJson(sbtPluginVersion.sbtPluginName)),

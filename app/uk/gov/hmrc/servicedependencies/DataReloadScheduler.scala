@@ -17,10 +17,9 @@
 package uk.gov.hmrc.servicedependencies
 
 import com.google.inject.Singleton
-import org.slf4j.MDC
 import play.api._
 import play.api.inject.ApplicationLifecycle
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
+import scala.concurrent.ExecutionContext.Implicits.global
 import uk.gov.hmrc.servicedependencies.service.UpdateScheduler
 
 import scala.concurrent.Future
@@ -35,7 +34,7 @@ class DataReloadScheduler @Inject()(
   updateScheduler: UpdateScheduler,
   applicationLifecycle: ApplicationLifecycle) {
   lazy val appName                          = "service-dependencies"
-  lazy val loggerDateFormat: Option[String] = configuration.getString("logger.json.dateformat")
+  lazy val loggerDateFormat: Option[String] = configuration.getOptional[String]("logger.json.dateformat")
 
   val repositoryDependenciesReloadIntervalKey = "dependency.reload.intervalminutes"
   val libraryReloadIntervalKey                = "library.reload.intervalminutes"
@@ -52,7 +51,7 @@ class DataReloadScheduler @Inject()(
   import scala.concurrent.duration._
 
   private def scheduleRepositoryDependencyDataReloadSchedule(app: Application)(implicit hc: HeaderCarrier) = {
-    val maybeReloadInterval = app.configuration.getInt(repositoryDependenciesReloadIntervalKey)
+    val maybeReloadInterval = app.configuration.getOptional[Int](repositoryDependenciesReloadIntervalKey)
 
     maybeReloadInterval.fold {
       Logger.warn(s"$repositoryDependenciesReloadIntervalKey is missing. reload will be disabled")
@@ -64,7 +63,7 @@ class DataReloadScheduler @Inject()(
   }
 
   private def scheduleLibraryVersionDataReloadSchedule(app: Application)(implicit hc: HeaderCarrier) = {
-    val maybeReloadInterval = app.configuration.getInt(libraryReloadIntervalKey)
+    val maybeReloadInterval = app.configuration.getOptional[Int](libraryReloadIntervalKey)
 
     maybeReloadInterval.fold {
       Logger.warn(s"$libraryReloadIntervalKey is missing. reload will be disabled")
@@ -76,7 +75,7 @@ class DataReloadScheduler @Inject()(
   }
 
   private def scheduleSbtPluginVersionDataReloadSchedule(app: Application)(implicit hc: HeaderCarrier) = {
-    val maybeReloadInterval = app.configuration.getInt(sbtPluginReloadIntervalKey)
+    val maybeReloadInterval = app.configuration.getOptional[Int](sbtPluginReloadIntervalKey)
 
     maybeReloadInterval.fold {
       Logger.warn(s"$sbtPluginReloadIntervalKey is missing. reload will be disabled")
