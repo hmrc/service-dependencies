@@ -10,4 +10,8 @@
 # Failing to follow this rule may result in test routes deployed in production.
 
 # Add all the application routes to the prod.routes file
+
+POST       /test-only/sbt             @uk.gov.hmrc.servicedependencies.testonly.IntegrationTestController.addSbtVersion()
+POST       /test-only/library         @uk.gov.hmrc.servicedependencies.testonly.IntegrationTestController.addLibraryVersion()
+POST       /test-only/dependencies    @uk.gov.hmrc.servicedependencies.testonly.IntegrationTestController.addDependencies()
 ->         /                          prod.Routes
