@@ -17,14 +17,14 @@
 package uk.gov.hmrc.servicedependencies.persistence
 
 import com.google.inject.{Inject, Singleton}
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
+import scala.concurrent.ExecutionContext.Implicits.global
 import play.modules.reactivemongo.ReactiveMongoComponent
 import reactivemongo.bson.BSONObjectID
 import uk.gov.hmrc.lock.LockFormats
 import uk.gov.hmrc.lock.LockFormats.Lock
 import uk.gov.hmrc.mongo.ReactiveRepository
-
 import scala.concurrent.Future
+
 @Singleton
 class LocksRepository @Inject()(mongo: ReactiveMongoComponent)
     extends ReactiveRepository[Lock, BSONObjectID](

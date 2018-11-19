@@ -329,9 +329,9 @@ class GithubSpec extends WordSpec with Matchers with MockitoSugar with OptionVal
           throw new RequestException(new RequestError, 404)
       }
 
-      when(github.gh.releaseService).thenReturn(ReleaseServiceStub)
+      val gh = new Github(ReleaseServiceStub, mockContentsService)
 
-      github.findLatestVersion(repoName) shouldBe None
+      gh.findLatestVersion(repoName) shouldBe None
     }
 
     "other exceptions should not be handled gracefully" in new TestSetup {
@@ -340,9 +340,9 @@ class GithubSpec extends WordSpec with Matchers with MockitoSugar with OptionVal
           throw new RequestException(new RequestError, 500)
       }
 
-      when(github.gh.releaseService).thenReturn(ReleaseServiceStub)
+      val gh = new Github(ReleaseServiceStub, mockContentsService)
 
-      a[RequestException] should be thrownBy github.findLatestVersion(repoName)
+      a[RequestException] should be thrownBy gh.findLatestVersion(repoName)
     }
   }
 
@@ -355,12 +355,7 @@ class GithubSpec extends WordSpec with Matchers with MockitoSugar with OptionVal
     val appDependenciesFile   = "project/AppDependencies.scala"
     val repoName              = "citizen-auth-frontend"
 
-    val gh = mock[GithubApiClient]
-
-    val github = new Github(gh)
-
     val mockContentsService = mock[ExtendedContentsService]
-    when(gh.contentsService).thenReturn(mockContentsService)
 
     when(mockContentsService.getContents(any(), is("project")))
       .thenReturn(List[RepositoryContents]().asJava)
@@ -369,7 +364,9 @@ class GithubSpec extends WordSpec with Matchers with MockitoSugar with OptionVal
       .thenReturn(List[RepositoryContents]().asJava)
 
     val mockedReleaseService = mock[ReleaseService]
-    when(gh.releaseService).thenReturn(mockedReleaseService)
+
+
+    val github = new Github(mockedReleaseService, mockContentsService)
   }
 
   private def loadFileAsBase64String(filename: String): String = {

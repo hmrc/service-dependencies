@@ -19,14 +19,14 @@ package uk.gov.hmrc.servicedependencies.controller.admin
 import javax.inject.{Inject, Singleton}
 import play.api.Logger
 import play.api.libs.json.Json
-import play.api.mvc.Action
-import uk.gov.hmrc.play.bootstrap.controller.BaseController
-import uk.gov.hmrc.play.http.logging.MdcLoggingExecutionContext._
+import play.api.mvc.ControllerComponents
+import uk.gov.hmrc.play.bootstrap.controller.BackendController
 import uk.gov.hmrc.servicedependencies.service.DependencyDataUpdatingService
 
 @Singleton
-class AdministrationController @Inject()(dependencyDataUpdatingService: DependencyDataUpdatingService)
-    extends BaseController {
+class AdministrationController @Inject()(dependencyDataUpdatingService: DependencyDataUpdatingService, cc: ControllerComponents)
+    extends BackendController(cc) {
+
 
   def reloadLibraryDependenciesForAllRepositories(force: Option[Boolean] = None) = Action { implicit request =>
     dependencyDataUpdatingService
@@ -41,7 +41,7 @@ class AdministrationController @Inject()(dependencyDataUpdatingService: Dependen
   def reloadLibraryVersions() = Action { implicit request =>
     dependencyDataUpdatingService
       .reloadLatestLibraryVersions()
-      .map(_ => println(s"""${">" * 10} done ${"<" * 10}"""))
+      .map(_ => Logger.debug(s"""${">" * 10} done ${"<" * 10}"""))
       .onFailure {
         case ex => throw new RuntimeException("reload of libraries failed", ex)
       }
@@ -51,7 +51,7 @@ class AdministrationController @Inject()(dependencyDataUpdatingService: Dependen
   def reloadSbtPluginVersions() = Action { implicit request =>
     dependencyDataUpdatingService
       .reloadLatestSbtPluginVersions()
-      .map(_ => println(s"""${">" * 10} done ${"<" * 10}"""))
+      .map(_ => Logger.debug(s"""${">" * 10} done ${"<" * 10}"""))
       .onFailure {
         case ex => throw new RuntimeException("reload of sbt plugins failed", ex)
       }

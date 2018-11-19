@@ -18,7 +18,7 @@ package uk.gov.hmrc.servicedependencies.service
 
 import com.google.inject.{Inject, Singleton}
 import org.slf4j.LoggerFactory
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
+import scala.concurrent.ExecutionContext.Implicits.global
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.lock.LockFormats.Lock
 import uk.gov.hmrc.servicedependencies.config.CuratedDependencyConfigProvider

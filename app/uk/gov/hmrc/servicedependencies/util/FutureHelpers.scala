@@ -16,47 +16,40 @@
 
 package uk.gov.hmrc.servicedependencies.util
 
-import com.kenshoo.play.metrics.{Metrics, MetricsImpl}
-import play.api.Play
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
-
-import scala.concurrent.Future
+import com.codahale.metrics.MetricRegistry
+import com.kenshoo.play.metrics.Metrics
+import javax.inject.{Inject, Singleton}
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success}
 
-object FutureHelpers {
+@Singleton
+class FutureHelpers @Inject()(metrics: Metrics) {
 
-  lazy val metrics: Metrics = Play.current.injector.instanceOf[MetricsImpl]
-  lazy val defaultRegistry  = metrics.defaultRegistry
+  val defaultMetricsRegistry: MetricRegistry = metrics.defaultRegistry
 
-  def withTimerAndCounter[T](name: String)(f: Future[T], mayBeAuxFailurePredicate: Option[T => Boolean] = None) = {
-    val t = defaultRegistry.timer(s"$name.timer").time()
-
-    def logFailure: Unit = {
-      t.stop()
-      defaultRegistry.counter(s"$name.failure").inc()
-    }
-
-    def logSuccess: Unit = {
-      t.stop()
-      defaultRegistry.counter(s"$name.success").inc()
-    }
-
-    def doAuxFailurePredicate(s: T): Unit =
-      mayBeAuxFailurePredicate.foreach { auxFailurePredicate =>
-        if (auxFailurePredicate(s)) {
-          logFailure
-        }
-      }
-
+  def withTimerAndCounter[T](name: String)(f: Future[T]) = {
+    val t = defaultMetricsRegistry.timer(s"$name.timer").time()
     f.andThen {
-      case Success(s) =>
-        logSuccess
-        doAuxFailurePredicate(s)
+      case Success(_) =>
+        t.stop()
+        defaultMetricsRegistry.counter(s"$name.success").inc()
       case Failure(_) =>
-        logFailure
+        t.stop()
+        defaultMetricsRegistry.counter(s"$name.failure").inc()
     }
   }
 
+  def runFuturesSequentially[A, B](l: Iterable[A])(fn: A => Future[B])(implicit ec: ExecutionContext): Future[Seq[B]] =
+    l.foldLeft(Future.successful(List.empty[B])) { (previousFuture, next) ⇒
+      for {
+        previousResults ← previousFuture
+        next ← fn(next)
+      } yield previousResults :+ next
+    }
+}
+
+object FutureHelpers {
   implicit class FutureExtender[A](f: Future[A]) {
     def andAlso(fn: A => Unit): Future[A] =
       f.flatMap { r =>
@@ -77,7 +70,7 @@ object FutureHelpers {
   }
 
   implicit class FutureIterable[A](futureList: Future[Iterable[A]]) {
-    def flatMap[B](fn: A => Future[Iterable[B]]) =
+    def flatMap[B](fn: A => Future[Iterable[B]])(implicit ec: ExecutionContext) =
       futureList
         .flatMap { list =>
           val listOfFutures = list.map { li =>
@@ -88,15 +81,16 @@ object FutureHelpers {
         }
         .map(_.flatten)
 
-    def map[B](fn: A => B): Future[Iterable[B]] =
+    def map[B](fn: A => B)(implicit ec: ExecutionContext): Future[Iterable[B]] =
       futureList.map(_.map {
         fn
       })
 
-    def filter[B](fn: A => Boolean): Future[Iterable[A]] =
+    def filter[B](fn: A => Boolean)(implicit ec: ExecutionContext): Future[Iterable[A]] =
       futureList.map(_.filter(fn))
   }
 
   def continueOnError[A](f: Future[A]) =
     f.map(Success(_)).recover { case x => Failure(x) }
+
 }

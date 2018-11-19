@@ -18,33 +18,32 @@ package uk.gov.hmrc.servicedependencies.persistence
 
 import com.google.inject.{Inject, Singleton}
 import play.api.libs.json.Json
-import reactivemongo.api.DB
 import reactivemongo.api.indexes.{Index, IndexType}
 import reactivemongo.bson.BSONObjectID
 import reactivemongo.play.json.ImplicitBSONHandlers._
 import uk.gov.hmrc.mongo.ReactiveRepository
-import uk.gov.hmrc.servicedependencies.util.FutureHelpers.withTimerAndCounter
+import uk.gov.hmrc.servicedependencies.util.FutureHelpers
 import uk.gov.hmrc.servicedependencies.model._
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
+import scala.concurrent.ExecutionContext.Implicits.global
 import play.modules.reactivemongo.ReactiveMongoComponent
 
 import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
-class LibraryVersionRepository @Inject()(mongo: ReactiveMongoComponent)
+class LibraryVersionRepository @Inject()(mongo: ReactiveMongoComponent, futureHelpers: FutureHelpers)
     extends ReactiveRepository[MongoLibraryVersion, BSONObjectID](
       collectionName = "libraryVersions",
       mongo          = mongo.mongoConnector.db,
       domainFormat   = MongoLibraryVersion.format) {
 
-  override def ensureIndexes(implicit ec: ExecutionContext = defaultContext): Future[Seq[Boolean]] =
+  override def ensureIndexes(implicit ec: ExecutionContext): Future[Seq[Boolean]] =
     localEnsureIndexes
 
   private def localEnsureIndexes =
     Future.sequence(
       Seq(
         collection
-          .indexesManager(defaultContext)
+          .indexesManager
           .ensure(
             Index(
               Seq("libraryName" -> IndexType.Hashed),
@@ -57,7 +56,8 @@ class LibraryVersionRepository @Inject()(mongo: ReactiveMongoComponent)
   def update(libraryVersion: MongoLibraryVersion): Future[MongoLibraryVersion] = {
 
     logger.debug(s"writing $libraryVersion")
-    withTimerAndCounter("mongo.update") {
+    futureHelpers
+      .withTimerAndCounter("mongo.update") {
       for {
         update <- collection.update(
                    selector = Json.obj("libraryName" -> Json.toJson(libraryVersion.libraryName)),

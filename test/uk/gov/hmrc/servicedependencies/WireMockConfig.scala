@@ -16,13 +16,18 @@
 
 package uk.gov.hmrc.servicedependencies
 
+import java.net.ServerSocket
+
 import com.github.tomakehurst.wiremock.WireMockServer
 import com.github.tomakehurst.wiremock.client.{MappingBuilder, WireMock}
 import com.github.tomakehurst.wiremock.core.WireMockConfiguration._
 
-class WireMockConfig(stubPort: Int) {
-  val stubHost                       = "localhost"
-  var wireMockServer: WireMockServer = new WireMockServer(wireMockConfig().port(stubPort))
+import scala.util.Try
+
+class WireMockConfig() {
+  val stubHost:String = "localhost"
+  val stubPort:Int    = PortTester.findPort()
+  val wireMockServer: WireMockServer = new WireMockServer(wireMockConfig().port(stubPort))
 
   def host() = s"http://$stubHost:$stubPort"
 
@@ -37,4 +42,20 @@ class WireMockConfig(stubPort: Int) {
 
   def stub(mapping: MappingBuilder) =
     wireMockServer.stubFor(mapping)
+}
+
+
+object PortTester {
+
+  def findPort(excluded: Int*): Int =
+    (6001 to 7000).find(port => !excluded.contains(port) && isFree(port)).getOrElse(throw new Exception("No free port"))
+
+  private def isFree(port: Int): Boolean = {
+    val triedSocket = Try {
+      val serverSocket = new ServerSocket(port)
+      Try(serverSocket.close())
+      serverSocket
+    }
+    triedSocket.isSuccess
+  }
 }

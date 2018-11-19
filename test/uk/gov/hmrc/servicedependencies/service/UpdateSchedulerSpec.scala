@@ -16,12 +16,13 @@
 
 package uk.gov.hmrc.servicedependencies.service
 
+import akka.actor.ActorSystem
+import akka.testkit.TestKit
 import org.mockito.Mockito
 import org.mockito.Mockito.verify
+import org.scalatest._
 import org.scalatest.mockito.MockitoSugar
-import org.scalatest.{BeforeAndAfterEach, FunSpec, Matchers}
-import org.scalatestplus.play.OneAppPerTest
-import play.libs.Akka
+import org.scalatestplus.play.guice.GuiceOneAppPerSuite
 import uk.gov.hmrc.githubclient.APIRateLimitExceededException
 import uk.gov.hmrc.http.HeaderCarrier
 
@@ -29,7 +30,13 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.concurrent.duration._
 
-class UpdateSchedulerSpec extends FunSpec with MockitoSugar with Matchers with OneAppPerTest with BeforeAndAfterEach {
+class UpdateSchedulerSpec extends TestKit(ActorSystem("UpdateSchedulerSpec"))
+  with FunSpecLike
+  with MockitoSugar
+  with Matchers
+  with GuiceOneAppPerSuite
+  with BeforeAndAfterAll
+  with BeforeAndAfterEach {
 
   trait Counter {
     var count                = 0
@@ -39,8 +46,12 @@ class UpdateSchedulerSpec extends FunSpec with MockitoSugar with Matchers with O
 
   implicit val hc = HeaderCarrier()
 
+  override def afterAll(): Unit = {
+    TestKit.shutdownActorSystem(system)
+  }
+
   def schedulerF(dependencyDataUpdatingService: DependencyDataUpdatingService) =
-    new UpdateScheduler(Akka.system(), dependencyDataUpdatingService)
+    new UpdateScheduler(system, dependencyDataUpdatingService)
 
   describe("Scheduler") {
     it("should schedule startUpdatingLibraryData based on configured interval") {

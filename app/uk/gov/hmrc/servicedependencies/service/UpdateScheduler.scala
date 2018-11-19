@@ -19,7 +19,7 @@ package uk.gov.hmrc.servicedependencies.service
 import akka.actor.{ActorSystem, Cancellable}
 import com.google.inject.{Inject, Singleton}
 import play.Logger
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
+import scala.concurrent.ExecutionContext.Implicits.global
 import uk.gov.hmrc.http.HeaderCarrier
 import scala.concurrent.duration.{FiniteDuration, _}
 import scala.language.postfixOps

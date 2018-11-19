@@ -22,13 +22,12 @@ import org.mockito.Mockito.when
 import org.scalatest._
 import org.scalatest.concurrent.{IntegrationPatience, ScalaFutures}
 import org.scalatest.mockito.MockitoSugar
-import org.scalatestplus.play.OneServerPerSuite
+import org.scalatestplus.play.guice.GuiceOneAppPerSuite
 import play.api.Configuration
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
 import uk.gov.hmrc.servicedependencies.config.ServiceDependenciesConfig
 import uk.gov.hmrc.servicedependencies.controller.model.Dependencies
-import uk.gov.hmrc.servicedependencies.model.{MongoLibraryVersion, MongoRepositoryDependencies, Version}
 import uk.gov.hmrc.servicedependencies.service._
 import uk.gov.hmrc.time.DateTimeUtils
 
@@ -37,7 +36,7 @@ import scala.concurrent.Future
 class ServiceDependenciesControllerSpec
     extends FreeSpec
     with BeforeAndAfterEach
-    with OneServerPerSuite
+    with GuiceOneAppPerSuite
     with Matchers
     with MockitoSugar
     with ScalaFutures
@@ -92,7 +91,8 @@ class ServiceDependenciesControllerSpec
       new ServiceDependenciesController(
         Configuration(),
         libraryDependencyUpdatingService,
-        mock[ServiceDependenciesConfig])
+        mock[ServiceDependenciesConfig],
+        stubControllerComponents())
   }
 
 }

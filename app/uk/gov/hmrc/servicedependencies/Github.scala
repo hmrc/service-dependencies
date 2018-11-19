@@ -16,27 +16,25 @@
 
 package uk.gov.hmrc.servicedependencies
 
-import java.util.Date
-
 import org.apache.commons.codec.binary.Base64
 import org.eclipse.egit.github.core.client.RequestException
 import org.eclipse.egit.github.core.{IRepositoryIdProvider, RepositoryContents}
 import org.slf4j.LoggerFactory
-import uk.gov.hmrc.githubclient.{APIRateLimitExceededException, GithubApiClient}
+import uk.gov.hmrc.githubclient._
 import uk.gov.hmrc.servicedependencies.config.model.{CuratedDependencyConfig, OtherDependencyConfig, SbtPluginConfig}
 import uk.gov.hmrc.servicedependencies.model.{GithubSearchResults, Version}
 import uk.gov.hmrc.servicedependencies.util.{Max, VersionParser}
 
 import scala.annotation.tailrec
-import scala.util.{Failure, Success, Try}
+import scala.util.Try
 
 case class GithubSearchError(message: String, throwable: Throwable)
 
-class Github(val gh: GithubApiClient) {
+class Github(releaseService: ReleaseService, contentsService: ExtendedContentsService) {
 
   private val org = "HMRC"
 
-  lazy val logger = LoggerFactory.getLogger(this.getClass)
+  private lazy val logger = LoggerFactory.getLogger(this.getClass)
 
   def findVersionsForMultipleArtifacts(
     repoName: String,
@@ -55,21 +53,15 @@ class Github(val gh: GithubApiClient) {
         Left(GithubSearchError(s"Unable to find dependencies for $repoName. Reason: ${ex.getMessage}", ex))
     }
 
-  protected def getLastGithubPushDate(repoName: String): Option[Date] =
-    Try(gh.repositoryService.getRepository(org, repoName).getPushedAt) match {
-      case Success(date) => Some(date)
-      case Failure(t) =>
-        logger.error(s"getLastGithubPushDate failed for $repoName:", t)
-        None
-    }
 
   def findLatestVersion(repoName: String): Option[Version] = {
 
-    val allVersions = Try(gh.releaseService.getTags(org, repoName).map(_.name)).recover {
-      case ex: RequestException if ex.getStatus == 404 =>
-        logger.info(s"Repository for $repoName not found")
-        Nil
-    }.get
+    val allVersions = Try(releaseService.getTags(org, repoName).map(_.name))
+      .recover {
+        case ex: RequestException if ex.getStatus == 404 =>
+          logger.info(s"Repository for $repoName not found")
+          Nil
+      }.get
 
     val maybeVersions: Seq[Option[Version]] = allVersions.map { version =>
       VersionParser.parseReleaseVersion(version)
@@ -133,7 +125,7 @@ class Github(val gh: GithubApiClient) {
   private def performSearchForMultipleArtifacts(
     repoName: String,
     filePath: String,
-    transformF: (RepositoryContents) => Map[String, Option[Version]]): Map[String, Option[Version]] = {
+    transformF: RepositoryContents => Map[String, Option[Version]]): Map[String, Option[Version]] = {
     val results = getContentsOrEmpty(repoName, filePath)
     if (results.isEmpty) Map.empty
     else transformF(results.head)
@@ -151,8 +143,9 @@ class Github(val gh: GithubApiClient) {
 
     import scala.collection.JavaConversions._
 
-    try { gh.contentsService.getContents(repositoryId(repoName, org), path).toList } catch {
+    try { contentsService.getContents(repositoryId(repoName, org), path).toList } catch {
       case ex: RequestException if ex.getStatus == 404 => List.empty
     }
   }
+
 }
