@@ -35,6 +35,7 @@
     }
   ],
   "libraries": [
+    "accessibility-testing-library",
     "auth-client",
     "bootstrap-play-25",
     "csp-client",
