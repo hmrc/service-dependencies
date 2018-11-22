@@ -57,4 +57,30 @@ class IntegrationTestController @Inject() (libraryRepo:                LibraryVe
     Future.sequence(request.body.map(dependenciesRepository.update)).map(_ => Ok("Done"))
   }
 
+
+  def deleteSbt = Action.async { implicit request =>
+      sbtPluginVersionRepository.clearAllData.map(_ => Ok("Done"))
+  }
+
+
+  def deleteVersions = Action.async { implicit request =>
+    libraryRepo.clearAllData.map(_ => Ok("Done"))
+  }
+
+
+  def deleteDependencies = Action.async { implicit request =>
+    dependenciesRepository.clearAllData.map(_ => Ok("Done"))
+  }
+
+
+  def deleteAll = Action.async { implicit request =>
+
+    val result = for {
+      _ <- sbtPluginVersionRepository.clearAllData
+      _ <- dependenciesRepository.clearAllData
+      f <- libraryRepo.clearAllData
+    } yield f
+
+    result.map(_ => Ok("Deleted"))
+  }
 }

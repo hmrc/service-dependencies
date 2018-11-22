@@ -14,4 +14,8 @@
 POST       /test-only/sbt             @uk.gov.hmrc.servicedependencies.testonly.IntegrationTestController.addSbtVersion()
 POST       /test-only/library         @uk.gov.hmrc.servicedependencies.testonly.IntegrationTestController.addLibraryVersion()
 POST       /test-only/dependencies    @uk.gov.hmrc.servicedependencies.testonly.IntegrationTestController.addDependencies()
+DELETE     /test-only/sbt             @uk.gov.hmrc.servicedependencies.testonly.IntegrationTestController.deleteSbt()
+DELETE     /test-only/library         @uk.gov.hmrc.servicedependencies.testonly.IntegrationTestController.deleteVersions()
+DELETE     /test-only/dependencies    @uk.gov.hmrc.servicedependencies.testonly.IntegrationTestController.deleteDependencies()
+DELETE     /test-only/all             @uk.gov.hmrc.servicedependencies.testonly.IntegrationTestController.deleteAll()
 ->         /                          prod.Routes
