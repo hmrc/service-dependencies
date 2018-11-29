@@ -32,8 +32,8 @@ import uk.gov.hmrc.githubclient.{APIRateLimitExceededException, GitApiConfig}
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.servicedependencies.config._
 import uk.gov.hmrc.servicedependencies.config.model.{CuratedDependencyConfig, OtherDependencyConfig, SbtPluginConfig}
-import uk.gov.hmrc.servicedependencies.connector.model.Repository
-import uk.gov.hmrc.servicedependencies.connector.{TeamsAndRepositoriesConnector, model}
+import uk.gov.hmrc.servicedependencies.connector.model.{Repository, RepositoryInfo}
+import uk.gov.hmrc.servicedependencies.connector.{GithubConnector, TeamsAndRepositoriesConnector, model}
 import uk.gov.hmrc.servicedependencies.model._
 import uk.gov.hmrc.servicedependencies.persistence.RepositoryLibraryDependenciesRepository
 import uk.gov.hmrc.servicedependencies.{Github, GithubSearchError}
@@ -183,7 +183,8 @@ class DependenciesDataSourceSpec
         .thenAnswer(new Answer[Future[Option[Repository]]] {
           override def answer(invocation: InvocationOnMock): Future[Option[Repository]] =
             if (invocation.getArgument[String](0) == repo2.name) {
-              Future(Some(repo2))
+              Future(None)
+              //Future(Some(repo2))
             } else {
               Future(None)
             }
@@ -191,12 +192,13 @@ class DependenciesDataSourceSpec
 
       val captor: ArgumentCaptor[MongoRepositoryDependencies] =
         ArgumentCaptor.forClass(classOf[MongoRepositoryDependencies])
+
       dependenciesDataSource.persistDependenciesForAllRepositories(curatedDependencyConfig, Nil).futureValue
       Mockito.verify(repositoryLibraryDependenciesRepository, Mockito.times(1)).update(captor.capture())
 
       val allStoredDependencies: List[MongoRepositoryDependencies] = captor.getAllValues.toList
       allStoredDependencies.size              should be(1)
-      allStoredDependencies(0).repositoryName shouldBe repo2.name
+      allStoredDependencies.head.repositoryName shouldBe repo2.name
     }
 
     "should short circuit operation when RequestException is thrown for api rate limiting reason" in new TestCase {
@@ -368,10 +370,16 @@ class DependenciesDataSourceSpec
     val repositoryLibraryDependenciesRepository = mock[RepositoryLibraryDependenciesRepository]
 
     val teamsAndRepositoriesConnector = mock[TeamsAndRepositoriesConnector]
+
     when(teamsAndRepositoriesConnector.getTeamsForServices()(any()))
       .thenReturn(Future.successful(Map("service1" -> Seq("PlatOps", "WebOps"))))
+
     when(teamsAndRepositoriesConnector.getAllRepositories()(any()))
       .thenReturn(Future.successful(repositories.map(_.name)))
+
+    when(teamsAndRepositoriesConnector.getAllRepositoryInfos()(any()))
+      .thenReturn(Future.successful(repositories.map(r => RepositoryInfo(r.name, r.lastActive, r.lastActive, "Service"))))
+
     when(teamsAndRepositoriesConnector.getRepository(any())(any())).thenAnswer(new Answer[Future[Option[Repository]]] {
       override def answer(invocation: InvocationOnMock): Future[Option[Repository]] =
         Future(repositories.find(_.name == invocation.getArgument[String](0)))
@@ -387,12 +395,25 @@ class DependenciesDataSourceSpec
         Right(lookupTable(repoName))
     }
 
+    val githubConnector = new GithubConnector(mockedDependenciesConfig, new DisabledMetrics()) {
+      override lazy val github: Github = new GithubStub(Map()) {
+
+        override def findLatestVersion(repoName: String): Option[Version] = super.findLatestVersion(repoName)
+
+        override def findVersionsForMultipleArtifacts(
+                                                       repoName: String,
+                                                       curatedDependencyConfig: CuratedDependencyConfig): Either[GithubSearchError, GithubSearchResults] =
+          Right(lookupTable(repoName))
+      }
+      override def now: DateTime       = timeNow
+    }
+
     val dependenciesDataSource = new DependenciesDataSource(
       teamsAndRepositoriesConnector,
       mockedDependenciesConfig,
-      repositoryLibraryDependenciesRepository,
-      new DisabledMetrics()) {
-      override lazy val github: Github = githubStub
+      githubConnector,
+      repositoryLibraryDependenciesRepository
+      ) {
       override def now: DateTime       = timeNow
     }
   }

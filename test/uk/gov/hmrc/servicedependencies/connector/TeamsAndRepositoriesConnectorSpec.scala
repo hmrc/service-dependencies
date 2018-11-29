@@ -26,6 +26,8 @@ import uk.gov.hmrc.http._
 import uk.gov.hmrc.play.http.logging.MdcLoggingExecutionContext._
 import uk.gov.hmrc.servicedependencies.WireMockConfig
 import com.github.tomakehurst.wiremock.client.WireMock._
+import org.joda.time.DateTime
+import uk.gov.hmrc.servicedependencies.connector.model.RepositoryInfo
 
 class TeamsAndRepositoriesConnectorSpec
     extends FreeSpec
@@ -88,6 +90,13 @@ class TeamsAndRepositoriesConnectorSpec
     "correctly parse json response" in {
       val repositories = services.getAllRepositories().futureValue
       repositories mustBe Seq("test-repo", "another-repo")
+    }
+
+    "return a list of full repo objects" in {
+      val repositories = services.getAllRepositoryInfos().futureValue
+      repositories mustBe List(
+        RepositoryInfo("test-repo", new DateTime("2015-09-15T17:27:38.000+01:00"), new DateTime("2017-05-19T12:00:51.000+01:00"),"Prototype",None),
+        RepositoryInfo("another-repo",new DateTime("2016-05-12T11:18:53.000+01:00"), new DateTime("2016-05-12T16:43:32.000+01:00"),"Prototype",None))
     }
   }
 
