@@ -17,7 +17,7 @@
 package uk.gov.hmrc.servicedependencies.connector
 
 import com.google.inject.{Inject, Singleton}
-import play.api.libs.json._
+import play.api.libs.json.Json
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.play.bootstrap.http.HttpClient
 import uk.gov.hmrc.servicedependencies.config.ServiceDependenciesConfig
@@ -42,7 +42,7 @@ class TeamsAndRepositoriesConnector @Inject()(httpClient: HttpClient, serviceCon
   val teamsAndRepositoriesApiBase = serviceConfiguration.teamsAndRepositoriesServiceUrl
 
   implicit val formats = Repository.format
-  implicit val infoFormats = RepositoryInfo.format
+  implicit val repositoryInfoFormats = RepositoryInfo.format
 
   def getRepository(repositoryName: String)(implicit hc: HeaderCarrier): Future[Option[Repository]] =
     httpClient.GET[Option[Repository]](s"$teamsAndRepositoriesApiBase/api/repositories/$repositoryName")

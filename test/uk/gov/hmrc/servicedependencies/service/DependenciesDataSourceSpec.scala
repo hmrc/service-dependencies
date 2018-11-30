@@ -183,12 +183,14 @@ class DependenciesDataSourceSpec
         .thenAnswer(new Answer[Future[Option[Repository]]] {
           override def answer(invocation: InvocationOnMock): Future[Option[Repository]] =
             if (invocation.getArgument[String](0) == repo2.name) {
-              Future(None)
-              //Future(Some(repo2))
+              Future(Some(repo2))
             } else {
               Future(None)
             }
         })
+
+      when(repositoryLibraryDependenciesRepository.update(any()))
+        .thenReturn(Future.successful(mock[MongoRepositoryDependencies]))
 
       val captor: ArgumentCaptor[MongoRepositoryDependencies] =
         ArgumentCaptor.forClass(classOf[MongoRepositoryDependencies])
@@ -269,7 +271,7 @@ class DependenciesDataSourceSpec
     "should get the latest library version" in new TestCase {
       override def repositories: Seq[model.Repository] = Seq(repo1, repo2, repo3)
 
-      override def githubStub =
+      override def githubStub() =
         new GithubStub(
           Map(),
           Map("library1" -> Version(1, 0, 0), "library2" -> Version(2, 0, 0), "library3" -> Version(3, 0, 0)))
@@ -385,7 +387,7 @@ class DependenciesDataSourceSpec
         Future(repositories.find(_.name == invocation.getArgument[String](0)))
     })
 
-    def githubStub: Github = new GithubStub(Map()) {
+    def githubStub(): Github = new GithubStub(Map()) {
 
       override def findLatestVersion(repoName: String): Option[Version] = super.findLatestVersion(repoName)
 
@@ -396,15 +398,7 @@ class DependenciesDataSourceSpec
     }
 
     val githubConnector = new GithubConnector(mockedDependenciesConfig, new DisabledMetrics()) {
-      override lazy val github: Github = new GithubStub(Map()) {
-
-        override def findLatestVersion(repoName: String): Option[Version] = super.findLatestVersion(repoName)
-
-        override def findVersionsForMultipleArtifacts(
-                                                       repoName: String,
-                                                       curatedDependencyConfig: CuratedDependencyConfig): Either[GithubSearchError, GithubSearchResults] =
-          Right(lookupTable(repoName))
-      }
+      override lazy val github: Github = githubStub()
       override def now: DateTime       = timeNow
     }
 

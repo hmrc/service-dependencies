@@ -40,12 +40,13 @@ class DependenciesDataSource @Inject()(
 
   lazy val logger = LoggerFactory.getLogger(this.getClass)
 
-  def now = DateTimeUtils.now
+  def now : DateTime = DateTimeUtils.now
 
-  def prepDependency(repo: RepositoryInfo,
-                        curatedDependencyConfig: CuratedDependencyConfig,
-                        currentDeps: Seq[MongoRepositoryDependencies],
-                        force: Boolean): Option[MongoRepositoryDependencies] = {
+
+  def buildDependency(repo: RepositoryInfo,
+                     curatedDependencyConfig: CuratedDependencyConfig,
+                     currentDeps: Seq[MongoRepositoryDependencies],
+                     force: Boolean): Option[MongoRepositoryDependencies] = {
 
     if (!force && lastUpdated(repo.name, currentDeps).isAfter(repo.lastUpdatedAt)) {
       logger.debug(s"No changes for repository (${repo.name}). Skipping....")
@@ -54,8 +55,8 @@ class DependenciesDataSource @Inject()(
       logger.debug(s"building repo for ${repo.name}")
       github.buildDependencies(repo, curatedDependencyConfig)
     }
-
   }
+
 
   private def lastUpdated(repoName: String, currentDeps: Seq[MongoRepositoryDependencies]): DateTime = {
     currentDeps.find(_.repositoryName == repoName)
@@ -81,7 +82,7 @@ class DependenciesDataSource @Inject()(
       .getAllRepositoryInfos()
       .map(repos => {
         logger.debug(s"loading dependencies for ${repos.length} repositories")
-        repos.flatMap(r => prepDependency(r, curatedDependencyConfig, currentDependencyEntries, force))
+        repos.flatMap(r => buildDependency(r, curatedDependencyConfig, currentDependencyEntries, force))
       })
       .flatMap(serialiseFutures(_)(repo => repoLibDepRepository.update(repo)))
   }
@@ -89,6 +90,7 @@ class DependenciesDataSource @Inject()(
 
   def getLatestSbtPluginVersions(sbtPlugins: Seq[SbtPluginConfig]): Seq[SbtPluginVersion] =
     sbtPlugins.flatMap(github.findLatestSbtPluginVersion)
+
 
   def getLatestLibrariesVersions(libraries: Seq[String]): Seq[LibraryVersion] =
     libraries.flatMap(github.findLatestLibraryVersion)
