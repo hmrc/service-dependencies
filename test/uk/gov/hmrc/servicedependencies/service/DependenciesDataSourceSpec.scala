@@ -175,32 +175,16 @@ class DependenciesDataSourceSpec
       allStoredDependencies.size should be(3)
     }
 
-    "should NOT terminate with exception when the repository is not found in teams-and-repositories" in new TestCase {
+    "should NOT call getRepository every time it updates a repository" in new TestCase {
 
       override def repositories: Seq[model.Repository] = Seq(repo1, repo2)
-
-      when(teamsAndRepositoriesConnector.getRepository(any())(any()))
-        .thenAnswer(new Answer[Future[Option[Repository]]] {
-          override def answer(invocation: InvocationOnMock): Future[Option[Repository]] =
-            if (invocation.getArgument[String](0) == repo2.name) {
-              Future(Some(repo2))
-            } else {
-              Future(None)
-            }
-        })
 
       when(repositoryLibraryDependenciesRepository.update(any()))
         .thenReturn(Future.successful(mock[MongoRepositoryDependencies]))
 
-      val captor: ArgumentCaptor[MongoRepositoryDependencies] =
-        ArgumentCaptor.forClass(classOf[MongoRepositoryDependencies])
-
       dependenciesDataSource.persistDependenciesForAllRepositories(curatedDependencyConfig, Nil).futureValue
-      Mockito.verify(repositoryLibraryDependenciesRepository, Mockito.times(1)).update(captor.capture())
 
-      val allStoredDependencies: List[MongoRepositoryDependencies] = captor.getAllValues.toList
-      allStoredDependencies.size              should be(1)
-      allStoredDependencies.head.repositoryName shouldBe repo2.name
+      Mockito.verify( teamsAndRepositoriesConnector, Mockito.never()).getRepository(_)
     }
 
     "should short circuit operation when RequestException is thrown for api rate limiting reason" in new TestCase {
