@@ -15,39 +15,22 @@
  */
 
 package uk.gov.hmrc.servicedependencies.connector
-import com.kenshoo.play.metrics.Metrics
 import javax.inject.{Inject, Singleton}
 import org.slf4j.LoggerFactory
-import uk.gov.hmrc.githubclient.{ExtendedContentsService, ExtendedGitHubClient, GithubClientMetrics, ReleaseService}
 import uk.gov.hmrc.servicedependencies.Github
-import uk.gov.hmrc.servicedependencies.config.ServiceDependenciesConfig
 import uk.gov.hmrc.servicedependencies.config.model.{CuratedDependencyConfig, SbtPluginConfig}
 import uk.gov.hmrc.servicedependencies.connector.model.RepositoryInfo
 import uk.gov.hmrc.servicedependencies.model._
 import uk.gov.hmrc.time.DateTimeUtils
 
 @Singleton
-class GithubConnector @Inject() (config: ServiceDependenciesConfig, metrics: Metrics) {
+class GithubConnector @Inject() (github: Github) {
 
   lazy val logger = LoggerFactory.getLogger(this.getClass)
 
   def now = DateTimeUtils.now
 
-  // Github client setup
-  private lazy val client: ExtendedGitHubClient = ExtendedGitHubClient(config.githubApiOpenConfig.apiUrl, new GithubMetrics("github.open"))
-    .setOAuth2Token(config.githubApiOpenConfig.key)
-    .asInstanceOf[ExtendedGitHubClient]
 
-  lazy val github: Github = new Github(new ReleaseService(client), new ExtendedContentsService(client))
-
-  class GithubMetrics(override val metricName: String) extends GithubClientMetrics {
-    lazy val registry = metrics.defaultRegistry
-    override def increment(name: String): Unit =
-      registry.counter(name).inc()
-  }
-
-
-  // github api helpers
   def findOtherDependencies(githubSearchResults: GithubSearchResults): Seq[MongoRepositoryDependency] = {
     githubSearchResults.others.foldLeft(Seq.empty[MongoRepositoryDependency]) {
       case (acc, (library, Some(currentVersion))) => acc :+ MongoRepositoryDependency(library, currentVersion)
@@ -55,12 +38,14 @@ class GithubConnector @Inject() (config: ServiceDependenciesConfig, metrics: Met
     }
   }
 
+
   def findPluginDependencies(githubSearchResults: GithubSearchResults): Seq[MongoRepositoryDependency] = {
     githubSearchResults.sbtPlugins.foldLeft(Seq.empty[MongoRepositoryDependency]) {
       case (acc, (library, Some(currentVersion))) => acc :+ MongoRepositoryDependency(library, currentVersion)
       case (acc, (_, None)) => acc
     }
   }
+
 
   def findLatestLibrariesVersions(githubSearchResults: GithubSearchResults): Seq[MongoRepositoryDependency] = {
     githubSearchResults.libraries.foldLeft(Seq.empty[MongoRepositoryDependency]) {
@@ -73,6 +58,7 @@ class GithubConnector @Inject() (config: ServiceDependenciesConfig, metrics: Met
   def findLatestSbtPluginVersion(sbtPluginConfig: SbtPluginConfig) : Option[SbtPluginVersion] = {
     github.findLatestVersion(sbtPluginConfig.name).map(v => SbtPluginVersion(sbtPluginConfig.name, Some(v)))
   }
+
 
   def findLatestLibraryVersion(lib: String): Option[LibraryVersion] = {
     github.findLatestVersion(lib).map(version => LibraryVersion(lib, Some(version)))

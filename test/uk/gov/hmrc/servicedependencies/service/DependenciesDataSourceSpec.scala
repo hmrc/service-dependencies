@@ -381,10 +381,7 @@ class DependenciesDataSourceSpec
         Right(lookupTable(repoName))
     }
 
-    val githubConnector = new GithubConnector(mockedDependenciesConfig, new DisabledMetrics()) {
-      override lazy val github: Github = githubStub()
-      override def now: DateTime       = timeNow
-    }
+    val githubConnector = new GithubConnector(githubStub())
 
     val dependenciesDataSource = new DependenciesDataSource(
       teamsAndRepositoriesConnector,

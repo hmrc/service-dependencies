@@ -23,7 +23,7 @@ import org.scalatestplus.play.guice.GuiceOneAppPerSuite
 import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.Application
 import uk.gov.hmrc.http._
-import uk.gov.hmrc.play.http.logging.MdcLoggingExecutionContext._
+import scala.concurrent.ExecutionContext.Implicits.global
 import uk.gov.hmrc.servicedependencies.WireMockConfig
 import com.github.tomakehurst.wiremock.client.WireMock._
 import org.joda.time.DateTime

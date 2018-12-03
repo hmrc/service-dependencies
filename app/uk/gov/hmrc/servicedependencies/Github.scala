@@ -16,11 +16,15 @@
 
 package uk.gov.hmrc.servicedependencies
 
+import com.google.inject.Provider
+import com.kenshoo.play.metrics.Metrics
+import javax.inject.Inject
 import org.apache.commons.codec.binary.Base64
 import org.eclipse.egit.github.core.client.RequestException
 import org.eclipse.egit.github.core.{IRepositoryIdProvider, RepositoryContents}
 import org.slf4j.LoggerFactory
 import uk.gov.hmrc.githubclient._
+import uk.gov.hmrc.servicedependencies.config.ServiceDependenciesConfig
 import uk.gov.hmrc.servicedependencies.config.model.{CuratedDependencyConfig, OtherDependencyConfig, SbtPluginConfig}
 import uk.gov.hmrc.servicedependencies.model.{GithubSearchResults, Version}
 import uk.gov.hmrc.servicedependencies.util.{Max, VersionParser}
@@ -149,3 +153,23 @@ class Github(releaseService: ReleaseService, contentsService: ExtendedContentsSe
   }
 
 }
+
+
+class GithubProvider @Inject() (config: ServiceDependenciesConfig, metrics: Metrics) extends Provider[Github] {
+
+  class GithubMetrics(override val metricName: String) extends GithubClientMetrics {
+    lazy val registry = metrics.defaultRegistry
+    override def increment(name: String): Unit =
+      registry.counter(name).inc()
+  }
+
+  // Github client setup
+  private lazy val client: ExtendedGitHubClient = ExtendedGitHubClient(config.githubApiOpenConfig.apiUrl, new GithubMetrics("github.open"))
+    .setOAuth2Token(config.githubApiOpenConfig.key)
+    .asInstanceOf[ExtendedGitHubClient]
+
+  override def get(): Github = {
+    new Github(new ReleaseService(client), new ExtendedContentsService(client))
+  }
+}
+

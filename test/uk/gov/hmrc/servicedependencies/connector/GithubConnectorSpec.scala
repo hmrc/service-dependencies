@@ -34,9 +34,7 @@ class GithubConnectorSpec extends WordSpec with MustMatchers with MockitoSugar {
 
   val mockGithub = mock[Github]
 
-  val githubConnector = new GithubConnector(config, metrics) {
-    override lazy val github: Github = mockGithub
-  }
+  val githubConnector = new GithubConnector(mockGithub)
 
 
   "findPluginDependencies" should {
