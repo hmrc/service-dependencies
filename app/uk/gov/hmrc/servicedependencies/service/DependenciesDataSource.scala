@@ -79,7 +79,7 @@ class DependenciesDataSource @Inject()(
     force: Boolean = false)(implicit hc: HeaderCarrier): Future[Seq[MongoRepositoryDependencies]] = {
 
     teamsAndRepositoriesConnector
-      .getAllRepositoryInfos()
+      .getAllRepositories()
       .map(repos => {
         logger.debug(s"loading dependencies for ${repos.length} repositories")
         repos.flatMap(r => buildDependency(r, curatedDependencyConfig, currentDependencyEntries, force))

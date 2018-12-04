@@ -361,9 +361,6 @@ class DependenciesDataSourceSpec
       .thenReturn(Future.successful(Map("service1" -> Seq("PlatOps", "WebOps"))))
 
     when(teamsAndRepositoriesConnector.getAllRepositories()(any()))
-      .thenReturn(Future.successful(repositories.map(_.name)))
-
-    when(teamsAndRepositoriesConnector.getAllRepositoryInfos()(any()))
       .thenReturn(Future.successful(repositories.map(r => RepositoryInfo(r.name, r.lastActive, r.lastActive, "Service"))))
 
     when(teamsAndRepositoriesConnector.getRepository(any())(any())).thenAnswer(new Answer[Future[Option[Repository]]] {
