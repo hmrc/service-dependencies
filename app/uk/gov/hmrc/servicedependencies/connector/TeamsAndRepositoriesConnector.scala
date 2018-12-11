@@ -21,9 +21,9 @@ import play.api.libs.json.Json
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.play.bootstrap.http.HttpClient
 import uk.gov.hmrc.servicedependencies.config.ServiceDependenciesConfig
-import uk.gov.hmrc.servicedependencies.connector.model.Repository
+import uk.gov.hmrc.servicedependencies.connector.model.{Repository, RepositoryInfo}
 import scala.concurrent.Future
-import uk.gov.hmrc.play.http.logging.MdcLoggingExecutionContext._
+import scala.concurrent.ExecutionContext.Implicits.global
 
 case class Team(
   name: String,
@@ -42,6 +42,7 @@ class TeamsAndRepositoriesConnector @Inject()(httpClient: HttpClient, serviceCon
   val teamsAndRepositoriesApiBase = serviceConfiguration.teamsAndRepositoriesServiceUrl
 
   implicit val formats = Repository.format
+  implicit val repositoryInfoFormats = RepositoryInfo.format
 
   def getRepository(repositoryName: String)(implicit hc: HeaderCarrier): Future[Option[Repository]] =
     httpClient.GET[Option[Repository]](s"$teamsAndRepositoriesApiBase/api/repositories/$repositoryName")
@@ -49,10 +50,8 @@ class TeamsAndRepositoriesConnector @Inject()(httpClient: HttpClient, serviceCon
   def getTeamsForServices()(implicit hc: HeaderCarrier): Future[Map[String, Seq[String]]] =
     httpClient.GET[Map[String, Seq[String]]](s"$teamsAndRepositoriesApiBase/api/services?teamDetails=true")
 
-  def getAllRepositories()(implicit hc: HeaderCarrier): Future[Seq[String]] =
-    httpClient.GET(s"$teamsAndRepositoriesApiBase/api/repositories") map { response =>
-      (response.json \\ "name").map(_.as[String])
-    }
+  def getAllRepositories()(implicit hc: HeaderCarrier): Future[Seq[RepositoryInfo]] =
+    httpClient.GET[Seq[RepositoryInfo]](s"$teamsAndRepositoriesApiBase/api/repositories")
 
   def getTeamsWithRepositories()(implicit hc: HeaderCarrier): Future[Seq[Team]] =
     httpClient.GET[Seq[Team]](s"$teamsAndRepositoriesApiBase/api/teams_with_repositories")

@@ -32,8 +32,8 @@ import uk.gov.hmrc.githubclient.{APIRateLimitExceededException, GitApiConfig}
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.servicedependencies.config._
 import uk.gov.hmrc.servicedependencies.config.model.{CuratedDependencyConfig, OtherDependencyConfig, SbtPluginConfig}
-import uk.gov.hmrc.servicedependencies.connector.model.Repository
-import uk.gov.hmrc.servicedependencies.connector.{TeamsAndRepositoriesConnector, model}
+import uk.gov.hmrc.servicedependencies.connector.model.{Repository, RepositoryInfo}
+import uk.gov.hmrc.servicedependencies.connector.{GithubConnector, TeamsAndRepositoriesConnector, model}
 import uk.gov.hmrc.servicedependencies.model._
 import uk.gov.hmrc.servicedependencies.persistence.RepositoryLibraryDependenciesRepository
 import uk.gov.hmrc.servicedependencies.{Github, GithubSearchError}
@@ -175,28 +175,16 @@ class DependenciesDataSourceSpec
       allStoredDependencies.size should be(3)
     }
 
-    "should NOT terminate with exception when the repository is not found in teams-and-repositories" in new TestCase {
+    "should NOT call getRepository every time it updates a repository" in new TestCase {
 
       override def repositories: Seq[model.Repository] = Seq(repo1, repo2)
 
-      when(teamsAndRepositoriesConnector.getRepository(any())(any()))
-        .thenAnswer(new Answer[Future[Option[Repository]]] {
-          override def answer(invocation: InvocationOnMock): Future[Option[Repository]] =
-            if (invocation.getArgument[String](0) == repo2.name) {
-              Future(Some(repo2))
-            } else {
-              Future(None)
-            }
-        })
+      when(repositoryLibraryDependenciesRepository.update(any()))
+        .thenReturn(Future.successful(mock[MongoRepositoryDependencies]))
 
-      val captor: ArgumentCaptor[MongoRepositoryDependencies] =
-        ArgumentCaptor.forClass(classOf[MongoRepositoryDependencies])
       dependenciesDataSource.persistDependenciesForAllRepositories(curatedDependencyConfig, Nil).futureValue
-      Mockito.verify(repositoryLibraryDependenciesRepository, Mockito.times(1)).update(captor.capture())
 
-      val allStoredDependencies: List[MongoRepositoryDependencies] = captor.getAllValues.toList
-      allStoredDependencies.size              should be(1)
-      allStoredDependencies(0).repositoryName shouldBe repo2.name
+      Mockito.verify( teamsAndRepositoriesConnector, Mockito.never()).getRepository(_)
     }
 
     "should short circuit operation when RequestException is thrown for api rate limiting reason" in new TestCase {
@@ -267,7 +255,7 @@ class DependenciesDataSourceSpec
     "should get the latest library version" in new TestCase {
       override def repositories: Seq[model.Repository] = Seq(repo1, repo2, repo3)
 
-      override def githubStub =
+      override def githubStub() =
         new GithubStub(
           Map(),
           Map("library1" -> Version(1, 0, 0), "library2" -> Version(2, 0, 0), "library3" -> Version(3, 0, 0)))
@@ -368,16 +356,19 @@ class DependenciesDataSourceSpec
     val repositoryLibraryDependenciesRepository = mock[RepositoryLibraryDependenciesRepository]
 
     val teamsAndRepositoriesConnector = mock[TeamsAndRepositoriesConnector]
+
     when(teamsAndRepositoriesConnector.getTeamsForServices()(any()))
       .thenReturn(Future.successful(Map("service1" -> Seq("PlatOps", "WebOps"))))
+
     when(teamsAndRepositoriesConnector.getAllRepositories()(any()))
-      .thenReturn(Future.successful(repositories.map(_.name)))
+      .thenReturn(Future.successful(repositories.map(r => RepositoryInfo(r.name, r.lastActive, r.lastActive, "Service"))))
+
     when(teamsAndRepositoriesConnector.getRepository(any())(any())).thenAnswer(new Answer[Future[Option[Repository]]] {
       override def answer(invocation: InvocationOnMock): Future[Option[Repository]] =
         Future(repositories.find(_.name == invocation.getArgument[String](0)))
     })
 
-    def githubStub: Github = new GithubStub(Map()) {
+    def githubStub(): Github = new GithubStub(Map()) {
 
       override def findLatestVersion(repoName: String): Option[Version] = super.findLatestVersion(repoName)
 
@@ -387,12 +378,14 @@ class DependenciesDataSourceSpec
         Right(lookupTable(repoName))
     }
 
+    val githubConnector = new GithubConnector(githubStub())
+
     val dependenciesDataSource = new DependenciesDataSource(
       teamsAndRepositoriesConnector,
       mockedDependenciesConfig,
-      repositoryLibraryDependenciesRepository,
-      new DisabledMetrics()) {
-      override lazy val github: Github = githubStub
+      githubConnector,
+      repositoryLibraryDependenciesRepository
+      ) {
       override def now: DateTime       = timeNow
     }
   }

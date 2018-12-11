@@ -23,9 +23,11 @@ import org.scalatestplus.play.guice.GuiceOneAppPerSuite
 import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.Application
 import uk.gov.hmrc.http._
-import uk.gov.hmrc.play.http.logging.MdcLoggingExecutionContext._
+import scala.concurrent.ExecutionContext.Implicits.global
 import uk.gov.hmrc.servicedependencies.WireMockConfig
 import com.github.tomakehurst.wiremock.client.WireMock._
+import org.joda.time.DateTime
+import uk.gov.hmrc.servicedependencies.connector.model.RepositoryInfo
 
 class TeamsAndRepositoriesConnectorSpec
     extends FreeSpec
@@ -87,7 +89,9 @@ class TeamsAndRepositoriesConnectorSpec
   "Retrieving a list of all repositories" - {
     "correctly parse json response" in {
       val repositories = services.getAllRepositories().futureValue
-      repositories mustBe Seq("test-repo", "another-repo")
+      repositories mustBe List(
+        RepositoryInfo("test-repo", new DateTime("2015-09-15T17:27:38.000+01:00"), new DateTime("2017-05-19T12:00:51.000+01:00"),"Prototype",None),
+        RepositoryInfo("another-repo",new DateTime("2016-05-12T11:18:53.000+01:00"), new DateTime("2016-05-12T16:43:32.000+01:00"),"Prototype",None))
     }
   }
 
