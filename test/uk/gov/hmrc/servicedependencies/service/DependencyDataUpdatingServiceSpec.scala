@@ -23,6 +23,8 @@ import org.scalatest.concurrent.{IntegrationPatience, ScalaFutures}
 import org.scalatest.mockito.MockitoSugar
 import org.scalatest.{BeforeAndAfterEach, FunSpec, Matchers, OptionValues}
 import org.scalatestplus.play.guice.GuiceOneAppPerTest
+import play.api.Application
+import play.api.inject.guice.GuiceApplicationBuilder
 import reactivemongo.api.DB
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.mongo.Awaiting
@@ -44,6 +46,11 @@ class DependencyDataUpdatingServiceSpec
     with OptionValues
     with ScalaFutures
     with IntegrationPatience {
+
+  override def fakeApplication(): Application =
+    new GuiceApplicationBuilder()
+      .configure("metrics.jvm" -> false)
+      .build()
 
   val timeForTest = DateTimeUtils.now
 

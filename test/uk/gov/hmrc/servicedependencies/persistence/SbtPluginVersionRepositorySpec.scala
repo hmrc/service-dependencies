@@ -37,6 +37,9 @@ import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.mockito.MockitoSugar
 import org.scalatest.{BeforeAndAfterEach, LoneElement, OptionValues}
 import org.scalatestplus.play.guice.GuiceOneAppPerSuite
+import play.api.Application
+import play.api.inject.guice.GuiceApplicationBuilder
+
 import scala.concurrent.ExecutionContext.Implicits.global
 import play.modules.reactivemongo.ReactiveMongoComponent
 import uk.gov.hmrc.mongo.{MongoConnector, MongoSpecSupport}
@@ -61,6 +64,10 @@ class SbtPluginVersionRepositorySpec
 
     override def mongoConnector = mockedMongoConnector
   }
+
+  override def fakeApplication(): Application = GuiceApplicationBuilder()
+    .configure("metrics.jvm" -> false)
+    .build()
 
   val futureHelper: FutureHelpers = app.injector.instanceOf[FutureHelpers]
   val mongoSbtPluginVersions = new SbtPluginVersionRepository(reactiveMongoComponent, futureHelper)

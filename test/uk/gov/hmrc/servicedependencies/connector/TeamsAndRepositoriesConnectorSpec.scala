@@ -58,8 +58,11 @@ class TeamsAndRepositoriesConnectorSpec
 
   override def fakeApplication(): Application =
     new GuiceApplicationBuilder()
-      .configure("microservice.services.teams-and-repositories.port" -> wireMock.stubPort,
-        "play.http.requestHandler" -> "play.api.http.DefaultHttpRequestHandler").build()
+      .configure(
+        "microservice.services.teams-and-repositories.port" -> wireMock.stubPort,
+        "play.http.requestHandler" -> "play.api.http.DefaultHttpRequestHandler",
+        "metrics.jvm" -> false
+      ).build()
 
   private val services = app.injector.instanceOf[TeamsAndRepositoriesConnector]
 
