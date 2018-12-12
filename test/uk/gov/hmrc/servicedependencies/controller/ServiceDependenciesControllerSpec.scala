@@ -23,7 +23,8 @@ import org.scalatest._
 import org.scalatest.concurrent.{IntegrationPatience, ScalaFutures}
 import org.scalatest.mockito.MockitoSugar
 import org.scalatestplus.play.guice.GuiceOneAppPerSuite
-import play.api.Configuration
+import play.api.inject.guice.GuiceApplicationBuilder
+import play.api.{Application, Configuration}
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
 import uk.gov.hmrc.servicedependencies.config.ServiceDependenciesConfig
@@ -42,6 +43,10 @@ class ServiceDependenciesControllerSpec
     with ScalaFutures
     with IntegrationPatience
     with OptionValues {
+
+  override def fakeApplication(): Application = GuiceApplicationBuilder()
+    .configure("metrics.jvm" -> false)
+    .build()
 
   "getDependencyVersionsForRepository" - {
     "should get dependency versions for a repository using the service" in new Setup {
