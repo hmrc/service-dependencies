@@ -14,7 +14,8 @@ private object AppDependencies {
     "uk.gov.hmrc"       %% "simple-reactivemongo" % "7.0.0-play-26",
     "uk.gov.hmrc"       %% "mongo-lock"           % "6.1.0-play-26",
     "com.typesafe.play" %% "play-json-joda"       % "2.6.0",
-    "org.typelevel"     %% "cats"                 % "0.9.0"
+    "org.typelevel"     %% "cats"                 % "0.9.0",
+    "org.apache.commons" % "commons-compress"     % "1.18"
   )
 
   val test = Seq(
