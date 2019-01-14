@@ -17,6 +17,7 @@
 package uk.gov.hmrc.servicedependencies.service
 
 import akka.actor.{Actor, ActorRef, ActorSystem, Props}
+import akka.routing.{FromConfig, RoundRobinPool}
 import play.api.Logger
 import java.io.{BufferedInputStream, InputStream}
 import java.util.concurrent.Executors
@@ -35,9 +36,28 @@ import scala.util.{Success, Try}
 import scala.util.control.NonFatal
 
 class SlugParser @Inject()(
-  actorSystem : ActorSystem,
-  slugParserJobsRepository: SlugParserJobsRepository,
-  @Named("slugParserActor") slugParserActor: ActorRef) {
+   actorSystem             : ActorSystem,
+   slugParserJobsRepository: SlugParserJobsRepository,
+   slugDependencyRepository: SlugDependencyRepository,
+   slugConnector           : SlugConnector,
+   futureHelpers           : FutureHelpers) {
+
+   import ExecutionContext.Implicits.global
+
+
+  // TODO inject actor with router? Need to use a factory?
+  val slugParserActor: ActorRef = actorSystem.actorOf(
+      Props(new SlugParser.SlugParserActor(
+          slugParserJobsRepository,
+          slugDependencyRepository,
+          slugConnector,
+          futureHelpers))
+        //.withRouter(RoundRobinPool(nrOfInstances = 2))
+        .withRouter(FromConfig())
+    , "slugParserActor")
+
+
+
 
   import ExecutionContext.Implicits.global
 
@@ -61,18 +81,16 @@ object SlugParser {
 
   case class RunJob(job: MongoSlugParserJob)
 
-  class SlugParserActor @Inject()(
+  class SlugParserActor (
     slugParserJobsRepository: SlugParserJobsRepository,
     slugDependencyRepository: SlugDependencyRepository,
     slugConnector           : SlugConnector,
     futureHelpers           : FutureHelpers) extends Actor {
 
-    // TODO or actor dispatcher
-    import ExecutionContext.Implicits.global
+    import context.dispatcher
 
     def receive = {
       case RunJob(job) =>
-
         println(s">>>>>>>>>>>>>>> running job $job")
 
         val f = futureHelpers.withTimerAndCounter("process slug")(for {

@@ -17,16 +17,12 @@
 package uk.gov.hmrc.servicedependencies
 
 import com.google.inject.AbstractModule
-import play.libs.akka.AkkaGuiceSupport
-import uk.gov.hmrc.servicedependencies.service.SlugParser
 
-class SchedulerModule() extends AbstractModule with AkkaGuiceSupport {
+class SchedulerModule() extends AbstractModule {
   override def configure(): Unit = {
     bind(classOf[DataReloadScheduler]).asEagerSingleton()
     bind(classOf[MetricsScheduler]).asEagerSingleton()
     bind(classOf[SlugParseScheduler]).asEagerSingleton()
     bind(classOf[Github]).toProvider(classOf[GithubProvider])
-
-    bindActor(classOf[SlugParser.SlugParserActor], "slugParserActor")
   }
 }
