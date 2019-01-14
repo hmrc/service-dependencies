@@ -16,19 +16,20 @@
 
 package uk.gov.hmrc.servicedependencies.connector
 
-import java.io.{BufferedInputStream, ByteArrayInputStream, ByteArrayOutputStream}
 import akka.actor.ActorSystem
-import akka.stream.ActorMaterializer
+import akka.stream.{ActorMaterializer, Materializer}
+import akka.stream.scaladsl.Sink
+import java.io.{ByteArrayInputStream, ByteArrayOutputStream, BufferedInputStream}
 import javax.inject.Inject
-import play.api.libs.ws.WSClient
+import play.api.libs.ws.{WSClient, WSResponse}
+import scala.concurrent.{ExecutionContext, Future}
 import uk.gov.hmrc.servicedependencies.config.ServiceDependenciesConfig
 
-import scala.concurrent.{ExecutionContext, Future}
 
 class SlugConnector @Inject()(ws: WSClient, serviceConfiguration: ServiceDependenciesConfig){
 
 
-  def downloadSlug(slug: String)  = {
+  def downloadSlug(slugUri: String): Future[BufferedInputStream] = {
 
     implicit val system = ActorSystem("AS")
     implicit val materializer = ActorMaterializer()
@@ -39,13 +40,13 @@ class SlugConnector @Inject()(ws: WSClient, serviceConfiguration: ServiceDepende
     val sink = akka.stream.scaladsl.Sink.foreach[akka.util.ByteString] { bytes =>
       out.write(bytes.toArray)
     }
-    ws.url("http://example.com/").withMethod("GET").stream().map { _.bodyAsSource.runWith(sink).andThen {
-      case result => out.close() // Close the stream whether there was an error or not
-        result.get  // Get the result or rethrow the error
-    }
+    ws.url(slugUri).withMethod("GET").stream.map {
+      _.bodyAsSource.runWith(sink).andThen {
+        case result => out.close() // Close the stream whether there was an error or not
+                       result.get  // Get the result or rethrow the error
+      }
     }.map { _ =>
-      new BufferedInputStream(new ByteArrayInputStream(out.toByteArray()))
+      new BufferedInputStream(new ByteArrayInputStream(out.toByteArray))
     }
   }
-
 }
