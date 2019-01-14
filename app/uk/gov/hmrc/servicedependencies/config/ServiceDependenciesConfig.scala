@@ -1,5 +1,5 @@
 /*
- * Copyright 2018 HM Revenue & Customs
+ * Copyright 2019 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,6 +26,9 @@ import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
 @Singleton
 class ServiceDependenciesConfig @Inject()(configuration: Configuration,
                                           serviceConfig: ServicesConfig) {
+
+  lazy val artifactoryBase: String           = configuration.get[String]("artifactory.url")
+  lazy val artifactoryApiKey: Option[String] = configuration.getOptional[String]("artifactory.apikey")
 
   private val githubOpenConfigKey     = "github.open.api"
   private val releaseServiceUrlKey    = "releases.api.url"

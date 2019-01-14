@@ -14,9 +14,19 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.servicedependencies.model
+package uk.gov.hmrc.servicedependencies.connector.model
 
-case class GithubSearchResults(
-  sbtPlugins: Map[String, Option[Version]],
-  libraries: Map[String, Option[Version]],
-  others: Map[String, Option[Version]])
+
+import play.api.libs.json.Json
+
+
+case class ArtifactoryRepo(repo: String, lastModified: String, lastUpdated: String, children: Seq[ArtifactoryChild])
+
+case class ArtifactoryChild(uri: String, folder: Boolean)
+
+object ArtifactoryRepo {
+
+  implicit val artifactoryChildFormat = Json.format[ArtifactoryChild]
+  implicit val artifactoryRepoFormat = Json.format[ArtifactoryRepo]
+
+}
