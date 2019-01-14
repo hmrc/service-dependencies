@@ -16,59 +16,110 @@
 
 package uk.gov.hmrc.servicedependencies.service
 
+import akka.actor.{Actor, ActorRef, ActorSystem, Props}
 import play.api.Logger
 import java.io.{BufferedInputStream, InputStream}
+import java.util.concurrent.Executors
 import javax.inject.Inject
 import org.apache.commons.compress.archivers.jar.JarArchiveInputStream
 import org.apache.commons.compress.archivers.{ArchiveInputStream, ArchiveStreamFactory}
 import org.apache.commons.compress.compressors.CompressorStreamFactory
 import uk.gov.hmrc.servicedependencies.connector.SlugConnector
-import uk.gov.hmrc.servicedependencies.model.{SlugDependencyInfo, SlugLibraryVersion}
+import uk.gov.hmrc.servicedependencies.model.{MongoSlugParserJob, SlugDependencyInfo, SlugLibraryVersion}
 import uk.gov.hmrc.servicedependencies.persistence.{SlugDependencyRepository, SlugParserJobsRepository}
-
-import scala.concurrent.ExecutionContext
+import uk.gov.hmrc.servicedependencies.util.FutureHelpers
+import scala.concurrent.{Await, ExecutionContext, Future}
+import scala.concurrent.duration.DurationInt
 import scala.io.Source
 import scala.util.{Success, Try}
 import scala.util.control.NonFatal
 
 class SlugParser @Inject()(
+  actorSystem             : ActorSystem,
   slugParserJobsRepository: SlugParserJobsRepository,
   slugDependencyRepository: SlugDependencyRepository,
-  slugConnector           : SlugConnector) {
+  slugConnector           : SlugConnector,
+  futureHelpers           : FutureHelpers) {
 
   import ExecutionContext.Implicits.global
 
+  val slugParserActor: ActorRef = actorSystem.actorOf(
+      Props(new SlugParser.SlugParserActor(
+        actorSystem,
+        slugParserJobsRepository,
+        slugDependencyRepository,
+        slugConnector,
+        futureHelpers))
+    , "slugParserActor"
+    )
+
   // TODO to be called from S3 notification too
   def runSlugParserJobs() =
-    // TODO use thread-pool (or akka actor pool?)
     slugParserJobsRepository
       .getAllEntries
-      .map(
+      .map {
         _.map {
-          job => Logger.debug(s"processing $job")
-                 (for {
-                    slug <- slugConnector.downloadSlug(job.slugUri)
-                    slvs =  SlugParser.parse(job.slugName, slug)
-                    // TODO what if already added
-                    _    <- slugDependencyRepository.add(SlugDependencyInfo(
-                              slugName     = job.slugName,
-                              slugUri      = job.slugUri,
-                              dependencies = slvs))
-                    _    <- job.id
-                              .map(slugParserJobsRepository.delete)
-                              .getOrElse(sys.error("No id on job!")) // shouldn't happen
-                  } yield ()
-                 ).recover {
-                    case NonFatal(e) => Logger.error(s"An error occurred processing slug parser job ${job.id}: ${e.getMessage}", e)
-                  }
-        })
+          job => slugParserActor ! SlugParser.RunJob(job)
+        }
+      }
       .recover {
         case NonFatal(e) => Logger.error(s"An error occurred processing slug parser jobs: ${e.getMessage}", e)
       }
+
 }
 
 
 object SlugParser {
+
+  case class RunJob(job: MongoSlugParserJob)
+
+  class SlugParserActor(
+    actorSystem             : ActorSystem,
+    slugParserJobsRepository: SlugParserJobsRepository,
+    slugDependencyRepository: SlugDependencyRepository,
+    slugConnector           : SlugConnector,
+    futureHelpers           : FutureHelpers) extends Actor {
+
+    // TODO or actor dispatcher
+    import ExecutionContext.Implicits.global
+
+    def receive = {
+      case RunJob(job) =>
+
+        println(s">>>>>>>>>>>>>>> running job $job")
+
+        val f = futureHelpers.withTimerAndCounter("process slug")(for {
+          _ <- Future(Logger.debug(s"downloading job {$job.id}"))
+          slug <- slugConnector.downloadSlug(job.slugUri)
+          _ = Logger.debug(s"downloaded {$job.id}")
+          slvs = try {
+                    SlugParser.parse(job.slugName, slug)
+                  } finally {
+                    try {
+                      slug.close
+                    } catch {
+                      case NonFatal(e) => Logger.error(s"Could not close stream: ${e.getMessage}", e)
+                    }
+                  }
+          // TODO what if already added
+          sld  =  SlugDependencyInfo(
+                    slugName     = job.slugName,
+                    slugUri      = job.slugUri,
+                    dependencies = slvs)
+          _    <- slugDependencyRepository.add(sld)
+          _ = Logger.debug(s"added {$job.id}: $sld")
+          _    <- job.id
+                    .map(slugParserJobsRepository.delete)
+                    .getOrElse(sys.error("No id on job!")) // shouldn't happen
+        } yield ()
+        ).recover {
+          case NonFatal(e) => Logger.error(s"An error occurred processing slug parser job ${job.id}: ${e.getMessage}", e)
+        }
+
+        // blocking so that number of actors determines throughput
+        Await.result(f, 1.minute)
+    }
+  }
 
   def parse(slugName: String, gz: BufferedInputStream): Seq[SlugLibraryVersion] =
     extractTarGzip(gz)
@@ -89,21 +140,18 @@ object SlugParser {
       .map(is => new ArchiveStreamFactory().createArchiveInputStream(new BufferedInputStream(is)))
 
   def extractVersionFromJar(inputStream: InputStream) : Option[String] = {
-
     val jar = new JarArchiveInputStream(inputStream)
-
     Stream
-    .continually(jar.getNextJarEntry)
-    .takeWhile(_ != null)
-    .flatMap(entry => {
-      entry.getName match {
-        //case "reference.conf" => None; // TODO: extract reference.conf & send to serviceConfigs
-        case "META-INF/MANIFEST.MF"     => extractVersionFromManifest(jar)
-        case file if file.endsWith("pom.xml") => extractVersionFromPom(jar)
-        case _                          => None; // skip
-      }
-    }).headOption
-
+      .continually(jar.getNextJarEntry)
+      .takeWhile(_ != null)
+      .flatMap(entry => {
+        entry.getName match {
+          //case "reference.conf" => None; // TODO: extract reference.conf & send to serviceConfigs
+          case "META-INF/MANIFEST.MF"           => extractVersionFromManifest(jar)
+          case file if file.endsWith("pom.xml") => extractVersionFromPom(jar)
+          case _                                => None; // skip
+        }
+      }).headOption
   }
 
 
