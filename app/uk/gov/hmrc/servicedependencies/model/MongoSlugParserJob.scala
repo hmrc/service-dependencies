@@ -14,15 +14,17 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.servicedependencies
+package uk.gov.hmrc.servicedependencies.model
+import play.api.libs.json.{Json, OFormat}
 
-import com.google.inject.AbstractModule
-
-class SchedulerModule() extends AbstractModule {
-  override def configure(): Unit = {
-    bind(classOf[DataReloadScheduler]).asEagerSingleton()
-    bind(classOf[MetricsScheduler]).asEagerSingleton()
-    bind(classOf[SlugParseScheduler]).asEagerSingleton()
-    bind(classOf[Github]).toProvider(classOf[GithubProvider])
+case class MongoSlugParserJob(
+  id         : Option[String],
+  slugName   : String,
+  libraryName: String,
+  version    : String) {
+    def slugUri = s"http://$slugName" // TODO
   }
+
+object MongoSlugParserJob {
+  implicit val format: OFormat[MongoSlugParserJob] = Json.format[MongoSlugParserJob]
 }

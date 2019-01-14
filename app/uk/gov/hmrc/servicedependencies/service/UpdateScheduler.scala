@@ -35,7 +35,7 @@ class UpdateScheduler @Inject()(
 
     val scheduler = actorSystem.scheduler.schedule(100 milliseconds, interval) {
       dependencyDataUpdatingService.reloadCurrentDependenciesDataForAllRepositories().recover {
-        case NonFatal(e) => Logger.error(s"Library dependencies update interrupted because: ${e.getMessage}")
+        case NonFatal(e) => Logger.error(s"Library dependencies update interrupted because: ${e.getMessage}", e)
       }
     }
 
@@ -47,7 +47,7 @@ class UpdateScheduler @Inject()(
 
     val scheduler = actorSystem.scheduler.schedule(100 milliseconds, interval) {
       dependencyDataUpdatingService.reloadLatestLibraryVersions().recover {
-        case NonFatal(e) => Logger.error(s"Libraries version update interrupted because: ${e.getMessage}")
+        case NonFatal(e) => Logger.error(s"Libraries version update interrupted because: ${e.getMessage}", e)
       }
     }
 
@@ -59,7 +59,7 @@ class UpdateScheduler @Inject()(
 
     val scheduler = actorSystem.scheduler.schedule(100 milliseconds, interval) {
       dependencyDataUpdatingService.reloadLatestSbtPluginVersions().recover {
-        case NonFatal(e) => Logger.error(s"Sbt Plugins version update interrupted because: ${e.getMessage}")
+        case NonFatal(e) => Logger.error(s"Sbt Plugins version update interrupted because: ${e.getMessage}", e)
       }
     }
 

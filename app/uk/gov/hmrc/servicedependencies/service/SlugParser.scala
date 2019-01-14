@@ -15,20 +15,62 @@
  */
 
 package uk.gov.hmrc.servicedependencies.service
-import java.io.{BufferedInputStream, InputStream}
 
+import play.api.Logger
+import java.io.{BufferedInputStream, InputStream}
+import javax.inject.Inject
 import org.apache.commons.compress.archivers.jar.JarArchiveInputStream
 import org.apache.commons.compress.archivers.{ArchiveInputStream, ArchiveStreamFactory}
 import org.apache.commons.compress.compressors.CompressorStreamFactory
-import uk.gov.hmrc.servicedependencies.model.SlugLibraryVersion
+import uk.gov.hmrc.servicedependencies.connector.SlugConnector
+import uk.gov.hmrc.servicedependencies.model.{SlugDependencyInfo, SlugLibraryVersion}
+import uk.gov.hmrc.servicedependencies.persistence.{SlugDependencyRepository, SlugParserJobsRepository}
 
+import scala.concurrent.ExecutionContext
 import scala.io.Source
 import scala.util.{Success, Try}
+import scala.util.control.NonFatal
+
+class SlugParser @Inject()(
+  slugParserJobsRepository: SlugParserJobsRepository,
+  slugDependencyRepository: SlugDependencyRepository,
+  slugConnector           : SlugConnector) {
+
+  import ExecutionContext.Implicits.global
+
+  // TODO to be called from S3 notification too
+  def runSlugParserJobs() =
+    // TODO use thread-pool (or akka actor pool?)
+    slugParserJobsRepository
+      .getAllEntries
+      .map(
+        _.map {
+          job => Logger.debug(s"processing $job")
+                 (for {
+                    slug <- slugConnector.downloadSlug(job.slugUri)
+                    slvs =  SlugParser.parse(job.slugName, slug)
+                    // TODO what if already added
+                    _    <- slugDependencyRepository.add(SlugDependencyInfo(
+                              slugName     = job.slugName,
+                              slugUri      = job.slugUri,
+                              dependencies = slvs))
+                    _    <- job.id
+                              .map(slugParserJobsRepository.delete)
+                              .getOrElse(sys.error("No id on job!")) // shouldn't happen
+                  } yield ()
+                 ).recover {
+                    case NonFatal(e) => Logger.error(s"An error occurred processing slug parser job ${job.id}: ${e.getMessage}", e)
+                  }
+        })
+      .recover {
+        case NonFatal(e) => Logger.error(s"An error occurred processing slug parser jobs: ${e.getMessage}", e)
+      }
+}
 
 
 object SlugParser {
 
-  def parse(slugName: String, gz: BufferedInputStream): Seq[SlugLibraryVersion] = {
+  def parse(slugName: String, gz: BufferedInputStream): Seq[SlugLibraryVersion] =
     extractTarGzip(gz)
     .map(tar => {
       Stream
@@ -41,12 +83,10 @@ object SlugParser {
         }
     })
     .getOrElse(Seq.empty)
-  }
 
-  def extractTarGzip(gz: BufferedInputStream): Try[ArchiveInputStream] = {
+  def extractTarGzip(gz: BufferedInputStream): Try[ArchiveInputStream] =
     Try(new CompressorStreamFactory().createCompressorInputStream(gz))
       .map(is => new ArchiveStreamFactory().createArchiveInputStream(new BufferedInputStream(is)))
-  }
 
   def extractVersionFromJar(inputStream: InputStream) : Option[String] = {
 

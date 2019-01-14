@@ -31,4 +31,9 @@ class SlugDependencyRepository @Inject()(mongo: ReactiveMongoComponent)
     mongo          = mongo.mongoConnector.db,
     domainFormat   = SlugDependencyInfo.format){
 
+  def add(slugDependencyInfo: SlugDependencyInfo): Future[Unit] =
+    collection
+      .insert(slugDependencyInfo)
+      .map(_ => ())
+
 }
