@@ -43,4 +43,29 @@ class ArtifactoryConnectorSpec extends FlatSpec
     ArtifactoryConnector.parseVersion(uri) shouldBe None
   }
 
+
+  "convertToDownloadableSlug" should "convert a service and slugname to a DownloadableSlug" in {
+    val service = "/personal-details-frontend"
+    val slug    = "/personal-details-frontend_0.27.0_0.5.2.tgz"
+
+    val dl = ArtifactoryConnector.convertToDownloadableSlug(service, slug, "http://webstore.internet/slugs").get
+    dl.service shouldBe "personal-details-frontend"
+    dl.slugName shouldBe "personal-details-frontend"
+    dl.slugVersion shouldBe "0.27.0"
+    dl.runnerVersion shouldBe "0.5.2"
+    dl.downloadURI shouldBe "http://webstore.internet/slugs/personal-details-frontend/personal-details-frontend_0.27.0_0.5.2.tgz"
+  }
+
+  it should "handle slugs with hotfix versions" in {
+    val service = "/personal-details-frontend"
+    val slug    = "/personal-details-frontend_0.27.0-4-g25792c2_0.5.2.tgz"
+
+    val dl = ArtifactoryConnector.convertToDownloadableSlug(service, slug, "http://webstore.internet/slugs").get
+    dl.service shouldBe "personal-details-frontend"
+    dl.slugName shouldBe "personal-details-frontend"
+    dl.slugVersion shouldBe "0.27.0-4-g25792c2"
+    dl.runnerVersion shouldBe "0.5.2"
+    dl.downloadURI shouldBe "http://webstore.internet/slugs/personal-details-frontend/personal-details-frontend_0.27.0-4-g25792c2_0.5.2.tgz"
+  }
+
 }

@@ -21,10 +21,14 @@ import play.api.Logger
 import play.api.libs.json.Json
 import play.api.mvc.ControllerComponents
 import uk.gov.hmrc.play.bootstrap.controller.BackendController
+import uk.gov.hmrc.servicedependencies.connector.ArtifactoryConnector
+import uk.gov.hmrc.servicedependencies.connector.model.DownloadableSlug
 import uk.gov.hmrc.servicedependencies.service.DependencyDataUpdatingService
 
+import scala.concurrent.Future
+
 @Singleton
-class AdministrationController @Inject()(dependencyDataUpdatingService: DependencyDataUpdatingService, cc: ControllerComponents)
+class AdministrationController @Inject()(dependencyDataUpdatingService: DependencyDataUpdatingService, artifactoryConnector: ArtifactoryConnector, cc: ControllerComponents)
     extends BackendController(cc) {
 
 
@@ -68,6 +72,20 @@ class AdministrationController @Inject()(dependencyDataUpdatingService: Dependen
 
   def mongoLocks() = Action.async { implicit request =>
     dependencyDataUpdatingService.locks().map(locks => Ok(Json.toJson(locks)))
+  }
+
+  def pollArtifactory() = Action.async { implicit request =>
+
+    implicit val format = Json.format[DownloadableSlug]
+
+    val slugs = for {
+      services <- artifactoryConnector.findAllSlugs()
+      allslugs <- Future.sequence( services.take(4).map(s => {
+        Thread.sleep(1000) // TODO: replace this with a real rate limiting solution
+        artifactoryConnector.findAllSlugsForService(s.uri)}))
+    } yield allslugs
+
+    slugs.map(s => Json.toJson(s)).map(s => Ok(s))
   }
 
 }
