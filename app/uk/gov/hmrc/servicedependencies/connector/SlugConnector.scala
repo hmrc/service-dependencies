@@ -26,14 +26,16 @@ import scala.concurrent.{ExecutionContext, Future}
 import uk.gov.hmrc.servicedependencies.config.ServiceDependenciesConfig
 
 
-class SlugConnector @Inject()(ws: WSClient, serviceConfiguration: ServiceDependenciesConfig){
-
+class SlugConnector @Inject()(
+  actorSystem         : ActorSystem,
+  ws                  : WSClient,
+  serviceConfiguration: ServiceDependenciesConfig){
 
   def downloadSlug(slugUri: String): Future[BufferedInputStream] = {
 
-    implicit val system = ActorSystem("AS")
+    implicit val system = actorSystem
     implicit val materializer = ActorMaterializer()
-    implicit val ex = ExecutionContext.Implicits.global
+    import ExecutionContext.Implicits.global
 
     val out = new ByteArrayOutputStream()
 

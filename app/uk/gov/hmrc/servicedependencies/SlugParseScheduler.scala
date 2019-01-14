@@ -19,28 +19,17 @@ package uk.gov.hmrc.servicedependencies
 import akka.actor.ActorSystem
 import play.api.inject.ApplicationLifecycle
 import play.api.Logger
-import com.kenshoo.play.metrics.Metrics
 import javax.inject.Inject
 import org.joda.time.Duration
 import play.api.{Configuration, Logger}
-import play.modules.reactivemongo.ReactiveMongoComponent
-import reactivemongo.api.DefaultDB
-import uk.gov.hmrc.servicedependencies.connector.SlugConnector
-import uk.gov.hmrc.servicedependencies.model.SlugDependencyInfo
-import uk.gov.hmrc.servicedependencies.persistence.{SlugDependencyRepository, SlugParserJobsRepository}
 import uk.gov.hmrc.servicedependencies.service.SlugParser
 import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.duration.{DurationLong, FiniteDuration}
-import scala.util.control.NonFatal
 
 class SlugParseScheduler @Inject()(
   actorSystem             : ActorSystem,
   configuration           : Configuration,
-  metrics                 : Metrics,
-  reactiveMongoComponent  : ReactiveMongoComponent,
-  slugParserJobsRepository: SlugParserJobsRepository,
-  slugDependencyRepository: SlugDependencyRepository,
-  slugConnector           : SlugConnector,
+  slugParser              : SlugParser,
   applicationLifecycle    : ApplicationLifecycle) {
 
   import ExecutionContext.Implicits.global
@@ -54,34 +43,7 @@ class SlugParseScheduler @Inject()(
 
   val cancellable = actorSystem.scheduler.schedule(1.minute, slugParseInterval) {
     Logger.info("Running slug parse")
-    runSlugParserJobs()
+    slugParser.runSlugParserJobs()
   }
   applicationLifecycle.addStopHook(() => Future(cancellable.cancel()))
-
-  // TODO to be called from S3 notification too
-  def runSlugParserJobs() =
-    // TODO use thread-pool (or akka actor pool?)
-    slugParserJobsRepository
-      .getAllEntries
-      .map(
-        _.map {
-          job => Logger.debug(s"processing $job")
-                 (for {
-                    slug <- slugConnector.downloadSlug(job.slugUri)
-                    slvs =  SlugParser.parse(job.slugName, slug)
-                    _    <- slugDependencyRepository.add(SlugDependencyInfo(
-                              slugName     = job.slugName,
-                              slugUri      = job.slugUri,
-                              dependencies = slvs))
-                    _    <- job.id
-                              .map(slugParserJobsRepository.delete)
-                              .getOrElse(sys.error("No id on job!")) // shouldn't happen
-                  } yield ()
-                 ).recover {
-                    case NonFatal(e) => Logger.error(s"An error occurred processing slug parser job ${job.id}: ${e.getMessage}", e)
-                  }
-        })
-      .recover {
-        case NonFatal(e) => Logger.error(s"An error occurred processing slug parser jobs: ${e.getMessage}", e)
-      }
 }
