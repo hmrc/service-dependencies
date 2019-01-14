@@ -20,7 +20,7 @@ import akka.actor.{Actor, ActorRef, ActorSystem, Props}
 import play.api.Logger
 import java.io.{BufferedInputStream, InputStream}
 import java.util.concurrent.Executors
-import javax.inject.Inject
+import javax.inject.{Inject, Named}
 import org.apache.commons.compress.archivers.jar.JarArchiveInputStream
 import org.apache.commons.compress.archivers.{ArchiveInputStream, ArchiveStreamFactory}
 import org.apache.commons.compress.compressors.CompressorStreamFactory
@@ -35,37 +35,25 @@ import scala.util.{Success, Try}
 import scala.util.control.NonFatal
 
 class SlugParser @Inject()(
-  actorSystem             : ActorSystem,
+  actorSystem : ActorSystem,
   slugParserJobsRepository: SlugParserJobsRepository,
-  slugDependencyRepository: SlugDependencyRepository,
-  slugConnector           : SlugConnector,
-  futureHelpers           : FutureHelpers) {
+  @Named("slugParserActor") slugParserActor: ActorRef) {
 
   import ExecutionContext.Implicits.global
-
-  val slugParserActor: ActorRef = actorSystem.actorOf(
-      Props(new SlugParser.SlugParserActor(
-        actorSystem,
-        slugParserJobsRepository,
-        slugDependencyRepository,
-        slugConnector,
-        futureHelpers))
-    , "slugParserActor"
-    )
 
   // TODO to be called from S3 notification too
   def runSlugParserJobs() =
     slugParserJobsRepository
       .getAllEntries
-      .map {
-        _.map {
+      .map { jobs =>
+        Logger.debug(s"found ${jobs.size} Slug parser jobs")
+        jobs.map {
           job => slugParserActor ! SlugParser.RunJob(job)
         }
       }
       .recover {
         case NonFatal(e) => Logger.error(s"An error occurred processing slug parser jobs: ${e.getMessage}", e)
       }
-
 }
 
 
@@ -73,8 +61,7 @@ object SlugParser {
 
   case class RunJob(job: MongoSlugParserJob)
 
-  class SlugParserActor(
-    actorSystem             : ActorSystem,
+  class SlugParserActor @Inject()(
     slugParserJobsRepository: SlugParserJobsRepository,
     slugDependencyRepository: SlugDependencyRepository,
     slugConnector           : SlugConnector,
