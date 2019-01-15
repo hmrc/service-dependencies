@@ -36,11 +36,8 @@ class ArtifactoryConnectorSpec extends FlatSpec
     val slug = "/pensions-frontend_2.62.0-5-g11e827d_0.5.2.tgz"
     val webroot = "https://webstore.test.uk/slugs"
 
-    val result = ArtifactoryConnector.convertToSlugParserJob(service, slug, webroot).get
+    val result = ArtifactoryConnector.convertToSlugParserJob(service, slug, webroot)
 
-    result.runnerVersion shouldBe "0.5.2"
-    result.slugVersion shouldBe "2.62.0-5-g11e827d"
-    result.slugName shouldBe "pensions-frontend"
     result.slugUri shouldBe "https://webstore.test.uk/slugs/pensions-frontend/pensions-frontend_2.62.0-5-g11e827d_0.5.2.tgz"
   }
 

@@ -177,7 +177,12 @@ object SlugParser {
   }
 
 
-  def extractVersionFromFilename(fileName: String): Option[String] = None
+  def extractVersionFromFilename(fileName: String): Option[String] = {
+    val regex = """^\/?(.+)_(\d+\.\d+\.\d+-?.*)_(\d+\.\d+\.\d+)\.tgz$""".r
+    // TODO: write a function to turn a slugname/full uri to version name
+    ???
+  }
+
 
 
 }

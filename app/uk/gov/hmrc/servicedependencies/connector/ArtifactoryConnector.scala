@@ -57,7 +57,7 @@ class ArtifactoryConnector @Inject()(http: HttpClient, config: ServiceDependenci
     http.GET[ArtifactoryRepo](s"$artifactoryRoot$service")
       .map(_.children
         .filterNot(_.folder)
-        .flatMap(repo => convertToSlugParserJob(service, repo.uri, webstoreRoot)).toList)
+        .map(repo => convertToSlugParserJob(service, repo.uri, webstoreRoot)).toList)
   }
 
   private val headers : List[(String, String)] =
@@ -70,16 +70,8 @@ class ArtifactoryConnector @Inject()(http: HttpClient, config: ServiceDependenci
 
 object ArtifactoryConnector {
 
-  def convertToSlugParserJob(serviceName: String, uri: String, webStoreRoot: String) : Option[NewSlugParserJob] = {
-    val regex = """^\/?(.+)_(\d+\.\d+\.\d+-?.*)_(\d+\.\d+\.\d+)\.tgz$""".r
-    regex.findFirstMatchIn(uri).map( m => {
-      NewSlugParserJob(
-        slugName      = serviceName.replace("/", ""),
-        slugVersion   = m.group(2),
-        runnerVersion = m.group(3),
-        slugUri       = s"$webStoreRoot$serviceName$uri"
-      )
-    })
+  def convertToSlugParserJob(serviceName: String, uri: String, webStoreRoot: String) : NewSlugParserJob = {
+    NewSlugParserJob(s"$webStoreRoot$serviceName$uri")
   }
 
   def convertToWebStoreURL(url: String) : String = {
