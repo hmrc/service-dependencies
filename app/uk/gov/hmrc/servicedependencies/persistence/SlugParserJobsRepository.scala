@@ -25,12 +25,11 @@ import reactivemongo.bson.BSONObjectID
 import reactivemongo.play.json.ImplicitBSONHandlers._
 import uk.gov.hmrc.mongo.ReactiveRepository
 import uk.gov.hmrc.servicedependencies.model.{MongoSlugParserJob, NewSlugParserJob}
-import uk.gov.hmrc.servicedependencies.util.FutureHelpers
 
 import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
-class SlugParserJobsRepository @Inject()(mongo: ReactiveMongoComponent, futureHelpers: FutureHelpers)
+class SlugParserJobsRepository @Inject()(mongo: ReactiveMongoComponent)
     extends ReactiveRepository[MongoSlugParserJob, BSONObjectID](
       collectionName = "slugParserJobs",
       mongo          = mongo.mongoConnector.db,

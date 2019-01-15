@@ -28,19 +28,18 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import play.modules.reactivemongo.ReactiveMongoComponent
 import uk.gov.hmrc.mongo.{MongoConnector, MongoSpecSupport}
 import uk.gov.hmrc.play.test.UnitSpec
-import uk.gov.hmrc.servicedependencies.model.{MongoSbtPluginVersion, Version}
-import uk.gov.hmrc.servicedependencies.util.FutureHelpers
+import uk.gov.hmrc.servicedependencies.model.{SlugInfo, SlugDependency}
 import uk.gov.hmrc.time.DateTimeUtils
 
-class SbtPluginVersionRepositorySpec
+class SlugInfoRepositorySpec
     extends UnitSpec
-    with LoneElement
-    with MongoSpecSupport
-    with ScalaFutures
-    with OptionValues
-    with BeforeAndAfterEach
-    with GuiceOneAppPerSuite
-    with MockitoSugar {
+       with LoneElement
+       with MongoSpecSupport
+       with ScalaFutures
+       with OptionValues
+       with BeforeAndAfterEach
+       with GuiceOneAppPerSuite
+       with MockitoSugar {
 
   val reactiveMongoComponent: ReactiveMongoComponent = new ReactiveMongoComponent {
     val mockedMongoConnector: MongoConnector = mock[MongoConnector]
@@ -53,45 +52,47 @@ class SbtPluginVersionRepositorySpec
     .configure("metrics.jvm" -> false)
     .build()
 
-  val futureHelper: FutureHelpers = app.injector.instanceOf[FutureHelpers]
-  val mongoSbtPluginVersions = new SbtPluginVersionRepository(reactiveMongoComponent, futureHelper)
+  val slugInfoRepository = new SlugInfoRepository(reactiveMongoComponent)
 
   override def beforeEach() {
-    await(mongoSbtPluginVersions.drop)
+    await(slugInfoRepository.drop)
   }
 
-  "update" should {
+  "SlugInfoRepository.add" should {
     "inserts correctly" in {
-
-      val sbtPluginVersion = MongoSbtPluginVersion("some-sbtPlugin", Some(Version(1, 0, 2)), DateTimeUtils.now)
-      await(mongoSbtPluginVersions.update(sbtPluginVersion))
-
-      await(mongoSbtPluginVersions.getAllEntries) shouldBe Seq(sbtPluginVersion)
+      await(slugInfoRepository.add(slugInfo))
+      await(slugInfoRepository.getAllEntries) shouldBe Seq(slugInfo)
     }
 
-    "updates correctly (based on sbtPlugin name)" in {
-
-      val sbtPluginVersion    = MongoSbtPluginVersion("some-sbtPlugin", Some(Version(1, 0, 2)), DateTimeUtils.now)
-      val newSbtPluginVersion = sbtPluginVersion.copy(version = Some(Version(1, 0, 5)))
-      await(mongoSbtPluginVersions.update(sbtPluginVersion))
-
-      await(mongoSbtPluginVersions.update(newSbtPluginVersion))
-
-      await(mongoSbtPluginVersions.getAllEntries) shouldBe Seq(newSbtPluginVersion)
+    "reject duplicates" in {
+      await(slugInfoRepository.add(slugInfo))
+      //await(slugInfoRepository.add(slugInfo)) // TODO except exception
     }
   }
 
-  "clearAllDependencyEntries" should {
+  "SlugParserJobsRepository.clearAllDependencyEntries" should {
     "deletes everything" in {
+      await(slugInfoRepository.add(slugInfo))
+      await(slugInfoRepository.getAllEntries) should have size 1
 
-      val sbtPluginVersion = MongoSbtPluginVersion("some-sbtPlugin", Some(Version(1, 0, 2)), DateTimeUtils.now)
-      await(mongoSbtPluginVersions.update(sbtPluginVersion))
-
-      await(mongoSbtPluginVersions.getAllEntries) should have size 1
-
-      await(mongoSbtPluginVersions.clearAllData)
-
-      await(mongoSbtPluginVersions.getAllEntries) shouldBe Nil
+      await(slugInfoRepository.clearAllData)
+      await(slugInfoRepository.getAllEntries) shouldBe Nil
     }
   }
+
+  val slugInfo =
+    SlugInfo(
+      slugUri       = "https://store/slugs/my-slug/my-slug_0.27.0_0.5.2.tgz",
+      slugName      = "my-slug",
+      slugVersion   = "0.27.0",
+      runnerVersion = "0.5.2",
+      classpath     = "",
+      dependencies  = Seq(
+        SlugDependency(
+          libraryName = "lib1",
+          version     = "v1"),
+        SlugDependency(
+        libraryName = "lib2",
+        version     = "v2")))
+
 }

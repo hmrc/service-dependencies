@@ -48,4 +48,9 @@ class SlugInfoRepository @Inject()(mongo: ReactiveMongoComponent)
       .insert(slugInfo)
       .map(_ => ())
 
+  def getAllEntries: Future[Seq[SlugInfo]] =
+    findAll()
+
+  def clearAllData: Future[Boolean] =
+    super.removeAll().map(_.ok)
 }
