@@ -17,7 +17,6 @@
 package uk.gov.hmrc.servicedependencies.connector
 import org.scalatest.mockito.MockitoSugar
 import org.scalatest.{FlatSpec, Matchers}
-import uk.gov.hmrc.servicedependencies.model.MongoSlugParserJob
 
 class ArtifactoryConnectorSpec extends FlatSpec
   with Matchers
@@ -39,12 +38,9 @@ class ArtifactoryConnectorSpec extends FlatSpec
 
     val result = ArtifactoryConnector.convertToSlugParserJob(service, slug, webroot).get
 
-    result.id shouldBe None
-    result.processed shouldBe false
     result.runnerVersion shouldBe "0.5.2"
-    result.version shouldBe "2.62.0-5-g11e827d"
-    result.service shouldBe "pensions-frontend"
-    result.slugName shouldBe "/pensions-frontend_2.62.0-5-g11e827d_0.5.2.tgz"
+    result.slugVersion shouldBe "2.62.0-5-g11e827d"
+    result.slugName shouldBe "pensions-frontend"
     result.slugUri shouldBe "https://webstore.test.uk/slugs/pensions-frontend/pensions-frontend_2.62.0-5-g11e827d_0.5.2.tgz"
   }
 

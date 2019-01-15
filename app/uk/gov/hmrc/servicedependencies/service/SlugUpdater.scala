@@ -20,7 +20,7 @@ import akka.stream.scaladsl.{Sink, Source}
 import javax.inject.{Inject, Singleton}
 import play.api.Logger
 import uk.gov.hmrc.servicedependencies.connector.ArtifactoryConnector
-import uk.gov.hmrc.servicedependencies.model.MongoSlugParserJob
+import uk.gov.hmrc.servicedependencies.model.{MongoSlugParserJob, NewSlugParserJob}
 import uk.gov.hmrc.servicedependencies.persistence.SlugParserJobsRepository
 
 import scala.concurrent.duration.FiniteDuration
@@ -34,11 +34,11 @@ class SlugUpdater @Inject() (conn: ArtifactoryConnector,
                              rateLimit: RateLimit = RateLimit(1, FiniteDuration(2, "seconds")),
                              implicit val materializer: Materializer) {
 
-  def update() : Unit = {
+  def update(limit: Int = Int.MaxValue) : Unit = {
     Logger.info("Checking artifactory....")
     Source.fromFuture(conn.findAllSlugs())
       .mapConcat(identity)
-      .take(10)
+      .take(limit)
       .throttle(rateLimit.invocations, rateLimit.perDuration)
       .mapAsync(1)(r => conn.findAllSlugsForService(r.uri))
       .mapConcat(identity)
@@ -47,6 +47,6 @@ class SlugUpdater @Inject() (conn: ArtifactoryConnector,
   }
 
 
-  private[service] val mongoSink = Sink.foreachParallel[MongoSlugParserJob](1)(repo.add)
+  private[service] val mongoSink = Sink.foreachParallel[NewSlugParserJob](1)(repo.add)
 
 }

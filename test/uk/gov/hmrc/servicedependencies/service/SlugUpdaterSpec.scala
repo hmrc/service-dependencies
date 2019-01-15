@@ -8,7 +8,7 @@ import org.mockito.Mockito._
 import org.scalatest.{FlatSpecLike, Matchers}
 import uk.gov.hmrc.servicedependencies.connector.ArtifactoryConnector
 import uk.gov.hmrc.servicedependencies.connector.model.{ArtifactoryChild, ArtifactoryRepo}
-import uk.gov.hmrc.servicedependencies.model.MongoSlugParserJob
+import uk.gov.hmrc.servicedependencies.model.{MongoSlugParserJob, NewSlugParserJob}
 import uk.gov.hmrc.servicedependencies.persistence.SlugParserJobsRepository
 import org.mockito.ArgumentMatchers.{any, eq => eqTo}
 
@@ -33,7 +33,7 @@ class SlugUpdaterSpec extends TestKit(ActorSystem("MySpec"))
     val slug2 = ArtifactoryChild("/abc", true)
     val allRepos = ArtifactoryRepo("webstore", "2018-04-30T09:06:22.544Z", "2018-04-30T09:06:22.544Z", Seq(slug1, slug2))
 
-    val slugJob = MongoSlugParserJob(None, "","","","0.5.3", "http://")
+    val slugJob = NewSlugParserJob(slugName = "", slugVersion = "", "0.5.3", "http://")
 
     when(mockConnector.findAllSlugs()).thenReturn(Future(List(slug1, slug2)))
     when(mockConnector.findAllSlugsForService(any())).thenReturn(Future(List(slugJob, slugJob)))

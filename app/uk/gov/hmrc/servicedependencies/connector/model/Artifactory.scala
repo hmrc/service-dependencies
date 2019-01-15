@@ -22,7 +22,6 @@ import play.api.libs.json.Json
 
 case class ArtifactoryRepo(repo: String, lastModified: String, lastUpdated: String, children: Seq[ArtifactoryChild])
 case class ArtifactoryChild(uri: String, folder: Boolean)
-case class DownloadableSlug(service: String, slugName: String, downloadURI: String, slugVersion: String, runnerVersion: String)
 
 object ArtifactoryRepo {
 
