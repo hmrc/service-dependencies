@@ -15,7 +15,6 @@
  */
 
 package uk.gov.hmrc.servicedependencies.model
-import play.api.libs.json.{Json, OFormat}
 
 case class MongoSlugParserJob(
   id         : Option[String],
@@ -26,5 +25,13 @@ case class MongoSlugParserJob(
   }
 
 object MongoSlugParserJob {
-  implicit val format: OFormat[MongoSlugParserJob] = Json.format[MongoSlugParserJob]
+  import play.api.libs.json._
+  import play.api.libs.functional.syntax._
+
+  implicit val format: OFormat[MongoSlugParserJob] =
+    ( (__ \ "_id"        ).formatNullable[String]
+    ~ (__ \ "slugName"   ).format[String]
+    ~ (__ \ "libraryName").format[String]
+    ~ (__ \ "version"    ).format[String]
+    )(MongoSlugParserJob.apply, unlift(MongoSlugParserJob.unapply))
 }

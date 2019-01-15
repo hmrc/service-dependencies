@@ -36,6 +36,10 @@ import scala.util.{Success, Try}
 import scala.util.control.NonFatal
 
 class SlugParser @Inject()(
+  // actorSystem: ActorSystem,
+  // slugParserJobsRepository: SlugParserJobsRepository,
+  // @Named("slugParserActor") slugParserActor: ActorRef) {
+
    actorSystem             : ActorSystem,
    slugParserJobsRepository: SlugParserJobsRepository,
    slugDependencyRepository: SlugDependencyRepository,
@@ -81,7 +85,7 @@ object SlugParser {
 
   case class RunJob(job: MongoSlugParserJob)
 
-  class SlugParserActor (
+  class SlugParserActor @Inject()(
     slugParserJobsRepository: SlugParserJobsRepository,
     slugDependencyRepository: SlugDependencyRepository,
     slugConnector           : SlugConnector,
@@ -91,60 +95,56 @@ object SlugParser {
 
     def receive = {
       case RunJob(job) =>
-        println(s">>>>>>>>>>>>>>> running job $job")
+        Logger.debug(s">>>>>>>>>>>>>>> running job $job")
 
-        val f = futureHelpers.withTimerAndCounter("process slug")(for {
-          _ <- Future(Logger.debug(s"downloading job {$job.id}"))
-          slug <- slugConnector.downloadSlug(job.slugUri)
-          _ = Logger.debug(s"downloaded {$job.id}")
-          slvs = try {
-                    SlugParser.parse(job.slugName, slug)
-                  } finally {
-                    try {
-                      slug.close
-                    } catch {
-                      case NonFatal(e) => Logger.error(s"Could not close stream: ${e.getMessage}", e)
-                    }
-                  }
-          // TODO what if already added
-          sld  =  SlugDependencyInfo(
-                    slugName     = job.slugName,
-                    slugUri      = job.slugUri,
-                    dependencies = slvs)
-          _    <- slugDependencyRepository.add(sld)
-          _ = Logger.debug(s"added {$job.id}: $sld")
-          _    <- job.id
-                    .map(slugParserJobsRepository.delete)
-                    .getOrElse(sys.error("No id on job!")) // shouldn't happen
-        } yield ()
+        val f = futureHelpers.withTimerAndCounter("slug.process")(
+          for {
+            slvs <- slugConnector.downloadSlug(job.slugUri)(in => SlugParser.parse(job.slugName, in))
+            // TODO what if already added
+            sld  =  SlugDependencyInfo(
+                      slugName     = job.slugName,
+                      slugUri      = job.slugUri,
+                      dependencies = slvs)
+            _    <- slugDependencyRepository.add(sld)
+            _ = Logger.debug(s"added {$job.id}: $sld")
+            _    <- job.id
+                      .map(slugParserJobsRepository.delete)
+                      .getOrElse(sys.error("No id on job!")) // shouldn't happen
+          } yield ()
         ).recover {
           case NonFatal(e) => Logger.error(s"An error occurred processing slug parser job ${job.id}: ${e.getMessage}", e)
         }
 
         // blocking so that number of actors determines throughput
-        Await.result(f, 1.minute)
+        Await.result(f, 10.minute)
+    }
+
+    override def preRestart(reason: Throwable, message: Option[Any]) = {
+      super.preRestart(reason, message)
+      Logger.error(s"Restarting due to ${reason.getMessage} when processing $message", reason)
     }
   }
 
   def parse(slugName: String, gz: BufferedInputStream): Seq[SlugLibraryVersion] =
     extractTarGzip(gz)
-    .map(tar => {
+    .map { tar =>
       Stream
         .continually(tar.getNextEntry)
         .takeWhile(_ != null)
         .flatMap {
           case next if next.getName.toLowerCase.endsWith(".jar") =>
-            extractVersionFromJar(tar).map(v => SlugLibraryVersion(slugName, next.getName, v.toString))
+            extractVersionFromJar(tar).map(v => SlugLibraryVersion(slugName, next.getName, v.toString)) // TODO tar is closed prematurely for second reading...
           case _ => None
         }
-    })
+        .toList // make strict - gz will not be open forever...
+    }
     .getOrElse(Seq.empty)
 
   def extractTarGzip(gz: BufferedInputStream): Try[ArchiveInputStream] =
     Try(new CompressorStreamFactory().createCompressorInputStream(gz))
       .map(is => new ArchiveStreamFactory().createArchiveInputStream(new BufferedInputStream(is)))
 
-  def extractVersionFromJar(inputStream: InputStream) : Option[String] = {
+  def extractVersionFromJar(inputStream: InputStream): Option[String] = {
     val jar = new JarArchiveInputStream(inputStream)
     Stream
       .continually(jar.getNextJarEntry)
@@ -167,9 +167,9 @@ object SlugParser {
   }
 
 
-  def extractVersionFromPom(in: InputStream) :Option[String] = {
+  def extractVersionFromPom(in: InputStream): Option[String] = {
     import xml._
-    Try(XML.load(in)).map( pom => (pom \ "version").headOption.map(_.text)).getOrElse(None)
+    Try(XML.load(in)).map(pom => (pom \ "version").headOption.map(_.text)).getOrElse(None)
   }
 
 

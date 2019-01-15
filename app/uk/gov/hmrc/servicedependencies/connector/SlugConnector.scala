@@ -21,6 +21,7 @@ import akka.stream.{ActorMaterializer, Materializer}
 import akka.stream.scaladsl.Sink
 import java.io.{ByteArrayInputStream, ByteArrayOutputStream, BufferedInputStream}
 import javax.inject.Inject
+import play.api.Logger
 import play.api.libs.ws.{WSClient, WSResponse}
 import scala.concurrent.{ExecutionContext, Future}
 import uk.gov.hmrc.servicedependencies.config.ServiceDependenciesConfig
@@ -31,7 +32,8 @@ class SlugConnector @Inject()(
   ws                  : WSClient,
   serviceConfiguration: ServiceDependenciesConfig){
 
-  def downloadSlug(slugUri: String): Future[BufferedInputStream] = {
+  def downloadSlug[A](slugUri: String)(f: BufferedInputStream => A): Future[A] = {
+    Logger.debug(s"downloading slug $slugUri")
 
     implicit val system = actorSystem
     implicit val materializer = ActorMaterializer()
@@ -42,13 +44,18 @@ class SlugConnector @Inject()(
     val sink = akka.stream.scaladsl.Sink.foreach[akka.util.ByteString] { bytes =>
       out.write(bytes.toArray)
     }
-    ws.url(slugUri).withMethod("GET").stream.map {
+    ws.url(slugUri).withMethod("GET").stream.flatMap {
       _.bodyAsSource.runWith(sink).andThen {
         case result => out.close() // Close the stream whether there was an error or not
                        result.get  // Get the result or rethrow the error
       }
-    }.map { _ =>
-      new BufferedInputStream(new ByteArrayInputStream(out.toByteArray))
+    }.map { x =>
+      val in = new BufferedInputStream(new ByteArrayInputStream(out.toByteArray))
+      try {
+        f(in)
+      } finally {
+        in.close // no-op for ByteArrayOutputStream
+      }
     }
   }
 }
