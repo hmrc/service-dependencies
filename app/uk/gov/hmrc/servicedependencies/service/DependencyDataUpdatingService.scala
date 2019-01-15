@@ -89,7 +89,7 @@ class DependencyDataUpdatingService @Inject()(
     mongoLock.tryLock {
       logger.debug(s"Starting mongo update for ${mongoLock.lockId}")
       f
-    } map {
+    }.map {
       case Some(r) =>
         logger.debug(s"mongo update completed ${mongoLock.lockId}")
         r
@@ -99,8 +99,8 @@ class DependencyDataUpdatingService @Inject()(
     }
 
   def getSbtPluginDependencyState(
-    repositoryDependencies: MongoRepositoryDependencies,
-    sbtPluginReferences: Seq[MongoSbtPluginVersion]) =
+      repositoryDependencies: MongoRepositoryDependencies,
+      sbtPluginReferences   : Seq[MongoSbtPluginVersion]) =
     repositoryDependencies.sbtPluginDependencies.map { sbtPluginDependency =>
       val mayBeExternalSbtPlugin = curatedDependencyConfig.sbtPlugins
         .find(pluginConfig => pluginConfig.name == sbtPluginDependency.name && pluginConfig.isExternal())
@@ -109,7 +109,7 @@ class DependencyDataUpdatingService @Inject()(
         .map(
           _.version.getOrElse(throw new RuntimeException(
             s"External sbt plugin ($mayBeExternalSbtPlugin) must specify the (latest) version")))
-        .orElse(sbtPluginReferences.find(mlv => mlv.sbtPluginName == sbtPluginDependency.name).flatMap(_.version))
+        .orElse(sbtPluginReferences.find(_.sbtPluginName == sbtPluginDependency.name).flatMap(_.version))
 
       Dependency(
         sbtPluginDependency.name,
@@ -159,7 +159,7 @@ class DependencyDataUpdatingService @Inject()(
               Dependency(
                 d.name,
                 d.currentVersion,
-                libraryReferences.find(mlv => mlv.libraryName == d.name).flatMap(_.version))),
+                libraryReferences.find(_.libraryName == d.name).flatMap(_.version))),
           getSbtPluginDependencyState(dep, sbtPluginReferences),
           dep.otherDependencies.map(
             other =>

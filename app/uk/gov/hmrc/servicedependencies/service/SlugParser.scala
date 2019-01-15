@@ -42,20 +42,20 @@ class SlugParser @Inject()(
    slugConnector           : SlugConnector,
    futureHelpers           : FutureHelpers) {
 
-   import ExecutionContext.Implicits.global
+  import ExecutionContext.Implicits.global
 
 
-  val slugParserActor: ActorRef = actorSystem.actorOf(
+  val slugParserActor: ActorRef =
+    actorSystem.actorOf(
       Props(new SlugParser.SlugParserActor(
           slugParserJobsRepository,
           slugInfoRepository,
           slugConnector,
           futureHelpers))
-        .withRouter(FromConfig())
-    , "slugParserActor")
+        .withRouter(FromConfig()),
+      "slugParserActor")
 
-  // TODO to be called from S3 notification too
-  def runSlugParserJobs() =
+  def runSlugParserJobs(): Future[Unit] =
     slugParserJobsRepository
       .getUnprocessed
       .map { jobs =>
@@ -63,9 +63,6 @@ class SlugParser @Inject()(
         jobs.map {
           job => slugParserActor ! SlugParser.RunJob(job)
         }
-      }
-      .recover {
-        case NonFatal(e) => Logger.error(s"An error occurred processing slug parser jobs: ${e.getMessage}", e)
       }
 }
 
@@ -133,7 +130,7 @@ object SlugParser {
           dependencies  = slugDependencies)
     }
 
-    def extractFromUri(slugUri: String) = {
+    def extractFromUri(slugUri: String): (String, String, String) = {
       // e.g. https://store/slugs/my-slug/my-slug_0.27.0_0.5.2.tgz
       val filename = slugUri
                        .stripSuffix(".tgz").stripSuffix(".tar.gz")
@@ -153,14 +150,14 @@ object SlugParser {
     Stream
       .continually(jar.getNextJarEntry)
       .takeWhile(_ != null)
-      .flatMap(entry => {
+      .flatMap { entry =>
         entry.getName match {
           //case "reference.conf" => None; // TODO: extract reference.conf & send to serviceConfigs
           case "META-INF/MANIFEST.MF"           => extractVersionFromManifest(jar)
           case file if file.endsWith("pom.xml") => extractVersionFromPom(jar)
           case _                                => None; // skip
         }
-      }).headOption
+      }.headOption
   }
 
 

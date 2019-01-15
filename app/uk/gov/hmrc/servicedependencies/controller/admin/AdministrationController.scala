@@ -72,14 +72,16 @@ class AdministrationController @Inject()(dependencyDataUpdatingService: Dependen
     dependencyDataUpdatingService.locks().map(locks => Ok(Json.toJson(locks)))
   }
 
-  def addSlugParserJob = Action.async(parse.json) { implicit request =>
-    withJsonBody[NewSlugParserJob] { newJob =>
-      dependencyDataUpdatingService.addSlugParserJob(newJob).map { _ =>
-        Created("")
-      }.recover {
-        case ex => Logger.error("creation of slug job failed", ex)
-                   InternalServerError("Could not create slug job")
+  // TODO should be invoked from S3 notification? Requires moving out of admin?
+  def addSlugParserJob =
+    Action.async(parse.json) { implicit request =>
+      withJsonBody[NewSlugParserJob] { newJob =>
+        dependencyDataUpdatingService.addSlugParserJob(newJob).map { _ =>
+          Created("")
+        }.recover {
+          case ex => Logger.error("creation of slug job failed", ex)
+                     InternalServerError("Could not create slug job")
+        }
       }
     }
-  }
 }

@@ -25,6 +25,7 @@ import play.api.{Configuration, Logger}
 import uk.gov.hmrc.servicedependencies.service.SlugParser
 import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.duration.{DurationLong, FiniteDuration}
+import scala.util.control.NonFatal
 
 class SlugParseScheduler @Inject()(
   actorSystem             : ActorSystem,
@@ -44,6 +45,9 @@ class SlugParseScheduler @Inject()(
   val cancellable = actorSystem.scheduler.schedule(1.minute, slugParseInterval) {
     Logger.info("Running slug parse")
     slugParser.runSlugParserJobs()
+      .recover {
+        case NonFatal(e) => Logger.error(s"An error occurred processing slug parser jobs: ${e.getMessage}", e)
+      }
   }
   applicationLifecycle.addStopHook(() => Future(cancellable.cancel()))
 }
