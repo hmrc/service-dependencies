@@ -24,6 +24,7 @@ import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.play.bootstrap.http.HttpClient
 import uk.gov.hmrc.servicedependencies.config.ServiceDependenciesConfig
 import uk.gov.hmrc.servicedependencies.connector.model.{ArtifactoryChild, ArtifactoryRepo, DownloadableSlug}
+import uk.gov.hmrc.servicedependencies.model.MongoSlugParserJob
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -34,29 +35,29 @@ class ArtifactoryConnector @Inject()(http: HttpClient, config: ServiceDependenci
   import ArtifactoryConnector._
 
   val artifactoryRoot = s"${config.artifactoryBase}/api/storage/webstore/slugs"
-  val webstoreRoot = s"${config.webstoreBase}/slugs"
+  val webstoreRoot    = s"${config.webstoreBase}/slugs"
 
   implicit val ec: ExecutionContext = ExecutionContext.fromExecutorService(Executors.newFixedThreadPool(1))
 
   /**
     * Enumerate all slugs in webstore
     */
-  def findAllSlugs(): Future[Seq[ArtifactoryChild]] = {
+  def findAllSlugs(): Future[List[ArtifactoryChild]] = {
     implicit val hc: HeaderCarrier = HeaderCarrier(otherHeaders = headers)
-    http.GET[ArtifactoryRepo](artifactoryRoot).map(_.children.filter(_.folder))
+    http.GET[ArtifactoryRepo](artifactoryRoot).map(_.children.filter(_.folder).toList)
   }
 
 
   /**
     * Connect to artifactory and retrieve a list of all available slugs
     */
-  def findAllSlugsForService(service: String): Future[Seq[DownloadableSlug]] = {
+  def findAllSlugsForService(service: String): Future[List[MongoSlugParserJob]] = {
     Logger.info(s"downloading $service from artifactory")
     implicit val hc: HeaderCarrier = HeaderCarrier(otherHeaders = headers)
     http.GET[ArtifactoryRepo](s"$artifactoryRoot$service")
       .map(_.children
         .filterNot(_.folder)
-        .flatMap(repo => convertToDownloadableSlug(service, repo.uri, webstoreRoot)))
+        .flatMap(repo => convertToSlugParserJob(service, repo.uri, webstoreRoot)).toList)
   }
 
   private val headers : List[(String, String)] =
@@ -69,14 +70,15 @@ class ArtifactoryConnector @Inject()(http: HttpClient, config: ServiceDependenci
 
 object ArtifactoryConnector {
 
-  def convertToDownloadableSlug(serviceName: String, uri: String, webStoreRoot: String) : Option[DownloadableSlug] = {
+  def convertToSlugParserJob(serviceName: String, uri: String, webStoreRoot: String) : Option[MongoSlugParserJob] = {
     val regex = """^\/?(.+)_(\d+\.\d+\.\d+-?.*)_(\d+\.\d+\.\d+)\.tgz$""".r
     regex.findFirstMatchIn(uri).map( m => {
-      DownloadableSlug(
+      MongoSlugParserJob(
+        id            = None,
         service       = serviceName.replace("/", ""),
-        slugName      = m.group(1),
-        downloadURI   = s"$webStoreRoot$serviceName$uri",
-        slugVersion   = m.group(2),
+        slugName      = uri,
+        version       = m.group(2),
+        slugUri       = s"$webStoreRoot$serviceName$uri",
         runnerVersion = m.group(3))
     })
   }
@@ -88,19 +90,5 @@ object ArtifactoryConnector {
     url.replace(artifactoryPrefix, webstorePrefix).replace(artifactorySuffix, "")
   }
 
-
-  /**
-    * Given a uri to a slug, extract the runner version number.
-    * Runner version is the last section of the uri before the file suffix:
-    */
-  def parseSlugRunnerVersion(uri:String): Option[String] = {
-    val regex = """^.+_(\d+\.\d+\.\d+)\.tgz$""".r
-    regex.findFirstMatchIn(uri).map(_.group(1))
-  }
-
-  def parseVersion(uri: String): Option[String] = {
-    val regex = """_([\d-\w\.]+)_""".r
-    regex.findFirstMatchIn(uri).map(_.group(1))
-  }
 }
 

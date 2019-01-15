@@ -15,16 +15,22 @@
  */
 
 package uk.gov.hmrc.servicedependencies.model
-import play.api.libs.json.{Json, OFormat}
+import org.joda.time.DateTime
+import play.api.libs.json.{Format, Json, OFormat}
+import uk.gov.hmrc.mongo.json.ReactiveMongoFormats
+import uk.gov.hmrc.time.DateTimeUtils
 
 case class MongoSlugParserJob(
-  id         : Option[String],
-  slugName   : String,
-  libraryName: String,
-  version    : String) {
-    def slugUri = s"http://$slugName" // TODO
-  }
+  id          : Option[String],
+  service     : String,
+  slugName    : String,
+  version     : String,
+  runnerVersion: String,
+  slugUri     : String,
+  processed   : Boolean = false,
+  creationDate: DateTime = DateTimeUtils.now)
 
 object MongoSlugParserJob {
+  implicit val dtf: Format[DateTime] = ReactiveMongoFormats.dateTimeFormats
   implicit val format: OFormat[MongoSlugParserJob] = Json.format[MongoSlugParserJob]
 }

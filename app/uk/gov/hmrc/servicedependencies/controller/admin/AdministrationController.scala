@@ -74,18 +74,4 @@ class AdministrationController @Inject()(dependencyDataUpdatingService: Dependen
     dependencyDataUpdatingService.locks().map(locks => Ok(Json.toJson(locks)))
   }
 
-  def pollArtifactory() = Action.async { implicit request =>
-
-    implicit val format = Json.format[DownloadableSlug]
-
-    val slugs = for {
-      services <- artifactoryConnector.findAllSlugs()
-      allslugs <- Future.sequence( services.take(4).map(s => {
-        Thread.sleep(1000) // TODO: replace this with a real rate limiting solution
-        artifactoryConnector.findAllSlugsForService(s.uri)}))
-    } yield allslugs
-
-    slugs.map(s => Json.toJson(s)).map(s => Ok(s))
-  }
-
 }

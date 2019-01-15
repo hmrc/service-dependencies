@@ -17,55 +17,36 @@
 package uk.gov.hmrc.servicedependencies.connector
 import org.scalatest.mockito.MockitoSugar
 import org.scalatest.{FlatSpec, Matchers}
+import uk.gov.hmrc.servicedependencies.model.MongoSlugParserJob
 
 class ArtifactoryConnectorSpec extends FlatSpec
   with Matchers
   with MockitoSugar {
 
 
-  "convertToWebstoreURL" should "convert an artifactory link to a s3 webstore link" in {
-    val url = "https://artefacts.test.test.test.uk/artifactory/webstore/slugs/pensions-lifetime-allowance-frontend/pensions-lifetime-allowance-frontend_2.62.0-5-g11e827d_0.5.2.tgz"
+  "convertToWebstoreURL" should "convert an artifactory link to a webstore link" in {
+    val url = "https://artefacts.test.test.test.uk/artifactory/webstore/slugs/pensions-frontend/pensions-frontend_2.62.0-5-g11e827d_0.5.2.tgz"
     val res = ArtifactoryConnector.convertToWebStoreURL(url)
-    res shouldBe "https://webstore.test.test.test.uk/slugs/pensions-lifetime-allowance-frontend/pensions-lifetime-allowance-frontend_2.62.0-5-g11e827d_0.5.2.tgz"
+    res shouldBe "https://webstore.test.test.test.uk/slugs/pensions-frontend/pensions-frontend_2.62.0-5-g11e827d_0.5.2.tgz"
   }
 
 
-  "parseVersion" should "extract a version number from a uri" in {
-    ArtifactoryConnector.parseVersion( "/vat-sign-up-frontend_1.55.0_0.5.2.tgz") shouldBe Some("1.55.0")
-    ArtifactoryConnector.parseVersion( "/vat-sign-up-frontend_0.50.0-5-g44758bd_0.5.2.tgz") shouldBe Some("0.50.0-5-g44758bd")
-    ArtifactoryConnector.parseVersion( "/rate-scheduling_189_0.5.2.tgz") shouldBe Some("189")
-    ArtifactoryConnector.parseVersion( "/lost-credentials_0.15.0_0.5.2.tgz") shouldBe Some("0.15.0")
+  "convertToSlugParserJob" should "convert a uri to a MongoSlugParserJob" in {
 
+    val service = "/pensions-frontend"
+    val slug = "/pensions-frontend_2.62.0-5-g11e827d_0.5.2.tgz"
+    val webroot = "https://webstore.test.uk/slugs"
+
+    val result = ArtifactoryConnector.convertToSlugParserJob(service, slug, webroot).get
+
+    result.id shouldBe None
+    result.processed shouldBe false
+    result.runnerVersion shouldBe "0.5.2"
+    result.version shouldBe "2.62.0-5-g11e827d"
+    result.service shouldBe "pensions-frontend"
+    result.slugName shouldBe "/pensions-frontend_2.62.0-5-g11e827d_0.5.2.tgz"
+    result.slugUri shouldBe "https://webstore.test.uk/slugs/pensions-frontend/pensions-frontend_2.62.0-5-g11e827d_0.5.2.tgz"
   }
 
-  it should "return none when the version number is unparsable" in {
-    val uri = "/vat-sign-up-frontend.tgz"
-    ArtifactoryConnector.parseVersion(uri) shouldBe None
-  }
-
-
-  "convertToDownloadableSlug" should "convert a service and slugname to a DownloadableSlug" in {
-    val service = "/personal-details-frontend"
-    val slug    = "/personal-details-frontend_0.27.0_0.5.2.tgz"
-
-    val dl = ArtifactoryConnector.convertToDownloadableSlug(service, slug, "http://webstore.internet/slugs").get
-    dl.service shouldBe "personal-details-frontend"
-    dl.slugName shouldBe "personal-details-frontend"
-    dl.slugVersion shouldBe "0.27.0"
-    dl.runnerVersion shouldBe "0.5.2"
-    dl.downloadURI shouldBe "http://webstore.internet/slugs/personal-details-frontend/personal-details-frontend_0.27.0_0.5.2.tgz"
-  }
-
-  it should "handle slugs with hotfix versions" in {
-    val service = "/personal-details-frontend"
-    val slug    = "/personal-details-frontend_0.27.0-4-g25792c2_0.5.2.tgz"
-
-    val dl = ArtifactoryConnector.convertToDownloadableSlug(service, slug, "http://webstore.internet/slugs").get
-    dl.service shouldBe "personal-details-frontend"
-    dl.slugName shouldBe "personal-details-frontend"
-    dl.slugVersion shouldBe "0.27.0-4-g25792c2"
-    dl.runnerVersion shouldBe "0.5.2"
-    dl.downloadURI shouldBe "http://webstore.internet/slugs/personal-details-frontend/personal-details-frontend_0.27.0-4-g25792c2_0.5.2.tgz"
-  }
 
 }
