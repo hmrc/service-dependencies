@@ -89,7 +89,6 @@ object SlugParser {
         val f = futureHelpers.withTimerAndCounter("slug.process")(
           for {
             slvs <- slugConnector.downloadSlug(job.slugUri)(in => SlugParser.parse(job.slugName, in))
-            // TODO what if already added
             sld  =  SlugDependencyInfo(
                       slugName     = job.slugName,
                       slugUri      = job.slugUri,
@@ -120,7 +119,7 @@ object SlugParser {
         .takeWhile(_ != null)
         .flatMap {
           case next if next.getName.toLowerCase.endsWith(".jar") =>
-            extractVersionFromJar(tar).map(v => SlugLibraryVersion(slugName, next.getName, v.toString)) // TODO tar is closed prematurely for second reading...
+            extractVersionFromJar(tar).map(v => SlugLibraryVersion(slugName, next.getName, v.toString))
           case _ => None
         }
         .toList // make strict - gz will not be open forever...

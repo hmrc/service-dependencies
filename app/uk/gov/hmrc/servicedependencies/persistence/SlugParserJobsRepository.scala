@@ -43,9 +43,18 @@ class SlugParserJobsRepository @Inject()(mongo: ReactiveMongoComponent, futureHe
     localEnsureIndexes
 
   private def localEnsureIndexes =
-    Future(Seq.empty)
+    Future.sequence(
+      Seq(
+        collection
+          .indexesManager
+          .ensure(
+            Index(
+              Seq(
+                "slugName"    -> IndexType.Ascending,
+                "slugVersion" -> IndexType.Ascending),
+              name       = Some("slugJobParseUniqueIdx"),
+              unique     = true))))
 
-  // TODO check will fail if already exists (and behaviour)
   def add(newJob: NewSlugParserJob): Future[Unit] =
     collection
       .insert(

@@ -76,6 +76,9 @@ class AdministrationController @Inject()(dependencyDataUpdatingService: Dependen
     withJsonBody[NewSlugParserJob] { newJob =>
       dependencyDataUpdatingService.addSlugParserJob(newJob).map { _ =>
         Created("")
+      }.recover {
+        case ex => Logger.error("creation of slug job failed", ex)
+                   InternalServerError("Could not create slug job")
       }
     }
   }
