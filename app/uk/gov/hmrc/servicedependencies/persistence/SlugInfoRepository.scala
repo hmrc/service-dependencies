@@ -20,17 +20,17 @@ import play.modules.reactivemongo.ReactiveMongoComponent
 import reactivemongo.api.indexes.{Index, IndexType}
 import reactivemongo.bson.BSONObjectID
 import uk.gov.hmrc.mongo.ReactiveRepository
-import uk.gov.hmrc.servicedependencies.model.SlugDependencyInfo
+import uk.gov.hmrc.servicedependencies.model.SlugInfo
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
-class SlugDependencyRepository @Inject()(mongo: ReactiveMongoComponent)
-  extends ReactiveRepository[SlugDependencyInfo, BSONObjectID](
-    collectionName = "slugDependencies",
+class SlugInfoRepository @Inject()(mongo: ReactiveMongoComponent)
+  extends ReactiveRepository[SlugInfo, BSONObjectID](
+    collectionName = "slugInfo",
     mongo          = mongo.mongoConnector.db,
-    domainFormat   = SlugDependencyInfo.format){
+    domainFormat   = SlugInfo.format){
 
   private def localEnsureIndexes =
     Future.sequence(
@@ -39,16 +39,13 @@ class SlugDependencyRepository @Inject()(mongo: ReactiveMongoComponent)
           .indexesManager
           .ensure(
             Index(
-              Seq(
-                "slugName"    -> IndexType.Ascending/*,
-                "slugVersion" -> IndexType.Ascending*/), // TODO confirm unique key
-              name       = Some("slugJobParseUniqueIdx"),
+              Seq("slugUri" -> IndexType.Ascending),
+              name       = Some("slugInfoUniqueIdx"),
               unique     = true))))
 
-
-  def add(slugDependencyInfo: SlugDependencyInfo): Future[Unit] =
+  def add(slugInfo: SlugInfo): Future[Unit] =
     collection
-      .insert(slugDependencyInfo)
+      .insert(slugInfo)
       .map(_ => ())
 
 }

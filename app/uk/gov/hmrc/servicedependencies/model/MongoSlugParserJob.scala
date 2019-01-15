@@ -17,41 +17,30 @@
 package uk.gov.hmrc.servicedependencies.model
 
 case class MongoSlugParserJob(
-  id           : String,
-  slugName     : String,
-  slugVersion  : String,
-  runnerVersion: String,
-  slugUri      : String,
-  processed    : Boolean)
+  id       : String,
+  slugUri  : String,
+  processed: Boolean)
 
 object MongoSlugParserJob {
   import play.api.libs.json._
   import play.api.libs.functional.syntax._
 
   implicit val format: OFormat[MongoSlugParserJob] =
-    ( (__ \ "_id"          ).format[String]
-    ~ (__ \ "slugName"     ).format[String]
-    ~ (__ \ "slugVersion"  ).format[String]
-    ~ (__ \ "runnerVersion").format[String]
-    ~ (__ \ "slugUri"      ).format[String]
-    ~ (__ \ "processed"    ).format[Boolean]
+    ( (__ \ "_id"      ).format[String]
+    ~ (__ \ "slugUri"  ).format[String]
+    ~ (__ \ "processed").format[Boolean]
     )(MongoSlugParserJob.apply, unlift(MongoSlugParserJob.unapply))
 }
 
 case class NewSlugParserJob(
-  slugName     : String,
-  slugVersion  : String,
-  runnerVersion: String,
-  slugUri      : String)
+  slugUri: String)
 
 object NewSlugParserJob {
   import play.api.libs.json._
   import play.api.libs.functional.syntax._
 
   implicit val format: OFormat[NewSlugParserJob] =
-    ( (__ \ "slugName"     ).format[String]
-    ~ (__ \ "slugVersion"  ).format[String]
-    ~ (__ \ "runnerVersion").format[String]
-    ~ (__ \ "slugUri"      ).format[String]
-    )(NewSlugParserJob.apply, unlift(NewSlugParserJob.unapply))
+    (__ \ "slugUri")
+      .format[String]
+      .inmap(NewSlugParserJob.apply, unlift(NewSlugParserJob.unapply))
 }

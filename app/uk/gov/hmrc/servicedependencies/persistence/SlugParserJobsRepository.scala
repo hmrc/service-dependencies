@@ -49,9 +49,7 @@ class SlugParserJobsRepository @Inject()(mongo: ReactiveMongoComponent, futureHe
           .indexesManager
           .ensure(
             Index(
-              Seq(
-                "slugName"    -> IndexType.Ascending,
-                "slugVersion" -> IndexType.Ascending),
+              Seq("slugUri" -> IndexType.Ascending),
               name       = Some("slugJobParseUniqueIdx"),
               unique     = true))))
 
@@ -60,9 +58,6 @@ class SlugParserJobsRepository @Inject()(mongo: ReactiveMongoComponent, futureHe
       .insert(
         MongoSlugParserJob(
           id            = UUID.randomUUID().toString,
-          slugName      = newJob.slugName,
-          slugVersion   = newJob.slugVersion,
-          runnerVersion = newJob.runnerVersion,
           slugUri       = newJob.slugUri,
           processed     = false
         ))
