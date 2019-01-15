@@ -16,52 +16,65 @@
 
 package uk.gov.hmrc.servicedependencies.service
 
+import akka.actor.{Actor, ActorRef, ActorSystem, Props}
+import akka.routing.{FromConfig, RoundRobinPool}
 import play.api.Logger
 import java.io.{BufferedInputStream, InputStream}
-import javax.inject.Inject
+import java.util.concurrent.Executors
+import javax.inject.{Inject, Named}
 import org.apache.commons.compress.archivers.jar.JarArchiveInputStream
 import org.apache.commons.compress.archivers.{ArchiveInputStream, ArchiveStreamFactory}
 import org.apache.commons.compress.compressors.CompressorStreamFactory
 import uk.gov.hmrc.servicedependencies.connector.SlugConnector
-import uk.gov.hmrc.servicedependencies.model.{SlugDependencyInfo, SlugLibraryVersion}
+import uk.gov.hmrc.servicedependencies.model.{MongoSlugParserJob, SlugDependencyInfo, SlugLibraryVersion}
 import uk.gov.hmrc.servicedependencies.persistence.{SlugDependencyRepository, SlugParserJobsRepository}
-
-import scala.concurrent.ExecutionContext
+import uk.gov.hmrc.servicedependencies.util.FutureHelpers
+import scala.concurrent.{Await, ExecutionContext, Future}
+import scala.concurrent.duration.DurationInt
 import scala.io.Source
 import scala.util.{Success, Try}
 import scala.util.control.NonFatal
 
 class SlugParser @Inject()(
-  slugParserJobsRepository: SlugParserJobsRepository,
-  slugDependencyRepository: SlugDependencyRepository,
-  slugConnector           : SlugConnector) {
+  // actorSystem: ActorSystem,
+  // slugParserJobsRepository: SlugParserJobsRepository,
+  // @Named("slugParserActor") slugParserActor: ActorRef) {
+
+   actorSystem             : ActorSystem,
+   slugParserJobsRepository: SlugParserJobsRepository,
+   slugDependencyRepository: SlugDependencyRepository,
+   slugConnector           : SlugConnector,
+   futureHelpers           : FutureHelpers) {
+
+   import ExecutionContext.Implicits.global
+
+
+  // TODO inject actor with router? Need to use a factory?
+  val slugParserActor: ActorRef = actorSystem.actorOf(
+      Props(new SlugParser.SlugParserActor(
+          slugParserJobsRepository,
+          slugDependencyRepository,
+          slugConnector,
+          futureHelpers))
+        //.withRouter(RoundRobinPool(nrOfInstances = 2))
+        .withRouter(FromConfig())
+    , "slugParserActor")
+
+
+
 
   import ExecutionContext.Implicits.global
 
   // TODO to be called from S3 notification too
   def runSlugParserJobs() =
-    // TODO use thread-pool (or akka actor pool?)
     slugParserJobsRepository
       .getAllEntries
-      .map(
-        _.map {
-          job => Logger.debug(s"processing $job")
-                 (for {
-                    slug <- slugConnector.downloadSlug(job.slugUri)
-                    slvs =  SlugParser.parse(job.slugName, slug)
-                    // TODO what if already added
-                    _    <- slugDependencyRepository.add(SlugDependencyInfo(
-                              slugName     = job.slugName,
-                              slugUri      = job.slugUri,
-                              dependencies = slvs))
-                    _    <- job.id
-                              .map(slugParserJobsRepository.delete)
-                              .getOrElse(sys.error("No id on job!")) // shouldn't happen
-                  } yield ()
-                 ).recover {
-                    case NonFatal(e) => Logger.error(s"An error occurred processing slug parser job ${job.id}: ${e.getMessage}", e)
-                  }
-        })
+      .map { jobs =>
+        Logger.debug(s"found ${jobs.size} Slug parser jobs")
+        jobs.map {
+          job => slugParserActor ! SlugParser.RunJob(job)
+        }
+      }
       .recover {
         case NonFatal(e) => Logger.error(s"An error occurred processing slug parser jobs: ${e.getMessage}", e)
       }
@@ -70,40 +83,80 @@ class SlugParser @Inject()(
 
 object SlugParser {
 
+  case class RunJob(job: MongoSlugParserJob)
+
+  class SlugParserActor @Inject()(
+    slugParserJobsRepository: SlugParserJobsRepository,
+    slugDependencyRepository: SlugDependencyRepository,
+    slugConnector           : SlugConnector,
+    futureHelpers           : FutureHelpers) extends Actor {
+
+    import context.dispatcher
+
+    def receive = {
+      case RunJob(job) =>
+        Logger.debug(s">>>>>>>>>>>>>>> running job $job")
+
+        val f = futureHelpers.withTimerAndCounter("slug.process")(
+          for {
+            slvs <- slugConnector.downloadSlug(job.slugUri)(in => SlugParser.parse(job.slugName, in))
+            // TODO what if already added
+            sld  =  SlugDependencyInfo(
+                      slugName     = job.slugName,
+                      slugUri      = job.slugUri,
+                      dependencies = slvs)
+            _    <- slugDependencyRepository.add(sld)
+            _ = Logger.debug(s"added {$job.id}: $sld")
+            _    <- job.id
+                      .map(slugParserJobsRepository.delete)
+                      .getOrElse(sys.error("No id on job!")) // shouldn't happen
+          } yield ()
+        ).recover {
+          case NonFatal(e) => Logger.error(s"An error occurred processing slug parser job ${job.id}: ${e.getMessage}", e)
+        }
+
+        // blocking so that number of actors determines throughput
+        Await.result(f, 10.minute)
+    }
+
+    override def preRestart(reason: Throwable, message: Option[Any]) = {
+      super.preRestart(reason, message)
+      Logger.error(s"Restarting due to ${reason.getMessage} when processing $message", reason)
+    }
+  }
+
   def parse(slugName: String, gz: BufferedInputStream): Seq[SlugLibraryVersion] =
     extractTarGzip(gz)
-    .map(tar => {
+    .map { tar =>
       Stream
         .continually(tar.getNextEntry)
         .takeWhile(_ != null)
         .flatMap {
           case next if next.getName.toLowerCase.endsWith(".jar") =>
-            extractVersionFromJar(tar).map(v => SlugLibraryVersion(slugName, next.getName, v.toString))
+            extractVersionFromJar(tar).map(v => SlugLibraryVersion(slugName, next.getName, v.toString)) // TODO tar is closed prematurely for second reading...
           case _ => None
         }
-    })
+        .toList // make strict - gz will not be open forever...
+    }
     .getOrElse(Seq.empty)
 
   def extractTarGzip(gz: BufferedInputStream): Try[ArchiveInputStream] =
     Try(new CompressorStreamFactory().createCompressorInputStream(gz))
       .map(is => new ArchiveStreamFactory().createArchiveInputStream(new BufferedInputStream(is)))
 
-  def extractVersionFromJar(inputStream: InputStream) : Option[String] = {
-
+  def extractVersionFromJar(inputStream: InputStream): Option[String] = {
     val jar = new JarArchiveInputStream(inputStream)
-
     Stream
-    .continually(jar.getNextJarEntry)
-    .takeWhile(_ != null)
-    .flatMap(entry => {
-      entry.getName match {
-        //case "reference.conf" => None; // TODO: extract reference.conf & send to serviceConfigs
-        case "META-INF/MANIFEST.MF"     => extractVersionFromManifest(jar)
-        case file if file.endsWith("pom.xml") => extractVersionFromPom(jar)
-        case _                          => None; // skip
-      }
-    }).headOption
-
+      .continually(jar.getNextJarEntry)
+      .takeWhile(_ != null)
+      .flatMap(entry => {
+        entry.getName match {
+          //case "reference.conf" => None; // TODO: extract reference.conf & send to serviceConfigs
+          case "META-INF/MANIFEST.MF"           => extractVersionFromManifest(jar)
+          case file if file.endsWith("pom.xml") => extractVersionFromPom(jar)
+          case _                                => None; // skip
+        }
+      }).headOption
   }
 
 
@@ -114,9 +167,9 @@ object SlugParser {
   }
 
 
-  def extractVersionFromPom(in: InputStream) :Option[String] = {
+  def extractVersionFromPom(in: InputStream): Option[String] = {
     import xml._
-    Try(XML.load(in)).map( pom => (pom \ "version").headOption.map(_.text)).getOrElse(None)
+    Try(XML.load(in)).map(pom => (pom \ "version").headOption.map(_.text)).getOrElse(None)
   }
 
 

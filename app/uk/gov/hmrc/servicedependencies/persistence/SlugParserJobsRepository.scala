@@ -65,17 +65,6 @@ class SlugParserJobsRepository @Inject()(mongo: ReactiveMongoComponent, futureHe
         ))
       .map(_ => ())
 
-  // TODO remove this
-  def newMSLJ(i: String) = MongoSlugParserJob(
-    id          = None,
-    slugName    = s"slugName$i",
-    libraryName = s"libraryName$i",
-    version     = s"version$i")
-  add(newMSLJ("0"))
-  add(newMSLJ("1"))
-  add(newMSLJ("2"))
-  add(newMSLJ("3"))
-
 
   def delete(id: String): Future[Unit] =
     collection

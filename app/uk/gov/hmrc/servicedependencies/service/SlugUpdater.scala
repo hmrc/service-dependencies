@@ -23,31 +23,30 @@ import uk.gov.hmrc.servicedependencies.connector.ArtifactoryConnector
 import uk.gov.hmrc.servicedependencies.model.MongoSlugParserJob
 import uk.gov.hmrc.servicedependencies.persistence.SlugParserJobsRepository
 
-import scala.concurrent.duration.Duration
+import scala.concurrent.duration.FiniteDuration
+import scala.concurrent.ExecutionContext.Implicits.global
+
+case class RateLimit(invocations: Int, perDuration: FiniteDuration)
 
 @Singleton
-class SlugUpdater @Inject() (conn: ArtifactoryConnector, repo: SlugParserJobsRepository, implicit val materializer: Materializer) {
+class SlugUpdater @Inject() (conn: ArtifactoryConnector,
+                             repo: SlugParserJobsRepository,
+                             rateLimit: RateLimit = RateLimit(1, FiniteDuration(2, "seconds")),
+                             implicit val materializer: Materializer) {
 
   def update() : Unit = {
-
-    val printSink = Sink.foreach(println)
-
     Logger.info("Checking artifactory....")
     Source.fromFuture(conn.findAllSlugs())
       .mapConcat(identity)
       .take(10)
-      .throttle(1, Duration(2, "seconds"))
+      .throttle(rateLimit.invocations, rateLimit.perDuration)
       .mapAsync(1)(r => conn.findAllSlugsForService(r.uri))
       .mapConcat(identity)
       .to(mongoSink)
       .run()
   }
 
-  import scala.concurrent.ExecutionContext.Implicits.global
-  private val mongoSink = Sink.foreachParallel[MongoSlugParserJob](1)(repo.add)
 
-
-  Logger.info("updating....")
-  update()
+  private[service] val mongoSink = Sink.foreachParallel[MongoSlugParserJob](1)(repo.add)
 
 }

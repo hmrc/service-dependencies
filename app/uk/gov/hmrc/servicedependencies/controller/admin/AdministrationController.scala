@@ -21,14 +21,12 @@ import play.api.Logger
 import play.api.libs.json.Json
 import play.api.mvc.ControllerComponents
 import uk.gov.hmrc.play.bootstrap.controller.BackendController
-import uk.gov.hmrc.servicedependencies.connector.ArtifactoryConnector
-import uk.gov.hmrc.servicedependencies.connector.model.DownloadableSlug
 import uk.gov.hmrc.servicedependencies.service.DependencyDataUpdatingService
 
 import scala.concurrent.Future
 
 @Singleton
-class AdministrationController @Inject()(dependencyDataUpdatingService: DependencyDataUpdatingService, artifactoryConnector: ArtifactoryConnector, cc: ControllerComponents)
+class AdministrationController @Inject()(dependencyDataUpdatingService: DependencyDataUpdatingService, cc: ControllerComponents)
     extends BackendController(cc) {
 
 
