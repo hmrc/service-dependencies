@@ -71,15 +71,30 @@ class SlugParserSpec extends FlatSpec with Matchers {
     output shouldBe Some("3.2.5")
   }
 
+  "extractFromUri" should "extract the runnerVersion, slugVersion and slugName from Uri" in {
+    {
+      val (runnerVersion, slugVersion, slugName) = SlugParser.extractFromUri("https://store/slugs/my-slug/my-slug_0.27.0_0.5.2.tgz")
+      runnerVersion shouldBe "0.5.2"
+      slugVersion   shouldBe "0.27.0"
+      slugName      shouldBe "my-slug"
+    }
+    {
+      val (runnerVersion, slugVersion, slugName) = SlugParser.extractFromUri("https://store/slugs/my-slug/my-slug_0.27.0_0.5.2.tar.gz")
+      runnerVersion shouldBe "0.5.2"
+      slugVersion   shouldBe "0.27.0"
+      slugName      shouldBe "my-slug"
+    }
+  }
+
 
   "slugparser" should "parse a slug" in {
 
     val is = new BufferedInputStream(getClass.getResourceAsStream("/slugs/example-service.tar.gz"))
-    val res = SlugParser.parse("example-service.tar.gz", is)
+    val res = SlugParser.parse("example-service_0.27.0_0.5.2.tar.gz", is).get
 
-    res.length shouldBe 2
-    res.find(_.libraryName.contains("example-ivy")).map(_.version) shouldBe Some("3.2.0")
-    res.find(_.libraryName.contains("example-maven")).map(_.version) shouldBe Some("3.2.5")
+    res.dependencies.length shouldBe 2
+    res.dependencies.find(_.libraryName.contains("example-ivy")).map(_.version) shouldBe Some("3.2.0")
+    res.dependencies.find(_.libraryName.contains("example-maven")).map(_.version) shouldBe Some("3.2.5")
   }
 
 

@@ -17,15 +17,22 @@
 package uk.gov.hmrc.servicedependencies.model
 import play.api.libs.json.{Json, OFormat}
 
-case class SlugLibraryVersion(slugName: String, libraryName: String, version: String)
+case class SlugDependency(
+  libraryName: String,
+  version    : String)
 
-case class SlugDependencyInfo(slugName: String, slugUri: String, dependencies: Seq[SlugLibraryVersion])
+case class SlugInfo(
+  slugUri      : String,
+  slugName     : String,
+  slugVersion  : String,
+  runnerVersion: String,
+  classpath    : String,
+  dependencies : Seq[SlugDependency])
 
-object SlugLibraryVersion {
-  implicit val format: OFormat[SlugLibraryVersion] = Json.format[SlugLibraryVersion]
+object SlugDependency {
+  implicit val format: OFormat[SlugDependency] = Json.format[SlugDependency]
 }
 
-object SlugDependencyInfo {
-  implicit val format: OFormat[SlugDependencyInfo] = Json.format[SlugDependencyInfo]
+object SlugInfo {
+  implicit val format: OFormat[SlugInfo] = Json.format[SlugInfo]
 }
-
