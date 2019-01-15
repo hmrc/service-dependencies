@@ -28,9 +28,8 @@ import uk.gov.hmrc.servicedependencies.config.ServiceDependenciesConfig
 
 
 class SlugConnector @Inject()(
-  actorSystem         : ActorSystem,
-  ws                  : WSClient,
-  serviceConfiguration: ServiceDependenciesConfig){
+    actorSystem: ActorSystem,
+    ws         : WSClient){
 
   def downloadSlug[A](slugUri: String)(f: BufferedInputStream => A): Future[A] = {
     Logger.debug(s"downloading slug $slugUri")
@@ -49,7 +48,7 @@ class SlugConnector @Inject()(
         case result => out.close() // Close the stream whether there was an error or not
                        result.get  // Get the result or rethrow the error
       }
-    }.map { x =>
+    }.map { _ =>
       val in = new BufferedInputStream(new ByteArrayInputStream(out.toByteArray))
       try {
         f(in)

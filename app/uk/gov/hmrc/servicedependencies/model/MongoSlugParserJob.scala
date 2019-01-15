@@ -15,34 +15,43 @@
  */
 
 package uk.gov.hmrc.servicedependencies.model
-import org.joda.time.DateTime
-import uk.gov.hmrc.mongo.json.ReactiveMongoFormats
-import uk.gov.hmrc.time.DateTimeUtils
 
 case class MongoSlugParserJob(
-  id          : Option[String],
-  service     : String,
-  slugName    : String,
-  version     : String,
+  id           : String,
+  slugName     : String,
+  slugVersion  : String,
   runnerVersion: String,
-  slugUri     : String,
-  processed   : Boolean = false,
-  creationDate: DateTime = DateTimeUtils.now)
+  slugUri      : String,
+  processed    : Boolean)
 
 object MongoSlugParserJob {
   import play.api.libs.json._
   import play.api.libs.functional.syntax._
 
-  implicit val dtf: Format[DateTime] = ReactiveMongoFormats.dateTimeFormats
   implicit val format: OFormat[MongoSlugParserJob] =
-    ( (__ \ "_id"        ).formatNullable[String]
-    ~ (__ \ "service"   ).format[String]
-    ~ (__ \ "slugName"   ).format[String]
-    ~ (__ \ "version"    ).format[String]
+    ( (__ \ "_id"          ).format[String]
+    ~ (__ \ "slugName"     ).format[String]
+    ~ (__ \ "slugVersion"  ).format[String]
     ~ (__ \ "runnerVersion").format[String]
-    ~ (__ \ "slugUri").format[String]
-    ~ (__ \ "processed").format[Boolean]
-    ~ (__ \ "creationDate").format[DateTime]
-
+    ~ (__ \ "slugUri"      ).format[String]
+    ~ (__ \ "processed"    ).format[Boolean]
     )(MongoSlugParserJob.apply, unlift(MongoSlugParserJob.unapply))
+}
+
+case class NewSlugParserJob(
+  slugName     : String,
+  slugVersion  : String,
+  runnerVersion: String,
+  slugUri      : String)
+
+object NewSlugParserJob {
+  import play.api.libs.json._
+  import play.api.libs.functional.syntax._
+
+  implicit val format: OFormat[NewSlugParserJob] =
+    ( (__ \ "slugName"     ).format[String]
+    ~ (__ \ "slugVersion"  ).format[String]
+    ~ (__ \ "runnerVersion").format[String]
+    ~ (__ \ "slugUri"      ).format[String]
+    )(NewSlugParserJob.apply, unlift(NewSlugParserJob.unapply))
 }

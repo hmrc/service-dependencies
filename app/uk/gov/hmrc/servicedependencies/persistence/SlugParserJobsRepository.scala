@@ -24,7 +24,7 @@ import reactivemongo.api.indexes.{Index, IndexType}
 import reactivemongo.bson.BSONObjectID
 import reactivemongo.play.json.ImplicitBSONHandlers._
 import uk.gov.hmrc.mongo.ReactiveRepository
-import uk.gov.hmrc.servicedependencies.model.MongoSlugParserJob
+import uk.gov.hmrc.servicedependencies.model.{MongoSlugParserJob, NewSlugParserJob}
 import uk.gov.hmrc.servicedependencies.util.FutureHelpers
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -43,35 +43,46 @@ class SlugParserJobsRepository @Inject()(mongo: ReactiveMongoComponent, futureHe
     localEnsureIndexes
 
   private def localEnsureIndexes =
-    // TODO require index?
     Future.sequence(
       Seq(
         collection
           .indexesManager
           .ensure(
             Index(
-              Seq("id" -> IndexType.Hashed),
-              name       = Some("idIdx"),
-              unique     = true,
-              background = true))
-      )
-    )
+              Seq(
+                "slugName"    -> IndexType.Ascending,
+                "slugVersion" -> IndexType.Ascending),
+              name       = Some("slugJobParseUniqueIdx"),
+              unique     = true))))
 
-  def add(slugParserJob: MongoSlugParserJob): Future[Unit] =
+  def add(newJob: NewSlugParserJob): Future[Unit] =
     collection
       .insert(
-        slugParserJob.copy(
-          id = slugParserJob.id.orElse(Some(UUID.randomUUID().toString))
+        MongoSlugParserJob(
+          id            = UUID.randomUUID().toString,
+          slugName      = newJob.slugName,
+          slugVersion   = newJob.slugVersion,
+          runnerVersion = newJob.runnerVersion,
+          slugUri       = newJob.slugUri,
+          processed     = false
         ))
       .map(_ => ())
 
-
-  def delete(id: String): Future[Unit] =
+  def markProcessed(id: String): Future[Unit] = {
+    logger.info(s"mark job $id as processed")
     collection
-      .remove(Json.obj("_id" -> id))
+      .update(
+        selector = Json.obj("_id" -> id),
+        update   = Json.obj("$set" -> Json.obj("processed" -> true)))
       .map(_ => ())
+  }
 
-  def getAllEntries: Future[Seq[MongoSlugParserJob]] = findAll()
+  def getAllEntries: Future[Seq[MongoSlugParserJob]] =
+    findAll()
 
-  def clearAllData: Future[Boolean] = super.removeAll().map(_.ok)
+  def getUnprocessed: Future[Seq[MongoSlugParserJob]] =
+    find("processed" -> false)
+
+  def clearAllData: Future[Boolean] =
+    super.removeAll().map(_.ok)
 }

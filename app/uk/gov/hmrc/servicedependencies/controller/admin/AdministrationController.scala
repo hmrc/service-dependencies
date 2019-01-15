@@ -21,7 +21,9 @@ import play.api.Logger
 import play.api.libs.json.Json
 import play.api.mvc.ControllerComponents
 import uk.gov.hmrc.play.bootstrap.controller.BackendController
+import uk.gov.hmrc.servicedependencies.model.NewSlugParserJob
 import uk.gov.hmrc.servicedependencies.service.DependencyDataUpdatingService
+import scala.concurrent.Future
 
 import scala.concurrent.Future
 
@@ -72,4 +74,14 @@ class AdministrationController @Inject()(dependencyDataUpdatingService: Dependen
     dependencyDataUpdatingService.locks().map(locks => Ok(Json.toJson(locks)))
   }
 
+  def addSlugParserJob = Action.async(parse.json) { implicit request =>
+    withJsonBody[NewSlugParserJob] { newJob =>
+      dependencyDataUpdatingService.addSlugParserJob(newJob).map { _ =>
+        Created("")
+      }.recover {
+        case ex => Logger.error("creation of slug job failed", ex)
+                   InternalServerError("Could not create slug job")
+      }
+    }
+  }
 }

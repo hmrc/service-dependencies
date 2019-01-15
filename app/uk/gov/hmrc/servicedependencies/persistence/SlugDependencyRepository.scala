@@ -17,6 +17,7 @@
 package uk.gov.hmrc.servicedependencies.persistence
 import com.google.inject.{Inject, Singleton}
 import play.modules.reactivemongo.ReactiveMongoComponent
+import reactivemongo.api.indexes.{Index, IndexType}
 import reactivemongo.bson.BSONObjectID
 import uk.gov.hmrc.mongo.ReactiveRepository
 import uk.gov.hmrc.servicedependencies.model.SlugDependencyInfo
@@ -30,6 +31,20 @@ class SlugDependencyRepository @Inject()(mongo: ReactiveMongoComponent)
     collectionName = "slugDependencies",
     mongo          = mongo.mongoConnector.db,
     domainFormat   = SlugDependencyInfo.format){
+
+  private def localEnsureIndexes =
+    Future.sequence(
+      Seq(
+        collection
+          .indexesManager
+          .ensure(
+            Index(
+              Seq(
+                "slugName"    -> IndexType.Ascending/*,
+                "slugVersion" -> IndexType.Ascending*/), // TODO confirm unique key
+              name       = Some("slugJobParseUniqueIdx"),
+              unique     = true))))
+
 
   def add(slugDependencyInfo: SlugDependencyInfo): Future[Unit] =
     collection

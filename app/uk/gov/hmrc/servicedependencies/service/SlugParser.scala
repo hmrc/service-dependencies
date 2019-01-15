@@ -36,10 +36,6 @@ import scala.util.{Success, Try}
 import scala.util.control.NonFatal
 
 class SlugParser @Inject()(
-  // actorSystem: ActorSystem,
-  // slugParserJobsRepository: SlugParserJobsRepository,
-  // @Named("slugParserActor") slugParserActor: ActorRef) {
-
    actorSystem             : ActorSystem,
    slugParserJobsRepository: SlugParserJobsRepository,
    slugDependencyRepository: SlugDependencyRepository,
@@ -49,26 +45,19 @@ class SlugParser @Inject()(
    import ExecutionContext.Implicits.global
 
 
-  // TODO inject actor with router? Need to use a factory?
   val slugParserActor: ActorRef = actorSystem.actorOf(
       Props(new SlugParser.SlugParserActor(
           slugParserJobsRepository,
           slugDependencyRepository,
           slugConnector,
           futureHelpers))
-        //.withRouter(RoundRobinPool(nrOfInstances = 2))
         .withRouter(FromConfig())
     , "slugParserActor")
-
-
-
-
-  import ExecutionContext.Implicits.global
 
   // TODO to be called from S3 notification too
   def runSlugParserJobs() =
     slugParserJobsRepository
-      .getAllEntries
+      .getUnprocessed
       .map { jobs =>
         Logger.debug(s"found ${jobs.size} Slug parser jobs")
         jobs.map {
@@ -100,16 +89,13 @@ object SlugParser {
         val f = futureHelpers.withTimerAndCounter("slug.process")(
           for {
             slvs <- slugConnector.downloadSlug(job.slugUri)(in => SlugParser.parse(job.slugName, in))
-            // TODO what if already added
             sld  =  SlugDependencyInfo(
                       slugName     = job.slugName,
                       slugUri      = job.slugUri,
                       dependencies = slvs)
             _    <- slugDependencyRepository.add(sld)
             _ = Logger.debug(s"added {$job.id}: $sld")
-            _    <- job.id
-                      .map(slugParserJobsRepository.delete)
-                      .getOrElse(sys.error("No id on job!")) // shouldn't happen
+            _    <- slugParserJobsRepository.markProcessed(job.id)
           } yield ()
         ).recover {
           case NonFatal(e) => Logger.error(s"An error occurred processing slug parser job ${job.id}: ${e.getMessage}", e)
@@ -133,7 +119,7 @@ object SlugParser {
         .takeWhile(_ != null)
         .flatMap {
           case next if next.getName.toLowerCase.endsWith(".jar") =>
-            extractVersionFromJar(tar).map(v => SlugLibraryVersion(slugName, next.getName, v.toString)) // TODO tar is closed prematurely for second reading...
+            extractVersionFromJar(tar).map(v => SlugLibraryVersion(slugName, next.getName, v.toString))
           case _ => None
         }
         .toList // make strict - gz will not be open forever...

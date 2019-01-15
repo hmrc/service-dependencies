@@ -30,13 +30,14 @@ import scala.concurrent.Future
 
 @Singleton
 class DependencyDataUpdatingService @Inject()(
-  curatedDependencyConfigProvider: CuratedDependencyConfigProvider,
+  curatedDependencyConfigProvider        : CuratedDependencyConfigProvider,
   repositoryLibraryDependenciesRepository: RepositoryLibraryDependenciesRepository,
-  libraryVersionRepository: LibraryVersionRepository,
-  sbtPluginVersionRepository: SbtPluginVersionRepository,
-  locksRepository: LocksRepository,
-  mongoLocks: MongoLocks,
-  dependenciesDataSource: DependenciesDataSource
+  libraryVersionRepository               : LibraryVersionRepository,
+  sbtPluginVersionRepository             : SbtPluginVersionRepository,
+  locksRepository                        : LocksRepository,
+  mongoLocks                             : MongoLocks,
+  dependenciesDataSource                 : DependenciesDataSource,
+  slugParserJobsRepository               : SlugParserJobsRepository
 ) {
 
   lazy val logger = LoggerFactory.getLogger(this.getClass)
@@ -178,7 +179,8 @@ class DependencyDataUpdatingService @Inject()(
     case "libraryVersions"               => libraryVersionRepository.clearAllData
     case "sbtPluginVersions"             => sbtPluginVersionRepository.clearAllData
     case "locks"                         => locksRepository.clearAllData
-    case anythingElse                    => throw new RuntimeException(s"dropping $anythingElse collection is not supported")
+    case "slugParserJobs"                => slugParserJobsRepository.clearAllData
+    case other                           => throw new RuntimeException(s"dropping $other collection is not supported")
   }
 
   def locks(): Future[Seq[Lock]] =
@@ -186,4 +188,7 @@ class DependencyDataUpdatingService @Inject()(
 
   def clearUpdateDates =
     repositoryLibraryDependenciesRepository.clearUpdateDates
+
+  def addSlugParserJob(newJob: NewSlugParserJob): Future[Unit] =
+    slugParserJobsRepository.add(newJob)
 }
