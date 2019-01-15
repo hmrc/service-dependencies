@@ -43,20 +43,9 @@ class SlugParserJobsRepository @Inject()(mongo: ReactiveMongoComponent, futureHe
     localEnsureIndexes
 
   private def localEnsureIndexes =
-    // TODO require index?
-    Future.sequence(
-      Seq(
-        collection
-          .indexesManager
-          .ensure(
-            Index(
-              Seq("id" -> IndexType.Hashed),
-              name       = Some("idIdx"),
-              unique     = true,
-              background = true))
-      )
-    )
+    Future(Seq.empty)
 
+  // TODO check will fail if already exists (and behaviour)
   def add(slugParserJob: MongoSlugParserJob): Future[Unit] =
     collection
       .insert(
@@ -65,24 +54,21 @@ class SlugParserJobsRepository @Inject()(mongo: ReactiveMongoComponent, futureHe
         ))
       .map(_ => ())
 
-  // TODO remove this
-  def newMSLJ(i: String) = MongoSlugParserJob(
-    id          = None,
-    slugName    = s"slugName$i",
-    libraryName = s"libraryName$i",
-    version     = s"version$i")
-  add(newMSLJ("0"))
-  add(newMSLJ("1"))
-  add(newMSLJ("2"))
-  add(newMSLJ("3"))
-
-
-  def delete(id: String): Future[Unit] =
+  def markProcessed(id: String): Future[Unit] = {
+    logger.info(s"mark job $id as processed")
     collection
-      .remove(Json.obj("_id" -> id))
+      .update(
+        selector = Json.obj("_id" -> id),
+        update   = Json.obj("$set" -> Json.obj("processed" -> true)))
       .map(_ => ())
+  }
 
-  def getAllEntries: Future[Seq[MongoSlugParserJob]] = findAll()
+  def getAllEntries: Future[Seq[MongoSlugParserJob]] =
+    findAll()
 
-  def clearAllData: Future[Boolean] = super.removeAll().map(_.ok)
+  def getUnprocessed: Future[Seq[MongoSlugParserJob]] =
+    find("processed" -> false)
+
+  def clearAllData: Future[Boolean] =
+    super.removeAll().map(_.ok)
 }

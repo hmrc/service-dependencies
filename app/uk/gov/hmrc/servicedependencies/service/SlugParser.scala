@@ -36,10 +36,6 @@ import scala.util.{Success, Try}
 import scala.util.control.NonFatal
 
 class SlugParser @Inject()(
-  // actorSystem: ActorSystem,
-  // slugParserJobsRepository: SlugParserJobsRepository,
-  // @Named("slugParserActor") slugParserActor: ActorRef) {
-
    actorSystem             : ActorSystem,
    slugParserJobsRepository: SlugParserJobsRepository,
    slugDependencyRepository: SlugDependencyRepository,
@@ -49,26 +45,19 @@ class SlugParser @Inject()(
    import ExecutionContext.Implicits.global
 
 
-  // TODO inject actor with router? Need to use a factory?
   val slugParserActor: ActorRef = actorSystem.actorOf(
       Props(new SlugParser.SlugParserActor(
           slugParserJobsRepository,
           slugDependencyRepository,
           slugConnector,
           futureHelpers))
-        //.withRouter(RoundRobinPool(nrOfInstances = 2))
         .withRouter(FromConfig())
     , "slugParserActor")
-
-
-
-
-  import ExecutionContext.Implicits.global
 
   // TODO to be called from S3 notification too
   def runSlugParserJobs() =
     slugParserJobsRepository
-      .getAllEntries
+      .getUnprocessed
       .map { jobs =>
         Logger.debug(s"found ${jobs.size} Slug parser jobs")
         jobs.map {
@@ -108,7 +97,7 @@ object SlugParser {
             _    <- slugDependencyRepository.add(sld)
             _ = Logger.debug(s"added {$job.id}: $sld")
             _    <- job.id
-                      .map(slugParserJobsRepository.delete)
+                      .map(slugParserJobsRepository.markProcessed)
                       .getOrElse(sys.error("No id on job!")) // shouldn't happen
           } yield ()
         ).recover {

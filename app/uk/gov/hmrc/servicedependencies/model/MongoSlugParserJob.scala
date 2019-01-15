@@ -17,21 +17,23 @@
 package uk.gov.hmrc.servicedependencies.model
 
 case class MongoSlugParserJob(
-  id         : Option[String],
-  slugName   : String,
-  libraryName: String,
-  version    : String) {
-    def slugUri = s"http://$slugName" // TODO
-  }
+  id           : Option[String],
+  slugName     : String,
+  slugVersion  : String,
+  runnerVersion: String,
+  slugUri      : String,
+  processed    : Boolean)
 
 object MongoSlugParserJob {
   import play.api.libs.json._
   import play.api.libs.functional.syntax._
 
   implicit val format: OFormat[MongoSlugParserJob] =
-    ( (__ \ "_id"        ).formatNullable[String]
-    ~ (__ \ "slugName"   ).format[String]
-    ~ (__ \ "libraryName").format[String]
-    ~ (__ \ "version"    ).format[String]
+    ( (__ \ "_id"          ).formatNullable[String]
+    ~ (__ \ "slugName"     ).format[String]
+    ~ (__ \ "slugVersion"  ).format[String]
+    ~ (__ \ "runnerVersion").format[String]
+    ~ (__ \ "slugUri"      ).format[String]
+    ~ (__ \ "processed"    ).format[Boolean]
     )(MongoSlugParserJob.apply, unlift(MongoSlugParserJob.unapply))
 }
