@@ -24,7 +24,7 @@ import reactivemongo.api.indexes.{Index, IndexType}
 import reactivemongo.bson.BSONObjectID
 import reactivemongo.play.json.ImplicitBSONHandlers._
 import uk.gov.hmrc.mongo.ReactiveRepository
-import uk.gov.hmrc.servicedependencies.model.MongoSlugParserJob
+import uk.gov.hmrc.servicedependencies.model.{MongoSlugParserJob, NewSlugParserJob}
 import uk.gov.hmrc.servicedependencies.util.FutureHelpers
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -46,11 +46,16 @@ class SlugParserJobsRepository @Inject()(mongo: ReactiveMongoComponent, futureHe
     Future(Seq.empty)
 
   // TODO check will fail if already exists (and behaviour)
-  def add(slugParserJob: MongoSlugParserJob): Future[Unit] =
+  def add(newJob: NewSlugParserJob): Future[Unit] =
     collection
       .insert(
-        slugParserJob.copy(
-          id = slugParserJob.id.orElse(Some(UUID.randomUUID().toString))
+        MongoSlugParserJob(
+          id            = UUID.randomUUID().toString,
+          slugName      = newJob.slugName,
+          slugVersion   = newJob.slugVersion,
+          runnerVersion = newJob.runnerVersion,
+          slugUri       = newJob.slugUri,
+          processed     = false
         ))
       .map(_ => ())
 

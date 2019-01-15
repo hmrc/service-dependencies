@@ -189,6 +189,6 @@ class DependencyDataUpdatingService @Inject()(
   def clearUpdateDates =
     repositoryLibraryDependenciesRepository.clearUpdateDates
 
-  def addSlugParserJob(job: MongoSlugParserJob): Future[Unit] =
-    slugParserJobsRepository.add(job)
+  def addSlugParserJob(newJob: NewSlugParserJob): Future[Unit] =
+    slugParserJobsRepository.add(newJob)
 }

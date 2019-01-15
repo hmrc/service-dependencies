@@ -96,9 +96,7 @@ object SlugParser {
                       dependencies = slvs)
             _    <- slugDependencyRepository.add(sld)
             _ = Logger.debug(s"added {$job.id}: $sld")
-            _    <- job.id
-                      .map(slugParserJobsRepository.markProcessed)
-                      .getOrElse(sys.error("No id on job!")) // shouldn't happen
+            _    <- slugParserJobsRepository.markProcessed(job.id)
           } yield ()
         ).recover {
           case NonFatal(e) => Logger.error(s"An error occurred processing slug parser job ${job.id}: ${e.getMessage}", e)

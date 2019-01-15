@@ -21,7 +21,7 @@ import play.api.Logger
 import play.api.libs.json.Json
 import play.api.mvc.ControllerComponents
 import uk.gov.hmrc.play.bootstrap.controller.BackendController
-import uk.gov.hmrc.servicedependencies.model.MongoSlugParserJob
+import uk.gov.hmrc.servicedependencies.model.NewSlugParserJob
 import uk.gov.hmrc.servicedependencies.service.DependencyDataUpdatingService
 import scala.concurrent.Future
 
@@ -73,8 +73,8 @@ class AdministrationController @Inject()(dependencyDataUpdatingService: Dependen
   }
 
   def addSlugParserJob = Action.async(parse.json) { implicit request =>
-    withJsonBody[MongoSlugParserJob] { job =>
-      dependencyDataUpdatingService.addSlugParserJob(job).map { _ =>
+    withJsonBody[NewSlugParserJob] { newJob =>
+      dependencyDataUpdatingService.addSlugParserJob(newJob).map { _ =>
         Created("")
       }
     }
