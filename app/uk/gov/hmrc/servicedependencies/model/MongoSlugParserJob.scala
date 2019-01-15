@@ -16,7 +16,6 @@
 
 package uk.gov.hmrc.servicedependencies.model
 import org.joda.time.DateTime
-import play.api.libs.json.{Format, Json, OFormat}
 import uk.gov.hmrc.mongo.json.ReactiveMongoFormats
 import uk.gov.hmrc.time.DateTimeUtils
 
@@ -31,6 +30,19 @@ case class MongoSlugParserJob(
   creationDate: DateTime = DateTimeUtils.now)
 
 object MongoSlugParserJob {
+  import play.api.libs.json._
+  import play.api.libs.functional.syntax._
+
   implicit val dtf: Format[DateTime] = ReactiveMongoFormats.dateTimeFormats
-  implicit val format: OFormat[MongoSlugParserJob] = Json.format[MongoSlugParserJob]
+  implicit val format: OFormat[MongoSlugParserJob] =
+    ( (__ \ "_id"        ).formatNullable[String]
+    ~ (__ \ "service"   ).format[String]
+    ~ (__ \ "slugName"   ).format[String]
+    ~ (__ \ "version"    ).format[String]
+    ~ (__ \ "runnerVersion").format[String]
+    ~ (__ \ "slugUri").format[String]
+    ~ (__ \ "processed").format[Boolean]
+    ~ (__ \ "creationDate").format[DateTime]
+
+    )(MongoSlugParserJob.apply, unlift(MongoSlugParserJob.unapply))
 }
