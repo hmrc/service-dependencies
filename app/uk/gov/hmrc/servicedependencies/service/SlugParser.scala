@@ -61,10 +61,11 @@ class SlugParser @Inject()(
       .getUnprocessed
       .map { jobs =>
         Logger.debug(s"found ${jobs.size} Slug parser jobs")
-        jobs.map {
-          job => slugParserActor ! SlugParser.RunJob(job)
-        }
+        jobs.map(executeJob)
       }
+
+  def executeJob(job: MongoSlugParserJob): Unit =
+    slugParserActor ! SlugParser.RunJob(job)
 }
 
 
