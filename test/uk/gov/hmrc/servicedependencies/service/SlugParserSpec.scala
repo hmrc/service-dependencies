@@ -86,7 +86,15 @@ class SlugParserSpec extends FlatSpec with Matchers {
     val is = new BufferedInputStream(getClass.getResourceAsStream("/slugs/example-service.tar.gz"))
     val res = SlugParser.parse("example-service_0.27.0_0.5.2.tar.gz", is).get
 
+
+    res.slugName shouldBe "example-service"
+    res.runnerVersion shouldBe "0.5.2"
+    res.slugVersion shouldBe "0.27.0"
+
+    res.classpath.isEmpty shouldBe false
+
     res.dependencies.length shouldBe 2
+
     val ivy = res.dependencies.find(_.libraryName.contains("example-ivy")).get
     ivy.version shouldBe "3.2.0"
     ivy.group shouldBe "uk.gov.hmrc"

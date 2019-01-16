@@ -16,23 +16,24 @@
 
 package uk.gov.hmrc.servicedependencies.service
 
-import akka.actor.{Actor, ActorRef, ActorSystem, Props}
-import akka.routing.{FromConfig, RoundRobinPool}
-import play.api.Logger
 import java.io.{BufferedInputStream, InputStream}
-import java.util.concurrent.Executors
-import javax.inject.{Inject, Named}
+
+import akka.actor.{Actor, ActorRef, ActorSystem, Props}
+import akka.routing.FromConfig
+import javax.inject.Inject
 import org.apache.commons.compress.archivers.jar.JarArchiveInputStream
-import org.apache.commons.compress.archivers.{ArchiveInputStream, ArchiveStreamFactory}
+import org.apache.commons.compress.archivers.{ArchiveEntry, ArchiveInputStream, ArchiveStreamFactory}
 import org.apache.commons.compress.compressors.CompressorStreamFactory
+import play.api.Logger
 import uk.gov.hmrc.servicedependencies.connector.SlugConnector
-import uk.gov.hmrc.servicedependencies.model.{MongoSlugParserJob, SlugInfo, SlugDependency}
+import uk.gov.hmrc.servicedependencies.model.{MongoSlugParserJob, SlugDependency, SlugInfo}
 import uk.gov.hmrc.servicedependencies.persistence.{SlugInfoRepository, SlugParserJobsRepository}
 import uk.gov.hmrc.servicedependencies.util.FutureHelpers
-import scala.concurrent.{Await, ExecutionContext, Future}
+
 import scala.concurrent.duration.DurationInt
+import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.io.Source
-import scala.util.{Success, Try}
+import scala.util.Try
 import scala.util.control.NonFatal
 
 class SlugParser @Inject()(
@@ -73,9 +74,10 @@ object SlugParser {
 
   class SlugParserActor @Inject()(
     slugParserJobsRepository: SlugParserJobsRepository,
-    slugInfoRepository      : SlugInfoRepository,
-    slugConnector           : SlugConnector,
-    futureHelpers           : FutureHelpers) extends Actor {
+    slugInfoRepository: SlugInfoRepository,
+    slugConnector: SlugConnector,
+    futureHelpers: FutureHelpers)
+      extends Actor {
 
     import context.dispatcher
 
@@ -83,16 +85,19 @@ object SlugParser {
       case RunJob(job) =>
         Logger.debug(s">>>>>>>>>>>>>>> running job $job")
 
-        val f = futureHelpers.withTimerAndCounter("slug.process")(
-          for {
-            si <- slugConnector.downloadSlug(job.slugUri)(in => SlugParser.parse(job.slugUri, in).get)
-            _  <- slugInfoRepository.add(si)
-            _  =  Logger.debug(s"added {$job.id}: $si")
-            _  <- slugParserJobsRepository.markProcessed(job.id)
-          } yield ()
-        ).recover {
-          case NonFatal(e) => Logger.error(s"An error occurred processing slug parser job ${job.id}: ${e.getMessage}", e)
-        }
+        val f = futureHelpers
+          .withTimerAndCounter("slug.process")(
+            for {
+              si <- slugConnector.downloadSlug(job.slugUri)(in => SlugParser.parse(job.slugUri, in).get)
+              _  <- slugInfoRepository.add(si)
+              _ = Logger.debug(s"added {$job.id}: $si")
+              _ <- slugParserJobsRepository.markProcessed(job.id)
+            } yield ()
+          )
+          .recover {
+            case NonFatal(e) =>
+              Logger.error(s"An error occurred processing slug parser job ${job.id}: ${e.getMessage}", e)
+          }
 
         // blocking so that number of actors determines throughput
         Await.result(f, 10.minute)
@@ -106,40 +111,45 @@ object SlugParser {
 
   def parse(slugUri: String, gz: BufferedInputStream): Try[SlugInfo] =
     extractTarGzip(gz)
-    .map { tar =>
-      val slugDependencies =
-        Stream
-          .continually(tar.getNextEntry)
-          .takeWhile(_ != null)
-          .flatMap {
-            case next if next.getName.toLowerCase.endsWith(".jar") =>
-              extractVersionFromJar(next.getName, tar)
-            case _ => None
-          }
-          .toList // make strict - gz will not be open forever...
+      .map { tar =>
 
 
         val (runnerVersion, slugVersion, slugName) = extractFromUri(slugUri)
 
-        SlugInfo(
+        val slugInfo = SlugInfo(
           slugUri       = slugUri,
           slugName      = slugName,
           slugVersion   = slugVersion,
           runnerVersion = runnerVersion,
-          classpath     = "TODO",
-          dependencies  = slugDependencies)
-    }
+          classpath     = "",
+          dependencies  = List.empty[SlugDependency])
 
-    def extractFromUri(slugUri: String): (String, String, String) = {
-      // e.g. https://store/slugs/my-slug/my-slug_0.27.0_0.5.2.tgz
-      val filename = slugUri
-                       .stripSuffix(".tgz").stripSuffix(".tar.gz")
-                       .split("/")
-                       .lastOption
-                       .getOrElse(sys.error(s"Could not extract slug data from uri $slugUri"))
-      val runnerVersion :: slugVersion :: rest = filename.split("_").reverse.toList
-      (runnerVersion, slugVersion, rest.mkString("_"))
-    }
+          Iterator
+            .continually(tar.getNextEntry)
+            .takeWhile(_ != null)
+            .foldLeft(slugInfo)( (result: SlugInfo, next: ArchiveEntry) => {
+              next match {
+                case n if n.getName.toLowerCase.endsWith(".jar") => {
+                  extractVersionFromJar(n.getName, tar).map(v => result.copy(dependencies = result.dependencies ++ List(v))).getOrElse(result)
+                }
+                case n if n.getName.endsWith(s"bin/$slugName") =>
+                  extractClasspath(tar).map(cp => result.copy(classpath = cp)).getOrElse(result)
+                case _ => result
+              }
+            })
+      }
+
+  def extractFromUri(slugUri: String): (String, String, String) = {
+    // e.g. https://store/slugs/my-slug/my-slug_0.27.0_0.5.2.tgz
+    val filename = slugUri
+      .stripSuffix(".tgz")
+      .stripSuffix(".tar.gz")
+      .split("/")
+      .lastOption
+      .getOrElse(sys.error(s"Could not extract slug data from uri $slugUri"))
+    val runnerVersion :: slugVersion :: rest = filename.split("_").reverse.toList
+    (runnerVersion, slugVersion, rest.mkString("_"))
+  }
 
   def extractTarGzip(gz: BufferedInputStream): Try[ArchiveInputStream] =
     Try(new CompressorStreamFactory().createCompressorInputStream(gz))
@@ -157,20 +167,29 @@ object SlugParser {
           case file if file.endsWith("pom.xml") => extractVersionFromPom(libraryName, jar)
           case _                                => None; // skip
         }
-      }.headOption
+      }
+      .headOption
+  }
+
+
+  def extractClasspath(inputStream: InputStream) : Option[String] = {
+    val prefix = "declare -r app_classpath=\""
+    Source.fromInputStream(inputStream)
+      .getLines()
+      .find(_.startsWith(prefix))
   }
 
 
   def extractVersionFromManifest(libraryName: String, in: InputStream): Option[SlugDependency] = {
-    val versionRegex    = "Implementation-Version: (.+)".r
-    val groupRegex      = "Implementation-Vendor-Id: (.+)".r
-    val artifactRegex   = "Implementation-Title: (.+)".r
+    val versionRegex  = "Implementation-Version: (.+)".r
+    val groupRegex    = "Implementation-Vendor-Id: (.+)".r
+    val artifactRegex = "Implementation-Title: (.+)".r
 
     for {
-      manifest  <- Option(Source.fromInputStream(in).mkString)
-      version   <- versionRegex.findFirstMatchIn(manifest).map(_.group(1))
-      group     <- groupRegex.findFirstMatchIn(manifest).map(_.group(1))
-      artifact  <- artifactRegex.findFirstMatchIn(manifest).map(_.group(1))
+      manifest <- Option(Source.fromInputStream(in).mkString)
+      version  <- versionRegex.findFirstMatchIn(manifest).map(_.group(1))
+      group    <- groupRegex.findFirstMatchIn(manifest).map(_.group(1))
+      artifact <- artifactRegex.findFirstMatchIn(manifest).map(_.group(1))
     } yield SlugDependency(libraryName, version, group, artifact)
 
   }
@@ -181,8 +200,8 @@ object SlugParser {
     import xml._
 
     for {
-      raw <- Try(scala.io.Source.fromInputStream(in).mkString).toOption
-      pom <-  Try(XML.loadString(raw)).toOption
+      raw      <- Try(scala.io.Source.fromInputStream(in).mkString).toOption
+      pom      <- Try(XML.loadString(raw)).toOption
       version  <- (pom \ "version").headOption.getOrElse(pom \ "parent" \ "version").map(_.text).headOption
       group    <- (pom \ "groupId").headOption.getOrElse(pom \ "parent" \ "groupId").map(_.text).headOption
       artifact <- (pom \ "artifactId").headOption.map(_.text)
@@ -190,13 +209,10 @@ object SlugParser {
 
   }
 
-
   def extractVersionFromFilename(fileName: String): Option[String] = {
     val regex = """^\/?(.+)_(\d+\.\d+\.\d+-?.*)_(\d+\.\d+\.\d+)\.tgz$""".r
     // TODO: write a function to turn a slugname/full uri to version name
     ???
   }
-
-
 
 }
