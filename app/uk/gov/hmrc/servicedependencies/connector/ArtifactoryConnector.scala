@@ -15,24 +15,49 @@
  */
 
 package uk.gov.hmrc.servicedependencies.connector
-import javax.inject.Inject
+
+import java.util.concurrent.Executors
+
+import javax.inject.{Inject, Singleton}
+import play.api.Logger
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.play.bootstrap.http.HttpClient
 import uk.gov.hmrc.servicedependencies.config.ServiceDependenciesConfig
-import uk.gov.hmrc.servicedependencies.connector.model.ArtifactoryRepo
+import uk.gov.hmrc.servicedependencies.connector.model.{ArtifactoryChild, ArtifactoryRepo}
+import uk.gov.hmrc.servicedependencies.model.NewSlugParserJob
 
-import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.{ExecutionContext, Future}
 
-class ArtifactoryConnector @Inject()(http: HttpClient, config: ServiceDependenciesConfig){
+@Singleton
+class ArtifactoryConnector @Inject()(http: HttpClient, config: ServiceDependenciesConfig) {
 
-
+  import ArtifactoryConnector._
   import ArtifactoryRepo._
 
+  val artifactoryRoot = s"${config.artifactoryBase}/api/storage/webstore/slugs"
+  val webstoreRoot    = s"${config.webstoreBase}/slugs"
 
-  def findAllSlugs() = {
-    implicit val hc = HeaderCarrier(otherHeaders = headers)
-    http.GET[ArtifactoryRepo](config.artifactoryBase)
+  implicit val ec: ExecutionContext = ExecutionContext.fromExecutorService(Executors.newFixedThreadPool(1))
 
+  /**
+    * Enumerate all slugs in webstore
+    */
+  def findAllSlugs(): Future[List[ArtifactoryChild]] = {
+    implicit val hc: HeaderCarrier = HeaderCarrier(otherHeaders = headers)
+    http.GET[ArtifactoryRepo](artifactoryRoot).map(_.children.filter(_.folder).toList)
+  }
+
+
+  /**
+    * Connect to artifactory and retrieve a list of all available slugs
+    */
+  def findAllSlugsForService(service: String): Future[List[NewSlugParserJob]] = {
+    Logger.info(s"downloading $service from artifactory")
+    implicit val hc: HeaderCarrier = HeaderCarrier(otherHeaders = headers)
+    http.GET[ArtifactoryRepo](s"$artifactoryRoot$service")
+      .map(_.children
+        .filterNot(_.folder)
+        .map(repo => convertToSlugParserJob(service, repo.uri, webstoreRoot)).toList)
   }
 
   private val headers : List[(String, String)] =
@@ -45,18 +70,16 @@ class ArtifactoryConnector @Inject()(http: HttpClient, config: ServiceDependenci
 
 object ArtifactoryConnector {
 
+  def convertToSlugParserJob(serviceName: String, uri: String, webStoreRoot: String) : NewSlugParserJob = {
+    NewSlugParserJob(s"$webStoreRoot$serviceName$uri")
+  }
 
   def convertToWebStoreURL(url: String) : String = {
     val artifactoryPrefix = "https://artefacts."
-    val artifactorySuffix = "/artifactory/webstore"
     val webstorePrefix    = "https://webstore."
+    val artifactorySuffix = "/artifactory/webstore"
     url.replace(artifactoryPrefix, webstorePrefix).replace(artifactorySuffix, "")
   }
 
-
-  def parseVersion(uri: String): Option[String] = {
-    val regex = """_([\d-\w\.]+)_""".r
-    regex.findFirstMatchIn(uri).map(_.group(1))
-  }
 }
 

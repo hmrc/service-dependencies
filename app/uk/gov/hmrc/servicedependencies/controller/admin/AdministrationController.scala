@@ -25,6 +25,8 @@ import uk.gov.hmrc.servicedependencies.model.NewSlugParserJob
 import uk.gov.hmrc.servicedependencies.service.DependencyDataUpdatingService
 import scala.concurrent.Future
 
+import scala.concurrent.Future
+
 @Singleton
 class AdministrationController @Inject()(dependencyDataUpdatingService: DependencyDataUpdatingService, cc: ControllerComponents)
     extends BackendController(cc) {
