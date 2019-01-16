@@ -37,9 +37,6 @@ class LibraryVersionRepository @Inject()(mongo: ReactiveMongoComponent, futureHe
       domainFormat   = MongoLibraryVersion.format) {
 
   override def ensureIndexes(implicit ec: ExecutionContext): Future[Seq[Boolean]] =
-    localEnsureIndexes
-
-  private def localEnsureIndexes =
     Future.sequence(
       Seq(
         collection

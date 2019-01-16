@@ -16,13 +16,16 @@
 
 package uk.gov.hmrc.servicedependencies
 
+import akka.stream.Materializer
 import com.google.inject.AbstractModule
+import play.api.libs.concurrent.MaterializerProvider
 
-class SchedulerModule() extends AbstractModule {
+class Module() extends AbstractModule {
   override def configure(): Unit = {
     bind(classOf[DataReloadScheduler]).asEagerSingleton()
     bind(classOf[MetricsScheduler]).asEagerSingleton()
     bind(classOf[SlugParseScheduler]).asEagerSingleton()
     bind(classOf[Github]).toProvider(classOf[GithubProvider])
+    bind(classOf[Materializer]).toProvider(classOf[MaterializerProvider])
   }
 }

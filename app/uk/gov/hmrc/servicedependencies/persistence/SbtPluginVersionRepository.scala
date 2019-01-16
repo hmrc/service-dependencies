@@ -37,9 +37,6 @@ class SbtPluginVersionRepository @Inject()(mongo: ReactiveMongoComponent, future
       domainFormat   = MongoSbtPluginVersion.format) {
 
   override def ensureIndexes(implicit ec: ExecutionContext): Future[Seq[Boolean]] =
-    localEnsureIndexes
-
-  private def localEnsureIndexes =
     Future.sequence(
       Seq(
         collection

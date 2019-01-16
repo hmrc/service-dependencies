@@ -43,7 +43,6 @@ class SlugJobUpdater @Inject() (conn: ArtifactoryConnector,
       .throttle(rateLimit.invocations, rateLimit.perDuration)
       .mapAsync(1)(r => conn.findAllSlugsForService(r.uri))
       .mapConcat(identity)
-
       .to(mongoSink)
       .run()
   }

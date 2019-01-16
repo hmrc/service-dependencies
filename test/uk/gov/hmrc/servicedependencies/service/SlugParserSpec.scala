@@ -18,6 +18,8 @@ package uk.gov.hmrc.servicedependencies.service
 import java.io.{BufferedInputStream, ByteArrayInputStream}
 import java.nio.charset.StandardCharsets
 
+import org.apache.commons.compress.archivers.ArchiveStreamFactory
+import org.apache.commons.compress.compressors.CompressorStreamFactory
 import org.scalatest.{FlatSpec, Matchers}
 import uk.gov.hmrc.servicedependencies.model.SlugDependency
 
@@ -82,9 +84,9 @@ class SlugParserSpec extends FlatSpec with Matchers {
 
 
   "slugparser" should "parse a slug" in {
-
-    val is = new BufferedInputStream(getClass.getResourceAsStream("/slugs/example-service.tar.gz"))
-    val res = SlugParser.parse("example-service_0.27.0_0.5.2.tar.gz", is).get
+    val in = new CompressorStreamFactory().createCompressorInputStream(
+               getClass.getResourceAsStream("/slugs/example-service.tar.gz"))
+    val res = SlugParser.parse("example-service_0.27.0_0.5.2.tar.gz", in)
 
 
     res.slugName shouldBe "example-service"
