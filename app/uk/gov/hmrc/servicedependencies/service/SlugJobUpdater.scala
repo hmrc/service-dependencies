@@ -29,10 +29,11 @@ import scala.concurrent.ExecutionContext.Implicits.global
 case class RateLimit(invocations: Int, perDuration: FiniteDuration)
 
 @Singleton
-class SlugUpdater @Inject() (conn: ArtifactoryConnector,
-                             repo: SlugParserJobsRepository,
-                             rateLimit: RateLimit = RateLimit(1, FiniteDuration(2, "seconds")),
-                             implicit val materializer: Materializer) {
+class SlugJobUpdater @Inject() (conn: ArtifactoryConnector,
+                                repo: SlugParserJobsRepository,
+                                implicit val materializer: Materializer) {
+
+  val rateLimit: RateLimit = RateLimit(1, FiniteDuration(2, "seconds"))
 
   def update(limit: Int = Int.MaxValue) : Unit = {
     Logger.info("Checking artifactory....")
@@ -42,11 +43,15 @@ class SlugUpdater @Inject() (conn: ArtifactoryConnector,
       .throttle(rateLimit.invocations, rateLimit.perDuration)
       .mapAsync(1)(r => conn.findAllSlugsForService(r.uri))
       .mapConcat(identity)
+
       .to(mongoSink)
       .run()
   }
 
 
-  private[service] val mongoSink = Sink.foreachParallel[NewSlugParserJob](1)(repo.add)
+  private[service] val mongoSink = Sink.foreachParallel[NewSlugParserJob](1)(job => {
+    Logger.info(s"adding job $job")
+    repo.add(job)
+  })
 
 }

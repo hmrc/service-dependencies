@@ -113,7 +113,7 @@ object SlugParser {
           .takeWhile(_ != null)
           .flatMap {
             case next if next.getName.toLowerCase.endsWith(".jar") =>
-              extractVersionFromJar(tar)
+              extractVersionFromJar(next.getName, tar)
             case _ => None
           }
           .toList // make strict - gz will not be open forever...
@@ -145,7 +145,7 @@ object SlugParser {
     Try(new CompressorStreamFactory().createCompressorInputStream(gz))
       .map(is => new ArchiveStreamFactory().createArchiveInputStream(new BufferedInputStream(is)))
 
-  def extractVersionFromJar(inputStream: InputStream): Option[SlugDependency] = {
+  def extractVersionFromJar(libraryName: String, inputStream: InputStream): Option[SlugDependency] = {
     val jar = new JarArchiveInputStream(inputStream)
     Stream
       .continually(jar.getNextJarEntry)
@@ -153,15 +153,15 @@ object SlugParser {
       .flatMap { entry =>
         entry.getName match {
           //case "reference.conf" => None; // TODO: extract reference.conf & send to serviceConfigs
-          case "META-INF/MANIFEST.MF"           => extractVersionFromManifest(entry.getName, jar)
-          case file if file.endsWith("pom.xml") => extractVersionFromPom(entry.getName, jar)
+          case "META-INF/MANIFEST.MF"           => extractVersionFromManifest(libraryName, jar)
+          case file if file.endsWith("pom.xml") => extractVersionFromPom(libraryName, jar)
           case _                                => None; // skip
         }
       }.headOption
   }
 
 
-  def extractVersionFromManifest(fileName: String, in: InputStream): Option[SlugDependency] = {
+  def extractVersionFromManifest(libraryName: String, in: InputStream): Option[SlugDependency] = {
     val versionRegex    = "Implementation-Version: (.+)".r
     val groupRegex      = "Implementation-Vendor-Id: (.+)".r
     val artifactRegex   = "Implementation-Title: (.+)".r
@@ -171,20 +171,22 @@ object SlugParser {
       version   <- versionRegex.findFirstMatchIn(manifest).map(_.group(1))
       group     <- groupRegex.findFirstMatchIn(manifest).map(_.group(1))
       artifact  <- artifactRegex.findFirstMatchIn(manifest).map(_.group(1))
-    } yield SlugDependency(fileName, version, group, artifact)
+    } yield SlugDependency(libraryName, version, group, artifact)
 
   }
 
 
-  def extractVersionFromPom(fileName: String, in: InputStream): Option[SlugDependency] = {
+  def extractVersionFromPom(libraryName: String, in: InputStream): Option[SlugDependency] = {
+
     import xml._
 
     for {
-      pom <-  Try(XML.load(in)).toOption
-      version  <- (pom \ "version").headOption.map(_.text)
-      group    <- (pom \ "groupId").headOption.map(_.text)
+      raw <- Try(scala.io.Source.fromInputStream(in).mkString).toOption
+      pom <-  Try(XML.loadString(raw)).toOption
+      version  <- (pom \ "version").headOption.getOrElse(pom \ "parent" \ "version").map(_.text).headOption
+      group    <- (pom \ "groupId").headOption.getOrElse(pom \ "parent" \ "groupId").map(_.text).headOption
       artifact <- (pom \ "artifactId").headOption.map(_.text)
-    } yield SlugDependency(fileName, version, group, artifact)
+    } yield SlugDependency(libraryName, version, group, artifact)
 
   }
 

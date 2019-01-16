@@ -29,7 +29,7 @@ case class SlugInfo(
   slugVersion  : String,
   runnerVersion: String,
   classpath    : String,
-  dependencies : Seq[SlugDependency])
+  dependencies : List[SlugDependency])
 
 object SlugDependency {
   implicit val format: OFormat[SlugDependency] = Json.format[SlugDependency]

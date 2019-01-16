@@ -32,7 +32,7 @@ import scala.concurrent.Future
 import scala.concurrent.duration.FiniteDuration
 import scala.concurrent.ExecutionContext.Implicits.global
 
-class SlugUpdaterSpec extends TestKit(ActorSystem("MySpec"))
+class SlugJobUpdaterSpec extends TestKit(ActorSystem("SlugJobUpdaterSpec"))
   with ImplicitSender
   with FlatSpecLike
   with MockitoSugar
@@ -47,21 +47,24 @@ class SlugUpdaterSpec extends TestKit(ActorSystem("MySpec"))
 
     val slug1 = ArtifactoryChild("/test-service", true)
     val slug2 = ArtifactoryChild("/abc", true)
-    val allRepos = ArtifactoryRepo("webstore", "2018-04-30T09:06:22.544Z", "2018-04-30T09:06:22.544Z", Seq(slug1, slug2))
-
     val slugJob = NewSlugParserJob("http://")
 
     when(mockConnector.findAllSlugs()).thenReturn(Future(List(slug1, slug2)))
-    when(mockConnector.findAllSlugsForService(any())).thenReturn(Future(List(slugJob, slugJob)))
-    when(mockRepo.add(any())).thenReturn(Future())
 
-    val slugUpdater = new SlugUpdater(mockConnector, mockRepo, RateLimit(10000, FiniteDuration(100, "seconds")), ActorMaterializer())
+    when(mockConnector.findAllSlugsForService("/test-service")).thenReturn(Future(List( NewSlugParserJob("http://test-service/test-service_1.2.3-0.5.2.tgz"))))
+    when(mockConnector.findAllSlugsForService("/abc")).thenReturn(Future(List( NewSlugParserJob("http://abc/abc.2.3-0.5.2.tgz"))))
+    when(mockRepo.add(any())).thenReturn(Future {println("ok")} )
 
-    slugUpdater.update()
+    val slugUpdater = new SlugJobUpdater(mockConnector, mockRepo, ActorMaterializer()) {
+      override val rateLimit: RateLimit = RateLimit(1000, FiniteDuration(10, "seconds"))
+    }
+
+    slugUpdater.update(1000)
 
     Thread.sleep(1000)
-    verify(mockRepo, times(4)).add(any())
-
+    verify(mockConnector, times(1)).findAllSlugs()
+    verify(mockConnector, times(1)).findAllSlugsForService("/test-service")
+    verify(mockConnector, times(1)).findAllSlugsForService("/abc")
   }
 
 }
