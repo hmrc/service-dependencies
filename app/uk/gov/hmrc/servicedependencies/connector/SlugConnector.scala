@@ -17,30 +17,28 @@
 package uk.gov.hmrc.servicedependencies.connector
 
 import akka.actor.ActorSystem
-import akka.stream.{ActorMaterializer, Materializer}
+import akka.stream.Materializer
 import akka.stream.scaladsl.Sink
 import java.io.{ByteArrayInputStream, ByteArrayOutputStream, BufferedInputStream}
 import javax.inject.Inject
 import play.api.Logger
-import play.api.libs.ws.{WSClient, WSResponse}
+import play.api.libs.ws.WSClient
 import scala.concurrent.{ExecutionContext, Future}
-import uk.gov.hmrc.servicedependencies.config.ServiceDependenciesConfig
 
 
 class SlugConnector @Inject()(
-    actorSystem: ActorSystem,
-    ws         : WSClient){
+             ws          : WSClient)(
+    implicit actorSystem : ActorSystem,
+             materializer: Materializer){
 
   def downloadSlug[A](slugUri: String)(f: BufferedInputStream => A): Future[A] = {
     Logger.debug(s"downloading slug $slugUri")
 
-    implicit val system = actorSystem
-    implicit val materializer = ActorMaterializer()
     import ExecutionContext.Implicits.global
 
     val out = new ByteArrayOutputStream()
 
-    val sink = akka.stream.scaladsl.Sink.foreach[akka.util.ByteString] { bytes =>
+    val sink = Sink.foreach[akka.util.ByteString] { bytes =>
       out.write(bytes.toArray)
     }
     ws.url(slugUri).withMethod("GET").stream.flatMap {
