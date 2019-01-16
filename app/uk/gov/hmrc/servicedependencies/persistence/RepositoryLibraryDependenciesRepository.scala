@@ -37,9 +37,7 @@ class RepositoryLibraryDependenciesRepository @Inject()(mongo: ReactiveMongoComp
       mongo          = mongo.mongoConnector.db,
       domainFormat   = MongoRepositoryDependencies.format) {
 
-  override def ensureIndexes(implicit ec: ExecutionContext): Future[Seq[Boolean]] = localEnsureIndexes
-
-  private def localEnsureIndexes =
+  override def ensureIndexes(implicit ec: ExecutionContext): Future[Seq[Boolean]] =
     Future.sequence(
       Seq(
         collection.indexesManager.ensure(

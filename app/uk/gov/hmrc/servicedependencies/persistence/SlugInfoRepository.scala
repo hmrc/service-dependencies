@@ -32,7 +32,7 @@ class SlugInfoRepository @Inject()(mongo: ReactiveMongoComponent)
     mongo          = mongo.mongoConnector.db,
     domainFormat   = SlugInfo.format){
 
-  private def localEnsureIndexes =
+  override def ensureIndexes(implicit ec: ExecutionContext): Future[Seq[Boolean]] =
     Future.sequence(
       Seq(
         collection
