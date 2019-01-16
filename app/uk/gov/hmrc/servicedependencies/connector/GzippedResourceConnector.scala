@@ -18,41 +18,31 @@ package uk.gov.hmrc.servicedependencies.connector
 
 import akka.actor.ActorSystem
 import akka.stream.Materializer
-import akka.stream.scaladsl.Sink
-import java.io.{ByteArrayInputStream, ByteArrayOutputStream, BufferedInputStream}
+import akka.stream.scaladsl.{Compression, StreamConverters}
+import java.io.InputStream
 import javax.inject.Inject
 import play.api.Logger
 import play.api.libs.ws.WSClient
+
 import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.duration.DurationInt
 
 
-class SlugConnector @Inject()(
+class GzippedResourceConnector @Inject()(
              ws          : WSClient)(
     implicit actorSystem : ActorSystem,
              materializer: Materializer){
 
-  def downloadSlug[A](slugUri: String)(f: BufferedInputStream => A): Future[A] = {
-    Logger.debug(s"downloading slug $slugUri")
+  /** @param resourceUrl the url pointing to gzipped resource
+    * @return an uncompressed InputStream, which will close when it reaches the end
+    */
+  def openGzippedResource(resourceUrl: String): Future[InputStream] = {
+    Logger.debug(s"downloading $resourceUrl")
 
     import ExecutionContext.Implicits.global
 
-    val out = new ByteArrayOutputStream()
-
-    val sink = Sink.foreach[akka.util.ByteString] { bytes =>
-      out.write(bytes.toArray)
-    }
-    ws.url(slugUri).withMethod("GET").stream.flatMap {
-      _.bodyAsSource.runWith(sink).andThen {
-        case result => out.close() // Close the stream whether there was an error or not
-                       result.get  // Get the result or rethrow the error
-      }
-    }.map { _ =>
-      val in = new BufferedInputStream(new ByteArrayInputStream(out.toByteArray))
-      try {
-        f(in)
-      } finally {
-        in.close // no-op for ByteArrayOutputStream
-      }
+    ws.url(resourceUrl).withMethod("GET").stream.map { resp =>
+      resp.bodyAsSource.via(Compression.gunzip()).runWith(StreamConverters.asInputStream(readTimeout = 20.seconds))
     }
   }
 }

@@ -17,29 +17,29 @@
 package uk.gov.hmrc.servicedependencies.service
 
 import akka.actor.{Actor, ActorRef, ActorSystem, Props}
-import akka.routing.{FromConfig, RoundRobinPool}
+import akka.routing.FromConfig
 import play.api.Logger
 import java.io.{BufferedInputStream, InputStream}
-import java.util.concurrent.Executors
-import javax.inject.{Inject, Named}
+
+import javax.inject.Inject
 import org.apache.commons.compress.archivers.jar.JarArchiveInputStream
 import org.apache.commons.compress.archivers.{ArchiveInputStream, ArchiveStreamFactory}
-import org.apache.commons.compress.compressors.CompressorStreamFactory
-import uk.gov.hmrc.servicedependencies.connector.SlugConnector
-import uk.gov.hmrc.servicedependencies.model.{MongoSlugParserJob, SlugInfo, SlugDependency}
+import uk.gov.hmrc.servicedependencies.connector.GzippedResourceConnector
+import uk.gov.hmrc.servicedependencies.model.{MongoSlugParserJob, SlugDependency, SlugInfo}
 import uk.gov.hmrc.servicedependencies.persistence.{SlugInfoRepository, SlugParserJobsRepository}
 import uk.gov.hmrc.servicedependencies.util.FutureHelpers
+
 import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.concurrent.duration.DurationInt
 import scala.io.Source
-import scala.util.{Success, Try}
+import scala.util.Try
 import scala.util.control.NonFatal
 
 class SlugParser @Inject()(
    actorSystem             : ActorSystem,
    slugParserJobsRepository: SlugParserJobsRepository,
    slugInfoRepository      : SlugInfoRepository,
-   slugConnector           : SlugConnector,
+   gzippedResourceConnector: GzippedResourceConnector,
    futureHelpers           : FutureHelpers) {
 
   import ExecutionContext.Implicits.global
@@ -50,7 +50,7 @@ class SlugParser @Inject()(
       Props(new SlugParser.SlugParserActor(
           slugParserJobsRepository,
           slugInfoRepository,
-          slugConnector,
+          gzippedResourceConnector,
           futureHelpers))
         .withRouter(FromConfig()),
       "slugParserActor")
@@ -74,76 +74,73 @@ object SlugParser {
   class SlugParserActor @Inject()(
     slugParserJobsRepository: SlugParserJobsRepository,
     slugInfoRepository      : SlugInfoRepository,
-    slugConnector           : SlugConnector,
+    gzippedResourceConnector: GzippedResourceConnector,
     futureHelpers           : FutureHelpers) extends Actor {
 
     import context.dispatcher
 
     def receive = {
       case RunJob(job) =>
-        Logger.debug(s">>>>>>>>>>>>>>> running job $job")
+        Logger.debug(s"running job $job")
 
         val f = futureHelpers.withTimerAndCounter("slug.process")(
           for {
-            si <- slugConnector.downloadSlug(job.slugUri)(in => SlugParser.parse(job.slugUri, in).get)
+            is <- gzippedResourceConnector.openGzippedResource(job.slugUri)
+            si =  SlugParser.parse(job.slugUri, is)
             _  <- slugInfoRepository.add(si)
             _  =  Logger.debug(s"added {$job.id}: $si")
             _  <- slugParserJobsRepository.markProcessed(job.id)
           } yield ()
         ).recover {
           case NonFatal(e) => Logger.error(s"An error occurred processing slug parser job ${job.id}: ${e.getMessage}", e)
+                              // TODO mark slug as failed. maybe attempt number, so can give up when reach max?
         }
 
         // blocking so that number of actors determines throughput
         Await.result(f, 10.minute)
     }
 
-    override def preRestart(reason: Throwable, message: Option[Any]) = {
+    override def preRestart(reason: Throwable, message: Option[Any]): Unit = {
       super.preRestart(reason, message)
       Logger.error(s"Restarting due to ${reason.getMessage} when processing $message", reason)
     }
   }
 
-  def parse(slugUri: String, gz: BufferedInputStream): Try[SlugInfo] =
-    extractTarGzip(gz)
-    .map { tar =>
-      val slugDependencies =
-        Stream
-          .continually(tar.getNextEntry)
-          .takeWhile(_ != null)
-          .flatMap {
-            case next if next.getName.toLowerCase.endsWith(".jar") =>
-              extractVersionFromJar(tar).map(v => SlugDependency(next.getName, v.toString))
-            case _ => None
-          }
-          .toList // make strict - gz will not be open forever...
+  def parse(slugUri: String, in: InputStream): SlugInfo = {
+    val tar = new ArchiveStreamFactory().createArchiveInputStream(new BufferedInputStream(in))
 
+    val slugDependencies =
+      Stream
+        .continually(Try(tar.getNextEntry).recover { case e if e.getMessage == "Stream closed" => null }.get)
+        .takeWhile(_ != null)
+        .flatMap {
+          case next if next.getName.toLowerCase.endsWith(".jar") =>
+            extractVersionFromJar(tar).map(v => SlugDependency(next.getName, v.toString))
+          case _ => None
+        }
+        .toList // make strict - stream will not be open forever...
 
-        val (runnerVersion, slugVersion, slugName) = extractFromUri(slugUri)
+    val (runnerVersion, slugVersion, slugName) = extractFromUri(slugUri)
 
-        SlugInfo(
-          slugUri       = slugUri,
-          slugName      = slugName,
-          slugVersion   = slugVersion,
-          runnerVersion = runnerVersion,
-          classpath     = "TODO",
-          dependencies  = slugDependencies)
-    }
+    SlugInfo(
+      slugUri       = slugUri,
+      slugName      = slugName,
+      slugVersion   = slugVersion,
+      runnerVersion = runnerVersion,
+      classpath     = "TODO",
+      dependencies  = slugDependencies)
+  }
 
-    def extractFromUri(slugUri: String): (String, String, String) = {
-      // e.g. https://store/slugs/my-slug/my-slug_0.27.0_0.5.2.tgz
-      val filename = slugUri
-                       .stripSuffix(".tgz").stripSuffix(".tar.gz")
-                       .split("/")
-                       .lastOption
-                       .getOrElse(sys.error(s"Could not extract slug data from uri $slugUri"))
-      val runnerVersion :: slugVersion :: rest = filename.split("_").reverse.toList
-      (runnerVersion, slugVersion, rest.mkString("_"))
-    }
-
-  def extractTarGzip(gz: BufferedInputStream): Try[ArchiveInputStream] =
-    Try(new CompressorStreamFactory().createCompressorInputStream(gz))
-      .map(is => new ArchiveStreamFactory().createArchiveInputStream(new BufferedInputStream(is)))
+  def extractFromUri(slugUri: String): (String, String, String) = {
+    // e.g. https://store/slugs/my-slug/my-slug_0.27.0_0.5.2.tgz
+    val filename = slugUri
+                      .stripSuffix(".tgz").stripSuffix(".tar.gz")
+                      .split("/")
+                      .lastOption
+                      .getOrElse(sys.error(s"Could not extract slug data from uri $slugUri"))
+    val runnerVersion :: slugVersion :: rest = filename.split("_").reverse.toList
+    (runnerVersion, slugVersion, rest.mkString("_"))
+  }
 
   def extractVersionFromJar(inputStream: InputStream): Option[String] = {
     val jar = new JarArchiveInputStream(inputStream)
