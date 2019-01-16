@@ -19,7 +19,9 @@ import play.api.libs.json.{Json, OFormat}
 
 case class SlugDependency(
   libraryName: String,
-  version    : String)
+  version    : String,
+  group      : String,
+  artifact   : String)
 
 case class SlugInfo(
   slugUri      : String,
