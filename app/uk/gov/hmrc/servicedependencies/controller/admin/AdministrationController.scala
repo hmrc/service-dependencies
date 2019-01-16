@@ -22,15 +22,17 @@ import play.api.libs.json.Json
 import play.api.mvc.ControllerComponents
 import uk.gov.hmrc.play.bootstrap.controller.BackendController
 import uk.gov.hmrc.servicedependencies.model.NewSlugParserJob
-import uk.gov.hmrc.servicedependencies.service.DependencyDataUpdatingService
-import scala.concurrent.Future
+import uk.gov.hmrc.servicedependencies.service.{DependencyDataUpdatingService, SlugParser}
 
 import scala.concurrent.Future
+import scala.util.control.NonFatal
 
 @Singleton
-class AdministrationController @Inject()(dependencyDataUpdatingService: DependencyDataUpdatingService, cc: ControllerComponents)
-    extends BackendController(cc) {
-
+class AdministrationController @Inject()(
+    dependencyDataUpdatingService: DependencyDataUpdatingService,
+    slugParser                   : SlugParser,
+    cc                           : ControllerComponents)
+  extends BackendController(cc) {
 
   def reloadLibraryDependenciesForAllRepositories(force: Option[Boolean] = None) = Action { implicit request =>
     dependencyDataUpdatingService
@@ -78,12 +80,21 @@ class AdministrationController @Inject()(dependencyDataUpdatingService: Dependen
   def addSlugParserJob =
     Action.async(parse.json) { implicit request =>
       withJsonBody[NewSlugParserJob] { newJob =>
-        dependencyDataUpdatingService.addSlugParserJob(newJob).map { _ =>
-          Created("")
-        }.recover {
-          case ex => Logger.error("creation of slug job failed", ex)
-                     InternalServerError("Could not create slug job")
-        }
+        dependencyDataUpdatingService.addSlugParserJob(newJob)
+          .map(_ => Created)
+          .recover{
+            case ex => throw new RuntimeException("creation of slug job failed", ex)
+          }
       }
+    }
+
+  def runSlugParserJobs =
+    Action { implicit request =>
+      Logger.info("Running slug parser jobs")
+      slugParser.runSlugParserJobs()
+        .recover {
+          case NonFatal(e) => Logger.error(s"An error occurred processing slug parser jobs: ${e.getMessage}", e)
+        }
+      Accepted
     }
 }

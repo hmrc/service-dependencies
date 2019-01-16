@@ -28,10 +28,10 @@ import scala.concurrent.duration.{DurationLong, FiniteDuration}
 import scala.util.control.NonFatal
 
 class SlugParseScheduler @Inject()(
-  actorSystem             : ActorSystem,
-  configuration           : Configuration,
-  slugParser              : SlugParser,
-  applicationLifecycle    : ApplicationLifecycle) {
+  actorSystem         : ActorSystem,
+  configuration       : Configuration,
+  slugParser          : SlugParser,
+  applicationLifecycle: ApplicationLifecycle) {
 
   import ExecutionContext.Implicits.global
 
@@ -43,7 +43,7 @@ class SlugParseScheduler @Inject()(
       .getOrElse(throw new RuntimeException(s"$slugParseKey not specified"))
 
   val cancellable = actorSystem.scheduler.schedule(1.minute, slugParseInterval) {
-    Logger.info("Running slug parse")
+    Logger.info("Running slug parser jobs")
     slugParser.runSlugParserJobs()
       .recover {
         case NonFatal(e) => Logger.error(s"An error occurred processing slug parser jobs: ${e.getMessage}", e)

@@ -21,7 +21,7 @@ import akka.routing.FromConfig
 import play.api.Logger
 import java.io.{BufferedInputStream, InputStream}
 
-import javax.inject.Inject
+import com.google.inject.{Inject, Singleton}
 import org.apache.commons.compress.archivers.jar.JarArchiveInputStream
 import org.apache.commons.compress.archivers.{ArchiveInputStream, ArchiveStreamFactory}
 import uk.gov.hmrc.servicedependencies.connector.GzippedResourceConnector
@@ -35,6 +35,7 @@ import scala.io.Source
 import scala.util.Try
 import scala.util.control.NonFatal
 
+@Singleton
 class SlugParser @Inject()(
    actorSystem             : ActorSystem,
    slugParserJobsRepository: SlugParserJobsRepository,
