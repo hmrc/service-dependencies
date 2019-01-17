@@ -27,7 +27,7 @@ import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.duration.{DurationLong, FiniteDuration}
 import scala.util.control.NonFatal
 
-class SlugParseScheduler @Inject()(
+class SlugJobProcessorScheduler @Inject()(
   actorSystem         : ActorSystem,
   configuration       : Configuration,
   slugParser          : SlugParser,
@@ -35,19 +35,27 @@ class SlugParseScheduler @Inject()(
 
   import ExecutionContext.Implicits.global
 
-  private val slugParseKey = "repositoryDependencies.slugParse.interval"
+  private val slugParseEnabledKey = "repositoryDependencies.slugParse.enabled"
+  private val slugParseKey        = "repositoryDependencies.slugParse.interval"
 
-  lazy val slugParseInterval: FiniteDuration =
-    Option(configuration.getMillis(slugParseKey))
-      .map(_.milliseconds)
-      .getOrElse(throw new RuntimeException(s"$slugParseKey not specified"))
+  lazy val slugJobUpdaterEnabled: Boolean =
+    configuration.getOptional[Boolean](slugParseEnabledKey).getOrElse(false)
 
-  val cancellable = actorSystem.scheduler.schedule(1.minute, slugParseInterval) {
-    Logger.info("Running slug parser jobs")
-    slugParser.runSlugParserJobs()
-      .recover {
-        case NonFatal(e) => Logger.error(s"An error occurred processing slug parser jobs: ${e.getMessage}", e)
-      }
+  if (slugJobUpdaterEnabled) {
+    val slugParseInterval: FiniteDuration =
+      Option(configuration.getMillis(slugParseKey))
+        .map(_.milliseconds)
+        .getOrElse(throw new RuntimeException(s"$slugParseKey not specified"))
+
+    val cancellable = actorSystem.scheduler.schedule(1.minute, slugParseInterval) {
+      Logger.info("Running slug parser jobs")
+      slugParser.runSlugParserJobs()
+        .recover {
+          case NonFatal(e) => Logger.error(s"An error occurred processing slug parser jobs: ${e.getMessage}", e)
+        }
+    }
+    applicationLifecycle.addStopHook(() => Future(cancellable.cancel()))
+  } else {
+    Logger.info("Slug job processor scheduler is DISABLED. No new slug parser jobs will be created.")
   }
-  applicationLifecycle.addStopHook(() => Future(cancellable.cancel()))
 }

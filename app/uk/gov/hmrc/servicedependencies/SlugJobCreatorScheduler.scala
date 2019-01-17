@@ -40,18 +40,18 @@ class SlugJobCreatorScheduler @Inject()(
       .map(_.milliseconds)
       .getOrElse(throw new RuntimeException(s"$slugJobCreatorIntervalKey not specified"))
 
-  lazy val slugUpdaterEnabled : Boolean = configuration.getOptional[Boolean](slugJobCreatorEnabledKey).getOrElse(false)
+  lazy val slugUpdaterEnabled: Boolean =
+    configuration.getOptional[Boolean](slugJobCreatorEnabledKey).getOrElse(false)
 
 
-  if( slugUpdaterEnabled ) {
+  if (slugUpdaterEnabled) {
     val cancellable = actorSystem.scheduler.schedule(1.minute, slugParseInterval) {
       Logger.info("Running slug job creator")
       slugUpdater.update(10)
     }
 
     applicationLifecycle.addStopHook(() => Future(cancellable.cancel()))
-  }
-  else {
+  } else {
     Logger.info("Slug job creator is DISABLED. No new slug parser jobs will be created.")
   }
 }
