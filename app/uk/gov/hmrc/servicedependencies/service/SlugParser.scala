@@ -91,10 +91,10 @@ object SlugParser {
             is <- gzippedResourceConnector.openGzippedResource(job.slugUri)
             si =  SlugParser.parse(job.slugUri, is)
             _  <- slugInfoRepository.add(si)
-            _  =  Logger.debug(s"added {$job.id}: $si")
+            _  =  Logger.debug(s"added ${job.id}: ${si.slugName} ${si.slugVersion} ${si.runnerVersion}")
             _  <- slugParserJobsRepository.markProcessed(job.id)
           } yield ()
-        ).recover {
+        ).recoverWith {
           case NonFatal(e) => Logger.error(s"An error occurred processing slug parser job ${job.id}: ${e.getMessage}", e)
                               slugParserJobsRepository.markAttempted(job.id)
         }
@@ -126,6 +126,7 @@ object SlugParser {
         Iterator
           .continually(Try(tar.getNextEntry).recover { case e if e.getMessage == "Stream closed" => null }.get)
           .takeWhile(_ != null)
+          .filter(_.getName.startsWith(s"./$slugName"))
           .foldLeft(slugInfo)( (result: SlugInfo, next: ArchiveEntry) => {
             next match {
               case n if n.getName.toLowerCase.endsWith(".jar") => {
@@ -133,7 +134,9 @@ object SlugParser {
               }
               case n if n.getName.endsWith(s"bin/$slugName") =>
                 extractClasspath(tar).map(cp => result.copy(classpath = cp)).getOrElse(result)
-              case _ => result
+              case _ => {
+                result
+              }
             }
           })
 
@@ -150,21 +153,32 @@ object SlugParser {
       (runnerVersion, slugVersion, rest.mkString("_"))
     }
 
-  def extractVersionFromJar(libraryName: String, inputStream: InputStream): Option[SlugDependency] = {
+  sealed trait Dep
+  object Dep {
+    case object NoDep extends Dep
+    case class Manifest(sd: SlugDependency) extends Dep
+    case class Pom(sd: SlugDependency) extends Dep
+  }
+
+  def extractVersionFromJar(libraryName: String, inputStream: InputStream): Option[SlugDependency] = Try {
     val jar = new JarArchiveInputStream(inputStream)
-    Stream
+    Iterator
       .continually(jar.getNextJarEntry)
       .takeWhile(_ != null)
-      .flatMap { entry =>
+      .foldLeft(Dep.NoDep: Dep) { (dep, entry) =>
         entry.getName match {
           //case "reference.conf" => None; // TODO: extract reference.conf & send to serviceConfigs
-          case "META-INF/MANIFEST.MF"           => extractVersionFromManifest(libraryName, jar)
-          case file if file.endsWith("pom.xml") => extractVersionFromPom(libraryName, jar)
-          case _                                => None; // skip
+          case "META-INF/MANIFEST.MF" if !dep.isInstanceOf[Dep.Pom]  => extractVersionFromManifest(libraryName, jar).map(Dep.Manifest).getOrElse(Dep.NoDep)
+          case file if file.endsWith("pom.xml")                      => extractVersionFromPom(libraryName, jar).map(Dep.Pom).getOrElse(Dep.NoDep)
+          case _                                                     => dep // skip
         }
-      }
-      .headOption
-  }
+      } match {
+        case Dep.Manifest(d) => Some(d)
+        case Dep.Pom(d) => Some(d)
+        case Dep.NoDep => None
+    }
+
+  }.recover { case e => throw new RuntimeException(s"Could not extract version from $libraryName", e)}.get
 
 
   def extractClasspath(inputStream: InputStream) : Option[String] = {
@@ -184,8 +198,8 @@ object SlugParser {
       manifest <- Option(Source.fromInputStream(in).mkString)
       version  <- versionRegex.findFirstMatchIn(manifest).map(_.group(1))
       group    <- groupRegex.findFirstMatchIn(manifest).map(_.group(1))
-      artifact <- artifactRegex.findFirstMatchIn(manifest).map(_.group(1))
-    } yield SlugDependency(libraryName, version, group, artifact)
+      artifact <- artifactRegex.findFirstMatchIn(manifest).map(_.group(1).toLowerCase)
+    } yield SlugDependency(libraryName, version, group, artifact, meta = "fromManifest")
 
   }
 
@@ -200,7 +214,7 @@ object SlugParser {
       version  <- (pom \ "version").headOption.getOrElse(pom \ "parent" \ "version").map(_.text).headOption
       group    <- (pom \ "groupId").headOption.getOrElse(pom \ "parent" \ "groupId").map(_.text).headOption
       artifact <- (pom \ "artifactId").headOption.map(_.text)
-    } yield SlugDependency(libraryName, version, group, artifact)
+    } yield SlugDependency(libraryName, version, group, artifact, meta = "fromPom")
 
   }
 

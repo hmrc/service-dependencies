@@ -89,13 +89,13 @@ class SlugInfoRepositorySpec
       classpath     = "",
       dependencies  = List(
         SlugDependency(
-          libraryName = "lib1",
+          path = "lib1",
           version     = "v1",
           group       = "com.test.group",
           artifact    = "lib1"
         ),
         SlugDependency(
-        libraryName = "lib2",
+        path = "lib2",
         version     = "v2",
         group       = "com.test.group",
         artifact    = "lib1")))

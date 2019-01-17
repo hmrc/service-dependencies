@@ -20,6 +20,7 @@ import akka.stream.scaladsl.{Sink, Source}
 import javax.inject.{Inject, Singleton}
 import play.api.Logger
 import uk.gov.hmrc.servicedependencies.connector.ArtifactoryConnector
+import uk.gov.hmrc.servicedependencies.connector.model.ArtifactoryChild
 import uk.gov.hmrc.servicedependencies.model.{MongoSlugParserJob, NewSlugParserJob}
 import uk.gov.hmrc.servicedependencies.persistence.SlugParserJobsRepository
 
@@ -36,7 +37,6 @@ class SlugJobUpdater @Inject() (conn: ArtifactoryConnector,
   val rateLimit: RateLimit = RateLimit(1, FiniteDuration(2, "seconds"))
 
   def update(limit: Int = Int.MaxValue) : Unit = {
-    Logger.info("Checking artifactory....")
     Source.fromFuture(conn.findAllSlugs())
       .mapConcat(identity)
       .take(limit)
@@ -52,5 +52,33 @@ class SlugJobUpdater @Inject() (conn: ArtifactoryConnector,
     Logger.info(s"adding job $job")
     repo.add(job)
   })
+
+
+  def inWhiteList(c: ArtifactoryChild) : Boolean = {
+    Logger.info(s"filtering ${c.uri}")
+    repos.exists(r => c.uri.endsWith(r))
+  }
+
+  val repos = List(
+    "/key-store",
+    "/User-details",
+    "/company-auth-frontend",
+    "/multi-factor-authentication",
+    "/poison-password",
+    "/agent-usher",
+    "/third-party-application",
+    "/one-time-password",
+    "/preferences",
+    "/government-gateway-authentication",
+    "/message-frontend",
+    "/message",
+    "/personal-details-validation",
+    "/affinity-group",
+    "/back-office-adapter",
+    "/transaction-engine",
+    "/paye-tax-calculator-frontend",
+    "/bas-gateway",
+    "/email"
+  )
 
 }

@@ -18,10 +18,11 @@ package uk.gov.hmrc.servicedependencies.model
 import play.api.libs.json.{Json, OFormat}
 
 case class SlugDependency(
-  libraryName: String,
+  path       : String,
   version    : String,
   group      : String,
-  artifact   : String)
+  artifact   : String,
+  meta       : String = "")
 
 case class SlugInfo(
   slugUri      : String,
