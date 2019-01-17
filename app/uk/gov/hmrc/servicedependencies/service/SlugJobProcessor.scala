@@ -91,16 +91,14 @@ object SlugParser {
       .continually(Try(tar.getNextEntry).recover { case e if e.getMessage == "Stream closed" => null }.get)
       .takeWhile(_ != null)
       .filter(_.getName.startsWith(s"./$slugName"))
-      .foldLeft(slugInfo)( (result: SlugInfo, next: ArchiveEntry) =>
-        next match {
-          case n if n.getName.toLowerCase.endsWith(".jar") => extractVersionFromJar(n.getName, tar)
-                                                                .map(v => result.copy(dependencies = result.dependencies ++ List(v)))
-                                                                .getOrElse(result)
-          case n if n.getName.endsWith(s"bin/$slugName")   => extractClasspath(tar)
-                                                                .map(cp => result.copy(classpath = cp))
-                                                                .getOrElse(result)
-          case _                                           => result
-        }
+      .foldLeft(slugInfo)( (result, entry) =>
+        (entry.getName match {
+          case n if n.toLowerCase.endsWith(".jar") => extractVersionFromJar(n, tar)
+                                                        .map(v => result.copy(dependencies = result.dependencies ++ List(v)))
+          case n if n.endsWith(s"bin/$slugName")   => extractClasspath(tar)
+                                                        .map(cp => result.copy(classpath = cp))
+          case _                                   => None
+        }).getOrElse(result)
       )
   }
 
@@ -115,38 +113,43 @@ object SlugParser {
     (runnerVersion, slugVersion, rest.mkString("_"))
   }
 
-  sealed trait Dep
+  sealed trait Dep { def sd: SlugDependency }
   object Dep {
-    case object NoDep extends Dep
     case class Manifest(sd: SlugDependency) extends Dep
-    case class Pom(sd: SlugDependency) extends Dep
+    case class Pom     (sd: SlugDependency) extends Dep
+
+    def precedence(l: Dep, r: Dep): Dep =
+      (l, r) match {
+        case (l: Dep.Pom     , _              ) => l
+        case (_              , r : Dep.Pom    ) => r
+        case (l: Dep.Manifest, _              ) => l
+        case (_              , r: Dep.Manifest) => r
+      }
   }
 
-  def extractVersionFromJar(libraryName: String, inputStream: InputStream): Option[SlugDependency] = Try {
-    val jar = new JarArchiveInputStream(inputStream)
-    Iterator
-      .continually(jar.getNextJarEntry)
-      .takeWhile(_ != null)
-      .foldLeft(Dep.NoDep: Dep) { (dep, entry) =>
-        entry.getName match {
-          //case "reference.conf" => None; // TODO: extract reference.conf & send to serviceConfigs
-          case "META-INF/MANIFEST.MF" if !dep.isInstanceOf[Dep.Pom]  => extractVersionFromManifest(libraryName, jar).map(Dep.Manifest).getOrElse(Dep.NoDep)
-          case file if file.endsWith("pom.xml")                      => extractVersionFromPom(libraryName, jar).map(Dep.Pom).getOrElse(Dep.NoDep)
-          case _                                                     => dep // skip
-        }
-      } match {
-        case Dep.Manifest(d) => Some(d)
-        case Dep.Pom(d) => Some(d)
-        case Dep.NoDep => None
-    }
-
-  }.recover { case e => throw new RuntimeException(s"Could not extract version from $libraryName", e)}.get
+  def extractVersionFromJar(libraryName: String, inputStream: InputStream): Option[SlugDependency] =
+    Try {
+      val jar = new JarArchiveInputStream(inputStream)
+      Iterator
+        .continually(jar.getNextJarEntry)
+        .takeWhile(_ != null)
+        .map(_.getName match {
+          //case "reference.conf"                 => None; // TODO: extract reference.conf & send to serviceConfigs
+          case "META-INF/MANIFEST.MF"           => extractVersionFromManifest(libraryName, jar).map(Dep.Manifest)
+          case file if file.endsWith("pom.xml") => extractVersionFromPom(libraryName, jar).map(Dep.Pom)
+          case _                                => None
+        })
+        .collect { case Some(d) => d }
+        .reduceOption(Dep.precedence)
+        .map(_.sd)
+    }.recover { case e => throw new RuntimeException(s"Could not extract version from $libraryName", e) } // just return None?
+    .get
 
 
   def extractClasspath(inputStream: InputStream) : Option[String] = {
     val prefix = "declare -r app_classpath=\""
     scala.io.Source.fromInputStream(inputStream)
-      .getLines()
+      .getLines
       .find(_.startsWith(prefix))
       .map(_.replace(prefix, "").replace("\"", ""))
   }
