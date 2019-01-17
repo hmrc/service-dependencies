@@ -186,6 +186,7 @@ object SlugParser {
     Source.fromInputStream(inputStream)
       .getLines()
       .find(_.startsWith(prefix))
+      .map(_.replace(prefix, "").replace("\"", ""))
   }
 
 

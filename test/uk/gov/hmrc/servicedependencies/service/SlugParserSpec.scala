@@ -99,12 +99,12 @@ class SlugParserSpec extends FlatSpec with Matchers {
     val in = getClass.getResourceAsStream("/slugs/example-service.tar")
     val res = SlugParser.parse("example-service_0.27.0_0.5.2.tar.gz", in)
 
-
     res.slugName shouldBe "example-service"
     res.runnerVersion shouldBe "0.5.2"
     res.slugVersion shouldBe "0.27.0"
 
     res.classpath.isEmpty shouldBe false
+    res.classpath shouldNot startWith ("declare -r app_classpath")
 
     res.dependencies.length shouldBe 2
 
@@ -117,9 +117,21 @@ class SlugParserSpec extends FlatSpec with Matchers {
     maven.version shouldBe "1.2.3"
     maven.group shouldBe "com.test"
     maven.artifact shouldBe "mavenlibrary"
-
   }
 
+  "extractClasspath" should "strip the prefix and quotes" in {
+    val cp = "declare -r app_classpath=\"$lib_dir/org.apache.commons.commons-lang3-3.6.jar:$lib_dir/javax.transaction.jta-1.1.jar\""
+    val is = new ByteArrayInputStream(cp.getBytes(StandardCharsets.UTF_8))
+    val result = SlugParser.extractClasspath(is)
+    result shouldBe Some("$lib_dir/org.apache.commons.commons-lang3-3.6.jar:$lib_dir/javax.transaction.jta-1.1.jar")
+  }
+
+  it should "not extract anything if no classpath is present" in {
+    val cp = """declare -r script_conf_file="../conf/application.ini"""
+    val is = new ByteArrayInputStream(cp.getBytes(StandardCharsets.UTF_8))
+    val result = SlugParser.extractClasspath(is)
+    result shouldBe None
+  }
 
   /****** TEST DATA *******/
 
@@ -194,5 +206,5 @@ class SlugParserSpec extends FlatSpec with Matchers {
                     |    </dependency>
                     |  </dependencies>
                     |
-                    |</project>"""
+                    |</project>""".stripMargin
 }
