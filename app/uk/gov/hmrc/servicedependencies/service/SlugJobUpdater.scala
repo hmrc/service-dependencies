@@ -20,37 +20,36 @@ import akka.stream.scaladsl.{Sink, Source}
 import javax.inject.{Inject, Singleton}
 import play.api.Logger
 import uk.gov.hmrc.servicedependencies.connector.ArtifactoryConnector
-import uk.gov.hmrc.servicedependencies.model.{MongoSlugParserJob, NewSlugParserJob}
 import uk.gov.hmrc.servicedependencies.persistence.SlugParserJobsRepository
 
-import scala.concurrent.duration.FiniteDuration
-import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.duration.{DurationInt, FiniteDuration}
 
 case class RateLimit(invocations: Int, perDuration: FiniteDuration)
 
 @Singleton
-class SlugJobUpdater @Inject() (conn: ArtifactoryConnector,
-                                repo: SlugParserJobsRepository,
-                                implicit val materializer: Materializer) {
+class SlugJobUpdater @Inject()(
+  conn: ArtifactoryConnector,
+  repo: SlugParserJobsRepository)(
+  implicit val materializer: Materializer) {
 
-  val rateLimit: RateLimit = RateLimit(1, FiniteDuration(2, "seconds"))
+  import ExecutionContext.Implicits.global
 
-  def update(limit: Int = Int.MaxValue) : Unit = {
+  val rateLimit: RateLimit = RateLimit(1, 2.seconds)
+
+  def update(limit: Int = Int.MaxValue): Future[Unit] = {
     Logger.info("Checking artifactory....")
     Source.fromFuture(conn.findAllSlugs())
       .mapConcat(identity)
       .take(limit)
       .throttle(rateLimit.invocations, rateLimit.perDuration)
-      .mapAsync(1)(r => conn.findAllSlugsForService(r.uri))
+      .mapAsyncUnordered(1)(r => conn.findAllSlugsForService(r.uri))
       .mapConcat(identity)
-      .to(mongoSink)
-      .run()
+      .mapAsyncUnordered(1) { job =>
+        Logger.info(s"adding job $job")
+        repo.add(job)
+      }
+      .runWith(Sink.ignore)
+      .map(_ => ())
   }
-
-
-  private[service] val mongoSink = Sink.foreachParallel[NewSlugParserJob](1)(job => {
-    Logger.info(s"adding job $job")
-    repo.add(job)
-  })
-
 }

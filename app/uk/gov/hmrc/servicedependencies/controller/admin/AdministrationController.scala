@@ -101,7 +101,7 @@ class AdministrationController @Inject()(
   def executeJob =
     Action.async(parse.json) { implicit request =>
       withJsonBody[MongoSlugParserJob] { job =>
-        slugParser.executeJob(job)
+        slugParser.runJob(job)
         Future(Accepted)
       }
     }

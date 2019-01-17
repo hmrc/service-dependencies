@@ -55,7 +55,7 @@ class SlugJobUpdaterSpec extends TestKit(ActorSystem("SlugJobUpdaterSpec"))
     when(mockConnector.findAllSlugsForService("/abc")).thenReturn(Future(List( NewSlugParserJob("http://abc/abc.2.3-0.5.2.tgz"))))
     when(mockRepo.add(any())).thenReturn(Future {println("ok")} )
 
-    val slugUpdater = new SlugJobUpdater(mockConnector, mockRepo, ActorMaterializer()) {
+    val slugUpdater = new SlugJobUpdater(mockConnector, mockRepo)(ActorMaterializer()) {
       override val rateLimit: RateLimit = RateLimit(1000, FiniteDuration(10, "seconds"))
     }
 

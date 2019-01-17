@@ -16,98 +16,61 @@
 
 package uk.gov.hmrc.servicedependencies.service
 
-import akka.actor.{Actor, ActorRef, ActorSystem, Props}
-import akka.routing.FromConfig
-import play.api.Logger
+import akka.stream.scaladsl.{Sink, Source}
+import com.google.inject.{Inject, Singleton}
 import java.io.{BufferedInputStream, InputStream}
 
-import com.google.inject.{Inject, Singleton}
+import akka.stream.Materializer
+import play.api.Logger
 import org.apache.commons.compress.archivers.jar.JarArchiveInputStream
-import org.apache.commons.compress.archivers.{ArchiveEntry, ArchiveInputStream, ArchiveStreamFactory}
+import org.apache.commons.compress.archivers.{ArchiveEntry, ArchiveStreamFactory}
 import uk.gov.hmrc.servicedependencies.connector.GzippedResourceConnector
 import uk.gov.hmrc.servicedependencies.model.{MongoSlugParserJob, SlugDependency, SlugInfo}
 import uk.gov.hmrc.servicedependencies.persistence.{SlugInfoRepository, SlugParserJobsRepository}
 import uk.gov.hmrc.servicedependencies.util.FutureHelpers
 
-import scala.concurrent.{Await, ExecutionContext, Future}
-import scala.concurrent.duration.DurationInt
-import scala.concurrent.{Await, ExecutionContext, Future}
-import scala.io.Source
+import scala.concurrent.{ExecutionContext, Future}
 import scala.util.Try
 import scala.util.control.NonFatal
 
 @Singleton
 class SlugParser @Inject()(
-   actorSystem             : ActorSystem,
    slugParserJobsRepository: SlugParserJobsRepository,
    slugInfoRepository      : SlugInfoRepository,
    gzippedResourceConnector: GzippedResourceConnector,
-   futureHelpers           : FutureHelpers) {
+   futureHelpers           : FutureHelpers)(
+   implicit val materializer: Materializer) {
 
   import ExecutionContext.Implicits.global
 
 
-  val slugParserActor: ActorRef =
-    actorSystem.actorOf(
-      Props(new SlugParser.SlugParserActor(
-          slugParserJobsRepository,
-          slugInfoRepository,
-          gzippedResourceConnector,
-          futureHelpers))
-        .withRouter(FromConfig()),
-      "slugParserActor")
-
   def runSlugParserJobs(): Future[Unit] =
-    slugParserJobsRepository
-      .getUnprocessed
-      .map { jobs =>
-        Logger.debug(s"found ${jobs.size} Slug parser jobs")
-        jobs.map(executeJob)
-      }
+    Source.fromFuture(slugParserJobsRepository.getUnprocessed)
+      .map { jobs => Logger.debug(s"found ${jobs.size} Slug parser jobs"); jobs }
+      .mapConcat(_.toList)
+      .mapAsyncUnordered(2)(runJob)
+      .runWith(Sink.ignore)
+      .map(_ => ())
 
-  def executeJob(job: MongoSlugParserJob): Unit =
-    slugParserActor ! SlugParser.RunJob(job)
+  def runJob(job: MongoSlugParserJob): Future[Unit] =
+    futureHelpers.withTimerAndCounter("slug.process")(
+      for {
+        _  <- Future(Logger.debug(s"running job $job"))
+        is <- gzippedResourceConnector.openGzippedResource(job.slugUri)
+        si =  SlugParser.parse(job.slugUri, is)
+        _  <- slugInfoRepository.add(si)
+        _  =  Logger.debug(s"added {$job.id}: $si")
+        _  <- slugParserJobsRepository.markProcessed(job.id)
+      } yield ()
+    ).recover {
+      case NonFatal(e) => Logger.error(s"An error occurred processing slug parser job ${job.id}: ${e.getMessage}", e)
+        slugParserJobsRepository.markAttempted(job.id)
+    }
+
 }
 
 
 object SlugParser {
-
-  case class RunJob(job: MongoSlugParserJob)
-
-  class SlugParserActor @Inject()(
-      slugParserJobsRepository: SlugParserJobsRepository,
-      slugInfoRepository      : SlugInfoRepository,
-      gzippedResourceConnector: GzippedResourceConnector,
-      futureHelpers           : FutureHelpers)
-    extends Actor {
-
-    import context.dispatcher
-
-    def receive = {
-      case RunJob(job) =>
-        val f = futureHelpers.withTimerAndCounter("slug.process")(
-          for {
-            _  <- Future(Logger.debug(s"running job $job"))
-            is <- gzippedResourceConnector.openGzippedResource(job.slugUri)
-            si =  SlugParser.parse(job.slugUri, is)
-            _  <- slugInfoRepository.add(si)
-            _  =  Logger.debug(s"added {$job.id}: $si")
-            _  <- slugParserJobsRepository.markProcessed(job.id)
-          } yield ()
-        ).recover {
-          case NonFatal(e) => Logger.error(s"An error occurred processing slug parser job ${job.id}: ${e.getMessage}", e)
-                              slugParserJobsRepository.markAttempted(job.id)
-        }
-
-        // blocking so that number of actors determines throughput
-        Await.result(f, 10.minute)
-    }
-
-    override def preRestart(reason: Throwable, message: Option[Any]): Unit = {
-      super.preRestart(reason, message)
-      Logger.error(s"Restarting due to ${reason.getMessage} when processing $message", reason)
-    }
-  }
 
   def parse(slugUri: String, in: InputStream): SlugInfo = {
 
@@ -160,7 +123,7 @@ object SlugParser {
           //case "reference.conf" => None; // TODO: extract reference.conf & send to serviceConfigs
           case "META-INF/MANIFEST.MF"           => extractVersionFromManifest(libraryName, jar)
           case file if file.endsWith("pom.xml") => extractVersionFromPom(libraryName, jar)
-          case _                                => None; // skip
+          case _                                => None // skip
         }
       }
       .headOption
@@ -169,7 +132,7 @@ object SlugParser {
 
   def extractClasspath(inputStream: InputStream) : Option[String] = {
     val prefix = "declare -r app_classpath=\""
-    Source.fromInputStream(inputStream)
+    scala.io.Source.fromInputStream(inputStream)
       .getLines()
       .find(_.startsWith(prefix))
   }
@@ -181,7 +144,7 @@ object SlugParser {
     val artifactRegex = "Implementation-Title: (.+)".r
 
     for {
-      manifest <- Option(Source.fromInputStream(in).mkString)
+      manifest <- Option(scala.io.Source.fromInputStream(in).mkString)
       version  <- versionRegex.findFirstMatchIn(manifest).map(_.group(1))
       group    <- groupRegex.findFirstMatchIn(manifest).map(_.group(1))
       artifact <- artifactRegex.findFirstMatchIn(manifest).map(_.group(1))

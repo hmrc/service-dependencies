@@ -54,7 +54,6 @@ class SlugParserJobsRepository @Inject()(mongo: ReactiveMongoComponent)
             Index(
               Seq("processed" -> IndexType.Hashed),
               name       = Some("slugParserJobProcessedIdx"),
-              unique     = true,
               background = true))))
 
   def add(newJob: NewSlugParserJob): Future[Unit] =
