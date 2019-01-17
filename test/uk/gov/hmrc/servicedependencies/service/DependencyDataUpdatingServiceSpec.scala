@@ -507,6 +507,8 @@ class DependencyDataUpdatingServiceSpec
 
     val slugParserJobsRepository: SlugParserJobsRepository = mock[SlugParserJobsRepository]
 
+    val slugInfoRepository: SlugInfoRepository = mock[SlugInfoRepository]
+
     val testDependencyUpdatingService = new DependencyDataUpdatingService(
       curatedDependencyConfigProvider,
       repositoryLibraryDependenciesRepository,
@@ -515,7 +517,8 @@ class DependencyDataUpdatingServiceSpec
       locksRepository,
       mongoLocks,
       dependenciesDataSource,
-      slugParserJobsRepository
+      slugParserJobsRepository,
+      slugInfoRepository
     ) {
 
       override def now: DateTime = timeForTest

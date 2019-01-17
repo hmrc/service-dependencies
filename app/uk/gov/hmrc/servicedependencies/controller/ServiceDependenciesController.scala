@@ -38,18 +38,26 @@ class ServiceDependenciesController @Inject()(
 
   implicit val dependenciesFormat = Dependencies.format
 
-  def getDependencyVersionsForRepository(repositoryName: String) = Action.async { implicit request =>
-    dependencyDataUpdatingService
-      .getDependencyVersionsForRepository(repositoryName)
-      .map(maybeRepositoryDependencies =>
-        maybeRepositoryDependencies.fold(NotFound(s"$repositoryName not found"))(repoDependencies =>
-          Ok(Json.toJson(repoDependencies))))
-  }
+  def getDependencyVersionsForRepository(repositoryName: String) =
+    Action.async { implicit request =>
+      dependencyDataUpdatingService
+        .getDependencyVersionsForRepository(repositoryName)
+        .map { case None      => NotFound(s"$repositoryName not found")
+               case Some(res) => Ok(Json.toJson(res))
+             }
+    }
 
-  def dependencies() = Action.async { implicit request =>
-    dependencyDataUpdatingService
-      .getDependencyVersionsForAllRepositories()
-      .map(dependencies => Ok(Json.toJson(dependencies)))
-  }
+  def dependencies() =
+    Action.async { implicit request =>
+      dependencyDataUpdatingService
+        .getDependencyVersionsForAllRepositories
+        .map(res => Ok(Json.toJson(res)))
+    }
 
+  def slugInfos(name: String, version: Option[String]) =
+    Action.async { implicit request =>
+      dependencyDataUpdatingService
+        .getSlugInfos(name, version)
+        .map(res => Ok(Json.toJson(res)))
+    }
 }

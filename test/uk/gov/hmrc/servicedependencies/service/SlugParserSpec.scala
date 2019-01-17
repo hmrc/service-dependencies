@@ -89,9 +89,9 @@ class SlugParserSpec extends FlatSpec with Matchers {
     val res = SlugParser.parse("example-service_0.27.0_0.5.2.tar.gz", in)
 
 
-    res.slugName shouldBe "example-service"
+    res.name shouldBe "example-service"
     res.runnerVersion shouldBe "0.5.2"
-    res.slugVersion shouldBe "0.27.0"
+    res.version shouldBe "0.27.0"
 
     res.classpath.isEmpty shouldBe false
 

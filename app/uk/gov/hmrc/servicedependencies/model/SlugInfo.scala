@@ -24,9 +24,9 @@ case class SlugDependency(
   artifact   : String)
 
 case class SlugInfo(
-  slugUri      : String,
-  slugName     : String,
-  slugVersion  : String,
+  uri          : String,
+  name         : String,
+  version      : String,
   runnerVersion: String,
   classpath    : String,
   dependencies : List[SlugDependency])

@@ -28,7 +28,7 @@ import scala.concurrent.{ExecutionContext, Future}
 @Singleton
 class SlugInfoRepository @Inject()(mongo: ReactiveMongoComponent)
   extends ReactiveRepository[SlugInfo, BSONObjectID](
-    collectionName = "slugInfo",
+    collectionName = "slugInfos",
     mongo          = mongo.mongoConnector.db,
     domainFormat   = SlugInfo.format){
 
@@ -39,9 +39,16 @@ class SlugInfoRepository @Inject()(mongo: ReactiveMongoComponent)
           .indexesManager
           .ensure(
             Index(
-              Seq("slugUri" -> IndexType.Ascending),
-              name       = Some("slugInfoUniqueIdx"),
-              unique     = true))))
+              Seq("uri" -> IndexType.Ascending),
+              name   = Some("slugInfoUniqueIdx"),
+              unique = true)),
+        collection
+          .indexesManager
+          .ensure(
+            Index(
+              Seq("name" -> IndexType.Hashed),
+              name       = Some("slugInfoIdx"),
+              background = true))))
 
   def add(slugInfo: SlugInfo): Future[Unit] =
     collection
@@ -53,4 +60,10 @@ class SlugInfoRepository @Inject()(mongo: ReactiveMongoComponent)
 
   def clearAllData: Future[Boolean] =
     super.removeAll().map(_.ok)
+
+  def getSlugInfos(name: String, optVersion: Option[String]): Future[Seq[SlugInfo]] =
+    optVersion match {
+      case None          => find("name" -> name)
+      case Some(version) => find("name" -> name, "version" -> version)
+    }
 }

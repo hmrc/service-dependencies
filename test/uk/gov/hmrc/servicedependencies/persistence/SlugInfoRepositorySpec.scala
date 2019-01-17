@@ -82,9 +82,9 @@ class SlugInfoRepositorySpec
 
   val slugInfo =
     SlugInfo(
-      slugUri       = "https://store/slugs/my-slug/my-slug_0.27.0_0.5.2.tgz",
-      slugName      = "my-slug",
-      slugVersion   = "0.27.0",
+      uri           = "https://store/slugs/my-slug/my-slug_0.27.0_0.5.2.tgz",
+      name          = "my-slug",
+      version       = "0.27.0",
       runnerVersion = "0.5.2",
       classpath     = "",
       dependencies  = List(
@@ -99,5 +99,4 @@ class SlugInfoRepositorySpec
         version     = "v2",
         group       = "com.test.group",
         artifact    = "lib1")))
-
 }

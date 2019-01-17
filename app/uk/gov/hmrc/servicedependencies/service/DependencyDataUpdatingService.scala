@@ -37,7 +37,8 @@ class DependencyDataUpdatingService @Inject()(
   locksRepository                        : LocksRepository,
   mongoLocks                             : MongoLocks,
   dependenciesDataSource                 : DependenciesDataSource,
-  slugParserJobsRepository               : SlugParserJobsRepository
+  slugParserJobsRepository               : SlugParserJobsRepository,
+  slugInfoRepository                     : SlugInfoRepository
 ) {
 
   lazy val logger = LoggerFactory.getLogger(this.getClass)
@@ -191,4 +192,7 @@ class DependencyDataUpdatingService @Inject()(
 
   def addSlugParserJob(newJob: NewSlugParserJob): Future[Unit] =
     slugParserJobsRepository.add(newJob)
+
+  def getSlugInfos(name: String, version: Option[String]): Future[Seq[SlugInfo]] =
+    slugInfoRepository.getSlugInfos(name, version)
 }

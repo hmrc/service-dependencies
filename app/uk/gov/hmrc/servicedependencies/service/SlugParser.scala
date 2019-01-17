@@ -79,9 +79,9 @@ object SlugParser {
       val (runnerVersion, slugVersion, slugName) = extractFromUri(slugUri)
 
       val slugInfo = SlugInfo(
-        slugUri       = slugUri,
-        slugName      = slugName,
-        slugVersion   = slugVersion,
+        uri           = slugUri,
+        name          = slugName,
+        version       = slugVersion,
         runnerVersion = runnerVersion,
         classpath     = "",
         dependencies  = List.empty[SlugDependency])
