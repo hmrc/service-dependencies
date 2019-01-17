@@ -33,10 +33,10 @@ class SlugParserSpec extends FlatSpec with Matchers {
   it should "extract the correct version when present" in {
     val is = new ByteArrayInputStream(manifest.getBytes(StandardCharsets.UTF_8))
     SlugParser.extractVersionFromManifest("testlib.jar", is) shouldBe Some(SlugDependency("testlib.jar",
-      version = "1.1.3",
-      group = "com.typesafe.play",
+      version  = "1.1.3",
+      group    = "com.typesafe.play",
       artifact = "cachecontrol",
-      meta = "fromManifest"))
+      meta     = "fromManifest"))
   }
 
 
@@ -48,34 +48,34 @@ class SlugParserSpec extends FlatSpec with Matchers {
   it should "extract the correct version when present" in {
     val is = new ByteArrayInputStream(pom.getBytes(StandardCharsets.UTF_8))
     SlugParser.extractVersionFromPom("testlib.jar", is) shouldBe Some(SlugDependency("testlib.jar",
-      version = "1.2.3",
-      group = "org.example",
+      version  = "1.2.3",
+      group    = "org.example",
       artifact = "jpademo",
-      meta ="fromPom"))
+      meta     ="fromPom"))
   }
 
   it should "extract the correct version info from a pom with a parent group" in {
     val is = new ByteArrayInputStream(pomParent.getBytes(StandardCharsets.UTF_8))
     SlugParser.extractVersionFromPom("testlibparent.jar", is) shouldBe Some(SlugDependency("testlibparent.jar",
-      version = "1.7.25",
-      group = "org.slf4j",
+      version  = "1.7.25",
+      group    = "org.slf4j",
       artifact = "jul-to-slf4j",
-      meta = "fromPom"))
+      meta     = "fromPom"))
   }
 
   "extractConfFromJar" should "extract the version from a jar built with sbt" in {
     val is = new BufferedInputStream(getClass.getResourceAsStream("/slugs/example-ivy_2.11-3.2.0.jar"))
     val output = SlugParser.extractVersionFromJar("bob.jar", is).get
-    output.version shouldBe "3.2.0"
-    output.group shouldBe "uk.gov.hmrc"
+    output.version   shouldBe "3.2.0"
+    output.group     shouldBe "uk.gov.hmrc"
     output.artifact shouldBe "time"
   }
 
   it should "extract the version from a jar built with maven" in {
     val is = new BufferedInputStream(getClass.getResourceAsStream("/slugs/example-maven-3.2.5.jar"))
     val output = SlugParser.extractVersionFromJar("bob.jar", is).get
-    output.version shouldBe "1.2.3"
-    output.group shouldBe "com.test"
+    output.version  shouldBe "1.2.3"
+    output.group    shouldBe "com.test"
     output.artifact shouldBe "mavenlibrary"
   }
 
@@ -109,13 +109,13 @@ class SlugParserSpec extends FlatSpec with Matchers {
     res.dependencies.length shouldBe 2
 
     val ivy = res.dependencies.find(_.path.contains("example-ivy")).get
-    ivy.version shouldBe "3.2.0"
-    ivy.group shouldBe "uk.gov.hmrc"
+    ivy.version  shouldBe "3.2.0"
+    ivy.group    shouldBe "uk.gov.hmrc"
     ivy.artifact shouldBe "time"
 
     val maven = res.dependencies.find(_.path.contains("example-maven")).get
-    maven.version shouldBe "1.2.3"
-    maven.group shouldBe "com.test"
+    maven.version  shouldBe "1.2.3"
+    maven.group    shouldBe "com.test"
     maven.artifact shouldBe "mavenlibrary"
   }
 

@@ -32,7 +32,7 @@ import scala.concurrent.Future
 import scala.concurrent.duration.FiniteDuration
 import scala.concurrent.ExecutionContext.Implicits.global
 
-class SlugJobUpdaterSpec extends TestKit(ActorSystem("SlugJobUpdaterSpec"))
+class SlugJobCreatorSpec extends TestKit(ActorSystem("SlugJobCreatorSpec"))
   with ImplicitSender
   with FlatSpecLike
   with MockitoSugar
@@ -55,11 +55,11 @@ class SlugJobUpdaterSpec extends TestKit(ActorSystem("SlugJobUpdaterSpec"))
     when(mockConnector.findAllSlugsForService("/abc")).thenReturn(Future(List( NewSlugParserJob("http://abc/abc.2.3-0.5.2.tgz"))))
     when(mockRepo.add(any())).thenReturn(Future {println("ok")} )
 
-    val slugUpdater = new SlugJobUpdater(mockConnector, mockRepo)(ActorMaterializer()) {
+    val slugJobCreator = new SlugJobCreator(mockConnector, mockRepo)(ActorMaterializer()) {
       override val rateLimit: RateLimit = RateLimit(1000, FiniteDuration(10, "seconds"))
     }
 
-    slugUpdater.update(1000)
+    slugJobCreator.run(1000)
 
     Thread.sleep(1000)
     verify(mockConnector, times(1)).findAllSlugs()

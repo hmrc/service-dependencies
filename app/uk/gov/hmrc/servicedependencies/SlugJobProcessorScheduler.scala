@@ -22,7 +22,7 @@ import play.api.Logger
 import javax.inject.Inject
 import org.joda.time.Duration
 import play.api.{Configuration, Logger}
-import uk.gov.hmrc.servicedependencies.service.SlugParser
+import uk.gov.hmrc.servicedependencies.service.SlugJobProcessor
 import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.duration.{DurationLong, FiniteDuration}
 import scala.util.control.NonFatal
@@ -30,32 +30,32 @@ import scala.util.control.NonFatal
 class SlugJobProcessorScheduler @Inject()(
   actorSystem         : ActorSystem,
   configuration       : Configuration,
-  slugParser          : SlugParser,
+  slugJobProcessor    : SlugJobProcessor,
   applicationLifecycle: ApplicationLifecycle) {
 
   import ExecutionContext.Implicits.global
 
-  private val slugParseEnabledKey = "repositoryDependencies.slugParse.enabled"
-  private val slugParseKey        = "repositoryDependencies.slugParse.interval"
+  private val enabledKey  = "repositoryDependencies.slugJobProcessor.enabled"
+  private val intervalKey = "repositoryDependencies.slugJobProcessor.interval"
 
-  lazy val slugJobUpdaterEnabled: Boolean =
-    configuration.getOptional[Boolean](slugParseEnabledKey).getOrElse(false)
+  lazy val enabled: Boolean =
+    configuration.getOptional[Boolean](enabledKey).getOrElse(false)
 
-  if (slugJobUpdaterEnabled) {
-    val slugParseInterval: FiniteDuration =
-      Option(configuration.getMillis(slugParseKey))
+  if (enabled) {
+    val interval: FiniteDuration =
+      Option(configuration.getMillis(intervalKey))
         .map(_.milliseconds)
-        .getOrElse(throw new RuntimeException(s"$slugParseKey not specified"))
+        .getOrElse(throw new RuntimeException(s"$intervalKey not specified"))
 
-    val cancellable = actorSystem.scheduler.schedule(1.minute, slugParseInterval) {
+    val cancellable = actorSystem.scheduler.schedule(1.minute, interval) {
       Logger.info("Running slug parser jobs")
-      slugParser.runSlugParserJobs()
+      slugJobProcessor.run()
         .recover {
-          case NonFatal(e) => Logger.error(s"An error occurred processing slug parser jobs: ${e.getMessage}", e)
+          case NonFatal(e) => Logger.error(s"An error occurred running slug job processor: ${e.getMessage}", e)
         }
     }
     applicationLifecycle.addStopHook(() => Future(cancellable.cancel()))
   } else {
-    Logger.info("Slug job processor scheduler is DISABLED. No new slug parser jobs will be created.")
+    Logger.info("Slug job processor scheduler is DISABLED. No new slug parser jobs will be processed.")
   }
 }

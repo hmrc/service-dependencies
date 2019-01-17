@@ -30,7 +30,7 @@ import scala.concurrent.duration.{DurationInt, FiniteDuration}
 case class RateLimit(invocations: Int, perDuration: FiniteDuration)
 
 @Singleton
-class SlugJobUpdater @Inject()(
+class SlugJobCreator @Inject()(
   conn: ArtifactoryConnector,
   repo: SlugParserJobsRepository)(
   implicit val materializer: Materializer) {
@@ -39,7 +39,7 @@ class SlugJobUpdater @Inject()(
 
   val rateLimit: RateLimit = RateLimit(1, 2.seconds)
 
-  def update(limit: Int = Int.MaxValue): Future[Unit] =
+  def run(limit: Int = Int.MaxValue): Future[Unit] =
     Source.fromFuture(conn.findAllSlugs())
       .mapConcat(identity)
       .take(limit)

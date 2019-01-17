@@ -19,7 +19,7 @@ import akka.actor.ActorSystem
 import javax.inject.Inject
 import play.api.{Configuration, Logger}
 import play.api.inject.ApplicationLifecycle
-import uk.gov.hmrc.servicedependencies.service.SlugJobUpdater
+import uk.gov.hmrc.servicedependencies.service.SlugJobCreator
 
 import scala.concurrent.Future
 import scala.concurrent.duration.{DurationLong, FiniteDuration}
@@ -27,35 +27,34 @@ import scala.concurrent.duration.{DurationLong, FiniteDuration}
 class SlugJobCreatorScheduler @Inject()(
     actorSystem             : ActorSystem,
     configuration           : Configuration,
-    slugUpdater             : SlugJobUpdater,
+    slugJobCreator          : SlugJobCreator,
     applicationLifecycle    : ApplicationLifecycle) {
 
   import scala.concurrent.ExecutionContext.Implicits.global
 
-  private val slugJobCreatorEnabledKey  = "repositoryDependencies.slugJobs.enabled"
-  private val slugJobCreatorIntervalKey = "repositoryDependencies.slugJobs.interval"
-  private val slugJobCreatorLimitKey    = "repositoryDependencies.slugJobs.limit"
+  private val enabledKey  = "repositoryDependencies.slugJobCreator.enabled"
+  private val intervalKey = "repositoryDependencies.slugJobCreator.interval"
+  private val limitKey    = "repositoryDependencies.slugJobCreator.limit"
 
-  private lazy val slugParseInterval: FiniteDuration =
-    Option(configuration.getMillis(slugJobCreatorIntervalKey))
+  private lazy val interval: FiniteDuration =
+    Option(configuration.getMillis(intervalKey))
       .map(_.milliseconds)
-      .getOrElse(throw new RuntimeException(s"$slugJobCreatorIntervalKey not specified"))
+      .getOrElse(throw new RuntimeException(s"$intervalKey not specified"))
 
-  private lazy val slugUpdaterEnabled: Boolean =
-    configuration.getOptional[Boolean](slugJobCreatorEnabledKey).getOrElse(false)
+  private lazy val enabled: Boolean =
+    configuration.getOptional[Boolean](enabledKey).getOrElse(false)
 
-  private lazy val slugUpdaterLimit: Option[Int] =
-    configuration.getOptional[Int](slugJobCreatorLimitKey)
+  private lazy val limit: Option[Int] =
+    configuration.getOptional[Int](limitKey)
 
 
-  if (slugUpdaterEnabled) {
-    val cancellable = actorSystem.scheduler.schedule(1.minute, slugParseInterval) {
+  if (enabled) {
+    val cancellable = actorSystem.scheduler.schedule(1.minute, interval) {
+      Logger.info(s"Starting slug job creator scheduler, limited to ${limit.map(_.toString).getOrElse("unlimited")} items")
 
-      Logger.info(s"Starting slug job creator scheduler, limited to ${slugUpdaterLimit.map(_.toString).getOrElse("unlimited")} items")
-
-      slugUpdaterLimit match {
-        case Some(limit) => slugUpdater.update(limit)
-        case None        => slugUpdater.update()
+      limit match {
+        case Some(limit) => slugJobCreator.run(limit)
+        case None        => slugJobCreator.run()
       }
     }
     applicationLifecycle.addStopHook(() => Future(cancellable.cancel()))

@@ -34,7 +34,7 @@ import scala.util.Try
 import scala.util.control.NonFatal
 
 @Singleton
-class SlugParser @Inject()(
+class SlugJobProcessor @Inject()(
    slugParserJobsRepository: SlugParserJobsRepository,
    slugInfoRepository      : SlugInfoRepository,
    gzippedResourceConnector: GzippedResourceConnector,
@@ -44,15 +44,22 @@ class SlugParser @Inject()(
   import ExecutionContext.Implicits.global
 
 
-  def runSlugParserJobs(): Future[Unit] =
+  def run(): Future[Unit] =
     Source.fromFuture(slugParserJobsRepository.getUnprocessed)
       .map { jobs => Logger.debug(s"found ${jobs.size} Slug parser jobs"); jobs }
       .mapConcat(_.toList)
-      .mapAsyncUnordered(2)(runJob)
+      .mapAsyncUnordered(2) { job =>
+        processJob(job)
+          .map(_ => slugParserJobsRepository.markProcessed(job.id))
+          .recover {
+            case NonFatal(e) => Logger.error(s"An error occurred processing slug parser job ${job.id}: ${e.getMessage}", e)
+              slugParserJobsRepository.markAttempted(job.id)
+          }
+      }
       .runWith(Sink.ignore)
       .map(_ => ())
 
-  def runJob(job: MongoSlugParserJob): Future[Unit] =
+  def processJob(job: MongoSlugParserJob): Future[Unit] =
     futureHelpers.withTimerAndCounter("slug.process")(
       for {
         _  <- Future(Logger.debug(s"running job $job"))
@@ -60,13 +67,8 @@ class SlugParser @Inject()(
         si =  SlugParser.parse(job.slugUri, is)
         _  <- slugInfoRepository.add(si)
         _  =  Logger.debug(s"added {$job.id}: $si")
-        _  <- slugParserJobsRepository.markProcessed(job.id)
       } yield ()
-    ).recover {
-      case NonFatal(e) => Logger.error(s"An error occurred processing slug parser job ${job.id}: ${e.getMessage}", e)
-        slugParserJobsRepository.markAttempted(job.id)
-    }
-
+    )
 }
 
 
@@ -89,18 +91,17 @@ object SlugParser {
       .continually(Try(tar.getNextEntry).recover { case e if e.getMessage == "Stream closed" => null }.get)
       .takeWhile(_ != null)
       .filter(_.getName.startsWith(s"./$slugName"))
-      .foldLeft(slugInfo)( (result: SlugInfo, next: ArchiveEntry) => {
+      .foldLeft(slugInfo)( (result: SlugInfo, next: ArchiveEntry) =>
         next match {
-          case n if n.getName.toLowerCase.endsWith(".jar") => {
-            extractVersionFromJar(n.getName, tar).map(v => result.copy(dependencies = result.dependencies ++ List(v))).getOrElse(result)
-          }
-          case n if n.getName.endsWith(s"bin/$slugName") =>
-            extractClasspath(tar).map(cp => result.copy(classpath = cp)).getOrElse(result)
-          case _ => {
-            result
-          }
+          case n if n.getName.toLowerCase.endsWith(".jar") => extractVersionFromJar(n.getName, tar)
+                                                                .map(v => result.copy(dependencies = result.dependencies ++ List(v)))
+                                                                .getOrElse(result)
+          case n if n.getName.endsWith(s"bin/$slugName")   => extractClasspath(tar)
+                                                                .map(cp => result.copy(classpath = cp))
+                                                                .getOrElse(result)
+          case _                                           => result
         }
-      })
+      )
   }
 
   def extractFromUri(slugUri: String): (String, String, String) = {
