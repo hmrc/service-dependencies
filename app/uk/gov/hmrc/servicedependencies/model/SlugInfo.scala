@@ -19,7 +19,9 @@ import play.api.libs.json.{Json, OFormat}
 
 case class SlugDependency(
   libraryName: String,
-  version    : String)
+  version    : String,
+  group      : String,
+  artifact   : String)
 
 case class SlugInfo(
   slugUri      : String,
@@ -27,7 +29,7 @@ case class SlugInfo(
   slugVersion  : String,
   runnerVersion: String,
   classpath    : String,
-  dependencies : Seq[SlugDependency])
+  dependencies : List[SlugDependency])
 
 object SlugDependency {
   implicit val format: OFormat[SlugDependency] = Json.format[SlugDependency]

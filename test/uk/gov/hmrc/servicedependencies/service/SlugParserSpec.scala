@@ -15,62 +15,56 @@
  */
 
 package uk.gov.hmrc.servicedependencies.service
-import java.io.{BufferedInputStream, ByteArrayInputStream, FileInputStream}
+import java.io.{BufferedInputStream, ByteArrayInputStream}
 import java.nio.charset.StandardCharsets
 
 import org.apache.commons.compress.archivers.ArchiveStreamFactory
 import org.apache.commons.compress.compressors.CompressorStreamFactory
 import org.scalatest.{FlatSpec, Matchers}
-
-import scala.io.Source
+import uk.gov.hmrc.servicedependencies.model.SlugDependency
 
 class SlugParserSpec extends FlatSpec with Matchers {
 
   "extractVersionFromManifest" should "extract return nothing if no version is available in manifest" in {
     val is = new ByteArrayInputStream("Manifest-Version: 1.0".getBytes(StandardCharsets.UTF_8))
-    SlugParser.extractVersionFromManifest(is) shouldBe None
+    SlugParser.extractVersionFromManifest("testlib.jar", is) shouldBe None
   }
 
   it should "extract the correct version when present" in {
     val is = new ByteArrayInputStream(manifest.getBytes(StandardCharsets.UTF_8))
-    SlugParser.extractVersionFromManifest(is) shouldBe Some("1.1.3")
+    SlugParser.extractVersionFromManifest("testlib.jar", is) shouldBe Some(SlugDependency("testlib.jar", version = "1.1.3", group = "com.typesafe.play", artifact = "cachecontrol"))
   }
 
 
   "extractVersionFromPom" should "extract return nothing if no version is available in manifest" in {
     val is = new ByteArrayInputStream("".getBytes(StandardCharsets.UTF_8))
-    SlugParser.extractVersionFromPom(is) shouldBe None
+    SlugParser.extractVersionFromPom("",is) shouldBe None
   }
 
   it should "extract the correct version when present" in {
     val is = new ByteArrayInputStream(pom.getBytes(StandardCharsets.UTF_8))
-    SlugParser.extractVersionFromPom(is) shouldBe Some("1.2.3")
+    SlugParser.extractVersionFromPom("testlib.jar", is) shouldBe Some(SlugDependency("testlib.jar", version = "1.2.3", group = "org.example", artifact = "jpademo"))
   }
 
-
-  "extractVersionFromFilename" should "get version form java style jar names" in {
-
-  }
-
-  it should "get the version from scala style jar names" in {
-
-  }
-
-
-  it should "handle various edge cases" in {
-
+  it should "extract the correct version info from a pom with a parent group" in {
+    val is = new ByteArrayInputStream(pomParent.getBytes(StandardCharsets.UTF_8))
+    SlugParser.extractVersionFromPom("testlibparent.jar", is) shouldBe Some(SlugDependency("testlibparent.jar", version = "1.7.25", group = "org.slf4j", artifact = "jul-to-slf4j"))
   }
 
   "extractConfFromJar" should "extract the version from a jar built with sbt" in {
     val is = new BufferedInputStream(getClass.getResourceAsStream("/slugs/example-ivy_2.11-3.2.0.jar"))
-    val output = SlugParser.extractVersionFromJar(is)
-    output shouldBe Some("3.2.0")
+    val output = SlugParser.extractVersionFromJar("bob.jar", is).get
+    output.version shouldBe "3.2.0"
+    output.group shouldBe "uk.gov.hmrc"
+    output.artifact shouldBe "time"
   }
 
   it should "extract the version from a jar built with maven" in {
     val is = new BufferedInputStream(getClass.getResourceAsStream("/slugs/example-maven-3.2.5.jar"))
-    val output = SlugParser.extractVersionFromJar(is)
-    output shouldBe Some("3.2.5")
+    val output = SlugParser.extractVersionFromJar("bob.jar", is).get
+    output.version shouldBe "1.2.3"
+    output.group shouldBe "com.test"
+    output.artifact shouldBe "mavenlibrary"
   }
 
   "extractFromUri" should "extract the runnerVersion, slugVersion and slugName from Uri" in {
@@ -94,9 +88,25 @@ class SlugParserSpec extends FlatSpec with Matchers {
                getClass.getResourceAsStream("/slugs/example-service.tar.gz"))
     val res = SlugParser.parse("example-service_0.27.0_0.5.2.tar.gz", in)
 
+
+    res.slugName shouldBe "example-service"
+    res.runnerVersion shouldBe "0.5.2"
+    res.slugVersion shouldBe "0.27.0"
+
+    res.classpath.isEmpty shouldBe false
+
     res.dependencies.length shouldBe 2
-    res.dependencies.find(_.libraryName.contains("example-ivy")).map(_.version) shouldBe Some("3.2.0")
-    res.dependencies.find(_.libraryName.contains("example-maven")).map(_.version) shouldBe Some("3.2.5")
+
+    val ivy = res.dependencies.find(_.libraryName.contains("example-ivy")).get
+    ivy.version shouldBe "3.2.0"
+    ivy.group shouldBe "uk.gov.hmrc"
+    ivy.artifact shouldBe "time"
+
+    val maven = res.dependencies.find(_.libraryName.contains("example-maven")).get
+    maven.version shouldBe "1.2.3"
+    maven.group shouldBe "com.test"
+    maven.artifact shouldBe "mavenlibrary"
+
   }
 
 
@@ -141,4 +151,37 @@ class SlugParserSpec extends FlatSpec with Matchers {
                |
                |</project>
                |""".stripMargin
+
+  val pomParent = """<project xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://maven.apache.org/POM/4.0.0">
+                    |
+                    |  <modelVersion>4.0.0</modelVersion>
+                    |
+                    |  <parent>
+                    |    <groupId>org.slf4j</groupId>
+                    |    <artifactId>slf4j-parent</artifactId>
+                    |    <version>1.7.25</version>
+                    |  </parent>
+                    |
+                    |  <artifactId>jul-to-slf4j</artifactId>
+                    |
+                    |  <packaging>jar</packaging>
+                    |  <name>JUL to SLF4J bridge</name>
+                    |  <description>JUL to SLF4J bridge</description>
+                    |
+                    |  <url>http://www.slf4j.org</url>
+                    |
+                    |  <dependencies>
+                    |    <dependency>
+                    |      <groupId>org.slf4j</groupId>
+                    |      <artifactId>slf4j-api</artifactId>
+                    |    </dependency>
+                    |    <dependency>
+                    |      <groupId>org.slf4j</groupId>
+                    |      <artifactId>slf4j-log4j12</artifactId>
+                    |      <version>${project.version}</version>
+                    |      <scope>test</scope>
+                    |    </dependency>
+                    |  </dependencies>
+                    |
+                    |</project>"""
 }

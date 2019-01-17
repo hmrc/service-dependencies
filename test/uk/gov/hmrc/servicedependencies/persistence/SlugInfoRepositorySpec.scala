@@ -87,12 +87,17 @@ class SlugInfoRepositorySpec
       slugVersion   = "0.27.0",
       runnerVersion = "0.5.2",
       classpath     = "",
-      dependencies  = Seq(
+      dependencies  = List(
         SlugDependency(
           libraryName = "lib1",
-          version     = "v1"),
+          version     = "v1",
+          group       = "com.test.group",
+          artifact    = "lib1"
+        ),
         SlugDependency(
         libraryName = "lib2",
-        version     = "v2")))
+        version     = "v2",
+        group       = "com.test.group",
+        artifact    = "lib1")))
 
 }
