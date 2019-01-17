@@ -74,19 +74,19 @@ object SlugParser {
   case class RunJob(job: MongoSlugParserJob)
 
   class SlugParserActor @Inject()(
-    slugParserJobsRepository: SlugParserJobsRepository,
-    slugInfoRepository      : SlugInfoRepository,
-    gzippedResourceConnector: GzippedResourceConnector,
-    futureHelpers           : FutureHelpers) extends Actor {
+      slugParserJobsRepository: SlugParserJobsRepository,
+      slugInfoRepository      : SlugInfoRepository,
+      gzippedResourceConnector: GzippedResourceConnector,
+      futureHelpers           : FutureHelpers)
+    extends Actor {
 
     import context.dispatcher
 
     def receive = {
       case RunJob(job) =>
-        Logger.debug(s"running job $job")
-
         val f = futureHelpers.withTimerAndCounter("slug.process")(
           for {
+            _  <- Future(Logger.debug(s"running job $job"))
             is <- gzippedResourceConnector.openGzippedResource(job.slugUri)
             si =  SlugParser.parse(job.slugUri, is)
             _  <- slugInfoRepository.add(si)
@@ -95,7 +95,7 @@ object SlugParser {
           } yield ()
         ).recover {
           case NonFatal(e) => Logger.error(s"An error occurred processing slug parser job ${job.id}: ${e.getMessage}", e)
-                              // TODO mark slug as failed. maybe attempt number, so can give up when reach max?
+                              slugParserJobsRepository.markAttempted(job.id)
         }
 
         // blocking so that number of actors determines throughput

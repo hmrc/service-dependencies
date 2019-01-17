@@ -83,6 +83,31 @@ class SlugParserJobsRepositorySpec
     }
   }
 
+  "SlugParserJobsRepository.clearAllDependencyEntries" should {
+    "deletes everything" in {
+      val newJob = NewSlugParserJob("https://store/slugs/my-slug/my-slug_0.27.0_0.5.2.tgz")
+      await(slugParserJobsRepository.add(newJob))
+      await(slugParserJobsRepository.getAllEntries) should have size 1
+
+      await(slugParserJobsRepository.clearAllData)
+      await(slugParserJobsRepository.getAllEntries) shouldBe Nil
+    }
+  }
+
+  "SlugParserJobsRepository.markAttempted" should {
+    "increase the attempts flag" in {
+      val newJob = NewSlugParserJob("https://store/slugs/my-slug/my-slug_0.27.0_0.5.2.tgz")
+      await(slugParserJobsRepository.add(newJob))
+      val createdJob = checkSingleEntry(newJob.slugUri, false, 0)
+
+      await(slugParserJobsRepository.markAttempted(createdJob.id))
+      checkSingleEntry(newJob.slugUri, false, 1)
+
+      await(slugParserJobsRepository.markAttempted(createdJob.id))
+      checkSingleEntry(newJob.slugUri, false, 2)
+    }
+  }
+
   "SlugParserJobsRepository.getUnprocessed" should {
     "return only unprocessed jobs" in {
       val newJob1 = NewSlugParserJob("https://store/slugs/my-slug/my-slug_0.27.0_0.5.2.tgz")
@@ -100,25 +125,34 @@ class SlugParserJobsRepositorySpec
       unprocessed.head.slugUri shouldBe newJob2.slugUri
       unprocessed.head.processed shouldBe false
     }
-  }
 
-  "SlugParserJobsRepository.clearAllDependencyEntries" should {
-    "deletes everything" in {
-      val newJob = NewSlugParserJob("https://store/slugs/my-slug/my-slug_0.27.0_0.5.2.tgz")
-      await(slugParserJobsRepository.add(newJob))
-      await(slugParserJobsRepository.getAllEntries) should have size 1
+    "return only job with attemps < 3" in {
+      val newJob1 = NewSlugParserJob("https://store/slugs/my-slug/my-slug_0.27.0_0.5.2.tgz")
+      await(slugParserJobsRepository.add(newJob1))
+      val createdJob1 = checkSingleEntry(expectedSlugUri = newJob1.slugUri, expectedProcessed = false)
 
-      await(slugParserJobsRepository.clearAllData)
-      await(slugParserJobsRepository.getAllEntries) shouldBe Nil
+      val newJob2 = NewSlugParserJob("https://store/slugs/my-slug/my-slug_0.28.0_0.5.2.tgz")
+      await(slugParserJobsRepository.add(newJob2))
+      await(slugParserJobsRepository.getAllEntries) should have size 2
+
+      await(slugParserJobsRepository.markAttempted(createdJob1.id))
+      await(slugParserJobsRepository.markAttempted(createdJob1.id))
+      await(slugParserJobsRepository.markAttempted(createdJob1.id))
+
+      val unprocessed = await(slugParserJobsRepository.getUnprocessed)
+      unprocessed should have size 1
+      unprocessed.head.slugUri shouldBe newJob2.slugUri
+      unprocessed.head.processed shouldBe false
     }
   }
 
-  def checkSingleEntry(expectedSlugUri: String, expectedProcessed: Boolean): MongoSlugParserJob = {
+  def checkSingleEntry(expectedSlugUri: String, expectedProcessed: Boolean, expectedAttempts: Int = 0): MongoSlugParserJob = {
     val allEntries = await(slugParserJobsRepository.getAllEntries)
     allEntries should have size 1
     val createdJob = allEntries.head
     createdJob.slugUri shouldBe expectedSlugUri
     createdJob.processed shouldBe expectedProcessed
+    createdJob.attempts shouldBe expectedAttempts
     createdJob
   }
 }

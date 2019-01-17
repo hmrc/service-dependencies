@@ -63,7 +63,8 @@ class SlugParserJobsRepository @Inject()(mongo: ReactiveMongoComponent)
         MongoSlugParserJob(
           id            = UUID.randomUUID().toString,
           slugUri       = newJob.slugUri,
-          processed     = false
+          processed     = false,
+          attempts      = 0
         ))
       .map(_ => ())
 
@@ -76,11 +77,21 @@ class SlugParserJobsRepository @Inject()(mongo: ReactiveMongoComponent)
       .map(_ => ())
   }
 
+  def markAttempted(id: String): Future[Unit] = {
+    logger.info(s"mark job $id as attempted")
+    collection
+      .update(
+        selector = Json.obj("_id" -> id),
+        update   = Json.obj("$inc" -> Json.obj("attempts" -> 1)))
+      .map(_ => ())
+  }
+
   def getAllEntries: Future[Seq[MongoSlugParserJob]] =
     findAll()
 
   def getUnprocessed: Future[Seq[MongoSlugParserJob]] =
-    find("processed" -> false)
+    find("processed" -> false,
+         "attempts" -> Json.obj("$lt" -> 3))
 
   def clearAllData: Future[Boolean] =
     super.removeAll().map(_.ok)
