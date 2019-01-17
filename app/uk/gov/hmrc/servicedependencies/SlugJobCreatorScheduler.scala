@@ -32,24 +32,32 @@ class SlugJobCreatorScheduler @Inject()(
 
   import scala.concurrent.ExecutionContext.Implicits.global
 
-  private val slugJobCreatorEnabledKey = "repositoryDependencies.slugJobs.enabled"
+  private val slugJobCreatorEnabledKey  = "repositoryDependencies.slugJobs.enabled"
   private val slugJobCreatorIntervalKey = "repositoryDependencies.slugJobs.interval"
+  private val slugJobCreatorLimitKey    = "repositoryDependencies.slugJobs.limit"
 
-  lazy val slugParseInterval: FiniteDuration =
+  private lazy val slugParseInterval: FiniteDuration =
     Option(configuration.getMillis(slugJobCreatorIntervalKey))
       .map(_.milliseconds)
       .getOrElse(throw new RuntimeException(s"$slugJobCreatorIntervalKey not specified"))
 
-  lazy val slugUpdaterEnabled: Boolean =
+  private lazy val slugUpdaterEnabled: Boolean =
     configuration.getOptional[Boolean](slugJobCreatorEnabledKey).getOrElse(false)
+
+  private lazy val slugUpdaterLimit: Option[Int] =
+    configuration.getOptional[Int](slugJobCreatorLimitKey)
 
 
   if (slugUpdaterEnabled) {
     val cancellable = actorSystem.scheduler.schedule(1.minute, slugParseInterval) {
-      Logger.info("Running slug job creator")
-      slugUpdater.update(10)
-    }
 
+      Logger.info(s"Starting slug job creator scheduler, limited to ${slugUpdaterLimit.map(_.toString).getOrElse("unlimited")} items")
+
+      slugUpdaterLimit match {
+        case Some(limit) => slugUpdater.update(limit)
+        case None        => slugUpdater.update()
+      }
+    }
     applicationLifecycle.addStopHook(() => Future(cancellable.cancel()))
   } else {
     Logger.info("Slug job creator is DISABLED. No new slug parser jobs will be created.")

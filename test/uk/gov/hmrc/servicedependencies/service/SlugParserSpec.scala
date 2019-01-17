@@ -32,7 +32,11 @@ class SlugParserSpec extends FlatSpec with Matchers {
 
   it should "extract the correct version when present" in {
     val is = new ByteArrayInputStream(manifest.getBytes(StandardCharsets.UTF_8))
-    SlugParser.extractVersionFromManifest("testlib.jar", is) shouldBe Some(SlugDependency("testlib.jar", version = "1.1.3", group = "com.typesafe.play", artifact = "cachecontrol"))
+    SlugParser.extractVersionFromManifest("testlib.jar", is) shouldBe Some(SlugDependency("testlib.jar",
+      version = "1.1.3",
+      group = "com.typesafe.play",
+      artifact = "cachecontrol",
+      meta = "fromManifest"))
   }
 
 
@@ -43,12 +47,20 @@ class SlugParserSpec extends FlatSpec with Matchers {
 
   it should "extract the correct version when present" in {
     val is = new ByteArrayInputStream(pom.getBytes(StandardCharsets.UTF_8))
-    SlugParser.extractVersionFromPom("testlib.jar", is) shouldBe Some(SlugDependency("testlib.jar", version = "1.2.3", group = "org.example", artifact = "jpademo"))
+    SlugParser.extractVersionFromPom("testlib.jar", is) shouldBe Some(SlugDependency("testlib.jar",
+      version = "1.2.3",
+      group = "org.example",
+      artifact = "jpademo",
+      meta ="fromPom"))
   }
 
   it should "extract the correct version info from a pom with a parent group" in {
     val is = new ByteArrayInputStream(pomParent.getBytes(StandardCharsets.UTF_8))
-    SlugParser.extractVersionFromPom("testlibparent.jar", is) shouldBe Some(SlugDependency("testlibparent.jar", version = "1.7.25", group = "org.slf4j", artifact = "jul-to-slf4j"))
+    SlugParser.extractVersionFromPom("testlibparent.jar", is) shouldBe Some(SlugDependency("testlibparent.jar",
+      version = "1.7.25",
+      group = "org.slf4j",
+      artifact = "jul-to-slf4j",
+      meta = "fromPom"))
   }
 
   "extractConfFromJar" should "extract the version from a jar built with sbt" in {
@@ -84,31 +96,42 @@ class SlugParserSpec extends FlatSpec with Matchers {
 
 
   "slugparser" should "parse a slug" in {
-    val in = new CompressorStreamFactory().createCompressorInputStream(
-               getClass.getResourceAsStream("/slugs/example-service.tar.gz"))
+    val in = getClass.getResourceAsStream("/slugs/example-service.tar")
     val res = SlugParser.parse("example-service_0.27.0_0.5.2.tar.gz", in)
-
 
     res.name shouldBe "example-service"
     res.runnerVersion shouldBe "0.5.2"
     res.version shouldBe "0.27.0"
 
     res.classpath.isEmpty shouldBe false
+    res.classpath shouldNot startWith ("declare -r app_classpath")
 
     res.dependencies.length shouldBe 2
 
-    val ivy = res.dependencies.find(_.libraryName.contains("example-ivy")).get
+    val ivy = res.dependencies.find(_.path.contains("example-ivy")).get
     ivy.version shouldBe "3.2.0"
     ivy.group shouldBe "uk.gov.hmrc"
     ivy.artifact shouldBe "time"
 
-    val maven = res.dependencies.find(_.libraryName.contains("example-maven")).get
+    val maven = res.dependencies.find(_.path.contains("example-maven")).get
     maven.version shouldBe "1.2.3"
     maven.group shouldBe "com.test"
     maven.artifact shouldBe "mavenlibrary"
-
   }
 
+  "extractClasspath" should "strip the prefix and quotes" in {
+    val cp = "declare -r app_classpath=\"$lib_dir/org.apache.commons.commons-lang3-3.6.jar:$lib_dir/javax.transaction.jta-1.1.jar\""
+    val is = new ByteArrayInputStream(cp.getBytes(StandardCharsets.UTF_8))
+    val result = SlugParser.extractClasspath(is)
+    result shouldBe Some("$lib_dir/org.apache.commons.commons-lang3-3.6.jar:$lib_dir/javax.transaction.jta-1.1.jar")
+  }
+
+  it should "not extract anything if no classpath is present" in {
+    val cp = """declare -r script_conf_file="../conf/application.ini"""
+    val is = new ByteArrayInputStream(cp.getBytes(StandardCharsets.UTF_8))
+    val result = SlugParser.extractClasspath(is)
+    result shouldBe None
+  }
 
   /****** TEST DATA *******/
 
@@ -183,5 +206,5 @@ class SlugParserSpec extends FlatSpec with Matchers {
                     |    </dependency>
                     |  </dependencies>
                     |
-                    |</project>"""
+                    |</project>""".stripMargin
 }

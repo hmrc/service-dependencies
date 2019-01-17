@@ -73,61 +73,73 @@ class SlugParser @Inject()(
 object SlugParser {
 
   def parse(slugUri: String, in: InputStream): SlugInfo = {
+    val tar = new ArchiveStreamFactory().createArchiveInputStream(new BufferedInputStream(in))
 
-      val tar = new ArchiveStreamFactory().createArchiveInputStream(new BufferedInputStream(in))
+    val (runnerVersion, slugVersion, slugName) = extractFromUri(slugUri)
 
-      val (runnerVersion, slugVersion, slugName) = extractFromUri(slugUri)
+    val slugInfo = SlugInfo(
+      uri           = slugUri,
+      name          = slugName,
+      version       = slugVersion,
+      runnerVersion = runnerVersion,
+      classpath     = "",
+      dependencies  = List.empty[SlugDependency])
 
-      val slugInfo = SlugInfo(
-        uri           = slugUri,
-        name          = slugName,
-        version       = slugVersion,
-        runnerVersion = runnerVersion,
-        classpath     = "",
-        dependencies  = List.empty[SlugDependency])
+    Iterator
+      .continually(Try(tar.getNextEntry).recover { case e if e.getMessage == "Stream closed" => null }.get)
+      .takeWhile(_ != null)
+      .filter(_.getName.startsWith(s"./$slugName"))
+      .foldLeft(slugInfo)( (result: SlugInfo, next: ArchiveEntry) => {
+        next match {
+          case n if n.getName.toLowerCase.endsWith(".jar") => {
+            extractVersionFromJar(n.getName, tar).map(v => result.copy(dependencies = result.dependencies ++ List(v))).getOrElse(result)
+          }
+          case n if n.getName.endsWith(s"bin/$slugName") =>
+            extractClasspath(tar).map(cp => result.copy(classpath = cp)).getOrElse(result)
+          case _ => {
+            result
+          }
+        }
+      })
+  }
 
-        Iterator
-          .continually(Try(tar.getNextEntry).recover { case e if e.getMessage == "Stream closed" => null }.get)
-          .takeWhile(_ != null)
-          .foldLeft(slugInfo)( (result: SlugInfo, next: ArchiveEntry) => {
-            next match {
-              case n if n.getName.toLowerCase.endsWith(".jar") => {
-                extractVersionFromJar(n.getName, tar).map(v => result.copy(dependencies = result.dependencies ++ List(v))).getOrElse(result)
-              }
-              case n if n.getName.endsWith(s"bin/$slugName") =>
-                extractClasspath(tar).map(cp => result.copy(classpath = cp)).getOrElse(result)
-              case _ => result
-            }
-          })
+  def extractFromUri(slugUri: String): (String, String, String) = {
+    // e.g. https://store/slugs/my-slug/my-slug_0.27.0_0.5.2.tgz
+    val filename = slugUri
+                      .stripSuffix(".tgz").stripSuffix(".tar.gz")
+                      .split("/")
+                      .lastOption
+                      .getOrElse(sys.error(s"Could not extract slug data from uri $slugUri"))
+    val runnerVersion :: slugVersion :: rest = filename.split("_").reverse.toList
+    (runnerVersion, slugVersion, rest.mkString("_"))
+  }
 
-    }
+  sealed trait Dep
+  object Dep {
+    case object NoDep extends Dep
+    case class Manifest(sd: SlugDependency) extends Dep
+    case class Pom(sd: SlugDependency) extends Dep
+  }
 
-    def extractFromUri(slugUri: String): (String, String, String) = {
-      // e.g. https://store/slugs/my-slug/my-slug_0.27.0_0.5.2.tgz
-      val filename = slugUri
-                       .stripSuffix(".tgz").stripSuffix(".tar.gz")
-                       .split("/")
-                       .lastOption
-                       .getOrElse(sys.error(s"Could not extract slug data from uri $slugUri"))
-      val runnerVersion :: slugVersion :: rest = filename.split("_").reverse.toList
-      (runnerVersion, slugVersion, rest.mkString("_"))
-    }
-
-  def extractVersionFromJar(libraryName: String, inputStream: InputStream): Option[SlugDependency] = {
+  def extractVersionFromJar(libraryName: String, inputStream: InputStream): Option[SlugDependency] = Try {
     val jar = new JarArchiveInputStream(inputStream)
-    Stream
+    Iterator
       .continually(jar.getNextJarEntry)
       .takeWhile(_ != null)
-      .flatMap { entry =>
+      .foldLeft(Dep.NoDep: Dep) { (dep, entry) =>
         entry.getName match {
           //case "reference.conf" => None; // TODO: extract reference.conf & send to serviceConfigs
-          case "META-INF/MANIFEST.MF"           => extractVersionFromManifest(libraryName, jar)
-          case file if file.endsWith("pom.xml") => extractVersionFromPom(libraryName, jar)
-          case _                                => None // skip
+          case "META-INF/MANIFEST.MF" if !dep.isInstanceOf[Dep.Pom]  => extractVersionFromManifest(libraryName, jar).map(Dep.Manifest).getOrElse(Dep.NoDep)
+          case file if file.endsWith("pom.xml")                      => extractVersionFromPom(libraryName, jar).map(Dep.Pom).getOrElse(Dep.NoDep)
+          case _                                                     => dep // skip
         }
-      }
-      .headOption
-  }
+      } match {
+        case Dep.Manifest(d) => Some(d)
+        case Dep.Pom(d) => Some(d)
+        case Dep.NoDep => None
+    }
+
+  }.recover { case e => throw new RuntimeException(s"Could not extract version from $libraryName", e)}.get
 
 
   def extractClasspath(inputStream: InputStream) : Option[String] = {
@@ -135,6 +147,7 @@ object SlugParser {
     scala.io.Source.fromInputStream(inputStream)
       .getLines()
       .find(_.startsWith(prefix))
+      .map(_.replace(prefix, "").replace("\"", ""))
   }
 
 
@@ -147,24 +160,20 @@ object SlugParser {
       manifest <- Option(scala.io.Source.fromInputStream(in).mkString)
       version  <- versionRegex.findFirstMatchIn(manifest).map(_.group(1))
       group    <- groupRegex.findFirstMatchIn(manifest).map(_.group(1))
-      artifact <- artifactRegex.findFirstMatchIn(manifest).map(_.group(1))
-    } yield SlugDependency(libraryName, version, group, artifact)
-
+      artifact <- artifactRegex.findFirstMatchIn(manifest).map(_.group(1).toLowerCase)
+    } yield SlugDependency(libraryName, version, group, artifact, meta = "fromManifest")
   }
 
 
   def extractVersionFromPom(libraryName: String, in: InputStream): Option[SlugDependency] = {
-
     import xml._
-
     for {
       raw      <- Try(scala.io.Source.fromInputStream(in).mkString).toOption
       pom      <- Try(XML.loadString(raw)).toOption
       version  <- (pom \ "version").headOption.getOrElse(pom \ "parent" \ "version").map(_.text).headOption
       group    <- (pom \ "groupId").headOption.getOrElse(pom \ "parent" \ "groupId").map(_.text).headOption
       artifact <- (pom \ "artifactId").headOption.map(_.text)
-    } yield SlugDependency(libraryName, version, group, artifact)
-
+    } yield SlugDependency(libraryName, version, group, artifact, meta = "fromPom")
   }
 
   def extractVersionFromFilename(fileName: String): Option[String] = {
@@ -172,5 +181,4 @@ object SlugParser {
     // TODO: write a function to turn a slugname/full uri to version name
     ???
   }
-
 }

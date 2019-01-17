@@ -38,6 +38,8 @@ import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.mockito.MockitoSugar
 import org.scalatest.{BeforeAndAfterEach, LoneElement, OptionValues}
 import org.scalatestplus.play.guice.GuiceOneAppPerSuite
+import play.api.Application
+import play.api.inject.guice.GuiceApplicationBuilder
 import play.modules.reactivemongo.ReactiveMongoComponent
 import uk.gov.hmrc.mongo.{MongoConnector, MongoSpecSupport}
 import uk.gov.hmrc.play.test.UnitSpec
@@ -56,6 +58,11 @@ class RepositoryLibraryDependenciesRepositorySpec
     with BeforeAndAfterEach
     with GuiceOneAppPerSuite
     with MockitoSugar {
+
+  override def fakeApplication(): Application = new GuiceApplicationBuilder()
+    .disable(classOf[com.kenshoo.play.metrics.Metrics])
+    .configure("metrics.jvm" -> false)
+    .build()
 
   val mockMongoConnector         = mock[MongoConnector]
   val mockReactiveMongoComponent = mock[ReactiveMongoComponent]

@@ -27,5 +27,6 @@ class Module() extends AbstractModule {
     bind(classOf[SlugJobProcessorScheduler]).asEagerSingleton()
     bind(classOf[Github]).toProvider(classOf[GithubProvider])
     bind(classOf[Materializer]).toProvider(classOf[MaterializerProvider])
+    bind(classOf[SlugJobCreatorScheduler]).asEagerSingleton()
   }
 }
