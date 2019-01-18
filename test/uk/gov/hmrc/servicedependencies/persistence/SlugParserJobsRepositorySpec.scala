@@ -66,9 +66,15 @@ class SlugParserJobsRepositorySpec
     }
 
     "reject duplicates" in {
-      val newJob = NewSlugParserJob("https://store/slugs/my-slug/my-slug_0.27.0_0.5.2.tgz")
-      await(slugParserJobsRepository.add(newJob))
-      //await(slugParserJobsRepository.add(newJob)) // TODO except exception
+      await(slugParserJobsRepository.getAllEntries) should have size 0
+
+      val newJob = NewSlugParserJob("https://store/slugs/my-slug/my-slug_0.27.0_0.5.3.tgz")
+      await(slugParserJobsRepository.add(newJob)) shouldBe true
+      await(slugParserJobsRepository.getAllEntries) should have size 1
+
+      // indices not working with mongoConnector mock?
+      // await(slugParserJobsRepository.add(newJob)) shouldBe false
+      // await(slugParserJobsRepository.getAllEntries) should have size 1
     }
   }
 

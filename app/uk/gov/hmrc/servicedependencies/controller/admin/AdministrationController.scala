@@ -81,7 +81,9 @@ class AdministrationController @Inject()(
     Action.async(parse.json) { implicit request =>
       withJsonBody[NewSlugParserJob] { newJob =>
         dependencyDataUpdatingService.addSlugParserJob(newJob)
-          .map(_ => Created)
+          .map { case true  => Created
+                 case false => Conflict
+               }
           .recover{
             case ex => throw new RuntimeException("creation of slug job failed", ex)
           }

@@ -43,7 +43,7 @@ class SlugJobCreatorSpec extends TestKit(ActorSystem("SlugJobCreatorSpec"))
 
 
 
-  "update" should "write a number of mongojobs to the database" in {
+  "SlugJobCreator.add" should "write a number of mongojobs to the database" in {
 
     val slug1 = ArtifactoryChild("/test-service", true)
     val slug2 = ArtifactoryChild("/abc", true)
@@ -51,9 +51,9 @@ class SlugJobCreatorSpec extends TestKit(ActorSystem("SlugJobCreatorSpec"))
 
     when(mockConnector.findAllSlugs()).thenReturn(Future(List(slug1, slug2)))
 
-    when(mockConnector.findAllSlugsForService("/test-service")).thenReturn(Future(List( NewSlugParserJob("http://test-service/test-service_1.2.3-0.5.2.tgz"))))
-    when(mockConnector.findAllSlugsForService("/abc")).thenReturn(Future(List( NewSlugParserJob("http://abc/abc.2.3-0.5.2.tgz"))))
-    when(mockRepo.add(any())).thenReturn(Future {println("ok")} )
+    when(mockConnector.findAllSlugsForService("/test-service")).thenReturn(Future(List(NewSlugParserJob("http://test-service/test-service_1.2.3-0.5.2.tgz"))))
+    when(mockConnector.findAllSlugsForService("/abc")).thenReturn(Future(List(NewSlugParserJob("http://abc/abc.2.3-0.5.2.tgz"))))
+    when(mockRepo.add(any())).thenReturn(Future(true))
 
     val slugJobCreator = new SlugJobCreator(mockConnector, mockRepo)(ActorMaterializer()) {
       override val rateLimit: RateLimit = RateLimit(1000, FiniteDuration(10, "seconds"))

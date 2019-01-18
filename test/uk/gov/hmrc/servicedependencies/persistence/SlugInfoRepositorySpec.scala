@@ -65,8 +65,12 @@ class SlugInfoRepositorySpec
     }
 
     "reject duplicates" in {
-      await(slugInfoRepository.add(slugInfo))
-      //await(slugInfoRepository.add(slugInfo)) // TODO except exception
+      await(slugInfoRepository.add(slugInfo)) shouldBe true
+      await(slugInfoRepository.getAllEntries) should have size 1
+
+      // indices not working with mongoConnector mock?
+      // await(slugInfoRepository.add(slugInfo)) shouldBe false
+      // await(slugInfoRepository.getAllEntries) should have size 1
     }
   }
 
