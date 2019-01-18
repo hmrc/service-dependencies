@@ -21,7 +21,7 @@ import com.google.inject.{Inject, Singleton}
 import java.io.{BufferedInputStream, InputStream}
 
 import akka.stream.Materializer
-import play.api.Logger
+import play.api.{Configuration, Logger}
 import org.apache.commons.compress.archivers.jar.JarArchiveInputStream
 import org.apache.commons.compress.archivers.{ArchiveEntry, ArchiveStreamFactory}
 import uk.gov.hmrc.servicedependencies.connector.GzippedResourceConnector
@@ -42,7 +42,6 @@ class SlugJobProcessor @Inject()(
    implicit val materializer: Materializer) {
 
   import ExecutionContext.Implicits.global
-
 
   def run(): Future[Unit] =
     Source.fromFuture(slugParserJobsRepository.getUnprocessed)

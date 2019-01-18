@@ -19,22 +19,23 @@ import akka.actor.ActorSystem
 import javax.inject.Inject
 import play.api.{Configuration, Logger}
 import play.api.inject.ApplicationLifecycle
-import uk.gov.hmrc.servicedependencies.service.SlugJobCreator
+import uk.gov.hmrc.servicedependencies.service.{SlugJobCreator, SlugJobProcessor}
 
 import scala.concurrent.Future
 import scala.concurrent.duration.{DurationLong, FiniteDuration}
 
 class SlugJobCreatorScheduler @Inject()(
-    actorSystem             : ActorSystem,
-    configuration           : Configuration,
-    slugJobCreator          : SlugJobCreator,
-    applicationLifecycle    : ApplicationLifecycle) {
+    actorSystem         : ActorSystem,
+    configuration       : Configuration,
+    slugJobCreator      : SlugJobCreator,
+    slugJobProcessor    : SlugJobProcessor,
+    applicationLifecycle: ApplicationLifecycle) {
 
   import scala.concurrent.ExecutionContext.Implicits.global
 
-  private val enabledKey  = "repositoryDependencies.slugJobCreator.enabled"
-  private val intervalKey = "repositoryDependencies.slugJobCreator.interval"
-  private val limitKey    = "repositoryDependencies.slugJobCreator.limit"
+  private val enabledKey  = "repositoryDependencies.slugJob.enabled"
+  private val intervalKey = "repositoryDependencies.slugJob.interval"
+  private val limitKey    = "repositoryDependencies.slugJob.limit"
 
   private lazy val interval: FiniteDuration =
     Option(configuration.getMillis(intervalKey))
@@ -51,7 +52,12 @@ class SlugJobCreatorScheduler @Inject()(
   if (enabled) {
     val cancellable = actorSystem.scheduler.schedule(1.minute, interval) {
       Logger.info(s"Starting slug job creator scheduler, limited to ${limit.map(_.toString).getOrElse("unlimited")} items")
-      slugJobCreator.run(limit = limit)
+      slugJobCreator
+        .run(limit = limit)
+        .flatMap { _ =>
+          Logger.info("Finished creating slug jobs - now processing jobs")
+          slugJobProcessor.run()
+        }
     }
     applicationLifecycle.addStopHook(() => Future(cancellable.cancel()))
   } else {

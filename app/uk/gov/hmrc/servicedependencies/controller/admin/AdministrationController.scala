@@ -82,7 +82,8 @@ class AdministrationController @Inject()(
     Action.async(parse.json) { implicit request =>
       withJsonBody[NewSlugParserJob] { newJob =>
         dependencyDataUpdatingService.addSlugParserJob(newJob)
-          .map { case true  => Created
+          .map { case true  => slugJobProcessor.run()
+                               Created
                  case false => Conflict
                }
           .recover{
@@ -119,7 +120,12 @@ class AdministrationController @Inject()(
   def createSlugParserJobs(from: Int, limit: Int) =
     Action { implicit request =>
       Logger.info(s"Creating slug parser jobs: from=$from, limit=$limit")
-      slugJobCreator.run(from, Some(limit))
+      slugJobCreator
+        .run(from, Some(limit))
+        .flatMap { _ =>
+          Logger.info("Finished creating slug jobs - now processing jobs")
+          slugJobProcessor.run()
+        }
         .recover {
           case NonFatal(e) => Logger.error(s"An error occurred creating slug parser jobs: ${e.getMessage}", e)
         }
