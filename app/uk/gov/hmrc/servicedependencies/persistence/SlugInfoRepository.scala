@@ -50,10 +50,11 @@ class SlugInfoRepository @Inject()(mongo: ReactiveMongoComponent)
               name       = Some("slugInfoIdx"),
               background = true))))
 
-  def add(slugInfo: SlugInfo): Future[Unit] =
+  def add(slugInfo: SlugInfo): Future[Boolean] =
     collection
       .insert(slugInfo)
-      .map(_ => ())
+      .map(_ => true)
+      .recover { case MongoErrors.Duplicate(_) =>  false }
 
   def getAllEntries: Future[Seq[SlugInfo]] =
     findAll()

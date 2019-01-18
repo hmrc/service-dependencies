@@ -46,10 +46,7 @@ class SlugJobCreator @Inject()(
       .throttle(rateLimit.invocations, rateLimit.perDuration)
       .mapAsyncUnordered(1)(r => conn.findAllSlugsForService(r.uri))
       .mapConcat(identity)
-      .mapAsyncUnordered(1) { job =>
-        Logger.info(s"adding job $job")
-        repo.add(job)
-      }
+      .mapAsyncUnordered(1)(repo.add)
       .runWith(Sink.ignore)
       .map(_ => ())
 

@@ -51,7 +51,7 @@ class SlugJobProcessor @Inject()(
       .mapAsyncUnordered(2) { job =>
         processJob(job)
           .map(_ => slugParserJobsRepository.markProcessed(job.id))
-          .recover {
+          .recoverWith {
             case NonFatal(e) => Logger.error(s"An error occurred processing slug parser job ${job.id}: ${e.getMessage}", e)
               slugParserJobsRepository.markAttempted(job.id)
           }
@@ -62,11 +62,12 @@ class SlugJobProcessor @Inject()(
   def processJob(job: MongoSlugParserJob): Future[Unit] =
     futureHelpers.withTimerAndCounter("slug.process")(
       for {
-        _  <- Future(Logger.debug(s"running job $job"))
-        is <- gzippedResourceConnector.openGzippedResource(job.slugUri)
-        si =  SlugParser.parse(job.slugUri, is)
-        _  <- slugInfoRepository.add(si)
-        _  =  Logger.debug(s"added {$job.id}: $si")
+        _     <- Future(Logger.debug(s"running job $job"))
+        is    <- gzippedResourceConnector.openGzippedResource(job.slugUri)
+        si    =  SlugParser.parse(job.slugUri, is)
+        added <- slugInfoRepository.add(si)
+        _     =  if (added) Logger.debug(s"added ${job.id}: ${si.name} ${si.version}")
+                 else       Logger.warn(s"${job.id} not added - uri ${job.slugUri} already processed")
       } yield ()
     )
 }

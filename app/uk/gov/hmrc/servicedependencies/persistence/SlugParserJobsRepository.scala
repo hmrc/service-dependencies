@@ -56,7 +56,7 @@ class SlugParserJobsRepository @Inject()(mongo: ReactiveMongoComponent)
               name       = Some("slugParserJobProcessedIdx"),
               background = true))))
 
-  def add(newJob: NewSlugParserJob): Future[Unit] =
+  def add(newJob: NewSlugParserJob): Future[Boolean] =
     collection
       .insert(
         MongoSlugParserJob(
@@ -65,7 +65,8 @@ class SlugParserJobsRepository @Inject()(mongo: ReactiveMongoComponent)
           processed     = false,
           attempts      = 0
         ))
-      .map(_ => ())
+      .map(_ => true)
+      .recover { case MongoErrors.Duplicate(_) =>  false }
 
   def markProcessed(id: String): Future[Unit] = {
     logger.info(s"mark job $id as processed")
