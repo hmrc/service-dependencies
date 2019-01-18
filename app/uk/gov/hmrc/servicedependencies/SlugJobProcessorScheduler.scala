@@ -47,7 +47,7 @@ class SlugJobProcessorScheduler @Inject()(
         .map(_.milliseconds)
         .getOrElse(throw new RuntimeException(s"$intervalKey not specified"))
 
-    val cancellable = actorSystem.scheduler.schedule(1.minute, interval) {
+    val cancellable = actorSystem.scheduler.schedule(2.minute, interval) {
       Logger.info("Running slug parser jobs")
       slugJobProcessor.run()
         .recover {
