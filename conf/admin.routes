@@ -7,4 +7,4 @@ GET     /mongo-locks                        @uk.gov.hmrc.servicedependencies.con
 POST    /slug-parser-jobs/process           @uk.gov.hmrc.servicedependencies.controller.admin.AdministrationController.processSlugParserJobs
 POST    /slug-parser-jobs                   @uk.gov.hmrc.servicedependencies.controller.admin.AdministrationController.addSlugParserJob
 POST    /execute-slug-parser-job            @uk.gov.hmrc.servicedependencies.controller.admin.AdministrationController.executeJob
-POST    /slug-parser-jobs/create            @uk.gov.hmrc.servicedependencies.controller.admin.AdministrationController.createSlugParserJobs(from: Int ?= 0, to: Int ?= Int.MaxValue)
+POST    /slug-parser-jobs/create            @uk.gov.hmrc.servicedependencies.controller.admin.AdministrationController.createSlugParserJobs(from: Int, limit: Int)

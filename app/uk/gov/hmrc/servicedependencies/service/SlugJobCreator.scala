@@ -39,12 +39,12 @@ class SlugJobCreator @Inject()(
 
   val rateLimit: RateLimit = RateLimit(1, 2.seconds)
 
-  def run(from: Int = 0, to: Int = Int.MaxValue): Future[Unit] = {
-    Logger.info(s"creating slug jobs from artefactory: from=$from, to=$to")
+  def run(from: Int = 0, limit: Option[Int]): Future[Unit] = {
+    Logger.info(s"creating slug jobs from artefactory: from=$from, limit=$limit")
     Source.fromFuture(conn.findAllSlugs())
       .mapConcat(identity)
       .drop(from)
-      .take(to)
+      .take(limit.getOrElse[Int](Int.MaxValue))
       .throttle(rateLimit.invocations, rateLimit.perDuration)
       .mapAsyncUnordered(1)(r => conn.findAllSlugsForService(r.uri))
       .mapConcat(identity)

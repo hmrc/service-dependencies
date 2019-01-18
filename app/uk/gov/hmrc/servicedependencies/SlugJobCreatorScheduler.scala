@@ -51,11 +51,7 @@ class SlugJobCreatorScheduler @Inject()(
   if (enabled) {
     val cancellable = actorSystem.scheduler.schedule(1.minute, interval) {
       Logger.info(s"Starting slug job creator scheduler, limited to ${limit.map(_.toString).getOrElse("unlimited")} items")
-
-      limit match {
-        case Some(limit) => slugJobCreator.run(to = limit)
-        case None        => slugJobCreator.run()
-      }
+      slugJobCreator.run(limit = limit)
     }
     applicationLifecycle.addStopHook(() => Future(cancellable.cancel()))
   } else {
