@@ -31,7 +31,7 @@
     {
       "name": "sbt-plugin",
       "org": "com.typesafe.play",
-      "version": "2.5.12"
+      "version": "2.5.19"
     }
   ],
   "libraries": [
