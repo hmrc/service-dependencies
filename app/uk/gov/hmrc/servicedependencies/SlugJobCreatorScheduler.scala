@@ -53,7 +53,7 @@ class SlugJobCreatorScheduler @Inject()(
       Logger.info(s"Starting slug job creator scheduler, limited to ${limit.map(_.toString).getOrElse("unlimited")} items")
 
       limit match {
-        case Some(limit) => slugJobCreator.run(limit)
+        case Some(limit) => slugJobCreator.run(to = limit)
         case None        => slugJobCreator.run()
       }
     }

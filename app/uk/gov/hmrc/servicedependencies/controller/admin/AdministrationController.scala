@@ -22,7 +22,7 @@ import play.api.libs.json.Json
 import play.api.mvc.ControllerComponents
 import uk.gov.hmrc.play.bootstrap.controller.BackendController
 import uk.gov.hmrc.servicedependencies.model.{MongoSlugParserJob, NewSlugParserJob}
-import uk.gov.hmrc.servicedependencies.service.{DependencyDataUpdatingService, SlugJobProcessor}
+import uk.gov.hmrc.servicedependencies.service.{DependencyDataUpdatingService, SlugJobCreator, SlugJobProcessor}
 
 import scala.concurrent.Future
 import scala.util.control.NonFatal
@@ -31,6 +31,7 @@ import scala.util.control.NonFatal
 class AdministrationController @Inject()(
     dependencyDataUpdatingService: DependencyDataUpdatingService,
     slugJobProcessor             : SlugJobProcessor,
+    slugJobCreator               : SlugJobCreator,
     cc                           : ControllerComponents)
   extends BackendController(cc) {
 
@@ -92,7 +93,7 @@ class AdministrationController @Inject()(
 
   def processSlugParserJobs =
     Action { implicit request =>
-      Logger.info("Running slug parser jobs")
+      Logger.info("Processing slug parser jobs")
       slugJobProcessor.run()
         .recover {
           case NonFatal(e) => Logger.error(s"An error occurred processing slug parser jobs: ${e.getMessage}", e)
@@ -113,5 +114,15 @@ class AdministrationController @Inject()(
           }
         Future(Accepted)
       }
+    }
+
+  def createSlugParserJobs(from: Int, to: Int) =
+    Action { implicit request =>
+      Logger.info("Creating slug parser jobs: from=$from, to=$to")
+      slugJobCreator.run(from, to)
+        .recover {
+          case NonFatal(e) => Logger.error(s"An error occurred creating slug parser jobs: ${e.getMessage}", e)
+        }
+      Accepted
     }
 }

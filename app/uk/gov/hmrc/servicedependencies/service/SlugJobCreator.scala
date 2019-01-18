@@ -39,16 +39,19 @@ class SlugJobCreator @Inject()(
 
   val rateLimit: RateLimit = RateLimit(1, 2.seconds)
 
-  def run(limit: Int = Int.MaxValue): Future[Unit] =
+  def run(from: Int = 0, to: Int = Int.MaxValue): Future[Unit] = {
+    Logger.info(s"creating slug jobs from artefactory: from=$from, to=$to")
     Source.fromFuture(conn.findAllSlugs())
       .mapConcat(identity)
-      .take(limit)
+      .drop(from)
+      .take(to)
       .throttle(rateLimit.invocations, rateLimit.perDuration)
       .mapAsyncUnordered(1)(r => conn.findAllSlugsForService(r.uri))
       .mapConcat(identity)
       .mapAsyncUnordered(1)(repo.add)
       .runWith(Sink.ignore)
       .map(_ => ())
+  }
 
 
   def inWhiteList(c: ArtifactoryChild) : Boolean = {

@@ -59,7 +59,7 @@ class SlugJobCreatorSpec extends TestKit(ActorSystem("SlugJobCreatorSpec"))
       override val rateLimit: RateLimit = RateLimit(1000, FiniteDuration(10, "seconds"))
     }
 
-    slugJobCreator.run(1000)
+    slugJobCreator.run(to = 1000)
 
     Thread.sleep(1000)
     verify(mockConnector, times(1)).findAllSlugs()
