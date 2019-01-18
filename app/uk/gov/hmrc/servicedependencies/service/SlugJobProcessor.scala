@@ -62,12 +62,12 @@ class SlugJobProcessor @Inject()(
   def processJob(job: MongoSlugParserJob): Future[Unit] =
     futureHelpers.withTimerAndCounter("slug.process")(
       for {
-        _     <- Future(Logger.debug(s"running job $job"))
+        _     <- Future(Logger.debug(s"processing slug job ${job.id} (${job.slugUri})"))
         is    <- gzippedResourceConnector.openGzippedResource(job.slugUri)
         si    =  SlugParser.parse(job.slugUri, is)
         added <- slugInfoRepository.add(si)
-        _     =  if (added) Logger.debug(s"added ${job.id}: ${si.name} ${si.version}")
-                 else       Logger.warn(s"${job.id} not added - uri ${job.slugUri} already processed")
+        _     =  if (added) Logger.debug(s"added slugInfo for ${job.slugUri}: ${si.name} ${si.version}")
+                 else       Logger.warn(s"slug ${job.slugUri} not added - already processed")
       } yield ()
     )
 }

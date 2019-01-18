@@ -102,8 +102,12 @@ class AdministrationController @Inject()(
 
   def executeJob =
     Action.async(parse.json) { implicit request =>
-      withJsonBody[MongoSlugParserJob] { job =>
-        slugJobProcessor.processJob(job)
+      withJsonBody[NewSlugParserJob] { job =>
+        slugJobProcessor.processJob(MongoSlugParserJob(
+                    id        = "0",
+                    slugUri   = job.slugUri,
+                    processed = false,
+                    attempts  = 0))
           .recover {
             case NonFatal(e) => Logger.error(s"An error occurred processing slug parser job ${job.slugUri}: ${e.getMessage}", e)
           }
