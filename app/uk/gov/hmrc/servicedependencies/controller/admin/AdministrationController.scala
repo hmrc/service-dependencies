@@ -118,7 +118,7 @@ class AdministrationController @Inject()(
 
   def createSlugParserJobs(from: Int, to: Int) =
     Action { implicit request =>
-      Logger.info("Creating slug parser jobs: from=$from, to=$to")
+      Logger.info(s"Creating slug parser jobs: from=$from, to=$to")
       slugJobCreator.run(from, to)
         .recover {
           case NonFatal(e) => Logger.error(s"An error occurred creating slug parser jobs: ${e.getMessage}", e)

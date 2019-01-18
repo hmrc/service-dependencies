@@ -201,7 +201,7 @@ class SlugParserSpec extends FlatSpec with Matchers {
                     |    <dependency>
                     |      <groupId>org.slf4j</groupId>
                     |      <artifactId>slf4j-log4j12</artifactId>
-                    |      <version>${project.version}</version>
+                    |      <version>1.0.0</version>
                     |      <scope>test</scope>
                     |    </dependency>
                     |  </dependencies>

@@ -38,19 +38,19 @@ class MetricsScheduler @Inject()(
   reactiveMongoComponent: ReactiveMongoComponent,
   repositoryDependenciesSource: RepositoryDependenciesSource) {
 
-  private val refreshIntervalKey = "repositoryDependencies.metricsGauges.interval"
+  private val intervalKey = "repositoryDependencies.metricsGauges.interval"
 
-  lazy val refreshIntervalMillis: Long =
-    configuration
-      .getMilliseconds(refreshIntervalKey)
-      .getOrElse(throw new RuntimeException(s"$refreshIntervalKey not specified"))
+  private lazy val interval: FiniteDuration =
+    Option(configuration.getMillis(intervalKey))
+      .map(_.milliseconds)
+      .getOrElse(throw new RuntimeException(s"$intervalKey not specified"))
 
   implicit lazy val mongo: () => DefaultDB = reactiveMongoComponent.mongoConnector.db
 
   val lock = new ExclusiveTimePeriodLock {
     override def repo: LockRepository  = new LockRepository()
     override def lockId: String        = "repositoryDependenciesLock"
-    override def holdLockFor: Duration = new org.joda.time.Duration(refreshIntervalMillis)
+    override def holdLockFor: Duration = new org.joda.time.Duration(interval.toMillis)
   }
 
   val metricOrchestrator = new MetricOrchestrator(
@@ -60,7 +60,7 @@ class MetricsScheduler @Inject()(
     metricRegistry   = metrics.defaultRegistry
   )
 
-  actorSystem.scheduler.schedule(1.minute, refreshIntervalMillis.milliseconds) {
+  actorSystem.scheduler.schedule(1.minute, interval) {
     metricOrchestrator
       .attemptToUpdateRefreshAndResetMetrics( _ => true)
       .map(_.andLogTheResult())
@@ -68,5 +68,4 @@ class MetricsScheduler @Inject()(
         case NonFatal(e) => Logger.error(s"An error occurred processing metrics: ${e.getMessage}", e)
       }
   }
-
 }
