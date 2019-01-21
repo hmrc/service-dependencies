@@ -106,6 +106,8 @@ class SlugParserSpec extends FlatSpec with Matchers {
     res.classpath.isEmpty shouldBe false
     res.classpath shouldNot startWith ("declare -r app_classpath")
 
+    res.jdkVersion shouldBe "1.8.0_172"
+
     res.dependencies.length shouldBe 2
 
     val ivy = res.dependencies.find(_.path.contains("example-ivy")).get
@@ -131,6 +133,20 @@ class SlugParserSpec extends FlatSpec with Matchers {
     val is = new ByteArrayInputStream(cp.getBytes(StandardCharsets.UTF_8))
     val result = SlugParser.extractClasspath(is)
     result shouldBe None
+  }
+
+  "extractJdkVersion" should "strip the prefix and quotes" in {
+    val release =
+      """JAVA_VERSION="1.8.0_172"
+        |OS_NAME="Linux"
+        |OS_VERSION="2.6"
+        |OS_ARCH="amd64"
+        |SOURCE=" .:33d274a7dda0 corba:875a75c440cd deploy:93653a78dd93 hotspot:32ba4d2121c1 hotspot/make/closed:d7fcb23b86c8 hotspot/src/closed:0536bda62571 install:30a516c2a631 jaxp:30586bb50743 jaxws:452a6a5a878e jdk:5ccc572f4ffe jdk/make/closed:d881e9ea30d3 jdk/src/closed:14bbe60b3dd0 langtools:34ee52bc68a4 nashorn:7efd6152328e"
+        |BUILD_TYPE="commercial"
+        |""".stripMargin
+    val is = new ByteArrayInputStream(release.getBytes(StandardCharsets.UTF_8))
+    val result = SlugParser.extractJdkVersion(is)
+    result shouldBe Some("1.8.0_172")
   }
 
   /****** TEST DATA *******/

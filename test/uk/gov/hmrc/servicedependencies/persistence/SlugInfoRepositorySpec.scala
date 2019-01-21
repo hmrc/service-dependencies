@@ -93,6 +93,7 @@ class SlugInfoRepositorySpec
       versionLong     = SlugInfo.toLong("0.27.0"),
       runnerVersion   = "0.5.2",
       classpath       = "",
+      jdkVersion      = "",
       dependencies    = List(
         SlugDependency(
           path = "lib1",

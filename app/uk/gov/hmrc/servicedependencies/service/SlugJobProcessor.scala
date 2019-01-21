@@ -87,19 +87,24 @@ object SlugParser {
       versionLong     = SlugInfo.toLong(slugVersion),
       runnerVersion   = runnerVersion,
       classpath       = "",
+      jdkVersion      = "",
       dependencies    = List.empty[SlugDependency])
+
+    val Script = s"./$slugName/bin/$slugName"
 
     Iterator
       .continually(Try(tar.getNextEntry).recover { case e if e.getMessage == "Stream closed" => null }.get)
       .takeWhile(_ != null)
-      .filter(_.getName.startsWith(s"./$slugName"))
       .foldLeft(slugInfo)( (result, entry) =>
         (entry.getName match {
-          case n if n.toLowerCase.endsWith(".jar") => extractVersionFromJar(n, tar)
+          case n if n.startsWith(s"./$slugName/")
+                 && n.toLowerCase.endsWith(".jar") => extractVersionFromJar(n, tar)
                                                         .map(v => result.copy(dependencies = result.dependencies ++ List(v)))
-          case n if n.endsWith(s"bin/$slugName")   => extractClasspath(tar)
+          case Script                              => extractClasspath(tar)
                                                         .map(cp => result.copy(classpath = cp))
-          case _                                   => None
+          case "./.jdk/release"                    => extractJdkVersion(tar)
+                                                        .map(jdkv => result.copy(jdkVersion = jdkv))
+          case _                                   => println(s"ignoring ${entry.getName}"); None
         }).getOrElse(result)
       )
   }
@@ -150,6 +155,14 @@ object SlugParser {
 
   def extractClasspath(inputStream: InputStream) : Option[String] = {
     val prefix = "declare -r app_classpath=\""
+    scala.io.Source.fromInputStream(inputStream)
+      .getLines
+      .find(_.startsWith(prefix))
+      .map(_.replace(prefix, "").replace("\"", ""))
+  }
+
+  def extractJdkVersion(inputStream: InputStream): Option[String] = {
+    val prefix = "JAVA_VERSION="
     scala.io.Source.fromInputStream(inputStream)
       .getLines
       .find(_.startsWith(prefix))

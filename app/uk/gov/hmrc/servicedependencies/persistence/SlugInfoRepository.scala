@@ -56,7 +56,7 @@ class SlugInfoRepository @Inject()(mongo: ReactiveMongoComponent)
     collection
       .insert(slugInfo)
       .map(_ => true)
-      .recover { case MongoErrors.Duplicate(_) =>  false }
+      .recover { case MongoErrors.Duplicate(_) => false }
 
   def getAllEntries: Future[Seq[SlugInfo]] =
     findAll()

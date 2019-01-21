@@ -32,6 +32,7 @@ case class SlugInfo(
   versionLong     : Long,
   runnerVersion   : String,
   classpath       : String,
+  jdkVersion      : String,
   dependencies    : List[SlugDependency])
 
 object SlugInfo {
