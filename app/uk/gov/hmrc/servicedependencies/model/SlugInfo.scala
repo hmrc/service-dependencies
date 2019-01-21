@@ -25,17 +25,41 @@ case class SlugDependency(
   meta       : String = "")
 
 case class SlugInfo(
-  uri          : String,
-  name         : String,
-  version      : String,
-  runnerVersion: String,
-  classpath    : String,
-  dependencies : List[SlugDependency])
-
-object SlugDependency {
-  implicit val format: OFormat[SlugDependency] = Json.format[SlugDependency]
-}
+  uri             : String,
+  name            : String,
+  version         : String,
+  semanticVersion : Version,
+  versionLong     : Long,
+  runnerVersion   : String,
+  classpath       : String,
+  dependencies    : List[SlugDependency])
 
 object SlugInfo {
-  implicit val format: OFormat[SlugInfo] = Json.format[SlugInfo]
+  def toLong(s: String): Long = {
+    val v = Version.parse(s)
+    v.major * 1000 * 1000 +
+    v.minor * 1000 +
+    v.patch
+  }
 }
+
+trait MongoSlugInfoFormats {
+  implicit val sdFormat: OFormat[SlugDependency] =
+    Json.format[SlugDependency]
+
+  implicit val siFormat: OFormat[SlugInfo] =
+    Json.format[SlugInfo]
+}
+
+object MongoSlugInfoFormats extends MongoSlugInfoFormats
+
+
+trait ApiSlugInfoFormats {
+  implicit val sdFormat: OFormat[SlugDependency] =
+    Json.format[SlugDependency]
+
+  implicit val siFormat: OFormat[SlugInfo] =
+    Json.format[SlugInfo]
+}
+
+object ApiSlugInfoFormats extends ApiSlugInfoFormats

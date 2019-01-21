@@ -25,7 +25,7 @@ import play.api.{Configuration, Logger}
 import org.apache.commons.compress.archivers.jar.JarArchiveInputStream
 import org.apache.commons.compress.archivers.{ArchiveEntry, ArchiveStreamFactory}
 import uk.gov.hmrc.servicedependencies.connector.GzippedResourceConnector
-import uk.gov.hmrc.servicedependencies.model.{MongoSlugParserJob, SlugDependency, SlugInfo}
+import uk.gov.hmrc.servicedependencies.model.{MongoSlugParserJob, SlugDependency, SlugInfo, Version}
 import uk.gov.hmrc.servicedependencies.persistence.{SlugInfoRepository, SlugParserJobsRepository}
 import uk.gov.hmrc.servicedependencies.util.FutureHelpers
 
@@ -80,12 +80,14 @@ object SlugParser {
     val (runnerVersion, slugVersion, slugName) = extractFromUri(slugUri)
 
     val slugInfo = SlugInfo(
-      uri           = slugUri,
-      name          = slugName,
-      version       = slugVersion,
-      runnerVersion = runnerVersion,
-      classpath     = "",
-      dependencies  = List.empty[SlugDependency])
+      uri             = slugUri,
+      name            = slugName,
+      version         = slugVersion,
+      semanticVersion = Version.parse(slugVersion),
+      versionLong     = SlugInfo.toLong(slugVersion),
+      runnerVersion   = runnerVersion,
+      classpath       = "",
+      dependencies    = List.empty[SlugDependency])
 
     Iterator
       .continually(Try(tar.getNextEntry).recover { case e if e.getMessage == "Stream closed" => null }.get)

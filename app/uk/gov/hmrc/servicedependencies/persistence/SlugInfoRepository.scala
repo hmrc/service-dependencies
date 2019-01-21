@@ -20,7 +20,7 @@ import play.modules.reactivemongo.ReactiveMongoComponent
 import reactivemongo.api.indexes.{Index, IndexType}
 import reactivemongo.bson.BSONObjectID
 import uk.gov.hmrc.mongo.ReactiveRepository
-import uk.gov.hmrc.servicedependencies.model.SlugInfo
+import uk.gov.hmrc.servicedependencies.model.{SlugInfo, MongoSlugInfoFormats}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.{ExecutionContext, Future}
@@ -30,7 +30,9 @@ class SlugInfoRepository @Inject()(mongo: ReactiveMongoComponent)
   extends ReactiveRepository[SlugInfo, BSONObjectID](
     collectionName = "slugInfos",
     mongo          = mongo.mongoConnector.db,
-    domainFormat   = SlugInfo.format){
+    domainFormat   = MongoSlugInfoFormats.siFormat){
+
+  import MongoSlugInfoFormats._
 
   override def ensureIndexes(implicit ec: ExecutionContext): Future[Seq[Boolean]] =
     Future.sequence(

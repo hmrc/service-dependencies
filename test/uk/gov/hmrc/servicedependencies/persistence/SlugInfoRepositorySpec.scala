@@ -28,7 +28,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import play.modules.reactivemongo.ReactiveMongoComponent
 import uk.gov.hmrc.mongo.{MongoConnector, MongoSpecSupport}
 import uk.gov.hmrc.play.test.UnitSpec
-import uk.gov.hmrc.servicedependencies.model.{SlugInfo, SlugDependency}
+import uk.gov.hmrc.servicedependencies.model.{SlugInfo, SlugDependency, Version}
 import uk.gov.hmrc.time.DateTimeUtils
 
 class SlugInfoRepositorySpec
@@ -86,12 +86,14 @@ class SlugInfoRepositorySpec
 
   val slugInfo =
     SlugInfo(
-      uri           = "https://store/slugs/my-slug/my-slug_0.27.0_0.5.2.tgz",
-      name          = "my-slug",
-      version       = "0.27.0",
-      runnerVersion = "0.5.2",
-      classpath     = "",
-      dependencies  = List(
+      uri             = "https://store/slugs/my-slug/my-slug_0.27.0_0.5.2.tgz",
+      name            = "my-slug",
+      version         = "0.27.0",
+      semanticVersion = Version("0.27.0"),
+      versionLong     = SlugInfo.toLong("0.27.0"),
+      runnerVersion   = "0.5.2",
+      classpath       = "",
+      dependencies    = List(
         SlugDependency(
           path = "lib1",
           version     = "v1",

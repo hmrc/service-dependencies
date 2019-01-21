@@ -24,6 +24,7 @@ import play.api.mvc._
 import uk.gov.hmrc.play.bootstrap.controller.BackendController
 import uk.gov.hmrc.servicedependencies.config.ServiceDependenciesConfig
 import uk.gov.hmrc.servicedependencies.controller.model.Dependencies
+import uk.gov.hmrc.servicedependencies.model.ApiSlugInfoFormats
 import uk.gov.hmrc.servicedependencies.service._
 
 @Singleton
@@ -37,6 +38,7 @@ class ServiceDependenciesController @Inject()(
   val logger = LoggerFactory.getLogger(this.getClass)
 
   implicit val dependenciesFormat = Dependencies.format
+  implicit val slugInfoFormats    = ApiSlugInfoFormats.siFormat
 
   def getDependencyVersionsForRepository(repositoryName: String) =
     Action.async { implicit request =>
