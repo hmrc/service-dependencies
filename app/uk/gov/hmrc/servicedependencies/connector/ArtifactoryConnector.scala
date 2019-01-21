@@ -24,7 +24,8 @@ import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.play.bootstrap.http.HttpClient
 import uk.gov.hmrc.servicedependencies.config.ServiceDependenciesConfig
 import uk.gov.hmrc.servicedependencies.connector.model.{ArtifactoryChild, ArtifactoryRepo}
-import uk.gov.hmrc.servicedependencies.model.NewSlugParserJob
+import uk.gov.hmrc.servicedependencies.model.{NewSlugParserJob, SlugInfo}
+import uk.gov.hmrc.servicedependencies.service.SlugParser
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -55,31 +56,44 @@ class ArtifactoryConnector @Inject()(http: HttpClient, config: ServiceDependenci
     Logger.info(s"downloading $service from artifactory")
     implicit val hc: HeaderCarrier = HeaderCarrier(otherHeaders = headers)
     http.GET[ArtifactoryRepo](s"$artifactoryRoot$service")
-      .map(_.children
-        .filterNot(_.folder)
-        .map(repo => convertToSlugParserJob(service, repo.uri, webstoreRoot)).toList)
+      .map {
+        _.children
+          .filterNot(_.folder)
+          .map(repo => convertToSlugParserJob(service, repo.uri, webstoreRoot))
+          .toList
+      }.map { l =>
+        // for now, mark all as processed, except the latest version
+        if (l.isEmpty) l
+        else {
+          val l2 = l.map(_.copy(processed = true))
+          val (max, i) = l2.zipWithIndex.maxBy { j =>
+            val (_, v, _)       = SlugParser.extractFromUri(j._1.slugUri)
+            val versionLong     = SlugInfo.toLong(v)
+            versionLong
+          }
+          l2.updated(i, max.copy(processed = false))
+        }
+      }
   }
 
   private val headers : List[(String, String)] =
     config.artifactoryApiKey
-      .map( key => List(("X-JFrog-Art-Api", key)))
+      .map(key => List(("X-JFrog-Art-Api", key)))
       .getOrElse(List.empty)
-
 }
 
 
 object ArtifactoryConnector {
 
-  def convertToSlugParserJob(serviceName: String, uri: String, webStoreRoot: String) : NewSlugParserJob = {
-    NewSlugParserJob(s"$webStoreRoot$serviceName$uri")
-  }
+  def convertToSlugParserJob(serviceName: String, uri: String, webStoreRoot: String): NewSlugParserJob =
+    NewSlugParserJob(
+      slugUri   = s"$webStoreRoot$serviceName$uri",
+      processed = false)
 
-  def convertToWebStoreURL(url: String) : String = {
+  def convertToWebStoreURL(url: String): String = {
     val artifactoryPrefix = "https://artefacts."
     val webstorePrefix    = "https://webstore."
     val artifactorySuffix = "/artifactory/webstore"
     url.replace(artifactoryPrefix, webstorePrefix).replace(artifactorySuffix, "")
   }
-
 }
-

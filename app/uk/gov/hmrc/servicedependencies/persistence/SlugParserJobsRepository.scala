@@ -62,7 +62,7 @@ class SlugParserJobsRepository @Inject()(mongo: ReactiveMongoComponent)
         MongoSlugParserJob(
           id            = UUID.randomUUID().toString,
           slugUri       = newJob.slugUri,
-          processed     = false,
+          processed     = newJob.processed,
           attempts      = 0
         ))
       .map(_ => true)
