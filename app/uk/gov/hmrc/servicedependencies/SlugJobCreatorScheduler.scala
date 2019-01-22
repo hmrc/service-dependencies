@@ -35,7 +35,6 @@ class SlugJobCreatorScheduler @Inject()(
 
   private val enabledKey  = "repositoryDependencies.slugJob.enabled"
   private val intervalKey = "repositoryDependencies.slugJob.interval"
-  private val limitKey    = "repositoryDependencies.slugJob.limit"
 
   private lazy val interval: FiniteDuration =
     Option(configuration.getMillis(intervalKey))
@@ -45,15 +44,12 @@ class SlugJobCreatorScheduler @Inject()(
   private lazy val enabled: Boolean =
     configuration.getOptional[Boolean](enabledKey).getOrElse(false)
 
-  private lazy val limit: Option[Int] =
-    configuration.getOptional[Int](limitKey)
-
 
   if (enabled) {
     val cancellable = actorSystem.scheduler.schedule(1.minute, interval) {
-      Logger.info(s"Starting slug job creator scheduler, limited to ${limit.map(_.toString).getOrElse("unlimited")} items")
+      Logger.info(s"Starting slug job creator scheduler")
       slugJobCreator
-        .run(limit = limit)
+        .run
         .flatMap { _ =>
           Logger.info("Finished creating slug jobs - now processing jobs")
           slugJobProcessor.run()

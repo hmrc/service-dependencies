@@ -121,7 +121,7 @@ class AdministrationController @Inject()(
     Action { implicit request =>
       Logger.info(s"Creating slug parser jobs: from=$from, limit=$limit")
       slugJobCreator
-        .run(from, Some(limit))
+        .runHistoric(from, Some(limit))
         .flatMap { _ =>
           Logger.info("Finished creating slug jobs - now processing jobs")
           slugJobProcessor.run()
