@@ -28,6 +28,7 @@ import play.api.{Application, Configuration}
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
 import uk.gov.hmrc.servicedependencies.config.ServiceDependenciesConfig
+import uk.gov.hmrc.servicedependencies.connector.TeamsAndRepositoriesConnector
 import uk.gov.hmrc.servicedependencies.controller.model.Dependencies
 import uk.gov.hmrc.servicedependencies.service._
 import uk.gov.hmrc.time.DateTimeUtils
@@ -96,6 +97,7 @@ class ServiceDependenciesControllerSpec
       new ServiceDependenciesController(
         Configuration(),
         libraryDependencyUpdatingService,
+        mock[TeamsAndRepositoriesConnector],
         mock[ServiceDependenciesConfig],
         stubControllerComponents())
   }

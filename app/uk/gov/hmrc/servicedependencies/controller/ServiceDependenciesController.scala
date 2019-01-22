@@ -23,6 +23,7 @@ import play.api.libs.json.Json
 import play.api.mvc._
 import uk.gov.hmrc.play.bootstrap.controller.BackendController
 import uk.gov.hmrc.servicedependencies.config.ServiceDependenciesConfig
+import uk.gov.hmrc.servicedependencies.connector.TeamsAndRepositoriesConnector
 import uk.gov.hmrc.servicedependencies.controller.model.Dependencies
 import uk.gov.hmrc.servicedependencies.service._
 
@@ -30,6 +31,7 @@ import uk.gov.hmrc.servicedependencies.service._
 class ServiceDependenciesController @Inject()(
   configuration: Configuration,
   dependencyDataUpdatingService: DependencyDataUpdatingService,
+  teamsAndRepositoriesConnector: TeamsAndRepositoriesConnector,
   config: ServiceDependenciesConfig,
   cc: ControllerComponents)
     extends BackendController(cc) {
@@ -52,4 +54,16 @@ class ServiceDependenciesController @Inject()(
       .map(dependencies => Ok(Json.toJson(dependencies)))
   }
 
+  def dependenciesForTeam(team: String) = Action.async { implicit request =>
+    for {
+      teamRepos <- teamsAndRepositoriesConnector.getTeam(team)
+      deps <- dependencyDataUpdatingService.getDependencyVersionsForAllRepositories()
+    } yield {
+      val repos: Map[String, Seq[String]] = teamRepos.getOrElse(Map())
+      val services = repos.getOrElse("Service", List())
+      val libraries = repos.getOrElse("Library", List())
+      val teamDeps = deps.filter(d => services.contains(d.repositoryName) || libraries.contains(d.repositoryName))
+      Ok(Json.toJson(teamDeps))
+    }
+  }
 }
