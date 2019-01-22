@@ -42,4 +42,14 @@ class ArtifactoryConnectorSpec extends FlatSpec
   }
 
 
+  "toDownloadURL" should "Convert an artifactory API link to a downloadable url" in {
+
+    val url = "https://artefacts.test.test.test.uk/artifactory/api/storage/webstore-local/slugs/api-platform-test-user/api-platform-test-user_0.73.0_0.5.2.tgz"
+
+    val res = ArtifactoryConnector.toDownloadURL(url)
+
+    res shouldBe "https://webstore.test.test.test.uk/webstore/slugs/api-platform-test-user/api-platform-test-user_0.73.0_0.5.2.tgz"
+  }
+
+
 }
