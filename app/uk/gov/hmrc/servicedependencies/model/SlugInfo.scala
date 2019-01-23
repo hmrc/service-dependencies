@@ -15,7 +15,9 @@
  */
 
 package uk.gov.hmrc.servicedependencies.model
+
 import play.api.libs.json.{Json, OFormat}
+import scala.util.Try
 
 case class SlugDependency(
   path       : String,
@@ -36,12 +38,13 @@ case class SlugInfo(
   dependencies    : List[SlugDependency])
 
 object SlugInfo {
-  def toLong(s: String): Long = {
-    val v = Version.parse(s)
-    v.major * 1000 * 1000 +
-    v.minor * 1000 +
-    v.patch
-  }
+  def toLong(s: String): Option[Long] =
+    Try {
+      val v = Version.parse(s)
+      v.major.toLong * 1000 * 1000 +
+      v.minor.toLong * 1000 +
+      v.patch.toLong
+    }.toOption
 }
 
 trait MongoSlugInfoFormats {

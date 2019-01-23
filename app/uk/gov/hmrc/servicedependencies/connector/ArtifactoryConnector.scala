@@ -30,7 +30,6 @@ import uk.gov.hmrc.servicedependencies.model.{NewSlugParserJob, SlugInfo}
 import uk.gov.hmrc.servicedependencies.service.SlugParser
 
 import scala.concurrent.{ExecutionContext, Future}
-import scala.util.Try
 
 @Singleton
 class ArtifactoryConnector @Inject()(http: HttpClient, config: ServiceDependenciesConfig) {
@@ -46,7 +45,7 @@ class ArtifactoryConnector @Inject()(http: HttpClient, config: ServiceDependenci
   /**
     * Enumerate all slugs in webstore
     */
-  def findAllSlugs(): Future[List[ArtifactoryChild]] = {
+  def findAllServices(): Future[List[ArtifactoryChild]] = {
     implicit val hc: HeaderCarrier = HeaderCarrier(otherHeaders = xHeaders)
     http.GET[ArtifactoryRepo](artifactoryRoot).map(_.children.filter(_.folder).toList)
   }
@@ -89,9 +88,12 @@ class ArtifactoryConnector @Inject()(http: HttpClient, config: ServiceDependenci
         else {
           val l2 = l.map(_.copy(processed = true))
           val (max, i) = l2.zipWithIndex.maxBy { j =>
-            val (_, v, _)       = SlugParser.extractVersionsFromUri(j._1.slugUri)
-                                    .getOrElse(sys.error(s"Could not extract versions from ${j._1.slugUri}"))
-            Try(SlugInfo.toLong(v)).getOrElse(0l)
+            (for {
+               x         <- SlugParser.extractVersionsFromUri(j._1.slugUri)
+               (_, v, _) =  x
+               v         <- SlugInfo.toLong(v)
+             } yield v
+            ).getOrElse(0L)
           }
           l2.updated(i, max.copy(processed = false))
         }

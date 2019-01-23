@@ -51,7 +51,7 @@ class SlugJobCreatorSpec extends TestKit(ActorSystem("SlugJobCreatorSpec"))
     val slug2 = ArtifactoryChild("/abc", true)
     val slugJob = NewSlugParserJob("http://")
 
-    when(mockConnector.findAllSlugs()).thenReturn(Future(List(slug1, slug2)))
+    when(mockConnector.findAllServices()).thenReturn(Future(List(slug1, slug2)))
 
     when(mockConnector.findAllSlugsForService("/test-service")).thenReturn(Future(List(NewSlugParserJob("http://test-service/test-service_1.2.3-0.5.2.tgz"))))
     when(mockConnector.findAllSlugsForService("/abc")).thenReturn(Future(List(NewSlugParserJob("http://abc/abc.2.3-0.5.2.tgz"))))
@@ -64,7 +64,7 @@ class SlugJobCreatorSpec extends TestKit(ActorSystem("SlugJobCreatorSpec"))
     slugJobCreator.runHistoric(limit = Some(1000))
 
     Thread.sleep(1000)
-    verify(mockConnector, times(1)).findAllSlugs()
+    verify(mockConnector, times(1)).findAllServices()
     verify(mockConnector, times(1)).findAllSlugsForService("/test-service")
     verify(mockConnector, times(1)).findAllSlugsForService("/abc")
   }

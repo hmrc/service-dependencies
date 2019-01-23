@@ -90,20 +90,20 @@ class SlugInfoRepositorySpec
       name            = "my-slug",
       version         = "0.27.0",
       semanticVersion = Version("0.27.0"),
-      versionLong     = SlugInfo.toLong("0.27.0"),
+      versionLong     = 27000,
       runnerVersion   = "0.5.2",
       classpath       = "",
       jdkVersion      = "",
       dependencies    = List(
         SlugDependency(
-          path = "lib1",
-          version     = "v1",
-          group       = "com.test.group",
-          artifact    = "lib1"
+          path     = "lib1",
+          version  = "v1",
+          group    = "com.test.group",
+          artifact = "lib1"
         ),
         SlugDependency(
-        path = "lib2",
-        version     = "v2",
-        group       = "com.test.group",
-        artifact    = "lib1")))
+          path     = "lib2",
+          version  = "v2",
+          group    = "com.test.group",
+          artifact = "lib1")))
 }

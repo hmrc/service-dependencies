@@ -22,7 +22,6 @@ import javax.inject.{Inject, Singleton}
 import org.joda.time.{Duration, Instant}
 import play.api.Logger
 import uk.gov.hmrc.servicedependencies.connector.ArtifactoryConnector
-import uk.gov.hmrc.servicedependencies.connector.model.ArtifactoryChild
 import uk.gov.hmrc.servicedependencies.persistence.{SlugJobLastRunRepository, SlugParserJobsRepository}
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -43,7 +42,7 @@ class SlugJobCreator @Inject()(
 
   def runHistoric(from: Int = 0, limit: Option[Int]): Future[Unit] = {
     Logger.info(s"creating slug jobs from artefactory: from=$from, limit=$limit")
-    Source.fromFuture(conn.findAllSlugs())
+    Source.fromFuture(conn.findAllServices())
       .mapConcat(identity)
       .drop(from)
       .take(limit.getOrElse[Int](Int.MaxValue))
@@ -65,32 +64,4 @@ class SlugJobCreator @Inject()(
       _         <- Future.sequence(slugJobs.map(jobsRepo.add))
       _         <- jobRunRepo.setLastRun(nextSince)
     } yield ()
-
-
-  def inWhiteList(c: ArtifactoryChild): Boolean = {
-    Logger.info(s"filtering ${c.uri}")
-    repos.exists(c.uri.endsWith)
-  }
-
-  val repos = List(
-    "/key-store",
-    "/User-details",
-    "/company-auth-frontend",
-    "/multi-factor-authentication",
-    "/poison-password",
-    "/agent-usher",
-    "/third-party-application",
-    "/one-time-password",
-    "/preferences",
-    "/government-gateway-authentication",
-    "/message-frontend",
-    "/message",
-    "/personal-details-validation",
-    "/affinity-group",
-    "/back-office-adapter",
-    "/transaction-engine",
-    "/paye-tax-calculator-frontend",
-    "/bas-gateway",
-    "/email"
-  )
 }

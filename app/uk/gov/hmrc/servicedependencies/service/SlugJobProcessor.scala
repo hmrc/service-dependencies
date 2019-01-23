@@ -86,7 +86,7 @@ object SlugParser {
       name            = slugName,
       version         = slugVersion,
       semanticVersion = Version.parse(slugVersion),
-      versionLong     = SlugInfo.toLong(slugVersion),
+      versionLong     = SlugInfo.toLong(slugVersion).getOrElse(sys.error(s"Could not extract slug data from uri $slugUri")),
       runnerVersion   = runnerVersion,
       classpath       = "",
       jdkVersion      = "",
