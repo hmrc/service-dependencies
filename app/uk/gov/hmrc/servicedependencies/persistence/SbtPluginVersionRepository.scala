@@ -36,19 +36,13 @@ class SbtPluginVersionRepository @Inject()(mongo: ReactiveMongoComponent, future
       mongo          = mongo.mongoConnector.db,
       domainFormat   = MongoSbtPluginVersion.format) {
 
-  override def ensureIndexes(implicit ec: ExecutionContext): Future[Seq[Boolean]] =
-    Future.sequence(
-      Seq(
-        collection
-          .indexesManager
-          .ensure(
-            Index(
-              Seq("sbtPluginName" -> IndexType.Hashed),
-              name       = Some("sbtPluginNameIdx"),
-              unique     = true,
-              background = true))
-      )
-    )
+  override def indexes: Seq[Index] =
+    Seq(
+      Index(
+        Seq("sbtPluginName" -> IndexType.Hashed),
+        name       = Some("sbtPluginNameIdx"),
+        unique     = true,
+        background = true))
 
   def update(sbtPluginVersion: MongoSbtPluginVersion): Future[MongoSbtPluginVersion] = {
     logger.debug(s"writing $sbtPluginVersion")

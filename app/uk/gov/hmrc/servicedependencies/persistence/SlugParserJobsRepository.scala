@@ -38,23 +38,16 @@ class SlugParserJobsRepository @Inject()(mongo: ReactiveMongoComponent)
 
   import ExecutionContext.Implicits.global
 
-  override def ensureIndexes(implicit ec: ExecutionContext): Future[Seq[Boolean]] =
-    Future.sequence(
-      Seq(
-        collection
-          .indexesManager
-          .ensure(
-            Index(
-              Seq("slugUri" -> IndexType.Ascending),
-              name       = Some("slugParserJobUniqueIdx"),
-              unique     = true)),
-        collection
-          .indexesManager
-          .ensure(
-            Index(
-              Seq("processed" -> IndexType.Hashed),
-              name       = Some("slugParserJobProcessedIdx"),
-              background = true))))
+  override def indexes: Seq[Index] =
+    Seq(
+      Index(
+        Seq("slugUri" -> IndexType.Ascending),
+        name       = Some("slugParserJobUniqueIdx"),
+        unique     = true),
+      Index(
+        Seq("processed" -> IndexType.Hashed),
+        name       = Some("slugParserJobProcessedIdx"),
+        background = true))
 
   def add(newJob: NewSlugParserJob): Future[Boolean] =
     collection
