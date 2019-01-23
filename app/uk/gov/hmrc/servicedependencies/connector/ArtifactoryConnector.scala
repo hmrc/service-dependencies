@@ -90,7 +90,8 @@ class ArtifactoryConnector @Inject()(http: HttpClient, config: ServiceDependenci
         else {
           val l2 = l.map(_.copy(processed = true))
           val (max, i) = l2.zipWithIndex.maxBy { j =>
-            val (_, v, _)       = SlugParser.extractFromUri(j._1.slugUri)
+            val (_, v, _)       = SlugParser.extractVersionsFromUri(j._1.slugUri)
+                                    .getOrElse(sys.error(s"Could not extract versions from ${j._1.slugUri}"))
             val versionLong     = SlugInfo.toLong(v)
             versionLong
           }

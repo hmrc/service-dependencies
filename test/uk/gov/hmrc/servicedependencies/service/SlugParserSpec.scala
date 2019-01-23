@@ -79,19 +79,16 @@ class SlugParserSpec extends FlatSpec with Matchers {
     output.artifact shouldBe "mavenlibrary"
   }
 
-  "extractFromUri" should "extract the runnerVersion, slugVersion and slugName from Uri" in {
-    {
-      val (runnerVersion, slugVersion, slugName) = SlugParser.extractFromUri("https://store/slugs/my-slug/my-slug_0.27.0_0.5.2.tgz")
-      runnerVersion shouldBe "0.5.2"
-      slugVersion   shouldBe "0.27.0"
-      slugName      shouldBe "my-slug"
-    }
-    {
-      val (runnerVersion, slugVersion, slugName) = SlugParser.extractFromUri("https://store/slugs/my-slug/my-slug_0.27.0_0.5.2.tar.gz")
-      runnerVersion shouldBe "0.5.2"
-      slugVersion   shouldBe "0.27.0"
-      slugName      shouldBe "my-slug"
-    }
+  "extractFilename" should "extract the filename from Uri" in {
+     SlugParser.extractFilename("https://store/slugs/my-slug/my-slug_0.27.0_0.5.2.tgz")    shouldBe "my-slug_0.27.0_0.5.2"
+     SlugParser.extractFilename("https://store/slugs/my-slug/my-slug_0.27.0_0.5.2.tar.gz") shouldBe "my-slug_0.27.0_0.5.2"
+  }
+
+  "extractFromUri" should "extract the runnerVersion, slugVersion and slugName from Filename" in {
+    val Some((runnerVersion, slugVersion, slugName)) = SlugParser.extractVersionsFromFilename("my-slug_0.27.0_0.5.2")
+    runnerVersion shouldBe "0.5.2"
+    slugVersion   shouldBe "0.27.0"
+    slugName      shouldBe "my-slug"
   }
 
 

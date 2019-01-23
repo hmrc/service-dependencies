@@ -77,7 +77,9 @@ object SlugParser {
   def parse(slugUri: String, in: InputStream): SlugInfo = {
     val tar = new ArchiveStreamFactory().createArchiveInputStream(new BufferedInputStream(in))
 
-    val (runnerVersion, slugVersion, slugName) = extractFromUri(slugUri)
+    val (runnerVersion, slugVersion, slugName) =
+      extractVersionsFromUri(slugUri)
+        .getOrElse(sys.error(s"Could not extract slug data from uri $slugUri"))
 
     val slugInfo = SlugInfo(
       uri             = slugUri,
@@ -104,21 +106,30 @@ object SlugParser {
                                                         .map(cp => result.copy(classpath = cp))
           case "./.jdk/release"                    => extractJdkVersion(tar)
                                                         .map(jdkv => result.copy(jdkVersion = jdkv))
-          case _                                   => println(s"ignoring ${entry.getName}"); None
+          case _                                   => None
         }).getOrElse(result)
       )
   }
 
-  def extractFromUri(slugUri: String): (String, String, String) = {
+  def extractFilename(slugUri: String): String =
     // e.g. https://store/slugs/my-slug/my-slug_0.27.0_0.5.2.tgz
-    val filename = slugUri
-                      .stripSuffix(".tgz").stripSuffix(".tar.gz")
-                      .split("/")
-                      .lastOption
-                      .getOrElse(sys.error(s"Could not extract slug data from uri $slugUri"))
-    val runnerVersion :: slugVersion :: rest = filename.split("_").reverse.toList
-    (runnerVersion, slugVersion, rest.mkString("_"))
-  }
+    slugUri
+      .stripSuffix(".tgz").stripSuffix(".tar.gz")
+      .split("/")
+      .last
+
+  /** @return (SlugRunnerVersion, SlugVersion, SlugName) */
+  def extractVersionsFromFilename(filename: String): Option[(String, String, String)] =
+    Try {
+      // e.g. https://store/slugs/my-slug/my-slug_0.27.0_0.5.2.tgz
+      // val regex = """^\/?(.+)_(\d+\.\d+\.\d+-?.*)_(\d+\.\d+\.\d+)\.tgz$""".r
+      val runnerVersion :: slugVersion :: rest = filename.split("_").reverse.toList
+      (runnerVersion, slugVersion, rest.mkString("_"))
+    }.toOption
+
+  def extractVersionsFromUri(slugUri: String) =
+    extractVersionsFromFilename(extractFilename(slugUri))
+
 
   sealed trait Dep { def sd: SlugDependency }
   object Dep {
@@ -193,11 +204,5 @@ object SlugParser {
       group    <- (pom \ "groupId").headOption.getOrElse(pom \ "parent" \ "groupId").map(_.text).headOption
       artifact <- (pom \ "artifactId").headOption.map(_.text)
     } yield SlugDependency(libraryName, version, group, artifact, meta = "fromPom")
-  }
-
-  def extractVersionFromFilename(fileName: String): Option[String] = {
-    val regex = """^\/?(.+)_(\d+\.\d+\.\d+-?.*)_(\d+\.\d+\.\d+)\.tgz$""".r
-    // TODO: write a function to turn a slugname/full uri to version name
-    ???
   }
 }
