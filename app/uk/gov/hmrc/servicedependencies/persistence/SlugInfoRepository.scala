@@ -69,4 +69,5 @@ class SlugInfoRepository @Inject()(mongo: ReactiveMongoComponent)
       case None          => find("name" -> name)
       case Some(version) => find("name" -> name, "version" -> version)
     }
+
 }

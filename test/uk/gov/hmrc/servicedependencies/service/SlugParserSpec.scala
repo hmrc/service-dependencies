@@ -18,8 +18,6 @@ package uk.gov.hmrc.servicedependencies.service
 import java.io.{BufferedInputStream, ByteArrayInputStream}
 import java.nio.charset.StandardCharsets
 
-import org.apache.commons.compress.archivers.ArchiveStreamFactory
-import org.apache.commons.compress.compressors.CompressorStreamFactory
 import org.scalatest.{FlatSpec, Matchers}
 import uk.gov.hmrc.servicedependencies.model.SlugDependency
 
@@ -96,17 +94,17 @@ class SlugParserSpec extends FlatSpec with Matchers {
 
 
   "slugparser" should "parse a slug" in {
-    val in = getClass.getResourceAsStream("/slugs/example-service.tar")
-    val res = SlugParser.parse("example-service_0.27.0_0.5.2.tar.gz", in)
+    val in = getClass.getResourceAsStream("/slugs/example-service_0.1.2_0.5.2.tar")
+    val res = SlugParser.parse("https://webstore.uk/slugs/example-service/example-service_0.1.2_0.5.2.tgz", in)
 
     res.name shouldBe "example-service"
     res.runnerVersion shouldBe "0.5.2"
-    res.version shouldBe "0.27.0"
+    res.version shouldBe "0.1.2"
 
     res.classpath.isEmpty shouldBe false
     res.classpath shouldNot startWith ("declare -r app_classpath")
 
-    res.jdkVersion shouldBe "1.8.0_172"
+    res.jdkVersion shouldBe "1.8.0_181"
 
     res.dependencies.length shouldBe 2
 
@@ -148,6 +146,7 @@ class SlugParserSpec extends FlatSpec with Matchers {
     val result = SlugParser.extractJdkVersion(is)
     result shouldBe Some("1.8.0_172")
   }
+
 
   /****** TEST DATA *******/
 

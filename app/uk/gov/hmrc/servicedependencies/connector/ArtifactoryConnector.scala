@@ -19,12 +19,10 @@ package uk.gov.hmrc.servicedependencies.connector
 import java.util.concurrent.Executors
 
 import javax.inject.{Inject, Singleton}
-import org.joda.time.{DateTime, Duration, Instant}
+import org.joda.time.Instant
 import play.api.Logger
 import play.api.libs.json._
-import play.api.libs.functional.syntax._
 import uk.gov.hmrc.http.HeaderCarrier
-import uk.gov.hmrc.http.logging.Authorization
 import uk.gov.hmrc.play.bootstrap.http.HttpClient
 import uk.gov.hmrc.servicedependencies.config.ServiceDependenciesConfig
 import uk.gov.hmrc.servicedependencies.connector.model.{ArtifactoryChild, ArtifactoryRepo}
@@ -32,6 +30,7 @@ import uk.gov.hmrc.servicedependencies.model.{NewSlugParserJob, SlugInfo}
 import uk.gov.hmrc.servicedependencies.service.SlugParser
 
 import scala.concurrent.{ExecutionContext, Future}
+import scala.util.Try
 
 @Singleton
 class ArtifactoryConnector @Inject()(http: HttpClient, config: ServiceDependenciesConfig) {
@@ -91,8 +90,8 @@ class ArtifactoryConnector @Inject()(http: HttpClient, config: ServiceDependenci
           val l2 = l.map(_.copy(processed = true))
           val (max, i) = l2.zipWithIndex.maxBy { j =>
             val (_, v, _)       = SlugParser.extractFromUri(j._1.slugUri)
-            val versionLong     = SlugInfo.toLong(v)
-            versionLong
+            Try(SlugInfo.toLong(v)).getOrElse(0l)
+
           }
           l2.updated(i, max.copy(processed = false))
         }

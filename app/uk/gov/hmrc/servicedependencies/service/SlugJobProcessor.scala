@@ -90,21 +90,21 @@ object SlugParser {
       jdkVersion      = "",
       dependencies    = List.empty[SlugDependency])
 
-    val Script = s"./$slugName/bin/$slugName"
+    val Script = s"./$slugName-$slugVersion/bin/$slugName"
 
     Iterator
       .continually(Try(tar.getNextEntry).recover { case e if e.getMessage == "Stream closed" => null }.get)
       .takeWhile(_ != null)
       .foldLeft(slugInfo)( (result, entry) =>
         (entry.getName match {
-          case n if n.startsWith(s"./$slugName/")
+          case n if n.startsWith(s"./$slugName")
                  && n.toLowerCase.endsWith(".jar") => extractVersionFromJar(n, tar)
                                                         .map(v => result.copy(dependencies = result.dependencies ++ List(v)))
           case Script                              => extractClasspath(tar)
                                                         .map(cp => result.copy(classpath = cp))
           case "./.jdk/release"                    => extractJdkVersion(tar)
                                                         .map(jdkv => result.copy(jdkVersion = jdkv))
-          case _                                   => println(s"ignoring ${entry.getName}"); None
+          case _                                   =>  None
         }).getOrElse(result)
       )
   }
@@ -117,6 +117,7 @@ object SlugParser {
                       .lastOption
                       .getOrElse(sys.error(s"Could not extract slug data from uri $slugUri"))
     val runnerVersion :: slugVersion :: rest = filename.split("_").reverse.toList
+
     (runnerVersion, slugVersion, rest.mkString("_"))
   }
 
