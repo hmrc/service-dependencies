@@ -41,7 +41,6 @@ class SbtPluginVersionRepository @Inject()(mongo: ReactiveMongoComponent, future
       Index(
         Seq("sbtPluginName" -> IndexType.Hashed),
         name       = Some("sbtPluginNameIdx"),
-        unique     = true,
         background = true))
 
   def update(sbtPluginVersion: MongoSbtPluginVersion): Future[MongoSbtPluginVersion] = {

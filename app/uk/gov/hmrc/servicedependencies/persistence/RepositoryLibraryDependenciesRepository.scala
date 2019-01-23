@@ -37,17 +37,12 @@ class RepositoryLibraryDependenciesRepository @Inject()(mongo: ReactiveMongoComp
       mongo          = mongo.mongoConnector.db,
       domainFormat   = MongoRepositoryDependencies.format) {
 
-  override def ensureIndexes(implicit ec: ExecutionContext): Future[Seq[Boolean]] =
-    Future.sequence(
-      Seq(
-        collection.indexesManager.ensure(
-          Index(
-            Seq("repositoryName" -> IndexType.Hashed),
-            name       = Some("RepositoryNameIdx"),
-            unique     = true,
-            background = true))
-      )
-    )
+  override def indexes: Seq[Index] =
+    Seq(
+      Index(
+        Seq("repositoryName" -> IndexType.Hashed),
+        name       = Some("RepositoryNameIdx"),
+        background = true))
 
   def update(repositoryLibraryDependencies: MongoRepositoryDependencies): Future[MongoRepositoryDependencies] = {
     logger.info(s"writing to mongo: $repositoryLibraryDependencies")
