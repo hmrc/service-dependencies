@@ -57,12 +57,13 @@ class SlugJobCreator @Inject()(
 
   def run(): Future[Unit] =
     for {
-      lastRun  <- jobRunRepo.getLastRun
-      since    = lastRun.getOrElse(Instant.now.minus(Duration.standardDays(1)))
-      _        = Logger.info(s"creating slug jobs from artefactory: since=$since")
-      slugJobs <- conn.findAllSlugsSince(since)
-      _        <- Future.sequence(slugJobs.map(jobsRepo.add))
-      _        <- jobRunRepo.setLastRun(Instant.now)
+      nextSince <- Future(Instant.now)
+      lastRun   <- jobRunRepo.getLastRun
+      since     =  lastRun.getOrElse(Instant.now.minus(Duration.standardDays(1)))
+      _         =  Logger.info(s"creating slug jobs from artefactory: since=$since")
+      slugJobs  <- conn.findAllSlugsSince(since)
+      _         <- Future.sequence(slugJobs.map(jobsRepo.add))
+      _         <- jobRunRepo.setLastRun(nextSince)
     } yield ()
 
 

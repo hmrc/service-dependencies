@@ -20,8 +20,9 @@ import javax.inject.Inject
 import play.api.{Configuration, Logger}
 import play.api.inject.ApplicationLifecycle
 import uk.gov.hmrc.servicedependencies.service.{SlugJobCreator, SlugJobProcessor}
+import uk.gov.hmrc.servicedependencies.persistence.MongoLocks
 
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.duration.{DurationLong, FiniteDuration}
 
 class SlugJobCreatorScheduler @Inject()(
@@ -29,9 +30,10 @@ class SlugJobCreatorScheduler @Inject()(
     configuration       : Configuration,
     slugJobCreator      : SlugJobCreator,
     slugJobProcessor    : SlugJobProcessor,
+    mongoLocks          : MongoLocks,
     applicationLifecycle: ApplicationLifecycle) {
 
-  import scala.concurrent.ExecutionContext.Implicits.global
+  import ExecutionContext.Implicits.global
 
   private val enabledKey  = "repositoryDependencies.slugJob.enabled"
   private val intervalKey = "repositoryDependencies.slugJob.interval"
@@ -48,12 +50,18 @@ class SlugJobCreatorScheduler @Inject()(
   if (enabled) {
     val cancellable = actorSystem.scheduler.schedule(1.minute, interval) {
       Logger.info(s"Starting slug job creator scheduler")
-      slugJobCreator
-        .run
-        .flatMap { _ =>
-          Logger.info("Finished creating slug jobs - now processing jobs")
-          slugJobProcessor.run()
-        }
+
+      mongoLocks.slugJobSchedulerLock.tryLock {
+        slugJobCreator
+          .run
+          .flatMap { _ =>
+            Logger.info("Finished creating slug jobs - now processing jobs")
+            slugJobProcessor.run()
+          }
+      }.map {
+        case Some(_) => Logger.debug(s"Slug job creator finished - releasing lock")
+        case None    => Logger.debug(s"Slug job lock is taken... skipping update")
+      }
     }
     applicationLifecycle.addStopHook(() => Future(cancellable.cancel()))
   } else {
