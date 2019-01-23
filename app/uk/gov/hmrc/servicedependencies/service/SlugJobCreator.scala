@@ -15,14 +15,15 @@
  */
 
 package uk.gov.hmrc.servicedependencies.service
+
 import akka.stream.Materializer
 import akka.stream.scaladsl.{Sink, Source}
 import javax.inject.{Inject, Singleton}
+import org.joda.time.{Duration, Instant}
 import play.api.Logger
 import uk.gov.hmrc.servicedependencies.connector.ArtifactoryConnector
 import uk.gov.hmrc.servicedependencies.connector.model.ArtifactoryChild
-import uk.gov.hmrc.servicedependencies.model.{MongoSlugParserJob, NewSlugParserJob}
-import uk.gov.hmrc.servicedependencies.persistence.SlugParserJobsRepository
+import uk.gov.hmrc.servicedependencies.persistence.{SlugJobLastRunRepository, SlugParserJobsRepository}
 
 import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.duration.{DurationInt, FiniteDuration}
@@ -31,15 +32,16 @@ case class RateLimit(invocations: Int, perDuration: FiniteDuration)
 
 @Singleton
 class SlugJobCreator @Inject()(
-  conn: ArtifactoryConnector,
-  repo: SlugParserJobsRepository)(
+  conn      : ArtifactoryConnector,
+  jobsRepo  : SlugParserJobsRepository,
+  jobRunRepo: SlugJobLastRunRepository)(
   implicit val materializer: Materializer) {
 
   import ExecutionContext.Implicits.global
 
   val rateLimit: RateLimit = RateLimit(1, 2.seconds)
 
-  def run(from: Int = 0, limit: Option[Int]): Future[Unit] = {
+  def runHistoric(from: Int = 0, limit: Option[Int]): Future[Unit] = {
     Logger.info(s"creating slug jobs from artefactory: from=$from, limit=$limit")
     Source.fromFuture(conn.findAllSlugs())
       .mapConcat(identity)
@@ -48,15 +50,26 @@ class SlugJobCreator @Inject()(
       .throttle(rateLimit.invocations, rateLimit.perDuration)
       .mapAsyncUnordered(1)(r => conn.findAllSlugsForService(r.uri))
       .mapConcat(identity)
-      .mapAsyncUnordered(1)(repo.add)
+      .mapAsyncUnordered(1)(jobsRepo.add)
       .runWith(Sink.ignore)
       .map(_ => ())
   }
 
+  def run(): Future[Unit] =
+    for {
+      nextSince <- Future(Instant.now)
+      lastRun   <- jobRunRepo.getLastRun
+      since     =  lastRun.getOrElse(Instant.now.minus(Duration.standardDays(1)))
+      _         =  Logger.info(s"creating slug jobs from artefactory: since=$since")
+      slugJobs  <- conn.findAllSlugsSince(since)
+      _         <- Future.sequence(slugJobs.map(jobsRepo.add))
+      _         <- jobRunRepo.setLastRun(nextSince)
+    } yield ()
 
-  def inWhiteList(c: ArtifactoryChild) : Boolean = {
+
+  def inWhiteList(c: ArtifactoryChild): Boolean = {
     Logger.info(s"filtering ${c.uri}")
-    repos.exists(r => c.uri.endsWith(r))
+    repos.exists(c.uri.endsWith)
   }
 
   val repos = List(

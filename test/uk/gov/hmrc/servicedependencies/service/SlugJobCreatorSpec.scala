@@ -25,7 +25,9 @@ import org.scalatest.{FlatSpecLike, Matchers}
 import uk.gov.hmrc.servicedependencies.connector.ArtifactoryConnector
 import uk.gov.hmrc.servicedependencies.connector.model.{ArtifactoryChild, ArtifactoryRepo}
 import uk.gov.hmrc.servicedependencies.model.{MongoSlugParserJob, NewSlugParserJob}
-import uk.gov.hmrc.servicedependencies.persistence.SlugParserJobsRepository
+import uk.gov.hmrc.servicedependencies.persistence. {
+  SlugJobLastRunRepository, SlugParserJobsRepository
+}
 import org.mockito.ArgumentMatchers.{any, eq => eqTo}
 
 import scala.concurrent.Future
@@ -38,9 +40,9 @@ class SlugJobCreatorSpec extends TestKit(ActorSystem("SlugJobCreatorSpec"))
   with MockitoSugar
   with Matchers {
 
-  val mockRepo = mock[SlugParserJobsRepository]
-  val mockConnector = mock[ArtifactoryConnector]
-
+  val mockConnector  = mock[ArtifactoryConnector]
+  val mockJobsRepo   = mock[SlugParserJobsRepository]
+  val mockJobRunRepo = mock[SlugJobLastRunRepository]
 
 
   "SlugJobCreator.add" should "write a number of mongojobs to the database" in {
@@ -53,13 +55,13 @@ class SlugJobCreatorSpec extends TestKit(ActorSystem("SlugJobCreatorSpec"))
 
     when(mockConnector.findAllSlugsForService("/test-service")).thenReturn(Future(List(NewSlugParserJob("http://test-service/test-service_1.2.3-0.5.2.tgz"))))
     when(mockConnector.findAllSlugsForService("/abc")).thenReturn(Future(List(NewSlugParserJob("http://abc/abc.2.3-0.5.2.tgz"))))
-    when(mockRepo.add(any())).thenReturn(Future(true))
+    when(mockJobsRepo.add(any())).thenReturn(Future(true))
 
-    val slugJobCreator = new SlugJobCreator(mockConnector, mockRepo)(ActorMaterializer()) {
+    val slugJobCreator = new SlugJobCreator(mockConnector, mockJobsRepo, mockJobRunRepo)(ActorMaterializer()) {
       override val rateLimit: RateLimit = RateLimit(1000, FiniteDuration(10, "seconds"))
     }
 
-    slugJobCreator.run(limit = Some(1000))
+    slugJobCreator.runHistoric(limit = Some(1000))
 
     Thread.sleep(1000)
     verify(mockConnector, times(1)).findAllSlugs()

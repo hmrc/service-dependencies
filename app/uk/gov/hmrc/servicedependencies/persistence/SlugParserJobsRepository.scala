@@ -77,13 +77,13 @@ class SlugParserJobsRepository @Inject()(mongo: ReactiveMongoComponent)
       .map(_ => ())
   }
 
-  def markAttempted(id: String): Future[Unit] = {
+  def markAttempted(id: String): Future[Boolean] = {
     logger.info(s"mark job $id as attempted")
     collection
       .update(
         selector = Json.obj("_id" -> id),
         update   = Json.obj("$inc" -> Json.obj("attempts" -> 1)))
-      .map(_ => ())
+      .map(_.nModified == 1)
   }
 
   def getAllEntries: Future[Seq[MongoSlugParserJob]] =

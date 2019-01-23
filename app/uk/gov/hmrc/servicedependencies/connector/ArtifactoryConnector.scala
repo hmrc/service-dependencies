@@ -53,15 +53,15 @@ class ArtifactoryConnector @Inject()(http: HttpClient, config: ServiceDependenci
 
 
   def findAllSlugsSince(from: Instant) : Future[List[NewSlugParserJob]] = {
-
     Logger.info(s"finding all slugs since $from")
 
     val endpoint = s"${config.artifactoryBase}/api/search/creation?from=${from.getMillis}&repo=webstore-local"
     implicit val hc: HeaderCarrier = HeaderCarrier(extraHeaders = xHeaders)
 
     http.GET[JsObject](endpoint)
-      .map {
-        json =>  (json \\ "uri").map(_.as[String])
+      .map { json =>
+        (json \\ "uri")
+          .map(_.as[String])
           .filter(_.startsWith(s"${config.artifactoryBase}/api/storage/webstore-local/slugs/"))
           .filter(uri => uri.endsWith(".tgz") || uri.endsWith(".tar.gz"))
           .map(ArtifactoryConnector.toDownloadURL)
@@ -89,9 +89,9 @@ class ArtifactoryConnector @Inject()(http: HttpClient, config: ServiceDependenci
         else {
           val l2 = l.map(_.copy(processed = true))
           val (max, i) = l2.zipWithIndex.maxBy { j =>
-            val (_, v, _)       = SlugParser.extractFromUri(j._1.slugUri)
+            val (_, v, _)       = SlugParser.extractVersionsFromUri(j._1.slugUri)
+                                    .getOrElse(sys.error(s"Could not extract versions from ${j._1.slugUri}"))
             Try(SlugInfo.toLong(v)).getOrElse(0l)
-
           }
           l2.updated(i, max.copy(processed = false))
         }
@@ -100,10 +100,8 @@ class ArtifactoryConnector @Inject()(http: HttpClient, config: ServiceDependenci
 
   private lazy val xHeaders : List[(String, String)] =
     config.artifactoryApiKey
-
-      .map(key => List(("X-JFrog-Art-Api", key)))
+      .map(key => List("X-JFrog-Art-Api" -> key))
       .getOrElse(List.empty)
-
 }
 
 
@@ -114,16 +112,11 @@ object ArtifactoryConnector {
       slugUri   = s"$webStoreRoot$serviceName$uri",
       processed = false)
 
-  def convertToWebStoreURL(url: String): String = {
-    val artifactoryPrefix = "https://artefacts."
-    val webstorePrefix    = "https://webstore."
-    val artifactorySuffix = "/artifactory/webstore"
-    url.replace(artifactoryPrefix, webstorePrefix).replace(artifactorySuffix, "")
-  }
+  def convertToWebStoreURL(url: String): String =
+    url.replace("https://artefacts.", "https://webstore.")
+       .replace("/artifactory/webstore", "")
 
-  def toDownloadURL(url: String): String= {
+  def toDownloadURL(url: String): String =
     url.replace("https://artefacts.", "https://webstore.")
        .replace("/artifactory/api/storage/webstore-local/", "/webstore/")
-  }
-
 }

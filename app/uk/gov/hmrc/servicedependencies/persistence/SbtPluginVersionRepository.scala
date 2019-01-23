@@ -51,19 +51,14 @@ class SbtPluginVersionRepository @Inject()(mongo: ReactiveMongoComponent, future
     )
 
   def update(sbtPluginVersion: MongoSbtPluginVersion): Future[MongoSbtPluginVersion] = {
-
     logger.debug(s"writing $sbtPluginVersion")
     futureHelpers.withTimerAndCounter("mongo.update") {
-      for {
-        update <- collection.update(
-                   selector = Json.obj("sbtPluginName" -> Json.toJson(sbtPluginVersion.sbtPluginName)),
-                   update   = sbtPluginVersion,
-                   upsert   = true)
-      } yield
-        update match {
-          case _ => sbtPluginVersion
-        }
-    } recover {
+      collection.update(
+          selector = Json.obj("sbtPluginName" -> Json.toJson(sbtPluginVersion.sbtPluginName)),
+          update   = sbtPluginVersion,
+          upsert   = true)
+        .map(_ => sbtPluginVersion)
+    }.recover {
       case lastError => throw new RuntimeException(s"failed to persist SbtPluginVersion: $sbtPluginVersion", lastError)
     }
   }
