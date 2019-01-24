@@ -39,9 +39,6 @@ class SlugJobLastRunRepository @Inject()(mongo: ReactiveMongoComponent)
 
   import SlugJobLastRunRepository.LastRun
 
-  override def ensureIndexes(implicit ec: ExecutionContext): Future[Seq[Boolean]] =
-    Future(Seq())
-
   def clearAllData: Future[Boolean] =
     super.removeAll().map(_.ok)
 

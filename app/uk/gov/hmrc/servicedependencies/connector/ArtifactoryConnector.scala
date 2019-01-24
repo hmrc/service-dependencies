@@ -52,7 +52,7 @@ class ArtifactoryConnector @Inject()(http: HttpClient, config: ServiceDependenci
 
 
   def findAllSlugsSince(from: Instant) : Future[List[NewSlugParserJob]] = {
-    Logger.info(s"finding all slugs since $from")
+    Logger.info(s"finding all slugs since $from from artifactory")
 
     val endpoint = s"${config.artifactoryBase}/api/search/creation?from=${from.getMillis}&repo=webstore-local"
     implicit val hc: HeaderCarrier = HeaderCarrier(extraHeaders = xHeaders)
@@ -74,7 +74,7 @@ class ArtifactoryConnector @Inject()(http: HttpClient, config: ServiceDependenci
     * Connect to artifactory and retrieve a list of all available slugs
     */
   def findAllSlugsForService(service: String): Future[List[NewSlugParserJob]] = {
-    Logger.info(s"downloading $service from artifactory")
+    Logger.info(s"finding all slugUris for service $service from artifactory")
     implicit val hc: HeaderCarrier = HeaderCarrier(otherHeaders = xHeaders)
     http.GET[ArtifactoryRepo](s"$artifactoryRoot$service")
       .map {
@@ -91,8 +91,8 @@ class ArtifactoryConnector @Inject()(http: HttpClient, config: ServiceDependenci
             (for {
                x         <- SlugParser.extractVersionsFromUri(j._1.slugUri)
                (_, v, _) =  x
-               v         <- SlugInfo.toLong(v)
-             } yield v
+               l         <- SlugInfo.toLong(v)
+             } yield l
             ).getOrElse(0L)
           }
           l2.updated(i, max.copy(processed = false))

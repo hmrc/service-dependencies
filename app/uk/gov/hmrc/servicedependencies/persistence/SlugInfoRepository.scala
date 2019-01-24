@@ -34,23 +34,16 @@ class SlugInfoRepository @Inject()(mongo: ReactiveMongoComponent)
 
   import MongoSlugInfoFormats._
 
-  override def ensureIndexes(implicit ec: ExecutionContext): Future[Seq[Boolean]] =
-    Future.sequence(
-      Seq(
-        collection
-          .indexesManager
-          .ensure(
-            Index(
-              Seq("uri" -> IndexType.Ascending),
-              name   = Some("slugInfoUniqueIdx"),
-              unique = true)),
-        collection
-          .indexesManager
-          .ensure(
-            Index(
-              Seq("name" -> IndexType.Hashed),
-              name       = Some("slugInfoIdx"),
-              background = true))))
+  override def indexes: Seq[Index] =
+    Seq(
+      Index(
+        Seq("uri" -> IndexType.Ascending),
+        name   = Some("slugInfoUniqueIdx"),
+        unique = true),
+      Index(
+        Seq("name" -> IndexType.Hashed),
+        name       = Some("slugInfoIdx"),
+        background = true))
 
   def add(slugInfo: SlugInfo): Future[Boolean] =
     collection
