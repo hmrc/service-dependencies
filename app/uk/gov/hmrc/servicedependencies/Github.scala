@@ -67,9 +67,7 @@ class Github(releaseService: ReleaseService, contentsService: ExtendedContentsSe
           Nil
       }.get
 
-    val maybeVersions: Seq[Option[Version]] = allVersions.map { version =>
-      VersionParser.parseReleaseVersion(version)
-    }
+    val maybeVersions: Seq[Option[Version]] = allVersions.map(VersionParser.parseReleaseVersion)
     Max.maxOf(maybeVersions)
   }
 
@@ -172,4 +170,3 @@ class GithubProvider @Inject() (config: ServiceDependenciesConfig, metrics: Metr
     new Github(new ReleaseService(client), new ExtendedContentsService(client))
   }
 }
-

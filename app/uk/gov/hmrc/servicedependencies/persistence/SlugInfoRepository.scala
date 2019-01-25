@@ -22,7 +22,7 @@ import reactivemongo.api.collections.bson.BSONCollection
 import reactivemongo.api.indexes.{Index, IndexType}
 import reactivemongo.bson.{BSONDocument, BSONDocumentReader, BSONObjectID}
 import uk.gov.hmrc.mongo.ReactiveRepository
-import uk.gov.hmrc.servicedependencies.model.{MongoSlugInfoFormats, ServiceDependency, SlugInfo, Version}
+import uk.gov.hmrc.servicedependencies.model.{ServiceDependency, SlugInfo, MongoSlugInfoFormats, Version}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
@@ -73,12 +73,12 @@ class SlugInfoRepository @Inject()(mongo: ReactiveMongoComponent)
         slugVersion  <- bson.getAs[String]("slugVersion")
         depGroup     <- bson.getAs[String]("depGroup")
         depArtifact  <- bson.getAs[String]("depArtifact")
-        depVersion   <- bson.getAs[String]("depVersion").map(Version.parse)
+        depVersion   <- bson.getAs[String]("depVersion")
       } yield ServiceDependency(
         slugName = slugName
         , slugVersion = slugVersion
         , depGroup = depGroup
-        , depArtifact = depArtifact
+        , depArtefact = depArtifact
         , depVersion = depVersion
       )
       opt.get

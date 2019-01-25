@@ -39,12 +39,14 @@ case class SlugInfo(
 
 object SlugInfo {
   def toLong(s: String): Option[Long] =
-    Try {
-      val v = Version.parse(s)
-      v.major.toLong * 1000 * 1000 +
-      v.minor.toLong * 1000 +
-      v.patch.toLong
-    }.toOption
+    for {
+      v   <- Version.parse(s)
+      res <- Try {
+               v.major.toLong * 1000 * 1000 +
+               v.minor.toLong * 1000 +
+               v.patch.toLong
+             }.toOption
+    } yield res
 }
 
 trait MongoSlugInfoFormats {

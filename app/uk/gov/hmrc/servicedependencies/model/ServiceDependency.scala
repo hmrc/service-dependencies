@@ -16,19 +16,27 @@
 
 package uk.gov.hmrc.servicedependencies.model
 
-import play.api.libs.json.{Json, OFormat}
-import scala.util.Try
+import play.api.libs.json.{__, OFormat}
+import play.api.libs.functional.syntax._
 
 case class ServiceDependency(
-  slugName    : String,
-  slugVersion : String,
-  depGroup    : String,
-  depArtifact : String,
-  depVersion  : Version)
+    slugName    : String,
+    slugVersion : String,
+    depGroup    : String,
+    depArtefact : String,
+    depVersion  : String) {// need this as well as depSemanticVersion too since Version.parse(s).toString /= s (e.g. 0.8.0.RELEASE)
+  lazy val depSemanticVersion = Version(depVersion)
+}
 
 trait ApiServiceDependencyFormats {
+
   val sdFormat: OFormat[ServiceDependency] =
-    Json.format[ServiceDependency]
+    ( (__ \ "slugName"   ).format[String]
+    ~ (__ \ "slugVersion").format[String]
+    ~ (__ \ "depGroup"   ).format[String]
+    ~ (__ \ "depArtefact").format[String]
+    ~ (__ \ "depVersion" ).format[String]
+    )(ServiceDependency.apply, unlift(ServiceDependency.unapply))
 }
 
 object ApiServiceDependencyFormats extends ApiServiceDependencyFormats

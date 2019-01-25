@@ -103,14 +103,21 @@ class DependencyDataUpdatingService @Inject()(
       repositoryDependencies: MongoRepositoryDependencies,
       sbtPluginReferences   : Seq[MongoSbtPluginVersion]) =
     repositoryDependencies.sbtPluginDependencies.map { sbtPluginDependency =>
-      val mayBeExternalSbtPlugin = curatedDependencyConfig.sbtPlugins
-        .find(pluginConfig => pluginConfig.name == sbtPluginDependency.name && pluginConfig.isExternal())
+      val mayBeExternalSbtPlugin =
+        curatedDependencyConfig.sbtPlugins
+          .find(pluginConfig => pluginConfig.name == sbtPluginDependency.name && pluginConfig.isExternal)
 
-      val latestVersion = mayBeExternalSbtPlugin
-        .map(
-          _.version.getOrElse(throw new RuntimeException(
-            s"External sbt plugin ($mayBeExternalSbtPlugin) must specify the (latest) version")))
-        .orElse(sbtPluginReferences.find(_.sbtPluginName == sbtPluginDependency.name).flatMap(_.version))
+      val latestVersion =
+        mayBeExternalSbtPlugin
+          .map(_
+            .version
+            .getOrElse(sys.error(s"External sbt plugin ($mayBeExternalSbtPlugin) must specify the (latest) version"))
+          )
+          .orElse(
+            sbtPluginReferences
+              .find(_.sbtPluginName == sbtPluginDependency.name)
+              .flatMap(_.version)
+          )
 
       Dependency(
         sbtPluginDependency.name,
@@ -196,13 +203,13 @@ class DependencyDataUpdatingService @Inject()(
   def getSlugInfos(name: String, version: Option[String]): Future[Seq[SlugInfo]] =
     slugInfoRepository.getSlugInfos(name, version)
 
-  def findServicesWithDependency(group: String, artefact: String, versionOp: String, version: Version): Future[Seq[ServiceDependency]] = {
+  def findServicesWithDependency(
+    group: String, artefact: String, versionOp: VersionOp, version: Version): Future[Seq[ServiceDependency]] =
     slugInfoRepository.findServices(group, artefact).map { l =>
       versionOp match {
-        case "gt" => l.filter(_.depVersion >= version)
-        case "lt" => l.filter(_.depVersion <= version)
-        case "eq" => l.filter(_.depVersion == version)
+        case VersionOp.Gt => l.filter(_.depSemanticVersion >= version)
+        case VersionOp.Lt => l.filter(_.depSemanticVersion <= version)
+        case VersionOp.Eq => l.filter(_.depSemanticVersion == version)
       }
     }
-  }
 }
