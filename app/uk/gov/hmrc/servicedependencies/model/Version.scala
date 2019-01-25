@@ -46,6 +46,8 @@ object Version {
   def apply(version: String): Version =
     parse(version)
 
+  // TODO what about "0.8.0.RELEASE"?
+  // should preserve suffix separator...
   def parse(s: String): Version = {
     val versionRegex = """(\d+)\.(\d+)\.(\d+)-?(.*)""".r.unanchored
 
@@ -61,4 +63,19 @@ object Version {
     def asVersion(): Version =
       Version(v)
   }
+}
+
+trait VersionOp
+object VersionOp {
+  case object Gt extends VersionOp
+  case object Lt extends VersionOp
+  case object Eq extends VersionOp
+
+  def parse(s: String): Option[VersionOp] =
+    s match {
+      case "gt" => Some(Gt)
+      case "lt" => Some(Lt)
+      case "eq" => Some(Eq)
+      case _    => None
+    }
 }

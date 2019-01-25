@@ -24,8 +24,12 @@ import play.api.mvc._
 import uk.gov.hmrc.play.bootstrap.controller.BackendController
 import uk.gov.hmrc.servicedependencies.config.ServiceDependenciesConfig
 import uk.gov.hmrc.servicedependencies.controller.model.Dependencies
-import uk.gov.hmrc.servicedependencies.model.{ApiServiceDependencyFormats, ApiSlugInfoFormats, Version}
+import uk.gov.hmrc.servicedependencies.model.{
+  ApiServiceDependencyFormats, ApiSlugInfoFormats, Version, VersionOp
+}
 import uk.gov.hmrc.servicedependencies.service.DependencyDataUpdatingService
+
+import scala.concurrent.Future
 
 @Singleton
 class ServiceDependenciesController @Inject()(
@@ -63,11 +67,14 @@ class ServiceDependenciesController @Inject()(
         .map(res => Ok(Json.toJson(res)))
     }
 
-  def getServicesWithDependency(group: String, artefact: String, versionOp: String, version: String) =
+  def getServicesWithDependency(group: String, artefact: String, versionOpStr: String, version: String) =
     Action.async { implicit request =>
       implicit val format = ApiServiceDependencyFormats.sdFormat
-      dependencyDataUpdatingService
-        .findServicesWithDependency(group, artefact, versionOp, Version(version))
-        .map(res => Ok(Json.toJson(res)))
+      VersionOp.parse(versionOpStr) match {
+        case Some(versionOp) => dependencyDataUpdatingService
+                                  .findServicesWithDependency(group, artefact, versionOp, Version(version))
+                                  .map(res => Ok(Json.toJson(res)))
+        case _               => Future(BadRequest(s"invalid versionOp")) // TODO toJson
+      }
     }
 }

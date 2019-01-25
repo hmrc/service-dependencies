@@ -196,13 +196,13 @@ class DependencyDataUpdatingService @Inject()(
   def getSlugInfos(name: String, version: Option[String]): Future[Seq[SlugInfo]] =
     slugInfoRepository.getSlugInfos(name, version)
 
-  def findServicesWithDependency(group: String, artefact: String, versionOp: String, version: Version): Future[Seq[ServiceDependency]] = {
+  def findServicesWithDependency(
+    group: String, artefact: String, versionOp: VersionOp, version: Version): Future[Seq[ServiceDependency]] =
     slugInfoRepository.findServices(group, artefact).map { l =>
       versionOp match {
-        case "gt" => l.filter(_.depVersion >= version)
-        case "lt" => l.filter(_.depVersion <= version)
-        case "eq" => l.filter(_.depVersion == version)
+        case VersionOp.Gt => l.filter(_.depSemanticVersion >= version)
+        case VersionOp.Lt => l.filter(_.depSemanticVersion <= version)
+        case VersionOp.Eq => l.filter(_.depSemanticVersion == version)
       }
     }
-  }
 }
