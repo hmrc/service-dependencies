@@ -58,11 +58,10 @@ class DependenciesDataSource @Inject()(
   }
 
 
-  private def lastUpdated(repoName: String, currentDeps: Seq[MongoRepositoryDependencies]): DateTime = {
+  private def lastUpdated(repoName: String, currentDeps: Seq[MongoRepositoryDependencies]): DateTime =
     currentDeps.find(_.repositoryName == repoName)
       .map(_.updateDate)
       .getOrElse(new DateTime(0))
-  }
 
 
   private def serialiseFutures[A, B](l: Iterable[A])(fn: A => Future[B]): Future[Seq[B]] =
@@ -74,18 +73,16 @@ class DependenciesDataSource @Inject()(
     }
 
   def persistDependenciesForAllRepositories(
-    curatedDependencyConfig: CuratedDependencyConfig,
-    currentDependencyEntries: Seq[MongoRepositoryDependencies],
-    force: Boolean = false)(implicit hc: HeaderCarrier): Future[Seq[MongoRepositoryDependencies]] = {
-
+      curatedDependencyConfig: CuratedDependencyConfig,
+      currentDependencyEntries: Seq[MongoRepositoryDependencies],
+      force: Boolean = false)(implicit hc: HeaderCarrier): Future[Seq[MongoRepositoryDependencies]] =
     teamsAndRepositoriesConnector
       .getAllRepositories()
-      .map(repos => {
+      .map { repos =>
         logger.debug(s"loading dependencies for ${repos.length} repositories")
         repos.flatMap(r => buildDependency(r, curatedDependencyConfig, currentDependencyEntries, force))
-      })
+      }
       .flatMap(serialiseFutures(_)(repo => repoLibDepRepository.update(repo)))
-  }
 
 
   def getLatestSbtPluginVersions(sbtPlugins: Seq[SbtPluginConfig]): Seq[SbtPluginVersion] =
@@ -94,5 +91,4 @@ class DependenciesDataSource @Inject()(
 
   def getLatestLibrariesVersions(libraries: Seq[String]): Seq[LibraryVersion] =
     libraries.flatMap(github.findLatestLibraryVersion)
-
 }

@@ -76,6 +76,17 @@ class SlugInfoRepository @Inject()(mongo: ReactiveMongoComponent)
       slugVersion = "v1",
       depGroup    = "group",
       depArtefact = artefact,
-      depVersion  = "2.0.0")))
-
+      depVersion  = "2.0.0"),
+    ServiceDependency(
+      slugName    = "service1",
+      slugVersion = "v1",
+      depGroup    = "group",
+      depArtefact = artefact,
+      depVersion  = "3.9.9.Final"),
+    ServiceDependency(
+      slugName    = "service1",
+      slugVersion = "v1",
+      depGroup    = "group",
+      depArtefact = artefact,
+      depVersion  = "20080701")))
 }

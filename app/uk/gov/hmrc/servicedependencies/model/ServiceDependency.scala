@@ -24,8 +24,9 @@ case class ServiceDependency(
     slugVersion : String,
     depGroup    : String,
     depArtefact : String,
-    depVersion  : String) {// need this as well as depSemanticVersion too since Version.parse(s).toString /= s (e.g. 0.8.0.RELEASE)
-  lazy val depSemanticVersion = Version(depVersion)
+    depVersion  : String) {
+  lazy val depSemanticVersion: Option[Version] =
+    Version.parse(depVersion)
 }
 
 trait ApiServiceDependencyFormats {

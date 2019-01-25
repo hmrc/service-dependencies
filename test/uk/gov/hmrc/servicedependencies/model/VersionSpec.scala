@@ -61,4 +61,34 @@ class VersionSpec extends FreeSpec with MustMatchers {
     Version("1.2.3")          mustBe Version(1, 2, 3)
     Version("1.2.3-SNAPSHOT") mustBe Version(1, 2, 3, Some("SNAPSHOT"))
   }
+
+  "parse.toString == identity" in {
+    val testcases = List(
+      "1.2.3",
+      // with suffix
+      "9.0.0-play-26",
+      "1.0.7-alpha",
+      "2.5.0-3",
+      "2.0.0-M7",
+      "1.7.0-akka-2.5.x"
+      // with suffix but different suffix separator
+      /* "9.2.24.v20180105",
+      "3.9.9.Final",
+      "2.1.0.1",
+      "2.3.0_0.1.8",
+      "3.5.5_a2.3", */
+      // other - unparseable
+      /*"20080701",
+      "r938",
+      "999-SNAPSHOT",
+      "2.5",
+      "2.19-SNAPSHOT",
+      "0.11-RC1",
+      "2.5-20081211",
+      "2.2-cj-1.1",
+      "v2-rev137-1.23.0" */)
+    testcases.foreach { s =>
+      Version.parse(s).map(_.toString) mustBe Some(s)
+    }
+  }
 }

@@ -57,8 +57,6 @@ object Version {
     }
   }
 
-  //implicit val ord = Ordering.by(unapply)
-
   implicit class VersionExtensions(v: String) {
     def asVersion(): Version =
       Version(v)
