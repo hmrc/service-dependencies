@@ -22,14 +22,13 @@ import org.scalatest.mockito.MockitoSugar
 import org.scalatest.{BeforeAndAfterEach, LoneElement, OptionValues}
 import org.scalatestplus.play.guice.GuiceOneAppPerSuite
 import play.api.Application
-import play.api.inject.guice.GuiceApplicationBuilder
-
-import scala.concurrent.ExecutionContext.Implicits.global
 import play.modules.reactivemongo.ReactiveMongoComponent
 import uk.gov.hmrc.mongo.{MongoConnector, MongoSpecSupport}
 import uk.gov.hmrc.play.test.UnitSpec
 import uk.gov.hmrc.servicedependencies.model.{SlugInfo, SlugDependency, Version}
 import uk.gov.hmrc.time.DateTimeUtils
+
+import scala.concurrent.ExecutionContext.Implicits.global
 
 class SlugInfoRepositorySpec
     extends UnitSpec
@@ -38,24 +37,21 @@ class SlugInfoRepositorySpec
        with ScalaFutures
        with OptionValues
        with BeforeAndAfterEach
-       with GuiceOneAppPerSuite
        with MockitoSugar {
 
-  val reactiveMongoComponent: ReactiveMongoComponent = new ReactiveMongoComponent {
-    val mockedMongoConnector: MongoConnector = mock[MongoConnector]
-    when(mockedMongoConnector.db).thenReturn(mongo)
-
-    override def mongoConnector = mockedMongoConnector
+  val reactiveMongoComponent = new ReactiveMongoComponent {
+    override val mongoConnector = {
+      val mc = mock[MongoConnector]
+      when(mc.db).thenReturn(mongo)
+      mc
+    }
   }
-
-  override def fakeApplication(): Application = GuiceApplicationBuilder()
-    .configure("metrics.jvm" -> false)
-    .build()
 
   val slugInfoRepository = new SlugInfoRepository(reactiveMongoComponent)
 
   override def beforeEach() {
     await(slugInfoRepository.drop)
+    await(slugInfoRepository.ensureIndexes)
   }
 
   "SlugInfoRepository.add" should {
@@ -68,9 +64,8 @@ class SlugInfoRepositorySpec
       await(slugInfoRepository.add(slugInfo)) shouldBe true
       await(slugInfoRepository.getAllEntries) should have size 1
 
-      // indices not working with mongoConnector mock?
-      // await(slugInfoRepository.add(slugInfo)) shouldBe false
-      // await(slugInfoRepository.getAllEntries) should have size 1
+      await(slugInfoRepository.add(slugInfo)) shouldBe false
+      await(slugInfoRepository.getAllEntries) should have size 1
     }
   }
 

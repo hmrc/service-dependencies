@@ -38,24 +38,21 @@ class SlugParserJobsRepositorySpec
        with ScalaFutures
        with OptionValues
        with BeforeAndAfterEach
-       with GuiceOneAppPerSuite
        with MockitoSugar {
 
-  val reactiveMongoComponent: ReactiveMongoComponent = new ReactiveMongoComponent {
-    val mockedMongoConnector: MongoConnector = mock[MongoConnector]
-    when(mockedMongoConnector.db).thenReturn(mongo)
-
-    override def mongoConnector = mockedMongoConnector
+  val reactiveMongoComponent = new ReactiveMongoComponent {
+    override val mongoConnector = {
+      val mc = mock[MongoConnector]
+      when(mc.db).thenReturn(mongo)
+      mc
+    }
   }
-
-  override def fakeApplication(): Application = GuiceApplicationBuilder()
-    .configure("metrics.jvm" -> false)
-    .build()
 
   val slugParserJobsRepository = new SlugParserJobsRepository(reactiveMongoComponent)
 
   override def beforeEach() {
     await(slugParserJobsRepository.drop)
+    await(slugParserJobsRepository.ensureIndexes)
   }
 
   "SlugParserJobsRepository.add" should {
@@ -72,9 +69,8 @@ class SlugParserJobsRepositorySpec
       await(slugParserJobsRepository.add(newJob)) shouldBe true
       await(slugParserJobsRepository.getAllEntries) should have size 1
 
-      // indices not working with mongoConnector mock?
-      // await(slugParserJobsRepository.add(newJob)) shouldBe false
-      // await(slugParserJobsRepository.getAllEntries) should have size 1
+      await(slugParserJobsRepository.add(newJob)) shouldBe false
+      await(slugParserJobsRepository.getAllEntries) should have size 1
     }
   }
 

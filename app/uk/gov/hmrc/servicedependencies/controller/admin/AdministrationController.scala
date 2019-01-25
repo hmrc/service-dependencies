@@ -77,7 +77,6 @@ class AdministrationController @Inject()(
     dependencyDataUpdatingService.locks().map(locks => Ok(Json.toJson(locks)))
   }
 
-  // TODO should be invoked from S3 notification? Requires moving out of admin?
   def addSlugParserJob =
     Action.async(parse.json) { implicit request =>
       withJsonBody[NewSlugParserJob] { newJob =>

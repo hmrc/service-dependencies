@@ -15,12 +15,14 @@
  */
 
 package uk.gov.hmrc.servicedependencies
+
 import akka.actor.ActorSystem
 import javax.inject.Inject
 import play.api.{Configuration, Logger}
 import play.api.inject.ApplicationLifecycle
 import uk.gov.hmrc.servicedependencies.service.{SlugJobCreator, SlugJobProcessor}
 import uk.gov.hmrc.servicedependencies.persistence.MongoLocks
+import uk.gov.hmrc.servicedependencies.util.ConfigUtils
 
 import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.duration.{DurationLong, FiniteDuration}
@@ -31,24 +33,24 @@ class SlugJobCreatorScheduler @Inject()(
     slugJobCreator      : SlugJobCreator,
     slugJobProcessor    : SlugJobProcessor,
     mongoLocks          : MongoLocks,
-    applicationLifecycle: ApplicationLifecycle) {
+    applicationLifecycle: ApplicationLifecycle)
+  extends ConfigUtils {
 
   import ExecutionContext.Implicits.global
 
-  private val enabledKey  = "repositoryDependencies.slugJob.enabled"
-  private val intervalKey = "repositoryDependencies.slugJob.interval"
+  private val enabledKey      = "repositoryDependencies.slugJob.enabled"
+  private val intervalKey     = "repositoryDependencies.slugJob.interval"
+  private val initialDelayKey = "repositoryDependencies.slugJob.initialDelay"
 
-  private lazy val interval: FiniteDuration =
-    Option(configuration.getMillis(intervalKey))
-      .map(_.milliseconds)
-      .getOrElse(throw new RuntimeException(s"$intervalKey not specified"))
+  private lazy val initialDelay: FiniteDuration = getDuration(configuration, initialDelayKey)
+  private lazy val interval    : FiniteDuration = getDuration(configuration, intervalKey)
 
   private lazy val enabled: Boolean =
     configuration.getOptional[Boolean](enabledKey).getOrElse(false)
 
 
   if (enabled) {
-    val cancellable = actorSystem.scheduler.schedule(1.minute, interval) {
+    val cancellable = actorSystem.scheduler.schedule(initialDelay, interval) {
       Logger.info(s"Starting slug job creator scheduler")
 
       mongoLocks.slugJobSchedulerLock.tryLock {

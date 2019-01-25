@@ -82,20 +82,18 @@ class ArtifactoryConnector @Inject()(http: HttpClient, config: ServiceDependenci
           .filterNot(_.folder)
           .map(repo => convertToSlugParserJob(service, repo.uri, webstoreRoot))
           .toList
-      }.map { l =>
-        // for now, mark all as processed, except the latest version
+      }
+      // temporarily only process the latest:
+      // for now mark all as processed
+      .map(_.map(_.copy(processed = true)))
+      // and mark the latest version as not processed
+      .map { l =>
         if (l.isEmpty) l
         else {
-          val l2 = l.map(_.copy(processed = true))
-          val (max, i) = l2.zipWithIndex.maxBy { j =>
-            (for {
-               x         <- SlugParser.extractVersionsFromUri(j._1.slugUri)
-               (_, v, _) =  x
-               l         <- SlugInfo.toLong(v)
-             } yield l
-            ).getOrElse(0L)
+          val (max, i) = l.zipWithIndex.maxBy { j =>
+            SlugParser.extractVersionsFromUri(j._1.slugUri).map { case (_, v, _) => v }
           }
-          l2.updated(i, max.copy(processed = false))
+          l.updated(i, max.copy(processed = false))
         }
       }
   }

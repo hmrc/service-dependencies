@@ -27,23 +27,26 @@ import uk.gov.hmrc.lock.{ExclusiveTimePeriodLock, LockRepository}
 import uk.gov.hmrc.metrix.MetricOrchestrator
 import uk.gov.hmrc.metrix.persistence.MongoMetricRepository
 import uk.gov.hmrc.servicedependencies.service.RepositoryDependenciesSource
-import scala.concurrent.ExecutionContext.Implicits.global
+import uk.gov.hmrc.servicedependencies.util.ConfigUtils
+import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 import scala.util.control.NonFatal
 
 class MetricsScheduler @Inject()(
-  actorSystem: ActorSystem,
-  configuration: Configuration,
-  metrics: Metrics,
-  reactiveMongoComponent: ReactiveMongoComponent,
-  repositoryDependenciesSource: RepositoryDependenciesSource) {
+    actorSystem                 : ActorSystem,
+    configuration               : Configuration,
+    metrics                     : Metrics,
+    reactiveMongoComponent      : ReactiveMongoComponent,
+    repositoryDependenciesSource: RepositoryDependenciesSource)
+  extends ConfigUtils {
 
-  private val intervalKey = "repositoryDependencies.metricsGauges.interval"
+  import ExecutionContext.Implicits.global
 
-  private lazy val interval: FiniteDuration =
-    Option(configuration.getMillis(intervalKey))
-      .map(_.milliseconds)
-      .getOrElse(throw new RuntimeException(s"$intervalKey not specified"))
+  private val intervalKey      = "repositoryDependencies.metricsGauges.interval"
+  private val intitialDelayKey = "repositoryDependencies.metricsGauges.initialDelay"
+
+  private lazy val interval     : FiniteDuration = getDuration(configuration, intervalKey)
+  private lazy val intitialDelay: FiniteDuration = getDuration(configuration, intitialDelayKey)
 
   implicit lazy val mongo: () => DefaultDB = reactiveMongoComponent.mongoConnector.db
 
@@ -60,7 +63,7 @@ class MetricsScheduler @Inject()(
     metricRegistry   = metrics.defaultRegistry
   )
 
-  actorSystem.scheduler.schedule(1.minute, interval) {
+  actorSystem.scheduler.schedule(intitialDelay, interval) {
     metricOrchestrator
       .attemptToUpdateRefreshAndResetMetrics( _ => true)
       .map(_.andLogTheResult())
