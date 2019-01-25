@@ -22,7 +22,7 @@ import reactivemongo.api.collections.bson.BSONCollection
 import reactivemongo.api.indexes.{Index, IndexType}
 import reactivemongo.bson.{BSONDocument, BSONDocumentReader, BSONObjectID}
 import uk.gov.hmrc.mongo.ReactiveRepository
-import uk.gov.hmrc.servicedependencies.model.{ServiceDependency, SlugInfo, MongoSlugInfoFormats, Version}
+import uk.gov.hmrc.servicedependencies.model.{MongoSlugInfoFormats, ServiceDependency, SlugInfo}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
@@ -91,21 +91,22 @@ class SlugInfoRepository @Inject()(mongo: ReactiveMongoComponent)
 
 
   private def findServices(group: String, artefact: String, col: BSONCollection): Future[Seq[ServiceDependency]] = {
+
     import col.BatchCommands.AggregationFramework.{Ascending, Descending, FirstField, Group, Match, Project, Sort, UnwindField}
     import reactivemongo.bson._
 
-
-
-    val sortBySlug = Sort(Ascending("name"), Descending("version"))
+    // pipeline functions
+    val sortBySlug = Sort(Ascending("name"), Descending("versionLong"))
 
     val groupByLatestSlug = Group(BSONString(f"$$name"))(
-       "version"      -> FirstField("$version")
-      ,"uri"          -> FirstField("$uri")
-      ,"dependencies" -> FirstField("$dependencies")
-      ,"versionLong"  -> FirstField("$versionLong")
+        "version"      -> FirstField("version")
+      , "uri"          -> FirstField("uri")
+      , "dependencies" -> FirstField("dependencies")
+      , "versionLong"  -> FirstField("versionLong")
     )
 
-    val unwindDependencies = UnwindField("$dependencies")
+
+    val unwindDependencies = UnwindField("dependencies")
 
 
     val projectIntoServiceDependency = Project(
@@ -121,12 +122,14 @@ class SlugInfoRepository @Inject()(mongo: ReactiveMongoComponent)
       )
     )
 
-    val matchArtifact = Match(document("$lib.artifact" -> artefact, "$lib.group" -> group))
+    val matchArtifact = Match(document("depArtifact" -> artefact, "depGroup" -> group))
 
+
+    // run the pipeline
     col.aggregatorContext[ServiceDependency](
       sortBySlug,
       List(
-        groupByLatestSlug
+         groupByLatestSlug
         ,unwindDependencies
         ,projectIntoServiceDependency
         ,matchArtifact
