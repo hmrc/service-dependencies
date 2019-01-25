@@ -19,7 +19,6 @@ package uk.gov.hmrc.servicedependencies.config.model
 import play.api.libs.functional.syntax._
 import play.api.libs.json.{__, Json, JsError, Reads}
 import uk.gov.hmrc.servicedependencies.model.Version
-import cats.syntax.all._
 
 case class OtherDependencyConfig(name: String, latestVersion: Option[Version])
 

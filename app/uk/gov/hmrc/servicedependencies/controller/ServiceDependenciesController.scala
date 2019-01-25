@@ -16,6 +16,9 @@
 
 package uk.gov.hmrc.servicedependencies.controller
 
+import cats.data.EitherT
+import cats.instances.all._
+import cats.syntax.all._
 import com.google.inject.{Inject, Singleton}
 import org.slf4j.LoggerFactory
 import play.api.Configuration
@@ -25,7 +28,7 @@ import uk.gov.hmrc.play.bootstrap.controller.BackendController
 import uk.gov.hmrc.servicedependencies.config.ServiceDependenciesConfig
 import uk.gov.hmrc.servicedependencies.controller.model.Dependencies
 import uk.gov.hmrc.servicedependencies.model.{
-  ApiServiceDependencyFormats, ApiSlugInfoFormats, Version, VersionOp
+  ApiServiceDependencyFormats, ApiSlugInfoFormats, ServiceDependency, Version, VersionOp
 }
 import uk.gov.hmrc.servicedependencies.service.DependencyDataUpdatingService
 
@@ -67,14 +70,17 @@ class ServiceDependenciesController @Inject()(
         .map(res => Ok(Json.toJson(res)))
     }
 
-  def getServicesWithDependency(group: String, artefact: String, versionOpStr: String, version: String) =
+  def getServicesWithDependency(group: String, artefact: String, versionOpStr: String, versionStr: String) =
     Action.async { implicit request =>
       implicit val format = ApiServiceDependencyFormats.sdFormat
-      VersionOp.parse(versionOpStr) match {
-        case Some(versionOp) => dependencyDataUpdatingService
-                                  .findServicesWithDependency(group, artefact, versionOp, Version(version))
-                                  .map(res => Ok(Json.toJson(res)))
-        case _               => Future(BadRequest(s"invalid versionOp")) // TODO toJson
-      }
+      (for {
+         versionOp <- EitherT.fromOption[Future](VersionOp.parse(versionOpStr), BadRequest(s"invalid versionOp")) // TODO json error
+         version   <- EitherT.fromOption[Future](Version.parse(versionStr), BadRequest(s"invalid version")) // TODO json error
+         res       <- EitherT.liftT[Future, Result, Seq[ServiceDependency]] {
+                        dependencyDataUpdatingService
+                          .findServicesWithDependency(group, artefact, versionOp, version)
+                      }
+       } yield Ok(Json.toJson(res))
+      ).merge
     }
 }
