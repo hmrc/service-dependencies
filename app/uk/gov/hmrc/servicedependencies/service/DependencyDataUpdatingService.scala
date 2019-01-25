@@ -103,14 +103,21 @@ class DependencyDataUpdatingService @Inject()(
       repositoryDependencies: MongoRepositoryDependencies,
       sbtPluginReferences   : Seq[MongoSbtPluginVersion]) =
     repositoryDependencies.sbtPluginDependencies.map { sbtPluginDependency =>
-      val mayBeExternalSbtPlugin = curatedDependencyConfig.sbtPlugins
-        .find(pluginConfig => pluginConfig.name == sbtPluginDependency.name && pluginConfig.isExternal())
+      val mayBeExternalSbtPlugin =
+        curatedDependencyConfig.sbtPlugins
+          .find(pluginConfig => pluginConfig.name == sbtPluginDependency.name && pluginConfig.isExternal)
 
-      val latestVersion = mayBeExternalSbtPlugin
-        .map(
-          _.version.getOrElse(throw new RuntimeException(
-            s"External sbt plugin ($mayBeExternalSbtPlugin) must specify the (latest) version")))
-        .orElse(sbtPluginReferences.find(_.sbtPluginName == sbtPluginDependency.name).flatMap(_.version))
+      val latestVersion =
+        mayBeExternalSbtPlugin
+          .map(_
+            .version
+            .getOrElse(sys.error(s"External sbt plugin ($mayBeExternalSbtPlugin) must specify the (latest) version"))
+          )
+          .orElse(
+            sbtPluginReferences
+              .find(_.sbtPluginName == sbtPluginDependency.name)
+              .flatMap(_.version)
+          )
 
       Dependency(
         sbtPluginDependency.name,

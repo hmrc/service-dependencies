@@ -23,8 +23,8 @@ class SbtPluginConfigSpec extends FreeSpec with Matchers {
 
   "SbtPlugins" - {
     "should correctly identify internal repositories" in {
-      SbtPluginConfig("uk.gov.hmrc", "something", None).isInternal()                   shouldBe true
-      SbtPluginConfig("uk.gov.hmrc", "something", Some(Version(1, 2, 3))).isInternal() shouldBe false
+      SbtPluginConfig("uk.gov.hmrc", "something", None).isInternal                   shouldBe true
+      SbtPluginConfig("uk.gov.hmrc", "something", Some(Version(1, 2, 3))).isInternal shouldBe false
     }
   }
 

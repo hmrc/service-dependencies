@@ -44,16 +44,16 @@ object Version {
   implicit val format = Json.format[Version]
 
   def apply(version: String): Version =
-    parse(version)
+    parse(version).getOrElse(sys.error(s"Could not parse version $version"))
 
   // TODO what about "0.8.0.RELEASE"?
   // should preserve suffix separator...
-  def parse(s: String): Version = {
+  def parse(s: String): Option[Version] = {
     val versionRegex = """(\d+)\.(\d+)\.(\d+)-?(.*)""".r.unanchored
-
     s match {
-      case versionRegex(maj, min, patch, "")     => Version(Integer.parseInt(maj), Integer.parseInt(min), Integer.parseInt(patch))
-      case versionRegex(maj, min, patch, suffix) => Version(Integer.parseInt(maj), Integer.parseInt(min), Integer.parseInt(patch), Some(suffix))
+      case versionRegex(maj, min, patch, "")     => Some(Version(Integer.parseInt(maj), Integer.parseInt(min), Integer.parseInt(patch)))
+      case versionRegex(maj, min, patch, suffix) => Some(Version(Integer.parseInt(maj), Integer.parseInt(min), Integer.parseInt(patch), Some(suffix)))
+      case _                                     => None
     }
   }
 
