@@ -37,8 +37,7 @@ class DependencyDataUpdatingService @Inject()(
   locksRepository                        : LocksRepository,
   mongoLocks                             : MongoLocks,
   dependenciesDataSource                 : DependenciesDataSource,
-  slugParserJobsRepository               : SlugParserJobsRepository,
-  slugInfoRepository                     : SlugInfoRepository
+  slugParserJobsRepository               : SlugParserJobsRepository
 ) {
 
   lazy val logger = LoggerFactory.getLogger(this.getClass)
@@ -182,37 +181,19 @@ class DependencyDataUpdatingService @Inject()(
   def getAllRepositoriesDependencies(): Future[Seq[MongoRepositoryDependencies]] =
     repositoryLibraryDependenciesRepository.getAllEntries
 
-  def dropCollection(collectionName: String) = collectionName match {
-    case "repositoryLibraryDependencies" => repositoryLibraryDependenciesRepository.clearAllData
-    case "libraryVersions"               => libraryVersionRepository.clearAllData
-    case "sbtPluginVersions"             => sbtPluginVersionRepository.clearAllData
-    case "locks"                         => locksRepository.clearAllData
-    case "slugParserJobs"                => slugParserJobsRepository.clearAllData
-    case other                           => throw new RuntimeException(s"dropping $other collection is not supported")
-  }
+  def dropCollection(collectionName: String) =
+    collectionName match {
+      case "repositoryLibraryDependencies" => repositoryLibraryDependenciesRepository.clearAllData
+      case "libraryVersions"               => libraryVersionRepository.clearAllData
+      case "sbtPluginVersions"             => sbtPluginVersionRepository.clearAllData
+      case "locks"                         => locksRepository.clearAllData
+      case "slugParserJobs"                => slugParserJobsRepository.clearAllData
+      case other                           => throw new RuntimeException(s"dropping $other collection is not supported")
+    }
 
   def locks(): Future[Seq[Lock]] =
     locksRepository.getAllEntries
 
   def clearUpdateDates =
     repositoryLibraryDependenciesRepository.clearUpdateDates
-
-  def addSlugParserJob(newJob: NewSlugParserJob): Future[Boolean] =
-    slugParserJobsRepository.add(newJob)
-
-  def getSlugInfos(name: String, version: Option[String]): Future[Seq[SlugInfo]] =
-    slugInfoRepository.getSlugInfos(name, version)
-
-  def findServicesWithDependency(
-      group    : String,
-      artefact : String,
-      versionOp: VersionOp,
-      version  : Version): Future[Seq[ServiceDependency]] =
-    slugInfoRepository.findServices(group, artefact).map { l =>
-      versionOp match {
-        case VersionOp.Gt => l.filter(_.depSemanticVersion.map(_ >= version).getOrElse(true)) // include invalid semanticVersion in results
-        case VersionOp.Lt => l.filter(_.depSemanticVersion.map(_ >= version).getOrElse(true))
-        case VersionOp.Eq => l.filter(_.depSemanticVersion == Some(version))
-      }
-    }
 }

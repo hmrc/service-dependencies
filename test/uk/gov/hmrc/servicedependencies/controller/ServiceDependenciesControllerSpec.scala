@@ -49,55 +49,62 @@ class ServiceDependenciesControllerSpec
     .build()
 
   "getDependencyVersionsForRepository" - {
-    "should get dependency versions for a repository using the service" in new Setup {
-      val mockedLibraryDependencyDataUpdatingService = mock[DependencyDataUpdatingService]
-      val repoName                                   = "repo1"
-      val repositoryDependencies                     = Dependencies(repoName, Nil, Nil, Nil, DateTimeUtils.now)
+    "should get dependency versions for a repository using the service" in {
+      val boot = Boot.init
+      val repoName               = "repo1"
+      val repositoryDependencies = Dependencies(repoName, Nil, Nil, Nil, DateTimeUtils.now)
 
-      when(mockedLibraryDependencyDataUpdatingService.getDependencyVersionsForRepository(any()))
+      when(boot.mockedDependencyDataUpdatingService.getDependencyVersionsForRepository(any()))
         .thenReturn(Future.successful(Some(repositoryDependencies)))
 
-      val result = makeServiceDependenciesImpl(mockedLibraryDependencyDataUpdatingService)
-        .getDependencyVersionsForRepository(repoName)
-        .apply(FakeRequest())
+      val result = boot.controller
+                    .getDependencyVersionsForRepository(repoName)
+                    .apply(FakeRequest())
       val maybeRepositoryDependencies = contentAsJson(result).asOpt[Dependencies]
 
       maybeRepositoryDependencies.value shouldBe repositoryDependencies
-      Mockito.verify(mockedLibraryDependencyDataUpdatingService).getDependencyVersionsForRepository(repoName)
+      Mockito.verify(boot.mockedDependencyDataUpdatingService).getDependencyVersionsForRepository(repoName)
     }
-
   }
 
   "get dependencies" - {
-    "should get all dependencies using the service" in new Setup {
-      val mockedLibraryDependencyDataUpdatingService = mock[DependencyDataUpdatingService]
+    "should get all dependencies using the service" in {
+      val boot = Boot.init
       val libraryDependencies = Seq(
         Dependencies("repo1", Nil, Nil, Nil, DateTimeUtils.now),
         Dependencies("repo2", Nil, Nil, Nil, DateTimeUtils.now),
         Dependencies("repo3", Nil, Nil, Nil, DateTimeUtils.now)
       )
-      when(mockedLibraryDependencyDataUpdatingService.getDependencyVersionsForAllRepositories()).thenReturn(
-        Future.successful(
-          libraryDependencies
-        ))
+      when(boot.mockedDependencyDataUpdatingService.getDependencyVersionsForAllRepositories())
+        .thenReturn(Future.successful(libraryDependencies))
 
-      val result =
-        makeServiceDependenciesImpl(mockedLibraryDependencyDataUpdatingService).dependencies().apply(FakeRequest())
+      val result = boot.controller.dependencies().apply(FakeRequest())
       val repositoryLibraryDependencies = contentAsJson(result).as[Seq[Dependencies]]
 
       repositoryLibraryDependencies.size shouldBe 3
       repositoryLibraryDependencies      should contain theSameElementsAs libraryDependencies
     }
-
   }
 
-  trait Setup {
-    def makeServiceDependenciesImpl(libraryDependencyUpdatingService: DependencyDataUpdatingService) =
-      new ServiceDependenciesController(
+  case class Boot(
+    mockedDependencyDataUpdatingService: DependencyDataUpdatingService,
+    mockedSlugInfoService              : SlugInfoService,
+    controller                         : ServiceDependenciesController)
+
+  object Boot {
+    def init: Boot = {
+      val mockedDependencyDataUpdatingService = mock[DependencyDataUpdatingService]
+      val mockedSlugInfoService               = mock[SlugInfoService]
+      val controller = new ServiceDependenciesController(
         Configuration(),
-        libraryDependencyUpdatingService,
+        mockedDependencyDataUpdatingService,
+        mockedSlugInfoService,
         mock[ServiceDependenciesConfig],
         stubControllerComponents())
+      Boot(
+        mockedDependencyDataUpdatingService,
+        mockedSlugInfoService,
+        controller)
+    }
   }
-
 }

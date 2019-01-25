@@ -30,16 +30,19 @@ import uk.gov.hmrc.servicedependencies.controller.model.Dependencies
 import uk.gov.hmrc.servicedependencies.model.{
   ApiServiceDependencyFormats, ApiSlugInfoFormats, ServiceDependency, Version, VersionOp
 }
-import uk.gov.hmrc.servicedependencies.service.DependencyDataUpdatingService
+import uk.gov.hmrc.servicedependencies.service.{
+  DependencyDataUpdatingService, SlugInfoService
+}
 
 import scala.concurrent.Future
 
 @Singleton
 class ServiceDependenciesController @Inject()(
-    configuration: Configuration,
+    configuration  : Configuration,
     dependencyDataUpdatingService: DependencyDataUpdatingService,
-    config       : ServiceDependenciesConfig,
-    cc           : ControllerComponents)
+    slugInfoService: SlugInfoService,
+    config         : ServiceDependenciesConfig,
+    cc             : ControllerComponents)
   extends BackendController(cc) {
 
   val logger = LoggerFactory.getLogger(this.getClass)
@@ -65,7 +68,7 @@ class ServiceDependenciesController @Inject()(
   def slugInfos(name: String, version: Option[String]) =
     Action.async { implicit request =>
       implicit val format = ApiSlugInfoFormats.siFormat
-      dependencyDataUpdatingService
+      slugInfoService
         .getSlugInfos(name, version)
         .map(res => Ok(Json.toJson(res)))
     }
@@ -77,7 +80,7 @@ class ServiceDependenciesController @Inject()(
          versionOp <- EitherT.fromOption[Future](VersionOp.parse(versionOpStr), BadRequest(s"invalid versionOp")) // TODO json error
          version   <- EitherT.fromOption[Future](Version.parse(versionStr), BadRequest(s"invalid version")) // TODO json error
          res       <- EitherT.liftT[Future, Result, Seq[ServiceDependency]] {
-                        dependencyDataUpdatingService
+                        slugInfoService
                           .findServicesWithDependency(group, artefact, versionOp, version)
                       }
        } yield Ok(Json.toJson(res))
