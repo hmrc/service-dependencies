@@ -20,7 +20,7 @@ import play.modules.reactivemongo.ReactiveMongoComponent
 import reactivemongo.api.indexes.{Index, IndexType}
 import reactivemongo.bson.BSONObjectID
 import uk.gov.hmrc.mongo.ReactiveRepository
-import uk.gov.hmrc.servicedependencies.model.{SlugInfo, MongoSlugInfoFormats}
+import uk.gov.hmrc.servicedependencies.model.{ServiceDependency, SlugInfo, MongoSlugInfoFormats}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.{ExecutionContext, Future}
@@ -62,5 +62,8 @@ class SlugInfoRepository @Inject()(mongo: ReactiveMongoComponent)
       case None          => find("name" -> name)
       case Some(version) => find("name" -> name, "version" -> version)
     }
+
+  def findServices(group: String, artefact: String): Future[Seq[ServiceDependency]] =
+    ???
 
 }

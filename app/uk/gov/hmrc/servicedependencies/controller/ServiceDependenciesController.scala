@@ -24,21 +24,20 @@ import play.api.mvc._
 import uk.gov.hmrc.play.bootstrap.controller.BackendController
 import uk.gov.hmrc.servicedependencies.config.ServiceDependenciesConfig
 import uk.gov.hmrc.servicedependencies.controller.model.Dependencies
-import uk.gov.hmrc.servicedependencies.model.ApiSlugInfoFormats
-import uk.gov.hmrc.servicedependencies.service._
+import uk.gov.hmrc.servicedependencies.model.{ApiServiceDependencyFormats, ApiSlugInfoFormats, Version}
+import uk.gov.hmrc.servicedependencies.service.DependencyDataUpdatingService
 
 @Singleton
 class ServiceDependenciesController @Inject()(
-  configuration: Configuration,
-  dependencyDataUpdatingService: DependencyDataUpdatingService,
-  config: ServiceDependenciesConfig,
-  cc: ControllerComponents)
-    extends BackendController(cc) {
+    configuration: Configuration,
+    dependencyDataUpdatingService: DependencyDataUpdatingService,
+    config       : ServiceDependenciesConfig,
+    cc           : ControllerComponents)
+  extends BackendController(cc) {
 
   val logger = LoggerFactory.getLogger(this.getClass)
 
   implicit val dependenciesFormat = Dependencies.format
-  implicit val slugInfoFormats    = ApiSlugInfoFormats.siFormat
 
   def getDependencyVersionsForRepository(repositoryName: String) =
     Action.async { implicit request =>
@@ -58,8 +57,17 @@ class ServiceDependenciesController @Inject()(
 
   def slugInfos(name: String, version: Option[String]) =
     Action.async { implicit request =>
+      implicit val format = ApiSlugInfoFormats.siFormat
       dependencyDataUpdatingService
         .getSlugInfos(name, version)
+        .map(res => Ok(Json.toJson(res)))
+    }
+
+  def getServicesWithDependency(group: String, artefact: String, versionOp: String, version: String) =
+    Action.async { implicit request =>
+      implicit val format = ApiServiceDependencyFormats.sdFormat
+      dependencyDataUpdatingService
+        .findServicesWithDependency(group, artefact, versionOp, Version(version))
         .map(res => Ok(Json.toJson(res)))
     }
 }

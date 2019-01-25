@@ -20,15 +20,21 @@ import play.api.libs.json.Json
 
 import play.api.libs.functional.syntax._
 
-case class Version(major: Int, minor: Int, patch: Int, suffix: Option[String] = None) {
-  def <(other: Version) =
+case class Version(
+    major: Int,
+    minor: Int,
+    patch: Int,
+    suffix: Option[String] = None)
+  extends Ordered[Version] {
+
+  override def compare(other: Version): Int =
     if (major == other.major)
       if (minor == other.minor)
-        patch < other.patch
+        patch - other.patch
       else
-        minor < other.minor
+        minor - other.minor
     else
-      major < other.major
+      major - other.major
 
   override def toString: String = s"$major.$minor.$patch${suffix.map("-"+_).getOrElse("")}"
   def normalise                 = s"${major}_${minor}_$patch"
@@ -49,7 +55,7 @@ object Version {
     }
   }
 
-  implicit val ord = Ordering.by(unapply)
+  //implicit val ord = Ordering.by(unapply)
 
   implicit class VersionExtensions(v: String) {
     def asVersion(): Version =
