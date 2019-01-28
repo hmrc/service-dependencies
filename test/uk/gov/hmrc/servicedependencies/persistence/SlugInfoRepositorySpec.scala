@@ -80,6 +80,41 @@ class SlugInfoRepositorySpec
     }
   }
 
+  "SlugParserJobsRepository.findServices" should {
+
+    "only search the latest slugs" in {
+      await(slugInfoRepository.add(oldSlugInfo))
+      await(slugInfoRepository.add(slugInfo))
+
+      val result = await(slugInfoRepository.findServices( "com.test.group",  "lib1"))
+
+      result.length shouldBe 1
+
+      result.head.slugVersion shouldBe "0.27.0"
+      result.head.depArtefact shouldBe "lib1"
+      result.head.depGroup shouldBe "com.test.group"
+      result.head.depVersion shouldBe "1.2.0"
+      result.head.depSemanticVersion shouldBe Some(Version(1, 2, 0))
+
+    }
+
+    "find all slugs with a dependency matched by group and artifact" in {
+      await(slugInfoRepository.add(oldSlugInfo))
+      await(slugInfoRepository.add(slugInfo))
+      await(slugInfoRepository.add(otherSlug))
+
+      val result = await(slugInfoRepository.findServices( "com.test.group",  "lib2"))
+      result.length shouldBe 1
+
+      result.head.slugVersion shouldBe "0.27.0"
+      result.head.depArtefact shouldBe "lib2"
+      result.head.depGroup shouldBe "com.test.group"
+      result.head.depVersion shouldBe "0.66"
+      result.head.depSemanticVersion shouldBe None
+    }
+
+  }
+
   val slugInfo =
     SlugInfo(
       uri             = "https://store/slugs/my-slug/my-slug_0.27.0_0.5.2.tgz",
@@ -93,13 +128,37 @@ class SlugInfoRepositorySpec
       dependencies    = List(
         SlugDependency(
           path     = "lib1",
-          version  = "v1",
+          version  = "1.2.0",
           group    = "com.test.group",
           artifact = "lib1"
         ),
         SlugDependency(
           path     = "lib2",
-          version  = "v2",
+          version  = "0.66",
           group    = "com.test.group",
-          artifact = "lib1")))
+          artifact = "lib2")))
+
+  val oldSlugInfo = slugInfo.copy(
+    uri     = "https://store/slugs/my-slug/my-slug_0.26.0_0.5.2.tgz",
+    version = "0.26.0",
+    semanticVersion = Version("0.26.0"),
+    versionLong     = 26000
+  )
+
+  val otherSlug =   SlugInfo(
+    uri             = "https://store/slugs/other-slug/other-slug_0.55.0_0.5.2.tgz",
+    name            = "other-slug",
+    version         = "0.55.0",
+    semanticVersion = Version("0.55.0"),
+    versionLong     = 55000,
+    runnerVersion   = "0.5.2",
+    classpath       = "",
+    jdkVersion      = "",
+    dependencies    = List(
+      SlugDependency(
+        path     = "lib3",
+        version  = "1.66.1",
+        group    = "io.stuff",
+        artifact = "lib3"
+      )))
 }
