@@ -25,6 +25,7 @@ import uk.gov.hmrc.play.bootstrap.controller.BackendController
 import uk.gov.hmrc.servicedependencies.config.ServiceDependenciesConfig
 import uk.gov.hmrc.servicedependencies.connector.TeamsAndRepositoriesConnector
 import uk.gov.hmrc.servicedependencies.controller.model.Dependencies
+import uk.gov.hmrc.servicedependencies.model.ApiSlugInfoFormats
 import uk.gov.hmrc.servicedependencies.service._
 
 @Singleton
@@ -39,31 +40,42 @@ class ServiceDependenciesController @Inject()(
   val logger = LoggerFactory.getLogger(this.getClass)
 
   implicit val dependenciesFormat = Dependencies.format
+  implicit val slugInfoFormats    = ApiSlugInfoFormats.siFormat
 
-  def getDependencyVersionsForRepository(repositoryName: String) = Action.async { implicit request =>
-    dependencyDataUpdatingService
-      .getDependencyVersionsForRepository(repositoryName)
-      .map(maybeRepositoryDependencies =>
-        maybeRepositoryDependencies.fold(NotFound(s"$repositoryName not found"))(repoDependencies =>
-          Ok(Json.toJson(repoDependencies))))
-  }
-
-  def dependencies() = Action.async { implicit request =>
-    dependencyDataUpdatingService
-      .getDependencyVersionsForAllRepositories()
-      .map(dependencies => Ok(Json.toJson(dependencies)))
-  }
-
-  def dependenciesForTeam(team: String) = Action.async { implicit request =>
-    for {
-      teamRepos <- teamsAndRepositoriesConnector.getTeam(team)
-      deps <- dependencyDataUpdatingService.getDependencyVersionsForAllRepositories()
-    } yield {
-      val repos: Map[String, Seq[String]] = teamRepos.getOrElse(Map())
-      val services = repos.getOrElse("Service", List())
-      val libraries = repos.getOrElse("Library", List())
-      val teamDeps = deps.filter(d => services.contains(d.repositoryName) || libraries.contains(d.repositoryName))
-      Ok(Json.toJson(teamDeps))
+  def getDependencyVersionsForRepository(repositoryName: String) =
+    Action.async { implicit request =>
+      dependencyDataUpdatingService
+        .getDependencyVersionsForRepository(repositoryName)
+        .map { case None      => NotFound(s"$repositoryName not found")
+               case Some(res) => Ok(Json.toJson(res))
+             }
     }
-  }
+
+  def dependencies() =
+    Action.async { implicit request =>
+      dependencyDataUpdatingService
+        .getDependencyVersionsForAllRepositories
+        .map(res => Ok(Json.toJson(res)))
+    }
+
+  def slugInfos(name: String, version: Option[String]) =
+    Action.async { implicit request =>
+      dependencyDataUpdatingService
+        .getSlugInfos(name, version)
+        .map(res => Ok(Json.toJson(res)))
+    }
+
+  def dependenciesForTeam(team: String) =
+    Action.async { implicit request =>
+      for {
+        teamRepos <- teamsAndRepositoriesConnector.getTeam(team)
+        deps      <- dependencyDataUpdatingService.getDependencyVersionsForAllRepositories()
+      } yield {
+        val repos: Map[String, Seq[String]] = teamRepos.getOrElse(Map())
+        val services = repos.getOrElse("Service", List())
+        val libraries = repos.getOrElse("Library", List())
+        val teamDeps = deps.filter(d => services.contains(d.repositoryName) || libraries.contains(d.repositoryName))
+        Ok(Json.toJson(teamDeps))
+      }
+    }
 }

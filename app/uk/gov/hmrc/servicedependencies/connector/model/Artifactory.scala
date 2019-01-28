@@ -14,14 +14,18 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.servicedependencies
+package uk.gov.hmrc.servicedependencies.connector.model
 
-import com.google.inject.AbstractModule
 
-class SchedulerModule() extends AbstractModule {
-  override def configure(): Unit = {
-    bind(classOf[DataReloadScheduler]).asEagerSingleton()
-    bind(classOf[MetricsScheduler]).asEagerSingleton()
-    bind(classOf[Github]).toProvider(classOf[GithubProvider])
-  }
+import play.api.libs.json.Json
+
+
+case class ArtifactoryRepo(repo: String, lastModified: String, lastUpdated: String, children: Seq[ArtifactoryChild])
+case class ArtifactoryChild(uri: String, folder: Boolean)
+
+object ArtifactoryRepo {
+
+  implicit val artifactoryChildFormat = Json.format[ArtifactoryChild]
+  implicit val artifactoryRepoFormat = Json.format[ArtifactoryRepo]
+
 }

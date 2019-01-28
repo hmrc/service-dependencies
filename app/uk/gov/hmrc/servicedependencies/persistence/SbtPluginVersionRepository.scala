@@ -36,37 +36,22 @@ class SbtPluginVersionRepository @Inject()(mongo: ReactiveMongoComponent, future
       mongo          = mongo.mongoConnector.db,
       domainFormat   = MongoSbtPluginVersion.format) {
 
-  override def ensureIndexes(implicit ec: ExecutionContext): Future[Seq[Boolean]] =
-    localEnsureIndexes
-
-  private def localEnsureIndexes =
-    Future.sequence(
-      Seq(
-        collection
-          .indexesManager
-          .ensure(
-            Index(
-              Seq("sbtPluginName" -> IndexType.Hashed),
-              name       = Some("sbtPluginNameIdx"),
-              unique     = true,
-              background = true))
-      )
-    )
+  override def indexes: Seq[Index] =
+    Seq(
+      Index(
+        Seq("sbtPluginName" -> IndexType.Hashed),
+        name       = Some("sbtPluginNameIdx"),
+        background = true))
 
   def update(sbtPluginVersion: MongoSbtPluginVersion): Future[MongoSbtPluginVersion] = {
-
     logger.debug(s"writing $sbtPluginVersion")
     futureHelpers.withTimerAndCounter("mongo.update") {
-      for {
-        update <- collection.update(
-                   selector = Json.obj("sbtPluginName" -> Json.toJson(sbtPluginVersion.sbtPluginName)),
-                   update   = sbtPluginVersion,
-                   upsert   = true)
-      } yield
-        update match {
-          case _ => sbtPluginVersion
-        }
-    } recover {
+      collection.update(
+          selector = Json.obj("sbtPluginName" -> Json.toJson(sbtPluginVersion.sbtPluginName)),
+          update   = sbtPluginVersion,
+          upsert   = true)
+        .map(_ => sbtPluginVersion)
+    }.recover {
       case lastError => throw new RuntimeException(s"failed to persist SbtPluginVersion: $sbtPluginVersion", lastError)
     }
   }

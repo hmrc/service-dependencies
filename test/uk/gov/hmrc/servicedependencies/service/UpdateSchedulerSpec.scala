@@ -41,7 +41,7 @@ class UpdateSchedulerSpec extends TestKit(ActorSystem("UpdateSchedulerSpec"))
   trait Counter {
     var count                = 0
     def getCallCount: Int    = count
-    def resetCallCount: Unit = count = 0
+    def resetCallCount(): Unit = count = 0
   }
 
   implicit val hc = HeaderCarrier()

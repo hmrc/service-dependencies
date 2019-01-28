@@ -25,7 +25,7 @@ import play.api.test.Helpers._
 import org.scalatestplus.play.guice.GuiceOneServerPerSuite
 import play.api.test.FakeRequest
 import uk.gov.hmrc.servicedependencies.model.MongoRepositoryDependencies
-import uk.gov.hmrc.servicedependencies.service.DependencyDataUpdatingService
+import uk.gov.hmrc.servicedependencies.service.{DependencyDataUpdatingService, SlugJobCreator, SlugJobProcessor}
 
 import scala.concurrent.Future
 
@@ -43,11 +43,13 @@ class AdministrationControllerSpec
 
     "should call the reloadLibraryDependencyDataForAllRepositories on the service" in {
       val mockedLibraryDependencyDataUpdatingService = mock[DependencyDataUpdatingService]
+      val mockedSlugJobProcessor = mock[SlugJobProcessor]
+      val mockedSlugJobCreator = mock[SlugJobCreator]
 
       when(mockedLibraryDependencyDataUpdatingService.reloadCurrentDependenciesDataForAllRepositories(any())(any()))
         .thenReturn(Future.successful(Seq.empty[MongoRepositoryDependencies]))
 
-      val controller = new AdministrationController(mockedLibraryDependencyDataUpdatingService, stubControllerComponents())
+      val controller = new AdministrationController(mockedLibraryDependencyDataUpdatingService, mockedSlugJobProcessor, mockedSlugJobCreator, stubControllerComponents())
       controller.reloadLibraryDependenciesForAllRepositories().apply(FakeRequest())
 
       verify(mockedLibraryDependencyDataUpdatingService).reloadCurrentDependenciesDataForAllRepositories(eqTo(false))(
@@ -56,11 +58,13 @@ class AdministrationControllerSpec
 
     "should accept an optional query parameter to force the dependencies to be reloaded" in {
       val mockedLibraryDependencyDataUpdatingService = mock[DependencyDataUpdatingService]
+      val mockedSlugJobProcessor = mock[SlugJobProcessor]
+      val mockedSlugJobCreator = mock[SlugJobCreator]
 
       when(mockedLibraryDependencyDataUpdatingService.reloadCurrentDependenciesDataForAllRepositories(any())(any()))
         .thenReturn(Future.successful(Seq.empty[MongoRepositoryDependencies]))
 
-      val controller = new AdministrationController(mockedLibraryDependencyDataUpdatingService, stubControllerComponents())
+      val controller = new AdministrationController(mockedLibraryDependencyDataUpdatingService, mockedSlugJobProcessor, mockedSlugJobCreator, stubControllerComponents())
       controller.reloadLibraryDependenciesForAllRepositories(Some(true)).apply(FakeRequest())
 
       verify(mockedLibraryDependencyDataUpdatingService).reloadCurrentDependenciesDataForAllRepositories(eqTo(true))(
@@ -69,11 +73,13 @@ class AdministrationControllerSpec
 
     "should not force dependencies if the force query parameter is set to false" in {
       val mockedLibraryDependencyDataUpdatingService = mock[DependencyDataUpdatingService]
+      val mockedSlugJobProcessor = mock[SlugJobProcessor]
+      val mockedSlugJobCreator = mock[SlugJobCreator]
 
       when(mockedLibraryDependencyDataUpdatingService.reloadCurrentDependenciesDataForAllRepositories(any())(any()))
         .thenReturn(Future.successful(Seq.empty[MongoRepositoryDependencies]))
 
-      val controller = new AdministrationController(mockedLibraryDependencyDataUpdatingService, stubControllerComponents())
+      val controller = new AdministrationController(mockedLibraryDependencyDataUpdatingService, mockedSlugJobProcessor, mockedSlugJobCreator, stubControllerComponents())
       controller.reloadLibraryDependenciesForAllRepositories(Some(false)).apply(FakeRequest())
 
       verify(mockedLibraryDependencyDataUpdatingService).reloadCurrentDependenciesDataForAllRepositories(eqTo(false))(

@@ -27,6 +27,10 @@ import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
 class ServiceDependenciesConfig @Inject()(configuration: Configuration,
                                           serviceConfig: ServicesConfig) {
 
+  lazy val artifactoryBase: String           = configuration.get[String]("artifactory.url")
+  lazy val artifactoryApiKey: Option[String] = configuration.getOptional[String]("artifactory.apikey")
+  lazy val webstoreBase: String              = configuration.get[String]("artifactory.webstore")
+
   private val githubOpenConfigKey     = "github.open.api"
   private val releaseServiceUrlKey    = "releases.api.url"
   private val targetArtifactsKey      = "target.artifacts"

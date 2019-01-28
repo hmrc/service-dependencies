@@ -21,12 +21,19 @@ import play.api.Logger
 import play.api.libs.json.Json
 import play.api.mvc.ControllerComponents
 import uk.gov.hmrc.play.bootstrap.controller.BackendController
-import uk.gov.hmrc.servicedependencies.service.DependencyDataUpdatingService
+import uk.gov.hmrc.servicedependencies.model.{MongoSlugParserJob, NewSlugParserJob}
+import uk.gov.hmrc.servicedependencies.service.{DependencyDataUpdatingService, SlugJobCreator, SlugJobProcessor}
+
+import scala.concurrent.Future
+import scala.util.control.NonFatal
 
 @Singleton
-class AdministrationController @Inject()(dependencyDataUpdatingService: DependencyDataUpdatingService, cc: ControllerComponents)
-    extends BackendController(cc) {
-
+class AdministrationController @Inject()(
+    dependencyDataUpdatingService: DependencyDataUpdatingService,
+    slugJobProcessor             : SlugJobProcessor,
+    slugJobCreator               : SlugJobCreator,
+    cc                           : ControllerComponents)
+  extends BackendController(cc) {
 
   def reloadLibraryDependenciesForAllRepositories(force: Option[Boolean] = None) = Action { implicit request =>
     dependencyDataUpdatingService
@@ -70,4 +77,57 @@ class AdministrationController @Inject()(dependencyDataUpdatingService: Dependen
     dependencyDataUpdatingService.locks().map(locks => Ok(Json.toJson(locks)))
   }
 
+  def addSlugParserJob =
+    Action.async(parse.json) { implicit request =>
+      withJsonBody[NewSlugParserJob] { newJob =>
+        dependencyDataUpdatingService.addSlugParserJob(newJob)
+          .map { case true  => slugJobProcessor.run()
+                               Created
+                 case false => Conflict
+               }
+          .recover{
+            case ex => throw new RuntimeException("creation of slug job failed", ex)
+          }
+      }
+    }
+
+  def processSlugParserJobs =
+    Action { implicit request =>
+      Logger.info("Processing slug parser jobs")
+      slugJobProcessor.run()
+        .recover {
+          case NonFatal(e) => Logger.error(s"An error occurred processing slug parser jobs: ${e.getMessage}", e)
+        }
+      Accepted
+    }
+
+  def executeJob =
+    Action.async(parse.json) { implicit request =>
+      withJsonBody[NewSlugParserJob] { job =>
+        slugJobProcessor.processJob(MongoSlugParserJob(
+                    id        = "0",
+                    slugUri   = job.slugUri,
+                    processed = false,
+                    attempts  = 0))
+          .recover {
+            case NonFatal(e) => Logger.error(s"An error occurred processing slug parser job ${job.slugUri}: ${e.getMessage}", e)
+          }
+        Future(Accepted)
+      }
+    }
+
+  def createSlugParserJobs(from: Int, limit: Int) =
+    Action { implicit request =>
+      Logger.info(s"Creating slug parser jobs: from=$from, limit=$limit")
+      slugJobCreator
+        .runHistoric(from, Some(limit))
+        .flatMap { _ =>
+          Logger.info("Finished creating slug jobs - now processing jobs")
+          slugJobProcessor.run()
+        }
+        .recover {
+          case NonFatal(e) => Logger.error(s"An error occurred creating slug parser jobs: ${e.getMessage}", e)
+        }
+      Accepted
+    }
 }

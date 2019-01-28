@@ -34,9 +34,11 @@ class UpdateScheduler @Inject()(
     Logger.info(s"Initialising libraryDependencyDataReloader update every $interval")
 
     val scheduler = actorSystem.scheduler.schedule(100 milliseconds, interval) {
-      dependencyDataUpdatingService.reloadCurrentDependenciesDataForAllRepositories().recover {
-        case NonFatal(e) => Logger.error(s"Library dependencies update interrupted because: ${e.getMessage}")
-      }
+      dependencyDataUpdatingService.reloadCurrentDependenciesDataForAllRepositories()
+        .map(_ => ())
+        .recover {
+          case NonFatal(e) => Logger.error(s"Library dependencies update interrupted because: ${e.getMessage}", e)
+        }
     }
 
     scheduler
@@ -46,9 +48,11 @@ class UpdateScheduler @Inject()(
     Logger.info(s"Initialising libraryDataReloader update every $interval")
 
     val scheduler = actorSystem.scheduler.schedule(100 milliseconds, interval) {
-      dependencyDataUpdatingService.reloadLatestLibraryVersions().recover {
-        case NonFatal(e) => Logger.error(s"Libraries version update interrupted because: ${e.getMessage}")
-      }
+      dependencyDataUpdatingService.reloadLatestLibraryVersions()
+        .map(_ => ())
+        .recover {
+          case NonFatal(e) => Logger.error(s"Libraries version update interrupted because: ${e.getMessage}", e)
+        }
     }
 
     scheduler
@@ -58,9 +62,11 @@ class UpdateScheduler @Inject()(
     Logger.info(s"Initialising SbtPluginDataReloader update every $interval")
 
     val scheduler = actorSystem.scheduler.schedule(100 milliseconds, interval) {
-      dependencyDataUpdatingService.reloadLatestSbtPluginVersions().recover {
-        case NonFatal(e) => Logger.error(s"Sbt Plugins version update interrupted because: ${e.getMessage}")
-      }
+      dependencyDataUpdatingService.reloadLatestSbtPluginVersions()
+        .map(_ => ())
+        .recover {
+          case NonFatal(e) => Logger.error(s"Sbt Plugins version update interrupted because: ${e.getMessage}", e)
+        }
     }
 
     scheduler

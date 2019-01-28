@@ -40,7 +40,7 @@ object Version {
   def apply(version: String): Version =
     parse(version)
 
-  def parse(s: String) : Version = {
+  def parse(s: String): Version = {
     val versionRegex = """(\d+)\.(\d+)\.(\d+)-?(.*)""".r.unanchored
 
     s match {

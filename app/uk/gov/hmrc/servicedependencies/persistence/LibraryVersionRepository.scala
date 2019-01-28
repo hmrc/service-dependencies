@@ -37,9 +37,6 @@ class LibraryVersionRepository @Inject()(mongo: ReactiveMongoComponent, futureHe
       domainFormat   = MongoLibraryVersion.format) {
 
   override def ensureIndexes(implicit ec: ExecutionContext): Future[Seq[Boolean]] =
-    localEnsureIndexes
-
-  private def localEnsureIndexes =
     Future.sequence(
       Seq(
         collection
@@ -54,19 +51,14 @@ class LibraryVersionRepository @Inject()(mongo: ReactiveMongoComponent, futureHe
     )
 
   def update(libraryVersion: MongoLibraryVersion): Future[MongoLibraryVersion] = {
-
     logger.debug(s"writing $libraryVersion")
     futureHelpers
       .withTimerAndCounter("mongo.update") {
-      for {
-        update <- collection.update(
-                   selector = Json.obj("libraryName" -> Json.toJson(libraryVersion.libraryName)),
-                   update   = libraryVersion,
-                   upsert   = true)
-      } yield
-        update match {
-          case _ => libraryVersion
-        }
+        collection.update(
+            selector = Json.obj("libraryName" -> Json.toJson(libraryVersion.libraryName)),
+            update   = libraryVersion,
+            upsert   = true)
+          .map(_ => libraryVersion)
     } recover {
       case lastError => throw new RuntimeException(s"failed to persist LibraryVersion: $libraryVersion", lastError)
     }

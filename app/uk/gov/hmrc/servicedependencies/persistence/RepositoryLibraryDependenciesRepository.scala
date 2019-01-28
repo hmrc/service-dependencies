@@ -37,35 +37,22 @@ class RepositoryLibraryDependenciesRepository @Inject()(mongo: ReactiveMongoComp
       mongo          = mongo.mongoConnector.db,
       domainFormat   = MongoRepositoryDependencies.format) {
 
-  override def ensureIndexes(implicit ec: ExecutionContext): Future[Seq[Boolean]] = localEnsureIndexes
-
-  private def localEnsureIndexes =
-    Future.sequence(
-      Seq(
-        collection.indexesManager.ensure(
-          Index(
-            Seq("repositoryName" -> IndexType.Hashed),
-            name       = Some("RepositoryNameIdx"),
-            unique     = true,
-            background = true))
-      )
-    )
+  override def indexes: Seq[Index] =
+    Seq(
+      Index(
+        Seq("repositoryName" -> IndexType.Hashed),
+        name       = Some("RepositoryNameIdx"),
+        background = true))
 
   def update(repositoryLibraryDependencies: MongoRepositoryDependencies): Future[MongoRepositoryDependencies] = {
-
     logger.info(s"writing to mongo: $repositoryLibraryDependencies")
-
     futureHelper.withTimerAndCounter("mongo.update") {
-      for {
-        update <- collection.update(
-                   selector = Json.obj("repositoryName" -> Json.toJson(repositoryLibraryDependencies.repositoryName)),
-                   update   = repositoryLibraryDependencies,
-                   upsert   = true)
-      } yield
-        update match {
-          case _ => repositoryLibraryDependencies
-        }
-    } recover {
+      collection.update(
+          selector = Json.obj("repositoryName" -> Json.toJson(repositoryLibraryDependencies.repositoryName)),
+          update   = repositoryLibraryDependencies,
+          upsert   = true)
+        .map(_ => repositoryLibraryDependencies)
+    }.recover {
       case lastError =>
         throw new RuntimeException(
           s"failed to persist RepositoryLibraryDependencies: $repositoryLibraryDependencies",
@@ -75,7 +62,7 @@ class RepositoryLibraryDependenciesRepository @Inject()(mongo: ReactiveMongoComp
 
   def getForRepository(repositoryName: String): Future[Option[MongoRepositoryDependencies]] =
     futureHelper.withTimerAndCounter("mongo.read") {
-      find("repositoryName" -> BSONRegex("^" + repositoryName + "$", "i")) map {
+      find("repositoryName" -> BSONRegex("^" + repositoryName + "$", "i")).map {
         case data if data.size > 1 =>
           throw new RuntimeException(
             s"There should only be '1' record per repository! for $repositoryName there are ${data.size}")
