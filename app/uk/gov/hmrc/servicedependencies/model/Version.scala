@@ -41,8 +41,9 @@ case class Version(
 
 object Version {
   val mongoFormat: OFormat[Version] = {
+    // previous mongo data has suffix rather than original - this will be handled in read.
     def toVersion(major: Int, minor: Int, patch: Int, original: Option[String], suffix: Option[String]) =
-      Version(major, minor, patch, original.getOrElse(s"$major.$minor.$patch-${suffix.getOrElse("")}"))
+      Version(major, minor, patch, original.getOrElse(s"$major.$minor.$patch${suffix.map("-" + _).getOrElse("")}"))
 
     def fromVersion(v: Version) =
       (v.major, v.minor, v.patch, Some(v.original), None)
@@ -84,19 +85,4 @@ object Version {
     def asVersion(): Version =
       Version(v)
   }
-}
-
-trait VersionOp
-object VersionOp {
-  case object Gt extends VersionOp
-  case object Lt extends VersionOp
-  case object Eq extends VersionOp
-
-  def parse(s: String): Option[VersionOp] =
-    s match {
-      case "gt" => Some(Gt)
-      case "lt" => Some(Lt)
-      case "eq" => Some(Eq)
-      case _    => None
-    }
 }

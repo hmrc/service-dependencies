@@ -42,16 +42,6 @@ class SlugInfoService @Inject()(
   def getSlugInfos(name: String, version: Option[String]): Future[Seq[SlugInfo]] =
     slugInfoRepository.getSlugInfos(name, version)
 
-  def findServicesWithDependency(
-      group    : String,
-      artefact : String,
-      versionOp: VersionOp,
-      version  : Version): Future[Seq[ServiceDependency]] =
-    slugInfoRepository.findServices(group, artefact).map { l =>
-      versionOp match {
-        case VersionOp.Gt => l.filter(_.depSemanticVersion.map(_ >= version).getOrElse(true)) // include invalid semanticVersion in results
-        case VersionOp.Lt => l.filter(_.depSemanticVersion.map(_ <= version).getOrElse(true))
-        case VersionOp.Eq => l.filter(_.depSemanticVersion == Some(version))
-      }
-    }
+  def findServicesWithDependency(group: String,artefact : String): Future[Seq[ServiceDependency]] =
+    slugInfoRepository.findServices(group, artefact)
 }
