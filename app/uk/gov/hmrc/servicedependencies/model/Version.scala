@@ -21,10 +21,10 @@ import play.api.libs.json.Json
 import play.api.libs.functional.syntax._
 
 case class Version(
-    major: Int,
-    minor: Int,
-    patch: Int,
-    suffix: Option[String] = None)
+    major   : Int,
+    minor   : Int,
+    patch   : Int,
+    original: String)
   extends Ordered[Version] {
 
   override def compare(other: Version): Int =
@@ -36,7 +36,7 @@ case class Version(
     else
       major - other.major
 
-  override def toString: String = s"$major.$minor.$patch${suffix.map("-"+_).getOrElse("")}"
+  override def toString: String = original
   def normalise                 = s"${major}_${minor}_$patch"
 }
 
@@ -46,14 +46,18 @@ object Version {
   def apply(version: String): Version =
     parse(version).getOrElse(sys.error(s"Could not parse version $version"))
 
-  // TODO what about "0.8.0.RELEASE"?
-  // should preserve suffix separator...
+  def apply(major: Int, minor: Int, patch: Int): Version =
+    Version(major, minor, patch, s"$major.$minor.$patch")
+
   def parse(s: String): Option[Version] = {
-    val versionRegex = """(\d+)\.(\d+)\.(\d+)-?(.*)""".r.unanchored
+    val regex3 = """(\d+)\.(\d+)\.(\d+)?(.*)""".r.unanchored
+    val regex2 = """(\d+)\.(\d+)?(.*)""".r.unanchored
+    val regex1 = """(\d+)?(.*)""".r.unanchored
     s match {
-      case versionRegex(maj, min, patch, "")     => Some(Version(Integer.parseInt(maj), Integer.parseInt(min), Integer.parseInt(patch)))
-      case versionRegex(maj, min, patch, suffix) => Some(Version(Integer.parseInt(maj), Integer.parseInt(min), Integer.parseInt(patch), Some(suffix)))
-      case _                                     => None
+      case regex3(maj, min, patch, _) => Some(Version(Integer.parseInt(maj), Integer.parseInt(min), Integer.parseInt(patch), s))
+      case regex2(maj, min,  _)       => Some(Version(Integer.parseInt(maj), Integer.parseInt(min), 0                      , s))
+      case regex1(min,  _)            => Some(Version(0                    , Integer.parseInt(min), 0                      , s))
+      case _                          => None
     }
   }
 
