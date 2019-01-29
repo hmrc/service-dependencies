@@ -71,7 +71,7 @@ class SlugInfoServiceSpec
 
       val boot = Boot.init
 
-      val bad = v100.copy(depVersion  = "20080701")
+      val bad = v100.copy(depVersion  = "r938")
 
       when(boot.mockedSlugInfoRepository.findServices(group, artefact))
         .thenReturn(Future(Seq(v100, v200, v205, bad)))

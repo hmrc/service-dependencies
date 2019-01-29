@@ -53,8 +53,10 @@ trait MongoSlugInfoFormats {
   implicit val sdFormat: OFormat[SlugDependency] =
     Json.format[SlugDependency]
 
-  implicit val siFormat: OFormat[SlugInfo] =
+  implicit val siFormat: OFormat[SlugInfo] = {
+    implicit val vf = Version.mongoFormat
     Json.format[SlugInfo]
+  }
 }
 
 object MongoSlugInfoFormats extends MongoSlugInfoFormats
@@ -64,8 +66,10 @@ trait ApiSlugInfoFormats {
   implicit val sdFormat: OFormat[SlugDependency] =
     Json.format[SlugDependency]
 
-  implicit val siFormat: OFormat[SlugInfo] =
+  implicit val siFormat: OFormat[SlugInfo] = {
+    implicit val vf = Version.apiFormat
     Json.format[SlugInfo]
+  }
 }
 
 object ApiSlugInfoFormats extends ApiSlugInfoFormats
