@@ -20,24 +20,33 @@ import play.api.libs.json._
 import play.api.mvc.ControllerComponents
 import uk.gov.hmrc.mongo.json.ReactiveMongoFormats
 import uk.gov.hmrc.play.bootstrap.controller.BackendController
-import uk.gov.hmrc.servicedependencies.model.{MongoLibraryVersion, MongoRepositoryDependencies, MongoSbtPluginVersion, Version}
-import uk.gov.hmrc.servicedependencies.persistence.{LibraryVersionRepository, RepositoryLibraryDependenciesRepository, SbtPluginVersionRepository}
+import uk.gov.hmrc.servicedependencies.model.{
+  MongoLibraryVersion, MongoRepositoryDependencies, MongoSbtPluginVersion, SlugDependency, SlugInfo, Version
+}
+import uk.gov.hmrc.servicedependencies.persistence.{
+  LibraryVersionRepository, RepositoryLibraryDependenciesRepository, SbtPluginVersionRepository, SlugInfoRepository
+}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
-class IntegrationTestController @Inject() (libraryRepo:                LibraryVersionRepository,
-                                           sbtPluginVersionRepository: SbtPluginVersionRepository,
-                                           dependenciesRepository:     RepositoryLibraryDependenciesRepository,
-                                           cc: ControllerComponents) extends BackendController(cc) {
-
-
+class IntegrationTestController @Inject()(
+    libraryRepo               : LibraryVersionRepository,
+    sbtPluginVersionRepository: SbtPluginVersionRepository,
+    dependenciesRepository    : RepositoryLibraryDependenciesRepository,
+    sluginfoRepo              : SlugInfoRepository,
+    cc                        : ControllerComponents)
+  extends BackendController(cc) {
 
   implicit val dtf                  = ReactiveMongoFormats.dateTimeFormats
   implicit val vf                   = Version.apiFormat
   implicit val libraryVersionFormat = Json.using[Json.WithDefaultValues].format[MongoLibraryVersion]
   implicit val sbtVersionFormat     = Json.using[Json.WithDefaultValues].format[MongoSbtPluginVersion]
   implicit val dependenciesFormat   = Json.using[Json.WithDefaultValues].format[MongoRepositoryDependencies]
+  implicit val sluginfoFormat       = {
+    implicit val sdf = Json.using[Json.WithDefaultValues].format[SlugDependency]
+    Json.using[Json.WithDefaultValues].format[SlugInfo]
+  }
 
   private def validateJson[A : Reads] = parse.json.validate(
     _.validate[A].asEither.left.map(e => BadRequest(JsError.toJson(e)))
@@ -59,6 +68,11 @@ class IntegrationTestController @Inject() (libraryRepo:                LibraryVe
   }
 
 
+  def addSluginfos = Action.async(validateJson[Seq[SlugInfo]]) { implicit request =>
+    Future.sequence(request.body.map(sluginfoRepo.add)).map(_ => Ok("Done"))
+  }
+
+
   def deleteSbt = Action.async { implicit request =>
       sbtPluginVersionRepository.clearAllData.map(_ => Ok("Done"))
   }
@@ -74,14 +88,18 @@ class IntegrationTestController @Inject() (libraryRepo:                LibraryVe
   }
 
 
+  def deleteSluginfos = Action.async { implicit request =>
+    sluginfoRepo.clearAllData.map(_ => Ok("Done"))
+  }
+
+
   def deleteAll = Action.async { implicit request =>
 
-    val result = for {
+    for {
       _ <- sbtPluginVersionRepository.clearAllData
       _ <- dependenciesRepository.clearAllData
-      f <- libraryRepo.clearAllData
-    } yield f
-
-    result.map(_ => Ok("Deleted"))
+      _ <- libraryRepo.clearAllData
+      _ <- sluginfoRepo.clearAllData
+    } yield Ok("Deleted")
   }
 }
