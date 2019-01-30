@@ -37,8 +37,7 @@ class DependencyDataUpdatingService @Inject()(
   locksRepository                        : LocksRepository,
   mongoLocks                             : MongoLocks,
   dependenciesDataSource                 : DependenciesDataSource,
-  slugParserJobsRepository               : SlugParserJobsRepository,
-  slugInfoRepository                     : SlugInfoRepository
+  slugParserJobsRepository               : SlugParserJobsRepository
 ) {
 
   lazy val logger = LoggerFactory.getLogger(this.getClass)
@@ -103,14 +102,21 @@ class DependencyDataUpdatingService @Inject()(
       repositoryDependencies: MongoRepositoryDependencies,
       sbtPluginReferences   : Seq[MongoSbtPluginVersion]) =
     repositoryDependencies.sbtPluginDependencies.map { sbtPluginDependency =>
-      val mayBeExternalSbtPlugin = curatedDependencyConfig.sbtPlugins
-        .find(pluginConfig => pluginConfig.name == sbtPluginDependency.name && pluginConfig.isExternal())
+      val mayBeExternalSbtPlugin =
+        curatedDependencyConfig.sbtPlugins
+          .find(pluginConfig => pluginConfig.name == sbtPluginDependency.name && pluginConfig.isExternal)
 
-      val latestVersion = mayBeExternalSbtPlugin
-        .map(
-          _.version.getOrElse(throw new RuntimeException(
-            s"External sbt plugin ($mayBeExternalSbtPlugin) must specify the (latest) version")))
-        .orElse(sbtPluginReferences.find(_.sbtPluginName == sbtPluginDependency.name).flatMap(_.version))
+      val latestVersion =
+        mayBeExternalSbtPlugin
+          .map(_
+            .version
+            .getOrElse(sys.error(s"External sbt plugin ($mayBeExternalSbtPlugin) must specify the (latest) version"))
+          )
+          .orElse(
+            sbtPluginReferences
+              .find(_.sbtPluginName == sbtPluginDependency.name)
+              .flatMap(_.version)
+          )
 
       Dependency(
         sbtPluginDependency.name,
@@ -175,24 +181,19 @@ class DependencyDataUpdatingService @Inject()(
   def getAllRepositoriesDependencies(): Future[Seq[MongoRepositoryDependencies]] =
     repositoryLibraryDependenciesRepository.getAllEntries
 
-  def dropCollection(collectionName: String) = collectionName match {
-    case "repositoryLibraryDependencies" => repositoryLibraryDependenciesRepository.clearAllData
-    case "libraryVersions"               => libraryVersionRepository.clearAllData
-    case "sbtPluginVersions"             => sbtPluginVersionRepository.clearAllData
-    case "locks"                         => locksRepository.clearAllData
-    case "slugParserJobs"                => slugParserJobsRepository.clearAllData
-    case other                           => throw new RuntimeException(s"dropping $other collection is not supported")
-  }
+  def dropCollection(collectionName: String) =
+    collectionName match {
+      case "repositoryLibraryDependencies" => repositoryLibraryDependenciesRepository.clearAllData
+      case "libraryVersions"               => libraryVersionRepository.clearAllData
+      case "sbtPluginVersions"             => sbtPluginVersionRepository.clearAllData
+      case "locks"                         => locksRepository.clearAllData
+      case "slugParserJobs"                => slugParserJobsRepository.clearAllData
+      case other                           => throw new RuntimeException(s"dropping $other collection is not supported")
+    }
 
   def locks(): Future[Seq[Lock]] =
     locksRepository.getAllEntries
 
   def clearUpdateDates =
     repositoryLibraryDependenciesRepository.clearUpdateDates
-
-  def addSlugParserJob(newJob: NewSlugParserJob): Future[Boolean] =
-    slugParserJobsRepository.add(newJob)
-
-  def getSlugInfos(name: String, version: Option[String]): Future[Seq[SlugInfo]] =
-    slugInfoRepository.getSlugInfos(name, version)
 }

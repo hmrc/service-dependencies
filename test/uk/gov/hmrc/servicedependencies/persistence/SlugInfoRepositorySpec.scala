@@ -17,16 +17,14 @@
 package uk.gov.hmrc.servicedependencies.persistence
 
 import org.mockito.Mockito.when
-import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.mockito.MockitoSugar
-import org.scalatest.{BeforeAndAfterEach, LoneElement, OptionValues}
+import org.scalatest.{BeforeAndAfterEach, LoneElement}
 import org.scalatestplus.play.guice.GuiceOneAppPerSuite
 import play.api.Application
 import play.modules.reactivemongo.ReactiveMongoComponent
 import uk.gov.hmrc.mongo.{MongoConnector, MongoSpecSupport}
 import uk.gov.hmrc.play.test.UnitSpec
 import uk.gov.hmrc.servicedependencies.model.{SlugInfo, SlugDependency, Version}
-import uk.gov.hmrc.time.DateTimeUtils
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
@@ -34,8 +32,6 @@ class SlugInfoRepositorySpec
     extends UnitSpec
        with LoneElement
        with MongoSpecSupport
-       with ScalaFutures
-       with OptionValues
        with BeforeAndAfterEach
        with MockitoSugar {
 
@@ -84,7 +80,6 @@ class SlugInfoRepositorySpec
       uri             = "https://store/slugs/my-slug/my-slug_0.27.0_0.5.2.tgz",
       name            = "my-slug",
       version         = "0.27.0",
-      semanticVersion = Version("0.27.0"),
       versionLong     = 27000,
       runnerVersion   = "0.5.2",
       classpath       = "",

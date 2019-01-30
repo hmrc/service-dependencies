@@ -507,8 +507,6 @@ class DependencyDataUpdatingServiceSpec
 
     val slugParserJobsRepository: SlugParserJobsRepository = mock[SlugParserJobsRepository]
 
-    val slugInfoRepository: SlugInfoRepository = mock[SlugInfoRepository]
-
     val testDependencyUpdatingService = new DependencyDataUpdatingService(
       curatedDependencyConfigProvider,
       repositoryLibraryDependenciesRepository,
@@ -517,18 +515,14 @@ class DependencyDataUpdatingServiceSpec
       locksRepository,
       mongoLocks,
       dependenciesDataSource,
-      slugParserJobsRepository,
-      slugInfoRepository
+      slugParserJobsRepository
     ) {
-
       override def now: DateTime = timeForTest
 
       override val libraryMongoLock              = testMongoLockBuilder("libraryMongoLock")
       override val sbtPluginMongoLock            = testMongoLockBuilder("sbtPluginMongoLock")
       override val repositoryDependencyMongoLock = testMongoLockBuilder("repositoryDependencyMongoLock")
-
     }
-
   }
 
   def denyingTestMongoLockBuilder(lockId: String) = new MongoLock(() => mock[DB], lockId) {

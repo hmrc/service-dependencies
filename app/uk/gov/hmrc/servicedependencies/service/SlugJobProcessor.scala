@@ -77,16 +77,19 @@ object SlugParser {
   def parse(slugUri: String, in: InputStream): SlugInfo = {
     val tar = new ArchiveStreamFactory().createArchiveInputStream(new BufferedInputStream(in))
 
-    val (runnerVersion, slugVersion, slugName) =
-      extractVersionsFromUri(slugUri)
-        .getOrElse(sys.error(s"Could not extract slug data from uri $slugUri"))
+    val (runnerVersion, slugVersion, slugName, versionLong) =
+      (for {
+         (runnerVersion, slugVersion, slugName) <- extractVersionsFromUri(slugUri)
+         semanticVersion                        <- Version.parse(slugVersion)
+         versionLong                            <- SlugInfo.toLong(slugVersion)
+       } yield (runnerVersion, slugVersion, slugName, versionLong)
+      ).getOrElse(sys.error(s"Could not extract slug data from uri $slugUri"))
 
     val slugInfo = SlugInfo(
       uri             = slugUri,
       name            = slugName,
       version         = slugVersion,
-      semanticVersion = Version.parse(slugVersion),
-      versionLong     = SlugInfo.toLong(slugVersion).getOrElse(sys.error(s"Could not extract slug data from uri $slugUri")),
+      versionLong     = versionLong,
       runnerVersion   = runnerVersion,
       classpath       = "",
       jdkVersion      = "",

@@ -17,13 +17,15 @@
 package uk.gov.hmrc.servicedependencies.persistence
 import com.google.inject.{Inject, Singleton}
 import play.modules.reactivemongo.ReactiveMongoComponent
+import reactivemongo.api.Cursor
+import reactivemongo.api.collections.bson.BSONCollection
 import reactivemongo.api.indexes.{Index, IndexType}
-import reactivemongo.bson.BSONObjectID
+import reactivemongo.bson.{BSONDocument, BSONDocumentReader, BSONObjectID}
 import uk.gov.hmrc.mongo.ReactiveRepository
-import uk.gov.hmrc.servicedependencies.model.{SlugInfo, MongoSlugInfoFormats}
+import uk.gov.hmrc.servicedependencies.model.{MongoSlugInfoFormats, ServiceDependency, SlugInfo}
 
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.Future
 
 @Singleton
 class SlugInfoRepository @Inject()(mongo: ReactiveMongoComponent)
@@ -62,5 +64,79 @@ class SlugInfoRepository @Inject()(mongo: ReactiveMongoComponent)
       case None          => find("name" -> name)
       case Some(version) => find("name" -> name, "version" -> version)
     }
+
+
+  implicit object ReaderServiceDependency extends BSONDocumentReader[ServiceDependency]{
+    override def read(bson: BSONDocument): ServiceDependency = {
+      val opt: Option[ServiceDependency] = for {
+        slugName     <- bson.getAs[String]("slugName")
+        slugVersion  <- bson.getAs[String]("slugVersion")
+        depGroup     <- bson.getAs[String]("depGroup")
+        depArtifact  <- bson.getAs[String]("depArtifact")
+        depVersion   <- bson.getAs[String]("depVersion")
+      } yield ServiceDependency(
+        slugName = slugName
+        , slugVersion = slugVersion
+        , depGroup = depGroup
+        , depArtefact = depArtifact
+        , depVersion = depVersion
+      )
+      opt.get
+    }
+  }
+
+
+  def findServices(group: String, artefact: String): Future[Seq[ServiceDependency]] =
+    findServices(group, artefact, mongo.mongoConnector.db().collection(collectionName))
+
+
+  private def findServices(group: String, artefact: String, col: BSONCollection): Future[Seq[ServiceDependency]] = {
+
+    import col.BatchCommands.AggregationFramework.{Ascending, Descending, FirstField, Group, Match, Project, Sort, UnwindField}
+    import reactivemongo.bson._
+
+    // pipeline functions
+    val sortBySlug = Sort(Ascending("name"), Descending("versionLong"))
+
+    val groupByLatestSlug = Group(BSONString(f"$$name"))(
+        "version"      -> FirstField("version")
+      , "uri"          -> FirstField("uri")
+      , "dependencies" -> FirstField("dependencies")
+      , "versionLong"  -> FirstField("versionLong")
+    )
+
+
+    val unwindDependencies = UnwindField("dependencies")
+
+
+    val projectIntoServiceDependency = Project(
+      document(
+         "_id" -> 0
+        , "slugName"    -> "$_id"
+        , "slugVersion" -> "$version"
+        , "versionLong" -> "$versionLong"
+        , "lib"         -> "$dependencies"
+        , "depGroup"    -> "$dependencies.group"
+        , "depArtifact" -> "$dependencies.artifact"
+        , "depVersion"  -> "$dependencies.version"
+      )
+    )
+
+    val matchArtifact = Match(document("depArtifact" -> artefact, "depGroup" -> group))
+
+
+    // run the pipeline
+    col.aggregatorContext[ServiceDependency](
+      sortBySlug,
+      List(
+         groupByLatestSlug
+        ,unwindDependencies
+        ,projectIntoServiceDependency
+        ,matchArtifact
+      ))
+      .prepared
+      .cursor
+      .collect[List](-1, Cursor.FailOnError[List[ServiceDependency]]())
+  }
 
 }

@@ -20,7 +20,7 @@ import play.api.libs.json._
 import play.api.mvc.ControllerComponents
 import uk.gov.hmrc.mongo.json.ReactiveMongoFormats
 import uk.gov.hmrc.play.bootstrap.controller.BackendController
-import uk.gov.hmrc.servicedependencies.model.{MongoLibraryVersion, MongoRepositoryDependencies, MongoSbtPluginVersion}
+import uk.gov.hmrc.servicedependencies.model.{MongoLibraryVersion, MongoRepositoryDependencies, MongoSbtPluginVersion, Version}
 import uk.gov.hmrc.servicedependencies.persistence.{LibraryVersionRepository, RepositoryLibraryDependenciesRepository, SbtPluginVersionRepository}
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -34,6 +34,7 @@ class IntegrationTestController @Inject() (libraryRepo:                LibraryVe
 
 
   implicit val dtf                  = ReactiveMongoFormats.dateTimeFormats
+  implicit val vf                   = Version.apiFormat
   implicit val libraryVersionFormat = Json.using[Json.WithDefaultValues].format[MongoLibraryVersion]
   implicit val sbtVersionFormat     = Json.using[Json.WithDefaultValues].format[MongoSbtPluginVersion]
   implicit val dependenciesFormat   = Json.using[Json.WithDefaultValues].format[MongoRepositoryDependencies]

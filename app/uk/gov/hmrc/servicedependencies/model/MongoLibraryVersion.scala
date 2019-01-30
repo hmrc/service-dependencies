@@ -24,12 +24,18 @@ import uk.gov.hmrc.time.DateTimeUtils
 case class MongoLibraryVersion(libraryName: String, version: Option[Version], updateDate: DateTime = DateTimeUtils.now)
 object MongoLibraryVersion {
   implicit val dtf    = ReactiveMongoFormats.dateTimeFormats
-  implicit val format = Json.format[MongoLibraryVersion]
+  implicit val format = {
+    implicit val vf = Version.mongoFormat
+    Json.format[MongoLibraryVersion]
+  }
 }
 
 case class LibraryVersion(libraryName: String, version: Option[Version])
 object LibraryVersion {
-  implicit val format = Json.format[LibraryVersion]
+  implicit val format = {
+    implicit val vf = Version.apiFormat
+    Json.format[LibraryVersion]
+  }
 
   def apply(mongoLibraryVersion: MongoLibraryVersion): LibraryVersion =
     LibraryVersion(mongoLibraryVersion.libraryName, mongoLibraryVersion.version)

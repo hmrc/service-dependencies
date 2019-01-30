@@ -25,22 +25,28 @@ import uk.gov.hmrc.play.bootstrap.controller.BackendController
 import uk.gov.hmrc.servicedependencies.config.ServiceDependenciesConfig
 import uk.gov.hmrc.servicedependencies.connector.TeamsAndRepositoriesConnector
 import uk.gov.hmrc.servicedependencies.controller.model.Dependencies
-import uk.gov.hmrc.servicedependencies.model.ApiSlugInfoFormats
-import uk.gov.hmrc.servicedependencies.service._
+import uk.gov.hmrc.servicedependencies.model.{
+  ApiServiceDependencyFormats, ApiSlugInfoFormats, ServiceDependency
+}
+import uk.gov.hmrc.servicedependencies.service.{
+  DependencyDataUpdatingService, SlugInfoService
+}
+
+import scala.concurrent.Future
 
 @Singleton
 class ServiceDependenciesController @Inject()(
-  configuration: Configuration,
-  dependencyDataUpdatingService: DependencyDataUpdatingService,
-  teamsAndRepositoriesConnector: TeamsAndRepositoriesConnector,
-  config: ServiceDependenciesConfig,
-  cc: ControllerComponents)
-    extends BackendController(cc) {
+    configuration  : Configuration,
+    dependencyDataUpdatingService: DependencyDataUpdatingService,
+    teamsAndRepositoriesConnector: TeamsAndRepositoriesConnector,
+    slugInfoService: SlugInfoService,
+    config         : ServiceDependenciesConfig,
+    cc             : ControllerComponents)
+  extends BackendController(cc) {
 
   val logger = LoggerFactory.getLogger(this.getClass)
 
   implicit val dependenciesFormat = Dependencies.format
-  implicit val slugInfoFormats    = ApiSlugInfoFormats.siFormat
 
   def getDependencyVersionsForRepository(repositoryName: String) =
     Action.async { implicit request =>
@@ -60,7 +66,8 @@ class ServiceDependenciesController @Inject()(
 
   def slugInfos(name: String, version: Option[String]) =
     Action.async { implicit request =>
-      dependencyDataUpdatingService
+      implicit val format = ApiSlugInfoFormats.siFormat
+      slugInfoService
         .getSlugInfos(name, version)
         .map(res => Ok(Json.toJson(res)))
     }
@@ -70,12 +77,18 @@ class ServiceDependenciesController @Inject()(
       for {
         teamRepos <- teamsAndRepositoriesConnector.getTeam(team)
         deps      <- dependencyDataUpdatingService.getDependencyVersionsForAllRepositories()
-      } yield {
-        val repos: Map[String, Seq[String]] = teamRepos.getOrElse(Map())
-        val services = repos.getOrElse("Service", List())
-        val libraries = repos.getOrElse("Library", List())
-        val teamDeps = deps.filter(d => services.contains(d.repositoryName) || libraries.contains(d.repositoryName))
-        Ok(Json.toJson(teamDeps))
-      }
+        repos     =  teamRepos.getOrElse(Map())
+        services  =  repos.getOrElse("Service", List())
+        libraries =  repos.getOrElse("Library", List())
+        teamDeps  =  deps.filter(d => services.contains(d.repositoryName) || libraries.contains(d.repositoryName))
+      } yield Ok(Json.toJson(teamDeps))
+    }
+
+  def getServicesWithDependency(group: String, artefact: String) =
+    Action.async { implicit request =>
+      implicit val format = ApiServiceDependencyFormats.sdFormat
+      slugInfoService
+        .findServicesWithDependency(group, artefact)
+       .map(res => Ok(Json.toJson(res)))
     }
 }

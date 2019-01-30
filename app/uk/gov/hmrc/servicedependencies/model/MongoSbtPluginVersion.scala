@@ -28,13 +28,19 @@ case class MongoSbtPluginVersion(
 
 object MongoSbtPluginVersion {
   implicit val dtf    = ReactiveMongoFormats.dateTimeFormats
-  implicit val format = Json.format[MongoSbtPluginVersion]
+  implicit val format = {
+    implicit val vf = Version.mongoFormat
+    Json.format[MongoSbtPluginVersion]
+  }
 }
 
 case class SbtPluginVersion(sbtPluginName: String, version: Option[Version])
 
 object SbtPluginVersion {
-  implicit val format = Json.format[SbtPluginVersion]
+  implicit val format = {
+    implicit val vd = Version.apiFormat
+    Json.format[SbtPluginVersion]
+  }
 
   def apply(mongoSbtPluginVersion: MongoSbtPluginVersion): SbtPluginVersion =
     SbtPluginVersion(mongoSbtPluginVersion.sbtPluginName, mongoSbtPluginVersion.version)

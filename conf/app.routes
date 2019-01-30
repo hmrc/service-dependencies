@@ -2,3 +2,4 @@ GET     /api/dependencies                      @uk.gov.hmrc.servicedependencies.
 GET     /api/dependencies/:repository          @uk.gov.hmrc.servicedependencies.controller.ServiceDependenciesController.getDependencyVersionsForRepository(repository)
 GET     /api/sluginfos                         @uk.gov.hmrc.servicedependencies.controller.ServiceDependenciesController.slugInfos(name: String, version: Option[String])
 GET     /api/teams/:team/dependencies          @uk.gov.hmrc.servicedependencies.controller.ServiceDependenciesController.dependenciesForTeam(team)
+GET     /api/serviceDeps                       @uk.gov.hmrc.servicedependencies.controller.ServiceDependenciesController.getServicesWithDependency(group: String, artefact: String)

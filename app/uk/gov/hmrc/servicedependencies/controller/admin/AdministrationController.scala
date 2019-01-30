@@ -22,7 +22,9 @@ import play.api.libs.json.Json
 import play.api.mvc.ControllerComponents
 import uk.gov.hmrc.play.bootstrap.controller.BackendController
 import uk.gov.hmrc.servicedependencies.model.{MongoSlugParserJob, NewSlugParserJob}
-import uk.gov.hmrc.servicedependencies.service.{DependencyDataUpdatingService, SlugJobCreator, SlugJobProcessor}
+import uk.gov.hmrc.servicedependencies.service.{
+  DependencyDataUpdatingService, SlugJobCreator, SlugJobProcessor, SlugInfoService
+}
 
 import scala.concurrent.Future
 import scala.util.control.NonFatal
@@ -30,6 +32,7 @@ import scala.util.control.NonFatal
 @Singleton
 class AdministrationController @Inject()(
     dependencyDataUpdatingService: DependencyDataUpdatingService,
+    slugInfoService              : SlugInfoService,
     slugJobProcessor             : SlugJobProcessor,
     slugJobCreator               : SlugJobCreator,
     cc                           : ControllerComponents)
@@ -80,7 +83,7 @@ class AdministrationController @Inject()(
   def addSlugParserJob =
     Action.async(parse.json) { implicit request =>
       withJsonBody[NewSlugParserJob] { newJob =>
-        dependencyDataUpdatingService.addSlugParserJob(newJob)
+        slugInfoService.addSlugParserJob(newJob)
           .map { case true  => slugJobProcessor.run()
                                Created
                  case false => Conflict

@@ -17,14 +17,13 @@
 package uk.gov.hmrc.servicedependencies.service
 import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer
-import akka.stream.scaladsl.Sink
-import akka.testkit.{ImplicitSender, TestKit, TestProbe}
+import akka.testkit.{ImplicitSender, TestKit}
 import org.scalatest.mockito.MockitoSugar
 import org.mockito.Mockito._
 import org.scalatest.{FlatSpecLike, Matchers}
 import uk.gov.hmrc.servicedependencies.connector.ArtifactoryConnector
-import uk.gov.hmrc.servicedependencies.connector.model.{ArtifactoryChild, ArtifactoryRepo}
-import uk.gov.hmrc.servicedependencies.model.{MongoSlugParserJob, NewSlugParserJob}
+import uk.gov.hmrc.servicedependencies.connector.model.ArtifactoryChild
+import uk.gov.hmrc.servicedependencies.model.NewSlugParserJob
 import uk.gov.hmrc.servicedependencies.persistence. {
   SlugJobLastRunRepository, SlugParserJobsRepository
 }
@@ -40,32 +39,54 @@ class SlugJobCreatorSpec extends TestKit(ActorSystem("SlugJobCreatorSpec"))
   with MockitoSugar
   with Matchers {
 
-  val mockConnector  = mock[ArtifactoryConnector]
-  val mockJobsRepo   = mock[SlugParserJobsRepository]
-  val mockJobRunRepo = mock[SlugJobLastRunRepository]
-
-
   "SlugJobCreator.add" should "write a number of mongojobs to the database" in {
+
+    val boot = Boot.init
 
     val slug1 = ArtifactoryChild("/test-service", true)
     val slug2 = ArtifactoryChild("/abc", true)
     val slugJob = NewSlugParserJob("http://")
 
-    when(mockConnector.findAllServices()).thenReturn(Future(List(slug1, slug2)))
+    when(boot.mockedArtifactoryConnector.findAllServices())
+      .thenReturn(Future(List(slug1, slug2)))
 
-    when(mockConnector.findAllSlugsForService("/test-service")).thenReturn(Future(List(NewSlugParserJob("http://test-service/test-service_1.2.3-0.5.2.tgz"))))
-    when(mockConnector.findAllSlugsForService("/abc")).thenReturn(Future(List(NewSlugParserJob("http://abc/abc.2.3-0.5.2.tgz"))))
-    when(mockJobsRepo.add(any())).thenReturn(Future(true))
+    when(boot.mockedArtifactoryConnector.findAllSlugsForService("/test-service"))
+      .thenReturn(Future(List(NewSlugParserJob("http://test-service/test-service_1.2.3-0.5.2.tgz"))))
 
-    val slugJobCreator = new SlugJobCreator(mockConnector, mockJobsRepo, mockJobRunRepo)(ActorMaterializer()) {
-      override val rateLimit: RateLimit = RateLimit(1000, FiniteDuration(10, "seconds"))
-    }
+    when(boot.mockedArtifactoryConnector.findAllSlugsForService("/abc"))
+      .thenReturn(Future(List(NewSlugParserJob("http://abc/abc.2.3-0.5.2.tgz"))))
 
-    slugJobCreator.runHistoric(limit = Some(1000))
+    when(boot.mockedSlugParserJobsRepository.add(any()))
+      .thenReturn(Future(true))
+
+    boot.slugJobCreator.runHistoric(limit = Some(1000))
 
     Thread.sleep(1000)
-    verify(mockConnector, times(1)).findAllServices()
-    verify(mockConnector, times(1)).findAllSlugsForService("/test-service")
-    verify(mockConnector, times(1)).findAllSlugsForService("/abc")
+    verify(boot.mockedArtifactoryConnector, times(1)).findAllServices()
+    verify(boot.mockedArtifactoryConnector, times(1)).findAllSlugsForService("/test-service")
+    verify(boot.mockedArtifactoryConnector, times(1)).findAllSlugsForService("/abc")
+  }
+
+  case class Boot(
+    mockedArtifactoryConnector    : ArtifactoryConnector,
+    mockedSlugParserJobsRepository: SlugParserJobsRepository,
+    mockedJobLastRunRepository    : SlugJobLastRunRepository,
+    slugJobCreator                : SlugJobCreator
+  )
+
+  object Boot {
+    def init: Boot = {
+      val mockedArtifactoryConnector     = mock[ArtifactoryConnector]
+      val mockedSlugParserJobsRepository = mock[SlugParserJobsRepository]
+      val mockedJobLastRunRepository     = mock[SlugJobLastRunRepository]
+      val slugJobCreator = new SlugJobCreator(mockedArtifactoryConnector, mockedSlugParserJobsRepository, mockedJobLastRunRepository)(ActorMaterializer()) {
+        override val rateLimit: RateLimit = RateLimit(1000, FiniteDuration(10, "seconds"))
+      }
+      Boot(
+        mockedArtifactoryConnector,
+        mockedSlugParserJobsRepository,
+        mockedJobLastRunRepository,
+        slugJobCreator)
+    }
   }
 }
