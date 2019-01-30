@@ -17,8 +17,9 @@
 package uk.gov.hmrc.servicedependencies
 import akka.actor.ActorSystem
 import javax.inject.Inject
-import play.api.{Configuration, Logger}
+import play.api.Logger
 import play.api.inject.ApplicationLifecycle
+import uk.gov.hmrc.servicedependencies.config.SchedulerConfig
 import uk.gov.hmrc.servicedependencies.service.{SlugJobCreator, SlugJobProcessor}
 import uk.gov.hmrc.servicedependencies.persistence.MongoLocks
 
@@ -27,7 +28,7 @@ import scala.concurrent.duration.{DurationLong, FiniteDuration}
 
 class SlugJobCreatorScheduler @Inject()(
     actorSystem         : ActorSystem,
-    configuration       : Configuration,
+    schedulerConfig     : SchedulerConfig,
     slugJobCreator      : SlugJobCreator,
     slugJobProcessor    : SlugJobProcessor,
     mongoLocks          : MongoLocks,
@@ -35,19 +36,11 @@ class SlugJobCreatorScheduler @Inject()(
 
   import ExecutionContext.Implicits.global
 
-  private val enabledKey  = "repositoryDependencies.slugJob.enabled"
-  private val intervalKey = "repositoryDependencies.slugJob.interval"
-
-  private lazy val interval: FiniteDuration =
-    Option(configuration.getMillis(intervalKey))
-      .map(_.milliseconds)
-      .getOrElse(throw new RuntimeException(s"$intervalKey not specified"))
-
-  private lazy val enabled: Boolean =
-    configuration.getOptional[Boolean](enabledKey).getOrElse(false)
-
+  private val interval: FiniteDuration = schedulerConfig.slugJobCreatorInterval
+  private val enabled: Boolean = schedulerConfig.slugJobCreatorEnabled
 
   if (enabled) {
+    Logger.info(s"Slug Job Creator is ENABLED, checking for new slugs every ${interval.toString()}.")
     val cancellable = actorSystem.scheduler.schedule(1.minute, interval) {
       Logger.info(s"Starting slug job creator scheduler")
 
@@ -65,6 +58,6 @@ class SlugJobCreatorScheduler @Inject()(
     }
     applicationLifecycle.addStopHook(() => Future(cancellable.cancel()))
   } else {
-    Logger.info("Slug job creator is DISABLED. No new slug parser jobs will be created.")
+    Logger.info("Slug Job Creator is DISABLED. No new slug parser jobs will be created.")
   }
 }

@@ -20,17 +20,14 @@ import org.mockito.Mockito.when
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.mockito.MockitoSugar
 import org.scalatest.{BeforeAndAfterEach, LoneElement, OptionValues}
-import org.scalatestplus.play.guice.GuiceOneAppPerSuite
-import play.api.Application
-import play.api.inject.guice.GuiceApplicationBuilder
-
-import scala.concurrent.ExecutionContext.Implicits.global
 import play.modules.reactivemongo.ReactiveMongoComponent
 import uk.gov.hmrc.mongo.{MongoConnector, MongoSpecSupport}
 import uk.gov.hmrc.play.test.UnitSpec
 import uk.gov.hmrc.servicedependencies.model.{MongoSbtPluginVersion, Version}
-import uk.gov.hmrc.servicedependencies.util.FutureHelpers
+import uk.gov.hmrc.servicedependencies.util.{FutureHelpers, MockFutureHelpers}
 import uk.gov.hmrc.time.DateTimeUtils
+
+import scala.concurrent.ExecutionContext.Implicits.global
 
 class SbtPluginVersionRepositorySpec
     extends UnitSpec
@@ -39,7 +36,6 @@ class SbtPluginVersionRepositorySpec
     with ScalaFutures
     with OptionValues
     with BeforeAndAfterEach
-    with GuiceOneAppPerSuite
     with MockitoSugar {
 
   val reactiveMongoComponent: ReactiveMongoComponent = new ReactiveMongoComponent {
@@ -49,11 +45,7 @@ class SbtPluginVersionRepositorySpec
     override def mongoConnector = mockedMongoConnector
   }
 
-  override def fakeApplication(): Application = GuiceApplicationBuilder()
-    .configure("metrics.jvm" -> false)
-    .build()
-
-  val futureHelper: FutureHelpers = app.injector.instanceOf[FutureHelpers]
+  val futureHelper: FutureHelpers = new MockFutureHelpers()
   val mongoSbtPluginVersions = new SbtPluginVersionRepository(reactiveMongoComponent, futureHelper)
 
   override def beforeEach() {

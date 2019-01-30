@@ -26,7 +26,7 @@ import scala.util.{Failure, Success}
 @Singleton
 class FutureHelpers @Inject()(metrics: Metrics) {
 
-  val defaultMetricsRegistry: MetricRegistry = metrics.defaultRegistry
+  lazy val defaultMetricsRegistry: MetricRegistry = metrics.defaultRegistry
 
   def withTimerAndCounter[T](name: String)(f: Future[T]) = {
     val t = defaultMetricsRegistry.timer(s"$name.timer").time()
