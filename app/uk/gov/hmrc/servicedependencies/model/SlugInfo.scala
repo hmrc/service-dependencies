@@ -30,7 +30,6 @@ case class SlugInfo(
   uri             : String,
   name            : String,
   version         : String,
-  semanticVersion : Version,
   versionLong     : Long,
   runnerVersion   : String,
   classpath       : String,

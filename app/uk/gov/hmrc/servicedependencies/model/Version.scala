@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.servicedependencies.model
 
-import play.api.libs.json.{__, Json, OFormat}
+import play.api.libs.json.{__, Format, Json, JsError, JsString, JsSuccess, JsValue, OFormat}
 import play.api.libs.functional.syntax._
 
 case class Version(
@@ -41,6 +41,7 @@ case class Version(
 
 object Version {
   val mongoFormat: OFormat[Version] = {
+    // TODO just store as string...
     // previous mongo data has suffix rather than original - this will be handled in read.
     def toVersion(major: Int, minor: Int, patch: Int, original: Option[String], suffix: Option[String]) =
       Version(major, minor, patch, original.getOrElse(s"$major.$minor.$patch${suffix.map("-" + _).getOrElse("")}"))
@@ -56,12 +57,15 @@ object Version {
     )(toVersion, fromVersion)
   }
 
-  val apiFormat: OFormat[Version] =
-    ( (__ \ "major"   ).format[Int]
-    ~ (__ \ "minor"   ).format[Int]
-    ~ (__ \ "patch"   ).format[Int]
-    ~ (__ \ "original").format[String]
-    )(Version.apply, unlift(Version.unapply))
+  val apiFormat: Format[Version] = new Format[Version] {
+    override def reads(json: JsValue) =
+      json match {
+        case JsString(s) => Version.parse(s).map(v => JsSuccess(v)).getOrElse(JsError("Could not parse version"))
+        case _           => JsError("Not a string")
+      }
+    override def writes(v: Version) =
+      JsString(v.original)
+  }
 
   def apply(version: String): Version =
     parse(version).getOrElse(sys.error(s"Could not parse version $version"))
