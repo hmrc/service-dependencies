@@ -53,7 +53,9 @@ class GithubSpec extends WordSpec with Matchers with MockitoSugar with OptionVal
         .right
         .get
         .sbtPlugins shouldBe
-        Map("sbt-plugin" -> Some(Version(2, 3, 10)), "sbt-auto-build" -> Some(Version(1, 3, 0)))
+        Map(
+          "sbt-plugin"     -> Some(Version("2.3.10")),
+          "sbt-auto-build" -> Some(Version("1.3.0")))
     }
 
     "queries build.properties file(s) for sbt version" in new TestSetup {
@@ -69,7 +71,7 @@ class GithubSpec extends WordSpec with Matchers with MockitoSugar with OptionVal
         .right
         .get
         .others shouldBe
-        Map("sbt" -> Some(Version(0, 13, 15)))
+        Map("sbt" -> Some(Version("0.13.15")))
     }
 
     "queries github's repository for plugins and libraries" in new TestSetup {
@@ -100,10 +102,10 @@ class GithubSpec extends WordSpec with Matchers with MockitoSugar with OptionVal
       )
 
       results.right.get.sbtPlugins shouldBe Map(
-        "sbt-plugin"     -> Some(Version(2, 3, 10)),
-        "sbt-auto-build" -> Some(Version(1, 3, 0)))
+        "sbt-plugin"     -> Some(Version("2.3.10")),
+        "sbt-auto-build" -> Some(Version("1.3.0")))
       results.right.get.libraries shouldBe Map(
-        "play-ui"     -> Some(Version(1, 3, 0)),
+        "play-ui"     -> Some(Version("1.3.0")),
         "play-health" -> Some(Version("0.5.0")))
     }
 
@@ -124,9 +126,9 @@ class GithubSpec extends WordSpec with Matchers with MockitoSugar with OptionVal
         .get
         .libraries shouldBe
         Map(
-          "play-frontend" -> Some(Version(1, 1, 1)),
-          "play-ui"       -> Some(Version(2, 2, 2)),
-          "play-health"   -> Some(Version(8, 8, 8)))
+          "play-frontend" -> Some(Version("1.1.1")),
+          "play-ui"       -> Some(Version("2.2.2")),
+          "play-health"   -> Some(Version("8.8.8")))
     }
 
     "does not return an empty list of dependencies but fails when an http error occurs" in new TestSetup {
@@ -162,9 +164,9 @@ class GithubSpec extends WordSpec with Matchers with MockitoSugar with OptionVal
         .get
         .libraries shouldBe
         Map(
-          "play-frontend" -> Some(Version(1, 1, 1)),
-          "play-ui"       -> Some(Version(2, 2, 2)),
-          "play-health"   -> Some(Version(8, 8, 8)))
+          "play-frontend" -> Some(Version("1.1.1")),
+          "play-ui"       -> Some(Version("2.2.2")),
+          "play-health"   -> Some(Version("8.8.8")))
     }
 
     "return artifacts versions correctly for a repository's dependency file when there is more than one scala file under project" in new TestSetup {
@@ -188,7 +190,10 @@ class GithubSpec extends WordSpec with Matchers with MockitoSugar with OptionVal
         .right
         .get
         .libraries shouldBe
-        Map("play-frontend" -> None, "play-ui" -> Some(Version(7, 4, 0)), "play-health" -> Some(Version(2, 1, 0, Some("play-25"))))
+        Map(
+          "play-frontend" -> None,
+          "play-ui"       -> Some(Version("7.4.0")),
+          "play-health"   -> Some(Version("2.1.0-play-25")))
     }
 
     "return artifacts versions correctly for a repository's dependency file when there is scala files in project with no dependencies but an sbt.build file with dependencies" in new TestSetup {
@@ -210,9 +215,9 @@ class GithubSpec extends WordSpec with Matchers with MockitoSugar with OptionVal
         .get
         .libraries shouldBe
         Map(
-          "play-frontend" -> Some(Version(1, 1, 1)),
-          "play-ui"       -> Some(Version(2, 2, 2)),
-          "play-health"   -> Some(Version(8, 8, 8)))
+          "play-frontend" -> Some(Version("1.1.1")),
+          "play-ui"       -> Some(Version("2.2.2")),
+          "play-health"   -> Some(Version("8.8.8")))
     }
 
     "return artifacts versions correctly for a repository's dependency file when there is scala files in project with dependencies and an build.sbt with no dependencies" in new TestSetup {
@@ -233,7 +238,10 @@ class GithubSpec extends WordSpec with Matchers with MockitoSugar with OptionVal
         .right
         .get
         .libraries shouldBe
-        Map("play-frontend" -> None, "play-ui" -> Some(Version(7, 4, 0)), "play-health" -> Some(Version(2, 1, 0, Some("play-25"))))
+        Map(
+          "play-frontend" -> None,
+          "play-ui"       -> Some(Version("7.4.0")),
+          "play-health"   -> Some(Version("2.1.0-play-25")))
     }
 
     "return artifacts versions correctly for a repository's appDependencies.scala file" in new TestSetup {
@@ -251,7 +259,10 @@ class GithubSpec extends WordSpec with Matchers with MockitoSugar with OptionVal
         .right
         .get
         .libraries shouldBe
-        Map("play-frontend" -> None, "play-ui" -> Some(Version(7, 4, 0)), "play-health" -> Some(Version(2, 1, 0, Some("play-25"))))
+        Map(
+          "play-frontend" -> None,
+          "play-ui"       -> Some(Version(7, 4, 0)),
+          "play-health"   -> Some(Version("2.1.0-play-25")))
     }
 
     "return None for artifacts that don't appear in the build file for a repository" in new TestSetup {
@@ -267,7 +278,9 @@ class GithubSpec extends WordSpec with Matchers with MockitoSugar with OptionVal
         .right
         .get
         .libraries shouldBe
-        Map("play-ui" -> Some(Version(1, 3, 0)), "non-existing" -> None)
+        Map(
+          "play-ui"      -> Some(Version("1.3.0")),
+          "non-existing" -> None)
     }
 
     "return empty map if curated config is empty passed in" in new TestSetup {

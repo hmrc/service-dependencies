@@ -120,7 +120,6 @@ class SlugInfoRepositorySpec
       uri             = "https://store/slugs/my-slug/my-slug_0.27.0_0.5.2.tgz",
       name            = "my-slug",
       version         = "0.27.0",
-      semanticVersion = Version("0.27.0"),
       versionLong     = 27000,
       runnerVersion   = "0.5.2",
       classpath       = "",

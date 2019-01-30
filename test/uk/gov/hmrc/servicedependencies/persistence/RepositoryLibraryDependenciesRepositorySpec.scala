@@ -76,7 +76,7 @@ class RepositoryLibraryDependenciesRepositorySpec
 
       val repositoryLibraryDependencies = MongoRepositoryDependencies(
         "some-repo",
-        Seq(MongoRepositoryDependency("some-lib", Version(1, 0, 2))),
+        Seq(MongoRepositoryDependency("some-lib", Version("1.0.2"))),
         Nil,
         Nil,
         DateTimeUtils.now)
@@ -89,7 +89,7 @@ class RepositoryLibraryDependenciesRepositorySpec
 
       val repositoryLibraryDependencies = MongoRepositoryDependencies(
         "some-repo",
-        Seq(MongoRepositoryDependency("some-lib", Version(1, 0, 2, Some("play-26")))),
+        Seq(MongoRepositoryDependency("some-lib", Version("1.0.2-play-26"))),
         Nil,
         Nil,
         DateTimeUtils.now)
@@ -104,7 +104,7 @@ class RepositoryLibraryDependenciesRepositorySpec
 
       val repositoryLibraryDependencies = MongoRepositoryDependencies(
         "some-repo",
-        Seq(MongoRepositoryDependency("some-lib", Version(1, 0, 2))),
+        Seq(MongoRepositoryDependency("some-lib", Version("1.0.2"))),
         Nil,
         Nil,
         DateTimeUtils.now)
@@ -123,14 +123,16 @@ class RepositoryLibraryDependenciesRepositorySpec
 
       val repositoryLibraryDependencies = MongoRepositoryDependencies(
         "some-repo",
-        Seq(MongoRepositoryDependency("some-lib", Version(1, 0, 2))),
+        Seq(MongoRepositoryDependency("some-lib", Version("1.0.2"))),
         Nil,
         Nil,
         DateTimeUtils.now)
       val newRepositoryLibraryDependencies = repositoryLibraryDependencies.copy(
-        libraryDependencies = repositoryLibraryDependencies.libraryDependencies :+ MongoRepositoryDependency(
-          "some-other-lib",
-          Version(8, 4, 2, Some("play-26"))))
+        libraryDependencies =
+          repositoryLibraryDependencies.libraryDependencies :+ MongoRepositoryDependency(
+            "some-other-lib",
+            Version("8.4.2-play-26"))
+        )
       await(mongoRepositoryLibraryDependenciesRepository.update(repositoryLibraryDependencies))
 
       await(mongoRepositoryLibraryDependenciesRepository.update(newRepositoryLibraryDependencies))
@@ -143,13 +145,13 @@ class RepositoryLibraryDependenciesRepositorySpec
     "get back the correct record" in {
       val repositoryLibraryDependencies1 = MongoRepositoryDependencies(
         "some-repo1",
-        Seq(MongoRepositoryDependency("some-lib1", Version(1, 0, 2))),
+        Seq(MongoRepositoryDependency("some-lib1", Version("1.0.2"))),
         Nil,
         Nil,
         DateTimeUtils.now)
       val repositoryLibraryDependencies2 = MongoRepositoryDependencies(
         "some-repo2",
-        Seq(MongoRepositoryDependency("some-lib2", Version(11, 0, 22))),
+        Seq(MongoRepositoryDependency("some-lib2", Version("11.0.22"))),
         Nil,
         Nil,
         DateTimeUtils.now)
@@ -164,13 +166,13 @@ class RepositoryLibraryDependenciesRepositorySpec
     "finds the repository when the name is of different case" in {
       val repositoryLibraryDependencies1 = MongoRepositoryDependencies(
         "some-repo1",
-        Seq(MongoRepositoryDependency("some-lib1", Version(1, 0, 2))),
+        Seq(MongoRepositoryDependency("some-lib1", Version("1.0.2"))),
         Nil,
         Nil,
         DateTimeUtils.now)
       val repositoryLibraryDependencies2 = MongoRepositoryDependencies(
         "some-repo2",
-        Seq(MongoRepositoryDependency("some-lib2", Version(11, 0, 22))),
+        Seq(MongoRepositoryDependency("some-lib2", Version("11.0.22"))),
         Nil,
         Nil,
         DateTimeUtils.now)
@@ -184,13 +186,13 @@ class RepositoryLibraryDependenciesRepositorySpec
     "not find a repository with partial name" in {
       val repositoryLibraryDependencies1 = MongoRepositoryDependencies(
         "some-repo1",
-        Seq(MongoRepositoryDependency("some-lib1", Version(1, 0, 2))),
+        Seq(MongoRepositoryDependency("some-lib1", Version("1.0.2"))),
         Nil,
         Nil,
         DateTimeUtils.now)
       val repositoryLibraryDependencies2 = MongoRepositoryDependencies(
         "some-repo2",
-        Seq(MongoRepositoryDependency("some-lib2", Version(11, 0, 22))),
+        Seq(MongoRepositoryDependency("some-lib2", Version("11.0.22"))),
         Nil,
         Nil,
         DateTimeUtils.now)
@@ -207,7 +209,7 @@ class RepositoryLibraryDependenciesRepositorySpec
 
       val repositoryLibraryDependencies = MongoRepositoryDependencies(
         "some-repo",
-        Seq(MongoRepositoryDependency("some-lib", Version(1, 0, 2))),
+        Seq(MongoRepositoryDependency("some-lib", Version("1.0.2"))),
         Nil,
         Nil,
         DateTimeUtils.now)
@@ -230,14 +232,14 @@ class RepositoryLibraryDependenciesRepositorySpec
       val repositoryLibraryDependencies1 =
         MongoRepositoryDependencies(
           "some-repo",
-          Seq(MongoRepositoryDependency("some-lib2", Version(1, 0, 2))),
+          Seq(MongoRepositoryDependency("some-lib2", Version("1.0.2"))),
           Nil,
           Nil,
           t1)
       val repositoryLibraryDependencies2 =
         MongoRepositoryDependencies(
           "some-other-repo",
-          Seq(MongoRepositoryDependency("some-lib2", Version(1, 0, 2))),
+          Seq(MongoRepositoryDependency("some-lib2", Version("1.0.2"))),
           Nil,
           Nil,
           t2)

@@ -32,7 +32,7 @@ class VersionParserSpec extends FreeSpec with MustMatchers {
                       |    }.test
                       |  }""".stripMargin
 
-    VersionParser.parse(buildFile, targetArtifact) mustBe Some(Version(1, 2, 3))
+    VersionParser.parse(buildFile, targetArtifact) mustBe Some(Version(1, 2, 3, "1.2.3"))
   }
 
   "Parses play-frontend version in line with scope after" in {
@@ -44,7 +44,7 @@ class VersionParserSpec extends FreeSpec with MustMatchers {
                       |    }.test
                       |  }""".stripMargin
 
-    VersionParser.parse(buildFile, targetArtifact) mustBe Some(Version(1, 2, 3))
+    VersionParser.parse(buildFile, targetArtifact) mustBe Some(Version(1, 2, 3, "1.2.3"))
   }
 
   "Parses play-frontend version including suffix in line with scope after" in {
@@ -56,7 +56,7 @@ class VersionParserSpec extends FreeSpec with MustMatchers {
                       |    }.test
                       |  }""".stripMargin
 
-    VersionParser.parse(buildFile, targetArtifact) mustBe Some(Version(1, 2, 3, Some("play-26")))
+    VersionParser.parse(buildFile, targetArtifact) mustBe Some(Version(1, 2, 3, "1.2.3-play-26"))
   }
 
   "Parses play-frontend version form variable" in {
@@ -70,7 +70,7 @@ class VersionParserSpec extends FreeSpec with MustMatchers {
                       |    }.test
                       |  }""".stripMargin
 
-    VersionParser.parse(buildFile, targetArtifact) mustBe Some(Version(1, 2, 3))
+    VersionParser.parse(buildFile, targetArtifact) mustBe Some(Version(1, 2, 3, "1.2.3"))
   }
 
   "Parses play-frontend version form variable with scope" in {
@@ -84,7 +84,7 @@ class VersionParserSpec extends FreeSpec with MustMatchers {
                       |    }.test
                       |  }""".stripMargin
 
-    VersionParser.parse(buildFile, targetArtifact) mustBe Some(Version(1, 2, 3))
+    VersionParser.parse(buildFile, targetArtifact) mustBe Some(Version(1, 2, 3, "1.2.3"))
   }
 
   "Returns None if it cannot find a play-frontend version" in {
@@ -112,9 +112,9 @@ class VersionParserSpec extends FreeSpec with MustMatchers {
 
     VersionParser
       .parse(buildFile, Seq("play-frontend", "play-backend", "play-middle")) must contain theSameElementsAs Seq(
-      "play-frontend" -> Some(Version(1, 2, 3)),
-      "play-backend"  -> Some(Version(3, 5, 5)),
-      "play-middle"   -> Some(Version(6, 8, 8))
+      "play-frontend" -> Some(Version(1, 2, 3, "1.2.3")),
+      "play-backend"  -> Some(Version(3, 5, 5, "3.5.5")),
+      "play-middle"   -> Some(Version(6, 8, 8, "6.8.8"))
     )
   }
 
@@ -130,20 +130,20 @@ class VersionParserSpec extends FreeSpec with MustMatchers {
 
     VersionParser
       .parse(buildFile, Seq("play-frontend", "play-backend", "play-middle")) must contain theSameElementsAs Seq(
-      "play-frontend" -> Some(Version(1, 2, 3)),
-      "play-backend"  -> Some(Version(3, 5, 5)),
+      "play-frontend" -> Some(Version(1, 2, 3, "1.2.3")),
+      "play-backend"  -> Some(Version(3, 5, 5, "3.5.5")),
       "play-middle"   -> None
     )
   }
 
   "Parses PRIVATE release version correctly" in {
     val tag = "release/1.0.1"
-    VersionParser.parseReleaseVersion(tag) mustBe Some(Version(1, 0, 1))
+    VersionParser.parseReleaseVersion(tag) mustBe Some(Version(1, 0, 1, "1.0.1"))
   }
 
   "Parses PUBLIC release version correctly" in {
     val tag = "v1.0.1"
-    VersionParser.parseReleaseVersion(tag) mustBe Some(Version(1, 0, 1))
+    VersionParser.parseReleaseVersion(tag) mustBe Some(Version(1, 0, 1, "1.0.1"))
   }
 
   "Parsing an invalid release version returns None" in {
@@ -160,7 +160,7 @@ class VersionParserSpec extends FreeSpec with MustMatchers {
                       |    }.test
                       |  }""".stripMargin
 
-    VersionParser.parse(buildFile, "simple-reactivemongo") mustBe Some(Version(7,0,0, Some("play-26")))
+    VersionParser.parse(buildFile, "simple-reactivemongo") mustBe Some(Version(7, 0, 0, "7.0.0-play-26"))
   }
 
   "Parsing version from variable ending with play version returns correct version" in {
@@ -173,7 +173,7 @@ class VersionParserSpec extends FreeSpec with MustMatchers {
                         |    }.test
                         |  }""".stripMargin
 
-    VersionParser.parse(buildFile, "simple-reactivemongo") mustBe Some(Version(7,0,0, Some("play-26")))
+    VersionParser.parse(buildFile, "simple-reactivemongo") mustBe Some(Version(7, 0, 0, "7.0.0-play-26"))
   }
 
   "Parsing non semantic version number returns None" in {
@@ -188,12 +188,11 @@ class VersionParserSpec extends FreeSpec with MustMatchers {
   }
 
   "Parsing a build.properties file returns the sbt version" in {
-    VersionParser.parsePropertyFile("sbt.version=1.2.3", "sbt.version") mustBe Some(Version(1, 2, 3))
-    VersionParser.parsePropertyFile(" sbt.version = 1.2.3 ", "sbt.version") mustBe Some(Version(1, 2, 3))
+    VersionParser.parsePropertyFile("sbt.version=1.2.3", "sbt.version") mustBe Some(Version(1, 2, 3, "1.2.3"))
+    VersionParser.parsePropertyFile(" sbt.version = 1.2.3 ", "sbt.version") mustBe Some(Version(1, 2, 3, "1.2.3"))
   }
 
   "Parsing build.properties file returns None for sbt version if the 'sbt.version' is not defined" in {
     VersionParser.parsePropertyFile("some.non-related.key=1.2.3", "sbt.version") mustBe None
   }
-
 }

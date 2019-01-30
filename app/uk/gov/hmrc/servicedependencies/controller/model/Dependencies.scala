@@ -22,22 +22,27 @@ import uk.gov.hmrc.http.controllers.RestFormats
 import uk.gov.hmrc.servicedependencies.model.Version
 
 case class Dependency(
-  name: String,
+  name          : String,
   currentVersion: Version,
-  latestVersion: Option[Version],
-  isExternal: Boolean = false
+  latestVersion : Option[Version],
+  isExternal    : Boolean = false
 )
 
 case class Dependencies(
-  repositoryName: String,
-  libraryDependencies: Seq[Dependency],
+  repositoryName        : String,
+  libraryDependencies   : Seq[Dependency],
   sbtPluginsDependencies: Seq[Dependency],
-  otherDependencies: Seq[Dependency],
-  lastUpdated: DateTime
+  otherDependencies     : Seq[Dependency],
+  lastUpdated           : DateTime
 )
 
 object Dependencies {
-  implicit val dtr    = RestFormats.dateTimeFormats
-  implicit val osf    = Json.format[Dependency]
-  implicit val format = Json.format[Dependencies]
+  implicit val format = {
+    implicit val dtr = RestFormats.dateTimeFormats
+    implicit val osf = {
+      implicit val vf = Version.apiFormat
+      Json.format[Dependency]
+    }
+    Json.format[Dependencies]
+  }
 }
