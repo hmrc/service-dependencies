@@ -40,7 +40,7 @@ class MetricsScheduler @Inject()(
   reactiveMongoComponent: ReactiveMongoComponent,
   repositoryDependenciesSource: RepositoryDependenciesSource) {
 
-  private val interval: FiniteDuration = schedulerConfig.metricsInterval
+  private val interval: FiniteDuration = schedulerConfig.metricsSchedulerInterval
 
   implicit lazy val mongo: () => DefaultDB = reactiveMongoComponent.mongoConnector.db
 
@@ -57,13 +57,20 @@ class MetricsScheduler @Inject()(
     metricRegistry   = metrics.defaultRegistry
   )
 
-  Logger.info(s"Enabling Metrics Scheduler, running every ${interval.toString()}")
-  actorSystem.scheduler.schedule(1.minute, interval) {
-    metricOrchestrator
-      .attemptToUpdateRefreshAndResetMetrics( _ => true)
-      .map(_.andLogTheResult())
-      .recover {
-        case NonFatal(e) => Logger.error(s"An error occurred processing metrics: ${e.getMessage}", e)
-      }
+  if(schedulerConfig.metricsSchedulerEnabled) {
+    Logger.info(s"Enabling Metrics Scheduler, running every ${interval.toString()}")
+    actorSystem.scheduler.schedule(1.minute, interval) {
+      metricOrchestrator
+        .attemptToUpdateRefreshAndResetMetrics(_ => true)
+        .map(_.andLogTheResult())
+        .recover {
+          case NonFatal(e) => Logger.error(s"An error occurred processing metrics: ${e.getMessage}", e)
+        }
+    }
   }
+  else {
+    Logger.info("Metrics Scheduler is DISABLED")
+  }
+
+
 }

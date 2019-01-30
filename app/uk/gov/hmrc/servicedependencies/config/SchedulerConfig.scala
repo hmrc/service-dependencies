@@ -26,6 +26,7 @@ import scala.concurrent.duration.{Duration, DurationLong, FiniteDuration}
 class SchedulerConfig @Inject()(configuration: Configuration) {
 
   private val schedulerEnabledKey           = "scheduler.enabled"
+  private val metricsIntervalEnabled        = "repositoryDependencies.metricsGauges.enabled"
   private val metricsIntervalKey            = "repositoryDependencies.metricsGauges.interval"
   private val dependenciesReloadIntervalKey = "dependency.reload.intervalminutes"
   private val libraryReloadIntervalKey      = "library.reload.intervalminutes"
@@ -45,10 +46,10 @@ class SchedulerConfig @Inject()(configuration: Configuration) {
 
 
   // Config for MetricsScheduler
-  def metricsInterval: FiniteDuration =
-    Option(configuration.getMillis(metricsIntervalKey))
-      .map(_.milliseconds)
-      .getOrElse(FiniteDuration(10, TimeUnit.MINUTES))
+  def metricsSchedulerEnabled: Boolean         = configuration.getOptional[Boolean](metricsIntervalEnabled).getOrElse(false)
+  def metricsSchedulerInterval: FiniteDuration = Option(configuration.getMillis(metricsIntervalKey))
+    .map(_.milliseconds)
+    .getOrElse(FiniteDuration(10, TimeUnit.MINUTES))
 
 
   // Config for DataReloadScheduler
