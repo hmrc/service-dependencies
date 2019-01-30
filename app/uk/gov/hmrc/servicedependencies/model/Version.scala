@@ -40,32 +40,47 @@ case class Version(
 }
 
 object Version {
-  val mongoFormat: OFormat[Version] = {
-    // TODO just store as string...
-    // previous mongo data has suffix rather than original - this will be handled in read.
-    def toVersion(major: Int, minor: Int, patch: Int, original: Option[String], suffix: Option[String]) =
-      Version(major, minor, patch, original.getOrElse(s"$major.$minor.$patch${suffix.map("-" + _).getOrElse("")}"))
+  // replace previous mongo version as object with string
+  // can drop previousMongoFormat once data has been updated
+  private val previousMongoFormat: OFormat[Version] = {
+    def toVersion(major: Int, minor: Int, patch: Int, suffix: Option[String]) =
+      Version(major, minor, patch, s"$major.$minor.$patch${suffix.map("-" + _).getOrElse("")}")
 
     def fromVersion(v: Version) =
-      (v.major, v.minor, v.patch, Some(v.original), None)
+      (v.major, v.minor, v.patch, None)
 
-    ( (__ \ "major"   ).format[Int]
-    ~ (__ \ "minor"   ).format[Int]
-    ~ (__ \ "patch"   ).format[Int]
-    ~ (__ \ "original").formatNullable[String]
-    ~ (__ \ "suffix").formatNullable[String]
+     ( (__ \ "major" ).format[Int]
+     ~ (__ \ "minor" ).format[Int]
+     ~ (__ \ "patch" ).format[Int]
+     ~ (__ \ "suffix").formatNullable[String]
     )(toVersion, fromVersion)
   }
 
-  val apiFormat: Format[Version] = new Format[Version] {
-    override def reads(json: JsValue) =
-      json match {
-        case JsString(s) => Version.parse(s).map(v => JsSuccess(v)).getOrElse(JsError("Could not parse version"))
-        case _           => JsError("Not a string")
-      }
-    override def writes(v: Version) =
-      JsString(v.original)
-  }
+  private val versionAsStringFormat: Format[Version] =
+    new Format[Version] {
+      override def reads(json: JsValue) =
+        json match {
+          case JsString(s) => Version.parse(s).map(v => JsSuccess(v)).getOrElse(JsError("Could not parse version"))
+          case _           => JsError("Not a string")
+        }
+
+      override def writes(v: Version) =
+        JsString(v.original)
+    }
+
+  val mongoFormat: Format[Version] =
+    new Format[Version] {
+      override def reads(json: JsValue) =
+        versionAsStringFormat.reads(json)
+          .orElse(previousMongoFormat.reads(json))
+
+      override def writes(v: Version) =
+        versionAsStringFormat.writes(v)
+    }
+
+  val apiFormat: Format[Version] =
+    versionAsStringFormat
+
 
   def apply(version: String): Version =
     parse(version).getOrElse(sys.error(s"Could not parse version $version"))
