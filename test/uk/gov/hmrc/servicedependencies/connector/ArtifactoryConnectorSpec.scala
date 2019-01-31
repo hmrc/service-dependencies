@@ -48,7 +48,7 @@ class ArtifactoryConnectorSpec extends FlatSpec
 
     val res = ArtifactoryConnector.toDownloadURL(url)
 
-    res shouldBe "https://webstore.test.test.test.uk/webstore/slugs/api-platform-test-user/api-platform-test-user_0.73.0_0.5.2.tgz"
+    res shouldBe "https://webstore.test.test.test.uk/slugs/api-platform-test-user/api-platform-test-user_0.73.0_0.5.2.tgz"
   }
 
 
