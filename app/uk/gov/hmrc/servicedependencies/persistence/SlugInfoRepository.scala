@@ -122,8 +122,7 @@ class SlugInfoRepository @Inject()(mongo: ReactiveMongoComponent)
       )
     )
 
-    val matchArtifact = Match(document("depArtifact" -> artefact, "depGroup" -> group))
-
+    val matchArtifact = Match(document("dependencies.artifact" -> artefact, "dependencies.group" -> group))
 
     // run the pipeline
     col.aggregatorContext[ServiceDependency](
@@ -131,8 +130,8 @@ class SlugInfoRepository @Inject()(mongo: ReactiveMongoComponent)
       List(
          groupByLatestSlug
         ,unwindDependencies
-        ,projectIntoServiceDependency
         ,matchArtifact
+        ,projectIntoServiceDependency
       ))
       .prepared
       .cursor

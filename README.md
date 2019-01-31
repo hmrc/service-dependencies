@@ -34,9 +34,17 @@ repositoryDependencies.slugJob.interval          # delay between polling artifac
 
 The github/sbt dependency parser is configured:
 ````
-dependency.reload.intervalminutes  # enables/disables the github repo/sbt parser
-library.reload.intervalminutes     # enables/disables the library version parser
-sbtPlugin.reload.intervalminutes1  # enables/disables the sbt plugin version parser
+scheduler.enabled                  # disable all github/sbt parsers
+dependency.reload.intervalminutes  # how often the github repo/sbt parser will run
+library.reload.intervalminutes     # how often the library version parser will run
+sbtPlugin.reload.intervalminutes   # how often the sbt plugin version parser will run
+````
+
+The metrics reporter is configured:
+
+````
+repositoryDependencies.metricsGauges.enabled   # enable the metrics reporter
+repositoryDependencies.metricsGauges.interval  # how often stats are uploaded
 ````
 
 ### License

@@ -96,7 +96,7 @@ class ServiceDependenciesControllerSpec
   object Boot {
     def init: Boot = {
       val mockedDependencyDataUpdatingService = mock[DependencyDataUpdatingService]
-      val mockedTeamsAndRepositoriesConnector = mock[TeamsAndRepositoriesConnector],
+      val mockedTeamsAndRepositoriesConnector = mock[TeamsAndRepositoriesConnector]
       val mockedSlugInfoService               = mock[SlugInfoService]
       val controller = new ServiceDependenciesController(
         Configuration(),

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.servicedependencies.util
+package uk.gov.hmrc.servicedependencies.config
 
 import akka.actor.ActorSystem
 import javax.inject.Inject

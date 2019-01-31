@@ -44,7 +44,7 @@ import play.modules.reactivemongo.ReactiveMongoComponent
 import uk.gov.hmrc.mongo.{MongoConnector, MongoSpecSupport}
 import uk.gov.hmrc.play.test.UnitSpec
 import uk.gov.hmrc.servicedependencies.model.{MongoRepositoryDependencies, MongoRepositoryDependency, Version}
-import uk.gov.hmrc.servicedependencies.util.FutureHelpers
+import uk.gov.hmrc.servicedependencies.util.{FutureHelpers, MockFutureHelpers}
 import uk.gov.hmrc.time.DateTimeUtils
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -56,13 +56,7 @@ class RepositoryLibraryDependenciesRepositorySpec
     with ScalaFutures
     with OptionValues
     with BeforeAndAfterEach
-    with GuiceOneAppPerSuite
     with MockitoSugar {
-
-  override def fakeApplication(): Application = new GuiceApplicationBuilder()
-    .disable(classOf[com.kenshoo.play.metrics.Metrics])
-    .configure("metrics.jvm" -> false)
-    .build()
 
   val mockMongoConnector         = mock[MongoConnector]
   val mockReactiveMongoComponent = mock[ReactiveMongoComponent]
@@ -70,7 +64,7 @@ class RepositoryLibraryDependenciesRepositorySpec
   when(mockMongoConnector.db).thenReturn(mongo)
   when(mockReactiveMongoComponent.mongoConnector).thenReturn(mockMongoConnector)
 
-  val futureHelper: FutureHelpers = app.injector.instanceOf[FutureHelpers]
+  val futureHelper: FutureHelpers = new MockFutureHelpers()
   val mongoRepositoryLibraryDependenciesRepository = new RepositoryLibraryDependenciesRepository(mockReactiveMongoComponent, futureHelper)
 
   override def beforeEach() {

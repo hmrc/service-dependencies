@@ -18,39 +18,29 @@ package uk.gov.hmrc.servicedependencies
 
 import akka.actor.ActorSystem
 import javax.inject.Inject
-import play.api.{Configuration, Logger}
+import play.api.Logger
 import play.api.inject.ApplicationLifecycle
+import uk.gov.hmrc.servicedependencies.config.SchedulerConfig
 import uk.gov.hmrc.servicedependencies.service.{SlugJobCreator, SlugJobProcessor}
 import uk.gov.hmrc.servicedependencies.persistence.MongoLocks
-import uk.gov.hmrc.servicedependencies.util.ConfigUtils
 
 import scala.concurrent.{ExecutionContext, Future}
-import scala.concurrent.duration.{DurationLong, FiniteDuration}
 
 class SlugJobCreatorScheduler @Inject()(
     actorSystem         : ActorSystem,
-    configuration       : Configuration,
+    schedulerConfig     : SchedulerConfig,
     slugJobCreator      : SlugJobCreator,
     slugJobProcessor    : SlugJobProcessor,
     mongoLocks          : MongoLocks,
-    applicationLifecycle: ApplicationLifecycle)
-  extends ConfigUtils {
+    applicationLifecycle: ApplicationLifecycle) {
 
   import ExecutionContext.Implicits.global
 
-  private val enabledKey      = "repositoryDependencies.slugJob.enabled"
-  private val intervalKey     = "repositoryDependencies.slugJob.interval"
-  private val initialDelayKey = "repositoryDependencies.slugJob.initialDelay"
+  private val slSchedulerConfig = schedulerConfig.SlugJobCreator
 
-  private lazy val initialDelay: FiniteDuration = getDuration(configuration, initialDelayKey)
-  private lazy val interval    : FiniteDuration = getDuration(configuration, intervalKey)
-
-  private lazy val enabled: Boolean =
-    configuration.getOptional[Boolean](enabledKey).getOrElse(false)
-
-
-  if (enabled) {
-    val cancellable = actorSystem.scheduler.schedule(initialDelay, interval) {
+  if (slSchedulerConfig.enabled) {
+    Logger.info(s"Slug Job Creator is ENABLED, checking for new slugs every ${slSchedulerConfig.interval}.")
+    val cancellable = actorSystem.scheduler.schedule(slSchedulerConfig.initialDelay, slSchedulerConfig.interval) {
       Logger.info(s"Starting slug job creator scheduler")
 
       mongoLocks.slugJobSchedulerLock.tryLock {
@@ -67,6 +57,6 @@ class SlugJobCreatorScheduler @Inject()(
     }
     applicationLifecycle.addStopHook(() => Future(cancellable.cancel()))
   } else {
-    Logger.info("Slug job creator is DISABLED. No new slug parser jobs will be created.")
+    Logger.info("Slug Job Creator is DISABLED. No new slug parser jobs will be created.")
   }
 }
