@@ -118,5 +118,5 @@ object ArtifactoryConnector {
 
   def toDownloadURL(url: String): String =
     url.replace("https://artefacts.", "https://webstore.")
-       .replace("/artifactory/api/storage/webstore-local/", "/webstore/")
+       .replace("/artifactory/api/storage/webstore-local/", "/")
 }
