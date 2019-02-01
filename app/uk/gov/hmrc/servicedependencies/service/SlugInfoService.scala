@@ -45,15 +45,6 @@ class SlugInfoService @Inject()(
   def findServicesWithDependency(group: String,artefact : String): Future[Seq[ServiceDependency]] =
     slugInfoRepository.findServices(group, artefact)
 
-  def findDistinctGroups: Future[Seq[String]] =
-    slugInfoRepository
-      .findDistinctGroups
-      .map(_.toSeq.sorted)
-
-  def findDistinctArtefacts(group: String): Future[Seq[String]] =
-    slugInfoRepository
-      .findDistinctArtefacts(group)
-
   def findGroupsArtefacts: Future[Seq[GroupArtefacts]] =
     slugInfoRepository
       .findGroupsArtefacts

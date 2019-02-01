@@ -16,10 +16,14 @@
 
 package uk.gov.hmrc.servicedependencies.model
 
-import play.api.libs.json.Json
-
 case class GroupArtefacts(group: String, artefacts: List[String])
 
 object GroupArtefacts {
-  val apiFormat = Json.format[GroupArtefacts]
+  import play.api.libs.json._
+  import play.api.libs.functional.syntax._
+
+  val apiFormat: OFormat[GroupArtefacts] =
+    ( (__ \ "group"      ).format[String]
+    ~ (__ \ "artefacts"  ).format[List[String]]
+    )(GroupArtefacts.apply, unlift(GroupArtefacts.unapply))
 }

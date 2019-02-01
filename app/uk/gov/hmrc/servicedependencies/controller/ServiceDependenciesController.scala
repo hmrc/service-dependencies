@@ -92,21 +92,6 @@ class ServiceDependenciesController @Inject()(
        .map(res => Ok(Json.toJson(res)))
     }
 
-
-  def getGroups =
-    Action.async { implicit request =>
-      slugInfoService
-        .findDistinctGroups
-       .map(res => Ok(Json.toJson(res)))
-    }
-
-  def getArtefacts(group: String) =
-    Action.async { implicit request =>
-      slugInfoService
-        .findDistinctArtefacts(group)
-        .map(res => Ok(Json.toJson(res)))
-    }
-
   def getGroupArtefacts =
     Action.async { implicit request =>
       implicit val format = GroupArtefacts.apiFormat
@@ -114,5 +99,4 @@ class ServiceDependenciesController @Inject()(
         .findGroupsArtefacts
         .map(res => Ok(Json.toJson(res)))
     }
-
 }

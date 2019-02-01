@@ -139,63 +139,6 @@ class SlugInfoRepository @Inject()(mongo: ReactiveMongoComponent)
       .collect[List](-1, Cursor.FailOnError[List[ServiceDependency]]())
   }
 
-
-  def findDistinctGroups: Future[Set[String]] =
-    collection.distinct[String, Set]("dependencies.group")
-
-
-  def findDistinctArtefacts(group: String): Future[Seq[String]] = {
-    val col: BSONCollection = mongo.mongoConnector.db().collection(collectionName)
-
-    import col.BatchCommands.AggregationFramework.{Ascending, FirstField, Group, GroupField, Match, Project, Sort, UnwindField}
-    import reactivemongo.bson._
-
-    implicit val rs = readerString
-
-    col.aggregatorContext[String](
-        Sort(Ascending("name"))
-      , List(
-          UnwindField("dependencies")
-        , Match(document("dependencies.group" -> group))
-        , Project(
-            document(
-                "group"    -> "$dependencies.group"
-              , "artifact" -> "$dependencies.artifact"
-            )
-          )
-        , GroupField("artifact")()
-        )
-      )
-      .prepared
-      .cursor
-      .collect[List](-1, Cursor.FailOnError[List[String]]())
-  }
-
-  private val readerString = new BSONDocumentReader[String]{
-    override def read(bson: BSONDocument): String =
-      bson.getAs[String]("_id").get
-  }
-
-
-/*db.getCollection('slugInfos-bak').aggregate(
-[
-   {$unwind: {"path": "$dependencies"}}
-   ,
-   { $match: { 'dependencies.group': "org.slf4j" } }
-   ,
-   { $project:
-     {group: "$dependencies.group", artifact: "$dependencies.artifact"}
-   }
-   ,
-   { $group: {
-         _id: "$artifact"
-       }
-   }
-]
-)*/
-
-
-
   private val readerGroupArtefacts = new BSONDocumentReader[GroupArtefacts]{
     override def read(bson: BSONDocument): GroupArtefacts = {
       val opt: Option[GroupArtefacts] = for {
@@ -209,13 +152,10 @@ class SlugInfoRepository @Inject()(mongo: ReactiveMongoComponent)
     }
   }
 
-
   def findGroupsArtefacts: Future[Seq[GroupArtefacts]] = {
     val col: BSONCollection = mongo.mongoConnector.db().collection(collectionName)
-
     import col.BatchCommands.AggregationFramework.{AddFieldToSet, Ascending, FirstField, Group, GroupField, Match, Project, Sort, UnwindField}
     import reactivemongo.bson._
-
     implicit val rga = readerGroupArtefacts
 
     col.aggregatorContext[GroupArtefacts](
@@ -235,24 +175,4 @@ class SlugInfoRepository @Inject()(mongo: ReactiveMongoComponent)
       .cursor
       .collect[List](-1, Cursor.FailOnError[List[GroupArtefacts]]())
   }
-
-
-
-/*
-db.getCollection('slugInfos').aggregate(
-[
-   {$unwind: {"path": "$dependencies"}}
-   ,
-   { $project:
-     {org: "$dependencies.group", artifact: "$dependencies.artifact"}
-   }
-   ,
-   { $group: {
-         _id: "$org"
-       , artifacts: { $addToSet: "$artifact"}
-       }
-   }
-]
-)
-*/
 }
