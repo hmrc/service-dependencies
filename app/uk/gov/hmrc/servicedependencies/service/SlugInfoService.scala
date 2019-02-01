@@ -23,7 +23,7 @@ import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.lock.LockFormats.Lock
 import uk.gov.hmrc.servicedependencies.config.CuratedDependencyConfigProvider
 import uk.gov.hmrc.servicedependencies.controller.model.{Dependencies, Dependency}
-import uk.gov.hmrc.servicedependencies.model._
+import uk.gov.hmrc.servicedependencies.model.{GroupArtefacts, NewSlugParserJob, ServiceDependency, SlugInfo}
 import uk.gov.hmrc.servicedependencies.persistence._
 import uk.gov.hmrc.time.DateTimeUtils
 import scala.concurrent.Future
@@ -44,4 +44,18 @@ class SlugInfoService @Inject()(
 
   def findServicesWithDependency(group: String,artefact : String): Future[Seq[ServiceDependency]] =
     slugInfoRepository.findServices(group, artefact)
+
+  def findDistinctGroups: Future[Seq[String]] =
+    slugInfoRepository
+      .findDistinctGroups
+      .map(_.toSeq.sorted)
+
+  def findDistinctArtefacts(group: String): Future[Seq[String]] =
+    slugInfoRepository
+      .findDistinctArtefacts(group)
+
+  def findGroupsArtefacts: Future[Seq[GroupArtefacts]] =
+    slugInfoRepository
+      .findGroupsArtefacts
+
 }
