@@ -3,4 +3,4 @@ digital-service: Catalogue
 leakDetectionExemptions:
  - ruleId: 'ip_addresses'
    filePaths:
-      - ' /test/uk/gov/hmrc/servicedependencies/model/VersionSpec.scala'
+      - '/test/uk/gov/hmrc/servicedependencies/model/VersionSpec.scala'
