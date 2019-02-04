@@ -15,6 +15,7 @@
  */
 
 package uk.gov.hmrc.servicedependencies.persistence
+
 import com.google.inject.{Inject, Singleton}
 import play.modules.reactivemongo.ReactiveMongoComponent
 import reactivemongo.api.Cursor
@@ -22,7 +23,7 @@ import reactivemongo.api.collections.bson.BSONCollection
 import reactivemongo.api.indexes.{Index, IndexType}
 import reactivemongo.bson.{BSONDocument, BSONDocumentReader, BSONObjectID}
 import uk.gov.hmrc.mongo.ReactiveRepository
-import uk.gov.hmrc.servicedependencies.model.{MongoSlugInfoFormats, ServiceDependency, SlugInfo}
+import uk.gov.hmrc.servicedependencies.model.{GroupArtefacts, MongoSlugInfoFormats, ServiceDependency, SlugInfo}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
@@ -66,7 +67,7 @@ class SlugInfoRepository @Inject()(mongo: ReactiveMongoComponent)
     }
 
 
-  implicit object ReaderServiceDependency extends BSONDocumentReader[ServiceDependency]{
+  private val readerServiceDependency = new BSONDocumentReader[ServiceDependency]{
     override def read(bson: BSONDocument): ServiceDependency = {
       val opt: Option[ServiceDependency] = for {
         slugName     <- bson.getAs[String]("slugName")
@@ -75,25 +76,24 @@ class SlugInfoRepository @Inject()(mongo: ReactiveMongoComponent)
         depArtifact  <- bson.getAs[String]("depArtifact")
         depVersion   <- bson.getAs[String]("depVersion")
       } yield ServiceDependency(
-        slugName = slugName
+          slugName    = slugName
         , slugVersion = slugVersion
-        , depGroup = depGroup
+        , depGroup    = depGroup
         , depArtefact = depArtifact
-        , depVersion = depVersion
-      )
+        , depVersion  = depVersion
+        )
       opt.get
     }
   }
 
 
-  def findServices(group: String, artefact: String): Future[Seq[ServiceDependency]] =
-    findServices(group, artefact, mongo.mongoConnector.db().collection(collectionName))
-
-
-  private def findServices(group: String, artefact: String, col: BSONCollection): Future[Seq[ServiceDependency]] = {
+  def findServices(group: String, artefact: String): Future[Seq[ServiceDependency]] = {
+    val col: BSONCollection = mongo.mongoConnector.db().collection(collectionName)
 
     import col.BatchCommands.AggregationFramework.{Ascending, Descending, FirstField, Group, Match, Project, Sort, UnwindField}
     import reactivemongo.bson._
+
+    implicit val rsd = readerServiceDependency
 
     // pipeline functions
     val sortBySlug = Sort(Ascending("name"), Descending("versionLong"))
@@ -103,7 +103,7 @@ class SlugInfoRepository @Inject()(mongo: ReactiveMongoComponent)
       , "uri"          -> FirstField("uri")
       , "dependencies" -> FirstField("dependencies")
       , "versionLong"  -> FirstField("versionLong")
-    )
+      )
 
 
     val unwindDependencies = UnwindField("dependencies")
@@ -119,23 +119,60 @@ class SlugInfoRepository @Inject()(mongo: ReactiveMongoComponent)
         , "depGroup"    -> "$dependencies.group"
         , "depArtifact" -> "$dependencies.artifact"
         , "depVersion"  -> "$dependencies.version"
-      )
+        )
     )
 
     val matchArtifact = Match(document("dependencies.artifact" -> artefact, "dependencies.group" -> group))
 
     // run the pipeline
     col.aggregatorContext[ServiceDependency](
-      sortBySlug,
-      List(
-         groupByLatestSlug
-        ,unwindDependencies
-        ,matchArtifact
-        ,projectIntoServiceDependency
-      ))
+        sortBySlug
+      , List(
+            groupByLatestSlug
+          , unwindDependencies
+          , matchArtifact
+          , projectIntoServiceDependency
+          )
+      )
       .prepared
       .cursor
       .collect[List](-1, Cursor.FailOnError[List[ServiceDependency]]())
   }
 
+  private val readerGroupArtefacts = new BSONDocumentReader[GroupArtefacts]{
+    override def read(bson: BSONDocument): GroupArtefacts = {
+      val opt: Option[GroupArtefacts] = for {
+        group     <- bson.getAs[String      ]("_id")
+        artefacts <- bson.getAs[List[String]]("artifacts")
+      } yield GroupArtefacts(
+          group     = group
+        , artefacts = artefacts
+        )
+      opt.getOrElse(sys.error(s"Could not read bson ${bson.elements.toList}"))
+    }
+  }
+
+  def findGroupsArtefacts: Future[Seq[GroupArtefacts]] = {
+    val col: BSONCollection = mongo.mongoConnector.db().collection(collectionName)
+    import col.BatchCommands.AggregationFramework.{AddFieldToSet, Ascending, FirstField, Group, GroupField, Match, Project, Sort, UnwindField}
+    import reactivemongo.bson._
+    implicit val rga = readerGroupArtefacts
+
+    col.aggregatorContext[GroupArtefacts](
+        Sort(Ascending("group"))
+      , List(
+          UnwindField("dependencies")
+        , Project(
+            document(
+                "group"    -> "$dependencies.group"
+              , "artifact" -> "$dependencies.artifact"
+            )
+          )
+        , Group(BSONString("$group"))("artifacts" -> AddFieldToSet("artifact"))
+        )
+      )
+      .prepared
+      .cursor
+      .collect[List](-1, Cursor.FailOnError[List[GroupArtefacts]]())
+  }
 }

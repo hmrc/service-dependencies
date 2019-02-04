@@ -26,7 +26,7 @@ import uk.gov.hmrc.servicedependencies.config.ServiceDependenciesConfig
 import uk.gov.hmrc.servicedependencies.connector.TeamsAndRepositoriesConnector
 import uk.gov.hmrc.servicedependencies.controller.model.Dependencies
 import uk.gov.hmrc.servicedependencies.model.{
-  ApiServiceDependencyFormats, ApiSlugInfoFormats, ServiceDependency
+  ApiServiceDependencyFormats, ApiSlugInfoFormats, GroupArtefacts, ServiceDependency
 }
 import uk.gov.hmrc.servicedependencies.service.{
   DependencyDataUpdatingService, SlugInfoService
@@ -90,5 +90,13 @@ class ServiceDependenciesController @Inject()(
       slugInfoService
         .findServicesWithDependency(group, artefact)
        .map(res => Ok(Json.toJson(res)))
+    }
+
+  def getGroupArtefacts =
+    Action.async { implicit request =>
+      implicit val format = GroupArtefacts.apiFormat
+      slugInfoService
+        .findGroupsArtefacts
+        .map(res => Ok(Json.toJson(res)))
     }
 }
