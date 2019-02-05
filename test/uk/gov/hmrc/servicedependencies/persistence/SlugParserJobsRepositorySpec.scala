@@ -17,29 +17,24 @@
 package uk.gov.hmrc.servicedependencies.persistence
 
 import org.mockito.Mockito.when
+import org.scalatest.{BeforeAndAfterEach, Matchers, WordSpecLike}
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.mockito.MockitoSugar
-import org.scalatest.{BeforeAndAfterEach, LoneElement, OptionValues}
-import org.scalatestplus.play.guice.GuiceOneAppPerSuite
-import play.api.Application
-import play.api.inject.guice.GuiceApplicationBuilder
 import play.modules.reactivemongo.ReactiveMongoComponent
-import uk.gov.hmrc.mongo.{FailOnUnindexedQueries, MongoConnector, MongoSpecSupport}
-import uk.gov.hmrc.play.test.UnitSpec
+import uk.gov.hmrc.mongo.{FailOnUnindexedQueries, MongoConnector, MongoSpecSupport, RepositoryPreparation}
 import uk.gov.hmrc.servicedependencies.model.{MongoSlugParserJob, NewSlugParserJob}
-import uk.gov.hmrc.time.DateTimeUtils
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
 class SlugParserJobsRepositorySpec
-    extends UnitSpec
-       with LoneElement
+    extends WordSpecLike
+       with Matchers
        with MongoSpecSupport
        with ScalaFutures
-       with OptionValues
        with BeforeAndAfterEach
        with MockitoSugar
-       with FailOnUnindexedQueries {
+       with FailOnUnindexedQueries
+       with RepositoryPreparation {
 
   val reactiveMongoComponent = new ReactiveMongoComponent {
     override val mongoConnector = {
@@ -52,8 +47,7 @@ class SlugParserJobsRepositorySpec
   val slugParserJobsRepository = new SlugParserJobsRepository(reactiveMongoComponent)
 
   override def beforeEach() {
-    await(slugParserJobsRepository.drop)
-    await(slugParserJobsRepository.ensureIndexes)
+    prepare(slugParserJobsRepository)
   }
 
   "SlugParserJobsRepository.add" should {

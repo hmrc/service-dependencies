@@ -18,12 +18,11 @@ package uk.gov.hmrc.servicedependencies.persistence
 
 import com.codahale.metrics.MetricRegistry
 import org.mockito.Mockito.when
+import org.scalatest.{BeforeAndAfterEach, Matchers, WordSpecLike}
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.mockito.MockitoSugar
-import org.scalatest.{BeforeAndAfterEach, LoneElement, OptionValues}
 import play.modules.reactivemongo.ReactiveMongoComponent
-import uk.gov.hmrc.mongo.{FailOnUnindexedQueries, MongoConnector, MongoSpecSupport}
-import uk.gov.hmrc.play.test.UnitSpec
+import uk.gov.hmrc.mongo.{FailOnUnindexedQueries, MongoConnector, MongoSpecSupport, RepositoryPreparation}
 import uk.gov.hmrc.servicedependencies.model.{MongoLibraryVersion, Version}
 import uk.gov.hmrc.servicedependencies.util.{FutureHelpers, MockFutureHelpers}
 import uk.gov.hmrc.time.DateTimeUtils
@@ -31,14 +30,14 @@ import uk.gov.hmrc.time.DateTimeUtils
 import scala.concurrent.ExecutionContext.Implicits.global
 
 class LibraryVersionRepositorySpec
-    extends UnitSpec
-    with LoneElement
-    with MongoSpecSupport
-    with ScalaFutures
-    with OptionValues
-    with BeforeAndAfterEach
-    with MockitoSugar
-    with FailOnUnindexedQueries {
+    extends WordSpecLike
+       with Matchers
+       with MongoSpecSupport
+       with ScalaFutures
+       with BeforeAndAfterEach
+       with MockitoSugar
+       with FailOnUnindexedQueries
+       with RepositoryPreparation {
 
   val reactiveMongoComponent = new ReactiveMongoComponent {
     val mockedMongoConnector = mock[MongoConnector]
@@ -53,8 +52,7 @@ class LibraryVersionRepositorySpec
   val libraryVersionRepository = new LibraryVersionRepository(reactiveMongoComponent, futureHelper)
 
   override def beforeEach() {
-    await(libraryVersionRepository.drop)
-    await(libraryVersionRepository.ensureIndexes)
+    prepare(libraryVersionRepository)
   }
 
   "update" should {

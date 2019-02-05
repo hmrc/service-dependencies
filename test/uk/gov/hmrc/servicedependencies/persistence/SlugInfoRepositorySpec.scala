@@ -17,24 +17,22 @@
 package uk.gov.hmrc.servicedependencies.persistence
 
 import org.mockito.Mockito.when
+import org.scalatest.{BeforeAndAfterEach, Matchers, WordSpecLike}
 import org.scalatest.mockito.MockitoSugar
-import org.scalatest.{BeforeAndAfterEach, LoneElement}
-import org.scalatestplus.play.guice.GuiceOneAppPerSuite
-import play.api.Application
 import play.modules.reactivemongo.ReactiveMongoComponent
-import uk.gov.hmrc.mongo.{FailOnUnindexedQueries, MongoConnector, MongoSpecSupport}
-import uk.gov.hmrc.play.test.UnitSpec
+import uk.gov.hmrc.mongo.{FailOnUnindexedQueries, MongoConnector, MongoSpecSupport, RepositoryPreparation}
 import uk.gov.hmrc.servicedependencies.model.{SlugInfo, SlugDependency, Version}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
 class SlugInfoRepositorySpec
-    extends UnitSpec
-       with LoneElement
+    extends WordSpecLike
+       with Matchers
        with MongoSpecSupport
        with BeforeAndAfterEach
        with MockitoSugar
-       with FailOnUnindexedQueries {
+       with FailOnUnindexedQueries
+       with RepositoryPreparation {
 
   val reactiveMongoComponent = new ReactiveMongoComponent {
     override val mongoConnector = {
@@ -47,8 +45,7 @@ class SlugInfoRepositorySpec
   val slugInfoRepository = new SlugInfoRepository(reactiveMongoComponent)
 
   override def beforeEach() {
-    await(slugInfoRepository.drop)
-    await(slugInfoRepository.ensureIndexes)
+    prepare(slugInfoRepository)
   }
 
   "SlugInfoRepository.add" should {
