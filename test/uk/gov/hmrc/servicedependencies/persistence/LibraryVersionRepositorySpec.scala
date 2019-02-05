@@ -22,7 +22,7 @@ import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.mockito.MockitoSugar
 import org.scalatest.{BeforeAndAfterEach, LoneElement, OptionValues}
 import play.modules.reactivemongo.ReactiveMongoComponent
-import uk.gov.hmrc.mongo.{MongoConnector, MongoSpecSupport}
+import uk.gov.hmrc.mongo.{FailOnUnindexedQueries, MongoConnector, MongoSpecSupport}
 import uk.gov.hmrc.play.test.UnitSpec
 import uk.gov.hmrc.servicedependencies.model.{MongoLibraryVersion, Version}
 import uk.gov.hmrc.servicedependencies.util.{FutureHelpers, MockFutureHelpers}
@@ -37,7 +37,8 @@ class LibraryVersionRepositorySpec
     with ScalaFutures
     with OptionValues
     with BeforeAndAfterEach
-    with MockitoSugar {
+    with MockitoSugar
+    with FailOnUnindexedQueries {
 
   val reactiveMongoComponent = new ReactiveMongoComponent {
     val mockedMongoConnector = mock[MongoConnector]
@@ -49,30 +50,31 @@ class LibraryVersionRepositorySpec
   val metricsRegistry = new MetricRegistry()
   val futureHelper: FutureHelpers = new MockFutureHelpers()
 
-  val mongoLibraryVersions = new LibraryVersionRepository(reactiveMongoComponent, futureHelper)
+  val libraryVersionRepository = new LibraryVersionRepository(reactiveMongoComponent, futureHelper)
 
   override def beforeEach() {
-    await(mongoLibraryVersions.drop)
+    await(libraryVersionRepository.drop)
+    await(libraryVersionRepository.ensureIndexes)
   }
 
   "update" should {
     "inserts correctly" in {
 
       val libraryVersion = MongoLibraryVersion("some-library", Some(Version(1, 0, 2)), DateTimeUtils.now)
-      await(mongoLibraryVersions.update(libraryVersion))
+      await(libraryVersionRepository.update(libraryVersion))
 
-      await(mongoLibraryVersions.getAllEntries) shouldBe Seq(libraryVersion)
+      await(libraryVersionRepository.getAllEntries) shouldBe Seq(libraryVersion)
     }
 
     "updates correctly (based on library name)" in {
 
       val libraryVersion    = MongoLibraryVersion("some-library", Some(Version(1, 0, 2)), DateTimeUtils.now)
       val newLibraryVersion = libraryVersion.copy(version = Some(Version(1, 0, 5)))
-      await(mongoLibraryVersions.update(libraryVersion))
+      await(libraryVersionRepository.update(libraryVersion))
 
-      await(mongoLibraryVersions.update(newLibraryVersion))
+      await(libraryVersionRepository.update(newLibraryVersion))
 
-      await(mongoLibraryVersions.getAllEntries) shouldBe Seq(newLibraryVersion)
+      await(libraryVersionRepository.getAllEntries) shouldBe Seq(newLibraryVersion)
     }
   }
 
@@ -80,13 +82,13 @@ class LibraryVersionRepositorySpec
     "deletes everything" in {
 
       val libraryVersion = MongoLibraryVersion("some-library", Some(Version(1, 0, 2)), DateTimeUtils.now)
-      await(mongoLibraryVersions.update(libraryVersion))
+      await(libraryVersionRepository.update(libraryVersion))
 
-      await(mongoLibraryVersions.getAllEntries) should have size 1
+      await(libraryVersionRepository.getAllEntries) should have size 1
 
-      await(mongoLibraryVersions.clearAllData)
+      await(libraryVersionRepository.clearAllData)
 
-      await(mongoLibraryVersions.getAllEntries) shouldBe Nil
+      await(libraryVersionRepository.getAllEntries) shouldBe Nil
     }
   }
 }

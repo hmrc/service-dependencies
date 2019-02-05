@@ -23,13 +23,13 @@ import org.scalatest.{BeforeAndAfterEach, LoneElement, OptionValues}
 import org.scalatestplus.play.guice.GuiceOneAppPerSuite
 import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
-
-import scala.concurrent.ExecutionContext.Implicits.global
 import play.modules.reactivemongo.ReactiveMongoComponent
-import uk.gov.hmrc.mongo.{MongoConnector, MongoSpecSupport}
+import uk.gov.hmrc.mongo.{FailOnUnindexedQueries, MongoConnector, MongoSpecSupport}
 import uk.gov.hmrc.play.test.UnitSpec
 import uk.gov.hmrc.servicedependencies.model.{MongoSlugParserJob, NewSlugParserJob}
 import uk.gov.hmrc.time.DateTimeUtils
+
+import scala.concurrent.ExecutionContext.Implicits.global
 
 class SlugParserJobsRepositorySpec
     extends UnitSpec
@@ -38,7 +38,8 @@ class SlugParserJobsRepositorySpec
        with ScalaFutures
        with OptionValues
        with BeforeAndAfterEach
-       with MockitoSugar {
+       with MockitoSugar
+       with FailOnUnindexedQueries {
 
   val reactiveMongoComponent = new ReactiveMongoComponent {
     override val mongoConnector = {

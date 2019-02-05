@@ -41,7 +41,7 @@ import org.scalatestplus.play.guice.GuiceOneAppPerSuite
 import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
 import play.modules.reactivemongo.ReactiveMongoComponent
-import uk.gov.hmrc.mongo.{MongoConnector, MongoSpecSupport}
+import uk.gov.hmrc.mongo.{FailOnUnindexedQueries, MongoConnector, MongoSpecSupport}
 import uk.gov.hmrc.play.test.UnitSpec
 import uk.gov.hmrc.servicedependencies.model.{MongoRepositoryDependencies, MongoRepositoryDependency, Version}
 import uk.gov.hmrc.servicedependencies.util.{FutureHelpers, MockFutureHelpers}
@@ -56,7 +56,9 @@ class RepositoryLibraryDependenciesRepositorySpec
     with ScalaFutures
     with OptionValues
     with BeforeAndAfterEach
-    with MockitoSugar {
+    with MockitoSugar
+    //with FailOnUnindexedQueries // case insensitive search is unindexed
+    {
 
   val mockMongoConnector         = mock[MongoConnector]
   val mockReactiveMongoComponent = mock[ReactiveMongoComponent]
@@ -65,10 +67,11 @@ class RepositoryLibraryDependenciesRepositorySpec
   when(mockReactiveMongoComponent.mongoConnector).thenReturn(mockMongoConnector)
 
   val futureHelper: FutureHelpers = new MockFutureHelpers()
-  val mongoRepositoryLibraryDependenciesRepository = new RepositoryLibraryDependenciesRepository(mockReactiveMongoComponent, futureHelper)
+  val repositoryLibraryDependenciesRepository = new RepositoryLibraryDependenciesRepository(mockReactiveMongoComponent, futureHelper)
 
   override def beforeEach() {
-    await(mongoRepositoryLibraryDependenciesRepository.drop)
+    await(repositoryLibraryDependenciesRepository.drop)
+    await(repositoryLibraryDependenciesRepository.ensureIndexes)
   }
 
   "update" should {
@@ -80,9 +83,9 @@ class RepositoryLibraryDependenciesRepositorySpec
         Nil,
         Nil,
         DateTimeUtils.now)
-      await(mongoRepositoryLibraryDependenciesRepository.update(repositoryLibraryDependencies))
+      await(repositoryLibraryDependenciesRepository.update(repositoryLibraryDependencies))
 
-      await(mongoRepositoryLibraryDependenciesRepository.getAllEntries) shouldBe Seq(repositoryLibraryDependencies)
+      await(repositoryLibraryDependenciesRepository.getAllEntries) shouldBe Seq(repositoryLibraryDependencies)
     }
 
     "inserts correctly with suffix" in {
@@ -93,9 +96,9 @@ class RepositoryLibraryDependenciesRepositorySpec
         Nil,
         Nil,
         DateTimeUtils.now)
-      await(mongoRepositoryLibraryDependenciesRepository.update(repositoryLibraryDependencies))
+      await(repositoryLibraryDependenciesRepository.update(repositoryLibraryDependencies))
 
-      await(mongoRepositoryLibraryDependenciesRepository.getAllEntries) shouldBe Seq(repositoryLibraryDependencies)
+      await(repositoryLibraryDependenciesRepository.getAllEntries) shouldBe Seq(repositoryLibraryDependencies)
     }
 
 
@@ -112,11 +115,11 @@ class RepositoryLibraryDependenciesRepositorySpec
         libraryDependencies = repositoryLibraryDependencies.libraryDependencies :+ MongoRepositoryDependency(
           "some-other-lib",
           Version(8, 4, 2)))
-      await(mongoRepositoryLibraryDependenciesRepository.update(repositoryLibraryDependencies))
+      await(repositoryLibraryDependenciesRepository.update(repositoryLibraryDependencies))
 
-      await(mongoRepositoryLibraryDependenciesRepository.update(newRepositoryLibraryDependencies))
+      await(repositoryLibraryDependenciesRepository.update(newRepositoryLibraryDependencies))
 
-      await(mongoRepositoryLibraryDependenciesRepository.getAllEntries) shouldBe Seq(newRepositoryLibraryDependencies)
+      await(repositoryLibraryDependenciesRepository.getAllEntries) shouldBe Seq(newRepositoryLibraryDependencies)
     }
 
     "updates correctly (based on repository name) with suffix" in {
@@ -133,11 +136,11 @@ class RepositoryLibraryDependenciesRepositorySpec
             "some-other-lib",
             Version("8.4.2-play-26"))
         )
-      await(mongoRepositoryLibraryDependenciesRepository.update(repositoryLibraryDependencies))
+      await(repositoryLibraryDependenciesRepository.update(repositoryLibraryDependencies))
 
-      await(mongoRepositoryLibraryDependenciesRepository.update(newRepositoryLibraryDependencies))
+      await(repositoryLibraryDependenciesRepository.update(newRepositoryLibraryDependencies))
 
-      await(mongoRepositoryLibraryDependenciesRepository.getAllEntries) shouldBe Seq(newRepositoryLibraryDependencies)
+      await(repositoryLibraryDependenciesRepository.getAllEntries) shouldBe Seq(newRepositoryLibraryDependencies)
     }
   }
 
@@ -156,10 +159,10 @@ class RepositoryLibraryDependenciesRepositorySpec
         Nil,
         DateTimeUtils.now)
 
-      await(mongoRepositoryLibraryDependenciesRepository.update(repositoryLibraryDependencies1))
-      await(mongoRepositoryLibraryDependenciesRepository.update(repositoryLibraryDependencies2))
+      await(repositoryLibraryDependenciesRepository.update(repositoryLibraryDependencies1))
+      await(repositoryLibraryDependenciesRepository.update(repositoryLibraryDependencies2))
 
-      await(mongoRepositoryLibraryDependenciesRepository.getForRepository("some-repo1")) shouldBe Some(
+      await(repositoryLibraryDependenciesRepository.getForRepository("some-repo1")) shouldBe Some(
         repositoryLibraryDependencies1)
     }
 
@@ -177,10 +180,10 @@ class RepositoryLibraryDependenciesRepositorySpec
         Nil,
         DateTimeUtils.now)
 
-      await(mongoRepositoryLibraryDependenciesRepository.update(repositoryLibraryDependencies1))
-      await(mongoRepositoryLibraryDependenciesRepository.update(repositoryLibraryDependencies2))
+      await(repositoryLibraryDependenciesRepository.update(repositoryLibraryDependencies1))
+      await(repositoryLibraryDependenciesRepository.update(repositoryLibraryDependencies2))
 
-      await(mongoRepositoryLibraryDependenciesRepository.getForRepository("SOME-REPO1")) shouldBe defined
+      await(repositoryLibraryDependenciesRepository.getForRepository("SOME-REPO1")) shouldBe defined
     }
 
     "not find a repository with partial name" in {
@@ -197,10 +200,10 @@ class RepositoryLibraryDependenciesRepositorySpec
         Nil,
         DateTimeUtils.now)
 
-      await(mongoRepositoryLibraryDependenciesRepository.update(repositoryLibraryDependencies1))
-      await(mongoRepositoryLibraryDependenciesRepository.update(repositoryLibraryDependencies2))
+      await(repositoryLibraryDependenciesRepository.update(repositoryLibraryDependencies1))
+      await(repositoryLibraryDependenciesRepository.update(repositoryLibraryDependencies2))
 
-      await(mongoRepositoryLibraryDependenciesRepository.getForRepository("some-repo")) shouldBe None
+      await(repositoryLibraryDependenciesRepository.getForRepository("some-repo")) shouldBe None
     }
   }
 
@@ -214,13 +217,13 @@ class RepositoryLibraryDependenciesRepositorySpec
         Nil,
         DateTimeUtils.now)
 
-      await(mongoRepositoryLibraryDependenciesRepository.update(repositoryLibraryDependencies))
+      await(repositoryLibraryDependenciesRepository.update(repositoryLibraryDependencies))
 
-      await(mongoRepositoryLibraryDependenciesRepository.getAllEntries) should have size 1
+      await(repositoryLibraryDependenciesRepository.getAllEntries) should have size 1
 
-      await(mongoRepositoryLibraryDependenciesRepository.clearAllData)
+      await(repositoryLibraryDependenciesRepository.clearAllData)
 
-      await(mongoRepositoryLibraryDependenciesRepository.getAllEntries) shouldBe Nil
+      await(repositoryLibraryDependenciesRepository.getAllEntries) shouldBe Nil
     }
   }
 
@@ -244,16 +247,16 @@ class RepositoryLibraryDependenciesRepositorySpec
           Nil,
           t2)
 
-      await(mongoRepositoryLibraryDependenciesRepository.update(repositoryLibraryDependencies1))
-      await(mongoRepositoryLibraryDependenciesRepository.update(repositoryLibraryDependencies2))
+      await(repositoryLibraryDependenciesRepository.update(repositoryLibraryDependencies1))
+      await(repositoryLibraryDependenciesRepository.update(repositoryLibraryDependencies2))
 
-      val mongoRepositoryDependencieses = await(mongoRepositoryLibraryDependenciesRepository.getAllEntries)
+      val mongoRepositoryDependencieses = await(repositoryLibraryDependenciesRepository.getAllEntries)
       mongoRepositoryDependencieses                   should have size 2
       mongoRepositoryDependencieses.map(_.updateDate) should contain theSameElementsAs Seq(t1, t2)
 
-      await(mongoRepositoryLibraryDependenciesRepository.clearUpdateDates)
+      await(repositoryLibraryDependenciesRepository.clearUpdateDates)
 
-      await(mongoRepositoryLibraryDependenciesRepository.getAllEntries)
+      await(repositoryLibraryDependenciesRepository.getAllEntries)
         .map(_.updateDate) should contain theSameElementsAs Seq(
         new DateTime(0, DateTimeZone.UTC),
         new DateTime(0, DateTimeZone.UTC))

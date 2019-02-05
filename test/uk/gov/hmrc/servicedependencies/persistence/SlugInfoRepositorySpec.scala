@@ -22,7 +22,7 @@ import org.scalatest.{BeforeAndAfterEach, LoneElement}
 import org.scalatestplus.play.guice.GuiceOneAppPerSuite
 import play.api.Application
 import play.modules.reactivemongo.ReactiveMongoComponent
-import uk.gov.hmrc.mongo.{MongoConnector, MongoSpecSupport}
+import uk.gov.hmrc.mongo.{FailOnUnindexedQueries, MongoConnector, MongoSpecSupport}
 import uk.gov.hmrc.play.test.UnitSpec
 import uk.gov.hmrc.servicedependencies.model.{SlugInfo, SlugDependency, Version}
 
@@ -33,7 +33,8 @@ class SlugInfoRepositorySpec
        with LoneElement
        with MongoSpecSupport
        with BeforeAndAfterEach
-       with MockitoSugar {
+       with MockitoSugar
+       with FailOnUnindexedQueries {
 
   val reactiveMongoComponent = new ReactiveMongoComponent {
     override val mongoConnector = {

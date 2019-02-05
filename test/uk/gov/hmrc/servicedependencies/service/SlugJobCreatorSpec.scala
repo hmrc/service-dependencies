@@ -19,6 +19,7 @@ import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer
 import akka.testkit.{ImplicitSender, TestKit}
 import org.scalatest.mockito.MockitoSugar
+import org.mockito.ArgumentMatchers.{any, eq => eqTo}
 import org.mockito.Mockito._
 import org.scalatest.{FlatSpecLike, Matchers}
 import uk.gov.hmrc.servicedependencies.connector.ArtifactoryConnector
@@ -27,7 +28,6 @@ import uk.gov.hmrc.servicedependencies.model.NewSlugParserJob
 import uk.gov.hmrc.servicedependencies.persistence. {
   SlugJobLastRunRepository, SlugParserJobsRepository
 }
-import org.mockito.ArgumentMatchers.{any, eq => eqTo}
 
 import scala.concurrent.Future
 import scala.concurrent.duration.FiniteDuration
@@ -38,6 +38,7 @@ class SlugJobCreatorSpec extends TestKit(ActorSystem("SlugJobCreatorSpec"))
   with FlatSpecLike
   with MockitoSugar
   with Matchers {
+
 
   "SlugJobCreator.add" should "write a number of mongojobs to the database" in {
 

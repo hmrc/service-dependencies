@@ -25,7 +25,7 @@ import org.scalatestplus.play.guice.GuiceOneAppPerSuite
 import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
 import play.modules.reactivemongo.ReactiveMongoComponent
-import uk.gov.hmrc.mongo.{MongoConnector, MongoSpecSupport}
+import uk.gov.hmrc.mongo.{FailOnUnindexedQueries, MongoConnector, MongoSpecSupport}
 import uk.gov.hmrc.play.test.UnitSpec
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -38,7 +38,8 @@ class SlugJobLastRunRepositorySpec
        with OptionValues
        with BeforeAndAfterEach
        with GuiceOneAppPerSuite
-       with MockitoSugar {
+       with MockitoSugar
+       with FailOnUnindexedQueries {
 
   val reactiveMongoComponent: ReactiveMongoComponent = new ReactiveMongoComponent {
     val mockedMongoConnector: MongoConnector = mock[MongoConnector]
@@ -55,6 +56,7 @@ class SlugJobLastRunRepositorySpec
 
   override def beforeEach() {
     await(slugJobLastRunRepository.drop)
+    await(slugJobLastRunRepository.ensureIndexes)
   }
 
   "SlugJobLastRunRepository" should {

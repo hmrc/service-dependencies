@@ -62,6 +62,9 @@ class RepositoryLibraryDependenciesRepository @Inject()(mongo: ReactiveMongoComp
 
   def getForRepository(repositoryName: String): Future[Option[MongoRepositoryDependencies]] =
     futureHelper.withTimerAndCounter("mongo.read") {
+      // Note, the regex will not use the index.
+      // Mongdo 3.4 supports collated indices, allowing for case-insensitive searches: https://docs.mongodb.com/manual/core/index-case-insensitive/
+      // but this is not currently supported in reactivemongo: https://github.com/ReactiveMongo/ReactiveMongo/issues/630
       find("repositoryName" -> BSONRegex("^" + repositoryName + "$", "i")).map {
         case data if data.size > 1 =>
           throw new RuntimeException(

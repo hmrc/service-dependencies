@@ -45,7 +45,6 @@ class LibraryVersionRepository @Inject()(mongo: ReactiveMongoComponent, futureHe
             Index(
               Seq("libraryName" -> IndexType.Hashed),
               name       = Some("libraryNameIdx"),
-              unique     = true,
               background = true))
       )
     )
