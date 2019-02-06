@@ -54,12 +54,13 @@ class SlugInfoRepositorySpec
       await(slugInfoRepository.getAllEntries) shouldBe Seq(slugInfo)
     }
 
-    "reject duplicates" in {
+    "replace exising" in {
       await(slugInfoRepository.add(slugInfo)) shouldBe true
       await(slugInfoRepository.getAllEntries) should have size 1
 
-      await(slugInfoRepository.add(slugInfo)) shouldBe false
-      await(slugInfoRepository.getAllEntries) should have size 1
+      val duplicate = slugInfo.copy(name = "my-slug-2")
+      await(slugInfoRepository.add(duplicate)) shouldBe true
+      await(slugInfoRepository.getAllEntries) shouldBe Seq(duplicate)
     }
   }
 

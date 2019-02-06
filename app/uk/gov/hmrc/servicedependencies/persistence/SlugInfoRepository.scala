@@ -17,16 +17,17 @@
 package uk.gov.hmrc.servicedependencies.persistence
 
 import com.google.inject.{Inject, Singleton}
+import play.api.libs.json.Json
 import play.modules.reactivemongo.ReactiveMongoComponent
 import reactivemongo.api.Cursor
 import reactivemongo.api.collections.bson.BSONCollection
 import reactivemongo.api.indexes.{Index, IndexType}
 import reactivemongo.bson.{BSONDocument, BSONDocumentReader, BSONObjectID}
+import reactivemongo.play.json.ImplicitBSONHandlers._
 import uk.gov.hmrc.mongo.ReactiveRepository
 import uk.gov.hmrc.servicedependencies.model.{GroupArtefacts, MongoSlugInfoFormats, ServiceDependency, SlugInfo}
 
-import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
 class SlugInfoRepository @Inject()(mongo: ReactiveMongoComponent)
@@ -36,6 +37,7 @@ class SlugInfoRepository @Inject()(mongo: ReactiveMongoComponent)
     domainFormat   = MongoSlugInfoFormats.siFormat){
 
   import MongoSlugInfoFormats._
+  import ExecutionContext.Implicits.global
 
   override def indexes: Seq[Index] =
     Seq(
@@ -50,7 +52,10 @@ class SlugInfoRepository @Inject()(mongo: ReactiveMongoComponent)
 
   def add(slugInfo: SlugInfo): Future[Boolean] =
     collection
-      .insert(slugInfo)
+      .update(
+        selector = Json.obj("uri" -> Json.toJson(slugInfo.uri)),
+        update   = slugInfo,
+        upsert   = true)
       .map(_ => true)
       .recover { case MongoErrors.Duplicate(_) => false }
 
