@@ -25,6 +25,7 @@ import uk.gov.hmrc.servicedependencies.service.{SlugJobCreator, SlugJobProcessor
 import uk.gov.hmrc.servicedependencies.persistence.MongoLocks
 
 import scala.concurrent.{ExecutionContext, Future}
+import scala.util.control.NonFatal
 
 class SlugJobCreatorScheduler @Inject()(
     actorSystem         : ActorSystem,
@@ -53,6 +54,8 @@ class SlugJobCreatorScheduler @Inject()(
       }.map {
         case Some(_) => Logger.debug(s"Slug job creator finished - releasing lock")
         case None    => Logger.debug(s"Slug job lock is taken... skipping update")
+      }.recover {
+        case NonFatal(ex) => Logger.error(s"Slug job scheduler failed: {ex.getMessage}", ex)
       }
     }
     applicationLifecycle.addStopHook(() => Future(cancellable.cancel()))
