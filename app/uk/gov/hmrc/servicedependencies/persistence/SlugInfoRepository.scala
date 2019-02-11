@@ -56,8 +56,7 @@ class SlugInfoRepository @Inject()(mongo: ReactiveMongoComponent)
         selector = Json.obj("uri" -> Json.toJson(slugInfo.uri)),
         update   = slugInfo,
         upsert   = true)
-      .map(_ => true)
-      .recover { case MongoErrors.Duplicate(_) => false }
+      .map(_.ok)
 
   def getAllEntries: Future[Seq[SlugInfo]] =
     findAll()

@@ -100,8 +100,11 @@ class ArtifactoryConnector @Inject()(http: HttpClient, config: ServiceDependenci
   }
 
   private lazy val authorization : Option[Authorization] =
-    config.artifactoryApiKey
-      .map(key => Authorization(s"Bearer $key"))
+    for {
+      user  <- config.artifactoryUser
+      pwd   <- config.artifactoryPwd
+      value =  java.util.Base64.getEncoder.encodeToString(s"$user:$pwd".getBytes)
+    } yield Authorization(s"Basic $value")
 }
 
 
