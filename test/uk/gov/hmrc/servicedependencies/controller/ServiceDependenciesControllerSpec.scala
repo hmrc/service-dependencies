@@ -51,9 +51,10 @@ class ServiceDependenciesControllerSpec
 
   "getDependencyVersionsForRepository" - {
     "should get dependency versions for a repository using the service" in {
-      val boot = Boot.init
-      val repoName               = "repo1"
-      val repositoryDependencies = Dependencies(repoName, Nil, Nil, Nil, DateTimeUtils.now)
+      val boot     = Boot.init
+      val repoName = "repo1"
+      val now      = DateTimeUtils.now
+      val repositoryDependencies = Dependencies(repoName, Nil, Nil, Nil, now)
 
       when(boot.mockedDependencyDataUpdatingService.getDependencyVersionsForRepository(any()))
         .thenReturn(Future.successful(Some(repositoryDependencies)))
@@ -61,9 +62,9 @@ class ServiceDependenciesControllerSpec
       val result = boot.controller
                     .getDependencyVersionsForRepository(repoName)
                     .apply(FakeRequest())
-      val maybeRepositoryDependencies = contentAsJson(result).asOpt[Dependencies]
 
-      maybeRepositoryDependencies.value shouldBe repositoryDependencies
+      contentAsJson(result).toString shouldBe
+         s"""{"repositoryName":"repo1","libraryDependencies":[],"sbtPluginsDependencies":[],"otherDependencies":[],"lastUpdated":"${now}"}"""
       Mockito.verify(boot.mockedDependencyDataUpdatingService).getDependencyVersionsForRepository(repoName)
     }
   }
@@ -71,19 +72,21 @@ class ServiceDependenciesControllerSpec
   "get dependencies" - {
     "should get all dependencies using the service" in {
       val boot = Boot.init
+      val now  = DateTimeUtils.now
       val libraryDependencies = Seq(
-        Dependencies("repo1", Nil, Nil, Nil, DateTimeUtils.now),
-        Dependencies("repo2", Nil, Nil, Nil, DateTimeUtils.now),
-        Dependencies("repo3", Nil, Nil, Nil, DateTimeUtils.now)
+        Dependencies("repo1", Nil, Nil, Nil, now),
+        Dependencies("repo2", Nil, Nil, Nil, now),
+        Dependencies("repo3", Nil, Nil, Nil, now)
       )
       when(boot.mockedDependencyDataUpdatingService.getDependencyVersionsForAllRepositories())
         .thenReturn(Future.successful(libraryDependencies))
 
       val result = boot.controller.dependencies().apply(FakeRequest())
-      val repositoryLibraryDependencies = contentAsJson(result).as[Seq[Dependencies]]
 
-      repositoryLibraryDependencies.size shouldBe 3
-      repositoryLibraryDependencies      should contain theSameElementsAs libraryDependencies
+      contentAsJson(result).toString shouldBe
+         s"""[{"repositoryName":"repo1","libraryDependencies":[],"sbtPluginsDependencies":[],"otherDependencies":[],"lastUpdated":"${now}"},""" +
+         s"""{"repositoryName":"repo2","libraryDependencies":[],"sbtPluginsDependencies":[],"otherDependencies":[],"lastUpdated":"${now}"},""" +
+         s"""{"repositoryName":"repo3","libraryDependencies":[],"sbtPluginsDependencies":[],"otherDependencies":[],"lastUpdated":"${now}"}]"""
     }
   }
 
