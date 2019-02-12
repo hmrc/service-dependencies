@@ -40,9 +40,9 @@ object Dependencies {
   implicit val format = {
     implicit val dtr = RestFormats.dateTimeFormats
     implicit val osf = {
-      implicit val vf = Version.apiFormat
-      Json.format[Dependency]
+      implicit val vf = Version.legacyApiWrites
+      Json.writes[Dependency]
     }
-    Json.format[Dependencies]
+    Json.writes[Dependencies]
   }
 }

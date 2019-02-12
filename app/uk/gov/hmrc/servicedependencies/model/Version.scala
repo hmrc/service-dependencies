@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.servicedependencies.model
 
-import play.api.libs.json.{__, Format, Json, JsError, JsString, JsSuccess, JsValue, OFormat}
+import play.api.libs.json.{__, Format, Json, JsError, JsString, JsSuccess, JsValue, OFormat, Writes}
 import play.api.libs.functional.syntax._
 
 case class Version(
@@ -80,6 +80,14 @@ object Version {
 
   val apiFormat: Format[Version] =
     versionAsStringFormat
+
+  // for backward compatibility - non-catalogue apis require broken down version
+  val legacyApiWrites: Writes[Version] =
+    ( (__ \ "major"   ).write[Int]
+    ~ (__ \ "minor"   ).write[Int]
+    ~ (__ \ "patch"   ).write[Int]
+    ~ (__ \ "original").write[String]
+    )(v => (v.major, v.minor, v.patch, v.original))
 
 
   def apply(version: String): Version =
