@@ -163,16 +163,16 @@ class SlugInfoRepository @Inject()(mongo: ReactiveMongoComponent)
     implicit val rga = readerGroupArtefacts
 
     col.aggregatorContext[GroupArtefacts](
-        Sort(Ascending("group"))
+        UnwindField("dependencies")
       , List(
-          UnwindField("dependencies")
-        , Project(
+          Project(
             document(
                 "group"    -> "$dependencies.group"
               , "artifact" -> "$dependencies.artifact"
             )
           )
         , Group(BSONString("$group"))("artifacts" -> AddFieldToSet("artifact"))
+        , Sort(Ascending("_id"))
         )
       )
       .prepared
