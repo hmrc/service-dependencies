@@ -137,6 +137,7 @@ class SlugInfoRepository @Inject()(mongo: ReactiveMongoComponent)
           , matchArtifact
           , projectIntoServiceDependency
           )
+      , allowDiskUse = true
       )
       .prepared
       .cursor
@@ -174,6 +175,7 @@ class SlugInfoRepository @Inject()(mongo: ReactiveMongoComponent)
         , Group(BSONString("$group"))("artifacts" -> AddFieldToSet("artifact"))
         , Sort(Ascending("_id"))
         )
+      , allowDiskUse = true
       )
       .prepared
       .cursor
