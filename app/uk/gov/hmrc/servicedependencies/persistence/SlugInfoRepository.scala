@@ -76,12 +76,14 @@ class SlugInfoRepository @Inject()(mongo: ReactiveMongoComponent)
       val opt: Option[ServiceDependency] = for {
         slugName     <- bson.getAs[String]("slugName")
         slugVersion  <- bson.getAs[String]("slugVersion")
+        teams        <- bson.getAs[List[String]]("teams").orElse(Some(List.empty))
         depGroup     <- bson.getAs[String]("depGroup")
         depArtifact  <- bson.getAs[String]("depArtifact")
         depVersion   <- bson.getAs[String]("depVersion")
       } yield ServiceDependency(
           slugName    = slugName
         , slugVersion = slugVersion
+        , teams       = teams
         , depGroup    = depGroup
         , depArtefact = depArtifact
         , depVersion  = depVersion

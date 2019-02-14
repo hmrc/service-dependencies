@@ -20,6 +20,7 @@ import java.nio.charset.StandardCharsets
 
 import org.scalatest.{FlatSpec, Matchers}
 import uk.gov.hmrc.servicedependencies.model.SlugDependency
+import uk.gov.hmrc.servicedependencies.connector.TeamsForServices
 
 class SlugParserSpec extends FlatSpec with Matchers {
 
@@ -92,11 +93,14 @@ class SlugParserSpec extends FlatSpec with Matchers {
 
   "slugparser" should "parse a slug" in {
     val in = getClass.getResourceAsStream("/slugs/example-service_0.1.2_0.5.2.tar")
-    val res = SlugParser.parse("https://webstore.uk/slugs/example-service/example-service_0.1.2_0.5.2.tgz", in)
+    val teamsForServices = TeamsForServices(Map("example-service" -> Seq("Team1")))
+    val res = SlugParser.parse("https://webstore.uk/slugs/example-service/example-service_0.1.2_0.5.2.tgz", in, teamsForServices)
 
     res.name shouldBe "example-service"
     res.runnerVersion shouldBe "0.5.2"
     res.version shouldBe "0.1.2"
+
+    res.teams shouldBe Seq("Team1")
 
     res.classpath.isEmpty shouldBe false
     res.classpath shouldNot startWith ("declare -r app_classpath")

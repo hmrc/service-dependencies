@@ -21,6 +21,7 @@ import play.api.Logger
 import play.api.libs.json.Json
 import play.api.mvc.ControllerComponents
 import uk.gov.hmrc.play.bootstrap.controller.BackendController
+import uk.gov.hmrc.servicedependencies.connector.TeamsAndRepositoriesConnector
 import uk.gov.hmrc.servicedependencies.model.{MongoSlugParserJob, NewSlugParserJob}
 import uk.gov.hmrc.servicedependencies.service.{
   DependencyDataUpdatingService, SlugJobCreator, SlugJobProcessor, SlugInfoService
@@ -35,6 +36,7 @@ class AdministrationController @Inject()(
     slugInfoService              : SlugInfoService,
     slugJobProcessor             : SlugJobProcessor,
     slugJobCreator               : SlugJobCreator,
+    teamsAndRepositoriesConnector: TeamsAndRepositoriesConnector,
     cc                           : ControllerComponents)
   extends BackendController(cc) {
 
@@ -107,14 +109,19 @@ class AdministrationController @Inject()(
   def executeJob =
     Action.async(parse.json) { implicit request =>
       withJsonBody[NewSlugParserJob] { job =>
-        slugJobProcessor.processJob(MongoSlugParserJob(
-                    id        = "0",
-                    slugUri   = job.slugUri,
-                    processed = false,
-                    attempts  = 0))
-          .recover {
-            case NonFatal(e) => Logger.error(s"An error occurred processing slug parser job ${job.slugUri}: ${e.getMessage}", e)
-          }
+        (for {
+           teamsForServices <- teamsAndRepositoriesConnector.getTeamsForServices
+           _                <- slugJobProcessor.processJob(
+                                 MongoSlugParserJob(
+                                   id        = "0",
+                                   slugUri   = job.slugUri,
+                                   processed = false,
+                                   attempts  = 0),
+                                 teamsForServices)
+         } yield ()
+        ).recover {
+          case NonFatal(e) => Logger.error(s"An error occurred processing slug parser job ${job.slugUri}: ${e.getMessage}", e)
+        }
         Future(Accepted)
       }
     }

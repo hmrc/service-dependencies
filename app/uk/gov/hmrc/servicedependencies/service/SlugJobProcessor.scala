@@ -16,15 +16,17 @@
 
 package uk.gov.hmrc.servicedependencies.service
 
+import akka.stream.Materializer
 import akka.stream.scaladsl.{Sink, Source}
 import com.google.inject.{Inject, Singleton}
 import java.io.{BufferedInputStream, InputStream}
-
-import akka.stream.Materializer
-import play.api.{Configuration, Logger}
 import org.apache.commons.compress.archivers.jar.JarArchiveInputStream
 import org.apache.commons.compress.archivers.{ArchiveEntry, ArchiveStreamFactory}
-import uk.gov.hmrc.servicedependencies.connector.GzippedResourceConnector
+import play.api.{Configuration, Logger}
+import uk.gov.hmrc.http.HeaderCarrier
+import uk.gov.hmrc.servicedependencies.connector.{
+  GzippedResourceConnector, TeamsAndRepositoriesConnector, TeamsForServices
+}
 import uk.gov.hmrc.servicedependencies.model.{MongoSlugParserJob, SlugDependency, SlugInfo, Version}
 import uk.gov.hmrc.servicedependencies.persistence.{SlugInfoRepository, SlugParserJobsRepository}
 import uk.gov.hmrc.servicedependencies.util.FutureHelpers
@@ -35,35 +37,44 @@ import scala.util.control.NonFatal
 
 @Singleton
 class SlugJobProcessor @Inject()(
-   slugParserJobsRepository: SlugParserJobsRepository,
-   slugInfoRepository      : SlugInfoRepository,
-   gzippedResourceConnector: GzippedResourceConnector,
-   futureHelpers           : FutureHelpers)(
+   slugParserJobsRepository     : SlugParserJobsRepository,
+   slugInfoRepository           : SlugInfoRepository,
+   gzippedResourceConnector     : GzippedResourceConnector,
+   teamsAndRepositoriesConnector: TeamsAndRepositoriesConnector,
+   futureHelpers                : FutureHelpers)(
    implicit val materializer: Materializer) {
 
   import ExecutionContext.Implicits.global
 
-  def run(): Future[Unit] =
+  def run(): Future[Unit] = {
+    implicit val hc = HeaderCarrier()
+    for {
+      teamsForServices <- teamsAndRepositoriesConnector.getTeamsForServices
+      _                <- run(teamsForServices)
+    } yield ()
+  }
+
+  private def run(teamsForServices: TeamsForServices): Future[akka.Done] =
     Source.fromFuture(slugParserJobsRepository.getUnprocessed)
       .map { jobs => Logger.debug(s"found ${jobs.size} Slug parser jobs"); jobs }
       .mapConcat(_.toList)
       .mapAsyncUnordered(2) { job =>
-        processJob(job)
+        processJob(job, teamsForServices)
           .map(_ => slugParserJobsRepository.markProcessed(job.id))
           .recoverWith {
             case NonFatal(e) => Logger.error(s"An error occurred processing slug parser job ${job.id}: ${e.getMessage}", e)
-              slugParserJobsRepository.markAttempted(job.id)
+                                slugParserJobsRepository.markAttempted(job.id)
           }
       }
       .runWith(Sink.ignore)
-      .map(_ => ())
 
-  def processJob(job: MongoSlugParserJob): Future[Unit] =
+
+  def processJob(job: MongoSlugParserJob, teamsForServices: TeamsForServices): Future[Unit] =
     futureHelpers.withTimerAndCounter("slug.process")(
       for {
         _     <- Future(Logger.debug(s"processing slug job ${job.id} (${job.slugUri})"))
         is    <- gzippedResourceConnector.openGzippedResource(job.slugUri)
-        si    =  SlugParser.parse(job.slugUri, is)
+        si    =  SlugParser.parse(job.slugUri, is, teamsForServices)
         added <- slugInfoRepository.add(si)
         _     =  if (added) Logger.debug(s"added slugInfo for ${job.slugUri}: ${si.name} ${si.version}")
                  else       Logger.warn(s"slug ${job.slugUri} not added - already processed")
@@ -74,7 +85,7 @@ class SlugJobProcessor @Inject()(
 
 object SlugParser {
 
-  def parse(slugUri: String, in: InputStream): SlugInfo = {
+  def parse(slugUri: String, in: InputStream, teamsForServices: TeamsForServices): SlugInfo = {
     val tar = new ArchiveStreamFactory().createArchiveInputStream(new BufferedInputStream(in))
 
     val (runnerVersion, slugVersion, slugName, versionLong) =
@@ -90,6 +101,7 @@ object SlugParser {
       name            = slugName,
       version         = slugVersion,
       versionLong     = versionLong,
+      teams           = teamsForServices.getTeams(slugName).toList,
       runnerVersion   = runnerVersion,
       classpath       = "",
       jdkVersion      = "",

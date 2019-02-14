@@ -36,6 +36,11 @@ object Team {
   def normalisedName(name: String): String = name.toLowerCase.replaceAll(" ", "_")
 }
 
+case class TeamsForServices(toMap: Map[String, Seq[String]]) {
+  def getTeams(service: String): Seq[String] =
+    toMap.getOrElse(service, Seq.empty)
+}
+
 @Singleton
 class TeamsAndRepositoriesConnector @Inject()(httpClient: HttpClient, serviceConfiguration: ServiceDependenciesConfig) {
 
@@ -47,8 +52,9 @@ class TeamsAndRepositoriesConnector @Inject()(httpClient: HttpClient, serviceCon
   def getRepository(repositoryName: String)(implicit hc: HeaderCarrier): Future[Option[Repository]] =
     httpClient.GET[Option[Repository]](s"$teamsAndRepositoriesApiBase/api/repositories/$repositoryName")
 
-  def getTeamsForServices()(implicit hc: HeaderCarrier): Future[Map[String, Seq[String]]] =
+  def getTeamsForServices()(implicit hc: HeaderCarrier): Future[TeamsForServices] =
     httpClient.GET[Map[String, Seq[String]]](s"$teamsAndRepositoriesApiBase/api/services?teamDetails=true")
+      .map(TeamsForServices.apply)
 
   def getAllRepositories()(implicit hc: HeaderCarrier): Future[Seq[RepositoryInfo]] =
     httpClient.GET[Seq[RepositoryInfo]](s"$teamsAndRepositoriesApiBase/api/repositories")

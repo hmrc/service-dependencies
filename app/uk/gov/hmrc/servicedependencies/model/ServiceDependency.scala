@@ -22,6 +22,7 @@ import play.api.libs.functional.syntax._
 case class ServiceDependency(
     slugName    : String,
     slugVersion : String,
+    teams       : List[String],
     depGroup    : String,
     depArtefact : String,
     depVersion  : String) {
@@ -34,6 +35,7 @@ trait ApiServiceDependencyFormats {
   val sdFormat: OFormat[ServiceDependency] =
     ( (__ \ "slugName"   ).format[String]
     ~ (__ \ "slugVersion").format[String]
+    ~ (__ \ "teams"      ).format[List[String]]
     ~ (__ \ "depGroup"   ).format[String]
     ~ (__ \ "depArtefact").format[String]
     ~ (__ \ "depVersion" ).format[String]

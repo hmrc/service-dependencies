@@ -32,8 +32,8 @@ import uk.gov.hmrc.githubclient.{APIRateLimitExceededException, GitApiConfig}
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.servicedependencies.config._
 import uk.gov.hmrc.servicedependencies.config.model.{CuratedDependencyConfig, OtherDependencyConfig, SbtPluginConfig}
+import uk.gov.hmrc.servicedependencies.connector.{GithubConnector, TeamsAndRepositoriesConnector, TeamsForServices}
 import uk.gov.hmrc.servicedependencies.connector.model.{Repository, RepositoryInfo}
-import uk.gov.hmrc.servicedependencies.connector.{GithubConnector, TeamsAndRepositoriesConnector, model}
 import uk.gov.hmrc.servicedependencies.model._
 import uk.gov.hmrc.servicedependencies.persistence.RepositoryLibraryDependenciesRepository
 import uk.gov.hmrc.servicedependencies.{Github, GithubSearchError}
@@ -74,7 +74,7 @@ class DependenciesDataSourceSpec
 
     "should persist the dependencies (library, plugin and other) for each repository" in new TestCase {
 
-      override def repositories: Seq[model.Repository] = Seq(repo1, repo2, repo3)
+      override def repositories: Seq[Repository] = Seq(repo1, repo2, repo3)
 
       val captor: ArgumentCaptor[MongoRepositoryDependencies] =
         ArgumentCaptor.forClass(classOf[MongoRepositoryDependencies])
@@ -120,7 +120,7 @@ class DependenciesDataSourceSpec
 
     "should persist the empty dependencies (non-sbt - i.e: no library, no plugins and no other dependencies)" in new TestCase {
 
-      override def repositories: Seq[model.Repository] = Seq(repo5)
+      override def repositories: Seq[Repository] = Seq(repo5)
 
       val captor: ArgumentCaptor[MongoRepositoryDependencies] =
         ArgumentCaptor.forClass(classOf[MongoRepositoryDependencies])
@@ -142,7 +142,7 @@ class DependenciesDataSourceSpec
 
     "should NOT persist the dependency when there not been any updates to the git repository" in new TestCase {
 
-      override def repositories: Seq[model.Repository] = Seq(repo1.copy(lastActive = timeInThePast))
+      override def repositories: Seq[Repository] = Seq(repo1.copy(lastActive = timeInThePast))
 
       Mockito.verifyZeroInteractions(repositoryLibraryDependenciesRepository)
 
@@ -154,7 +154,7 @@ class DependenciesDataSourceSpec
     }
 
     "should persist the dependency if the forced flag is true, even if there are no updates to the git repository" in new TestCase {
-      override def repositories: Seq[model.Repository] = Seq(repo1.copy(lastActive = timeInThePast), repo2, repo3)
+      override def repositories: Seq[Repository] = Seq(repo1.copy(lastActive = timeInThePast), repo2, repo3)
 
       val captor: ArgumentCaptor[MongoRepositoryDependencies] =
         ArgumentCaptor.forClass(classOf[MongoRepositoryDependencies])
@@ -177,7 +177,7 @@ class DependenciesDataSourceSpec
 
     "should NOT call getRepository every time it updates a repository" in new TestCase {
 
-      override def repositories: Seq[model.Repository] = Seq(repo1, repo2)
+      override def repositories: Seq[Repository] = Seq(repo1, repo2)
 
       when(repositoryLibraryDependenciesRepository.update(any()))
         .thenReturn(Future.successful(mock[MongoRepositoryDependencies]))
@@ -189,7 +189,7 @@ class DependenciesDataSourceSpec
 
     "should short circuit operation when RequestException is thrown for api rate limiting reason" in new TestCase {
 
-      override def repositories: Seq[model.Repository] = Seq(repo1, repo2, repo3, repo4)
+      override def repositories: Seq[Repository] = Seq(repo1, repo2, repo3, repo4)
 
       var callCount = 0
       override def githubStub: Github = new GithubStub(Map()) {
@@ -219,7 +219,7 @@ class DependenciesDataSourceSpec
 
     "should get the new repos (non existing in db) first" in new TestCase {
 
-      override def repositories: Seq[model.Repository] = Seq(repo1, repo2, repo3, repo4)
+      override def repositories: Seq[Repository] = Seq(repo1, repo2, repo3, repo4)
 
       val dependenciesAlreadyInDb = Seq(
         MongoRepositoryDependencies("repo1", Nil, Nil, Nil, timeNow),
@@ -253,7 +253,7 @@ class DependenciesDataSourceSpec
       results.filter(_.libraryName == lib).head.version
 
     "should get the latest library version" in new TestCase {
-      override def repositories: Seq[model.Repository] = Seq(repo1, repo2, repo3)
+      override def repositories: Seq[Repository] = Seq(repo1, repo2, repo3)
 
       override def githubStub() =
         new GithubStub(
@@ -279,7 +279,7 @@ class DependenciesDataSourceSpec
 
     "should get the latest sbt plugin version" in new TestCase {
 
-      override def repositories: Seq[model.Repository] = Seq(repo1, repo2, repo3)
+      override def repositories: Seq[Repository] = Seq(repo1, repo2, repo3)
       override def githubStub = new GithubStub(
         lookupMap = Map(),
         repositoryAndVersions =
@@ -304,13 +304,13 @@ class DependenciesDataSourceSpec
 
   trait TestCase {
 
-    def repositories: Seq[model.Repository]
+    def repositories: Seq[Repository]
 
-    val repo1 = model.Repository("repo1", timeInThePast, Seq("PlatOps"))
-    val repo2 = model.Repository("repo2", timeInThePast, Seq("PlatOps"))
-    val repo3 = model.Repository("repo3", timeInThePast, Seq("PlatOps"))
-    val repo4 = model.Repository("repo4", timeInThePast, Seq("PlatOps"))
-    val repo5 = model.Repository("repo5", timeInThePast, Seq("PlatOps"))
+    val repo1 = Repository("repo1", timeInThePast, Seq("PlatOps"))
+    val repo2 = Repository("repo2", timeInThePast, Seq("PlatOps"))
+    val repo3 = Repository("repo3", timeInThePast, Seq("PlatOps"))
+    val repo4 = Repository("repo4", timeInThePast, Seq("PlatOps"))
+    val repo5 = Repository("repo5", timeInThePast, Seq("PlatOps"))
 
     def lookupTable(repo: String) = repo match {
       case "repo1" =>
@@ -358,7 +358,7 @@ class DependenciesDataSourceSpec
     val teamsAndRepositoriesConnector = mock[TeamsAndRepositoriesConnector]
 
     when(teamsAndRepositoriesConnector.getTeamsForServices()(any()))
-      .thenReturn(Future.successful(Map("service1" -> Seq("PlatOps", "WebOps"))))
+      .thenReturn(Future.successful(TeamsForServices(Map("service1" -> Seq("PlatOps", "WebOps")))))
 
     when(teamsAndRepositoriesConnector.getAllRepositories()(any()))
       .thenReturn(Future.successful(repositories.map(r => RepositoryInfo(r.name, r.lastActive, r.lastActive, "Service"))))

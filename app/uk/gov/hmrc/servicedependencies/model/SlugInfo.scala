@@ -31,6 +31,7 @@ case class SlugInfo(
   name            : String,
   version         : String,
   versionLong     : Long,
+  teams           : List[String],
   runnerVersion   : String,
   classpath       : String,
   jdkVersion      : String,
