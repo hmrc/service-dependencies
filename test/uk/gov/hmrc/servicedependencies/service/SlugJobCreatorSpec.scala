@@ -22,7 +22,7 @@ import org.scalatest.mockito.MockitoSugar
 import org.mockito.ArgumentMatchers.{any, eq => eqTo}
 import org.mockito.Mockito._
 import org.scalatest.{FlatSpecLike, Matchers}
-import uk.gov.hmrc.servicedependencies.config.SchedulerConfig
+import uk.gov.hmrc.servicedependencies.config.SchedulerConfigs
 import uk.gov.hmrc.servicedependencies.connector.ArtifactoryConnector
 import uk.gov.hmrc.servicedependencies.connector.model.ArtifactoryChild
 import uk.gov.hmrc.servicedependencies.model.NewSlugParserJob
@@ -79,8 +79,8 @@ class SlugJobCreatorSpec extends TestKit(ActorSystem("SlugJobCreatorSpec"))
       val mockedArtifactoryConnector     = mock[ArtifactoryConnector]
       val mockedSlugParserJobsRepository = mock[SlugParserJobsRepository]
       val mockedJobLastRunRepository     = mock[SlugJobLastRunRepository]
-      val config                         = mock[SchedulerConfig]
-      val slugJobCreator = new SlugJobCreator(mockedArtifactoryConnector, mockedSlugParserJobsRepository, mockedJobLastRunRepository, config)(ActorMaterializer()) {
+      val configs                        = mock[SchedulerConfigs]
+      val slugJobCreator = new SlugJobCreator(mockedArtifactoryConnector, mockedSlugParserJobsRepository, mockedJobLastRunRepository, configs)(ActorMaterializer()) {
         override val rateLimit: RateLimit = RateLimit(1000, FiniteDuration(10, "seconds"))
       }
       Boot(

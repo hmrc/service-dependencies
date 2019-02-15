@@ -16,30 +16,30 @@
 
 package uk.gov.hmrc.servicedependencies
 
-import akka.actor.{ActorSystem, Cancellable}
+import akka.actor.ActorSystem
 import com.google.inject.Singleton
 import javax.inject.Inject
-import play.api.Logger
 import play.api.inject.ApplicationLifecycle
 import uk.gov.hmrc.http.HeaderCarrier
-import uk.gov.hmrc.servicedependencies.config.{SchedulerConfig, SchedulerConfigs}
+import uk.gov.hmrc.servicedependencies.config.SchedulerConfigs
 import uk.gov.hmrc.servicedependencies.service.DependencyDataUpdatingService
+import uk.gov.hmrc.servicedependencies.util.SchedulerUtils
 
-import scala.concurrent.{ExecutionContext, Future}
-import scala.concurrent.duration.{DurationInt, FiniteDuration}
-import scala.util.control.NonFatal
+import scala.concurrent.ExecutionContext
+
 
 @Singleton
 class DataReloadScheduler @Inject()(
-  schedulerConfigs             : SchedulerConfigs,
-  actorSystem                  : ActorSystem,
-  dependencyDataUpdatingService: DependencyDataUpdatingService,
-  applicationLifecycle         : ApplicationLifecycle) {
+      schedulerConfigs             : SchedulerConfigs
+    , dependencyDataUpdatingService: DependencyDataUpdatingService
+    )(implicit actorSystem         : ActorSystem
+             , applicationLifecycle: ApplicationLifecycle
+    ) extends SchedulerUtils {
 
   implicit val hc: HeaderCarrier = HeaderCarrier()
   import ExecutionContext.Implicits.global
 
-
+  // note, locks in service layer
   schedule("libraryDependencyDataReloader", schedulerConfigs.dependenciesReload){
     dependencyDataUpdatingService.reloadCurrentDependenciesDataForAllRepositories()
       .map(_ => ())
@@ -54,21 +54,4 @@ class DataReloadScheduler @Inject()(
     dependencyDataUpdatingService.reloadLatestSbtPluginVersions()
       .map(_ => ())
   }
-
-  private def schedule(
-      label          : String
-    , schedulerConfig: SchedulerConfig
-    )(f: => Future[Unit]) =
-      if (schedulerConfig.enabled) {
-        Logger.info(s"Initialising $label update every ${schedulerConfig.frequency}")
-        val cancellable =
-          actorSystem.scheduler.schedule(schedulerConfig.initialDelay, schedulerConfig.frequency) {
-            f.recover {
-                case NonFatal(e) => Logger.error(s"$label interrupted because: ${e.getMessage}", e)
-              }
-          }
-        applicationLifecycle.addStopHook(() => Future(cancellable.cancel()))
-      } else {
-        Logger.info(s"$label is DISABLED. to enable, configure configure ${schedulerConfig.enabledKey}=true in config.")
-      }
 }

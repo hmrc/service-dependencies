@@ -20,7 +20,7 @@ import akka.actor.ActorSystem
 import com.kenshoo.play.metrics.Metrics
 import javax.inject.Inject
 import org.joda.time.Duration
-import play.api.Logger
+import play.api.inject.ApplicationLifecycle
 import play.modules.reactivemongo.ReactiveMongoComponent
 import reactivemongo.api.DefaultDB
 import uk.gov.hmrc.lock.{ExclusiveTimePeriodLock, LockRepository}
@@ -28,16 +28,19 @@ import uk.gov.hmrc.metrix.MetricOrchestrator
 import uk.gov.hmrc.metrix.persistence.MongoMetricRepository
 import uk.gov.hmrc.servicedependencies.config.SchedulerConfigs
 import uk.gov.hmrc.servicedependencies.service.RepositoryDependenciesSource
+import uk.gov.hmrc.servicedependencies.util.SchedulerUtils
 
 import scala.concurrent.ExecutionContext
-import scala.util.control.NonFatal
+
 
 class MetricsScheduler @Inject()(
-    actorSystem                 : ActorSystem,
     schedulerConfigs            : SchedulerConfigs,
     metrics                     : Metrics,
     reactiveMongoComponent      : ReactiveMongoComponent,
-    repositoryDependenciesSource: RepositoryDependenciesSource) {
+    repositoryDependenciesSource: RepositoryDependenciesSource)(
+    implicit actorSystem         : ActorSystem,
+             applicationLifecycle: ApplicationLifecycle
+  ) extends SchedulerUtils {
 
   import ExecutionContext.Implicits.global
 
@@ -48,7 +51,7 @@ class MetricsScheduler @Inject()(
   val lock = new ExclusiveTimePeriodLock {
     override def repo: LockRepository  = new LockRepository()
     override def lockId: String        = "repositoryDependenciesLock"
-    override def holdLockFor: Duration = new org.joda.time.Duration(schedulerConfig.frequency.toMillis)
+    override def holdLockFor: Duration = new org.joda.time.Duration(schedulerConfig.frequency().toMillis)
   }
 
   val metricOrchestrator = new MetricOrchestrator(
@@ -58,18 +61,9 @@ class MetricsScheduler @Inject()(
     metricRegistry   = metrics.defaultRegistry
   )
 
-  if (schedulerConfig.enabled) {
-    Logger.info(s"Enabling Metrics Scheduler, running every ${schedulerConfig.frequency}")
-    actorSystem.scheduler.schedule(schedulerConfig.initialDelay, schedulerConfig.frequency) {
-      metricOrchestrator
-        .attemptToUpdateRefreshAndResetMetrics(_ => true)
-        .map(_.andLogTheResult())
-        .recover {
-          case NonFatal(e) => Logger.error(s"An error occurred processing metrics: ${e.getMessage}", e)
-        }
-    }
-  }
-  else {
-    Logger.info("Metrics Scheduler is DISABLED")
+  schedule("Metrics", schedulerConfig) {
+    metricOrchestrator
+      .attemptToUpdateRefreshAndResetMetrics(_ => true)
+      .map(_.andLogTheResult())
   }
 }

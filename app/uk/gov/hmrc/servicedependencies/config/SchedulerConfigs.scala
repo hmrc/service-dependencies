@@ -24,45 +24,75 @@ import scala.concurrent.duration.{DurationInt, FiniteDuration}
 case class SchedulerConfig(
     enabledKey  : String
   , enabled     : Boolean
-  , frequency   : FiniteDuration
-  , initialDelay: FiniteDuration
+  , frequency   : () => FiniteDuration
+  , initialDelay: () => FiniteDuration
   )
+
+object SchedulerConfig {
+  import ConfigUtils._
+
+  def apply(
+      configuration: Configuration
+    , enabledKey   : String
+    , frequency    : => FiniteDuration
+    , initialDelay : => FiniteDuration
+    ): SchedulerConfig =
+      SchedulerConfig(
+          enabledKey
+        , enabled      = configuration.get[Boolean](enabledKey)
+        , frequency    = () => frequency
+        , initialDelay = () => initialDelay
+        )
+
+  def apply(
+      configuration   : Configuration
+    , enabledKey      : String
+    , frequencyKey    : String
+    , initialDelayKey : String
+    ): SchedulerConfig =
+      SchedulerConfig(
+          enabledKey
+        , enabled      = configuration.get[Boolean](enabledKey)
+        , frequency    = () => getDuration(configuration, frequencyKey)
+        , initialDelay = () => getDuration(configuration, initialDelayKey)
+        )
+}
 
 @Singleton
 class SchedulerConfigs @Inject()(configuration: Configuration) extends ConfigUtils {
 
   val slugJobCreator = SchedulerConfig(
-      enabledKey   = "repositoryDependencies.slugJob.enabled"
-    , enabled      = configuration.get[Boolean]("repositoryDependencies.slugJob.enabled")
-    , frequency    = getDuration(configuration, "repositoryDependencies.slugJob.interval")
-    , initialDelay = getDuration(configuration, "repositoryDependencies.slugJob.initialDelay")
+      configuration
+    , enabledKey      = "repositoryDependencies.slugJob.enabled"
+    , frequencyKey    = "repositoryDependencies.slugJob.interval"
+    , initialDelayKey = "repositoryDependencies.slugJob.initialDelay"
     )
 
   val metrics = SchedulerConfig(
-      enabledKey   = "repositoryDependencies.metricsGauges.enabled"
-    , enabled      = configuration.get[Boolean]("repositoryDependencies.metricsGauges.enabled")
-    , frequency    = getDuration(configuration, "repositoryDependencies.metricsGauges.interval")
-    , initialDelay = getDuration(configuration, "repositoryDependencies.metricsGauges.initialDelay")
+      configuration
+    , enabledKey      = "repositoryDependencies.metricsGauges.enabled"
+    , frequencyKey    = "repositoryDependencies.metricsGauges.interval"
+    , initialDelayKey = "repositoryDependencies.metricsGauges.initialDelay"
     )
 
   val dependenciesReload = SchedulerConfig(
-      enabledKey   = "scheduler.enabled"
-    , enabled      = configuration.get[Boolean]("scheduler.enabled")
+      configuration
+    , enabledKey   = "scheduler.enabled"
       // TODO move 'minutes' out of key name into value - then reuse getDuration
     , frequency    = configuration.get[Int]("dependency.reload.intervalminutes").minutes
     , initialDelay = 100.milliseconds
     )
 
   val libraryReload = SchedulerConfig(
-      enabledKey   = "scheduler.enabled"
-    , enabled      = configuration.get[Boolean]("scheduler.enabled")
+      configuration
+    , enabledKey   = "scheduler.enabled"
     , frequency    = configuration.get[Int]("library.reload.intervalminutes").minutes
     , initialDelay = 100.milliseconds
     )
 
   val sbtReload = SchedulerConfig(
-      enabledKey   = "scheduler.enabled"
-    , enabled      = configuration.get[Boolean]("scheduler.enabled")
+      configuration
+    , enabledKey   = "scheduler.enabled"
     , frequency    = configuration.get[Int]("sbtPlugin.reload.intervalminutes").minutes
     , initialDelay = 100.milliseconds
     )

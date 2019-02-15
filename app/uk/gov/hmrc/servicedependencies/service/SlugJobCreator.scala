@@ -61,7 +61,7 @@ class SlugJobCreator @Inject()(
       nextSince <- Future(Instant.now)
       lastRun   <- jobRunRepo.getLastRun
       since     =  lastRun.getOrElse {
-                     val default = Instant.now.minus(Duration.millis(schedulerConfigs.slugJobCreator.frequency.toMillis))
+                     val default = Instant.now.minus(Duration.millis(schedulerConfigs.slugJobCreator.frequency().toMillis))
                      Logger.warn(s"This is the first run of SlugJobCreator - you may want to backfill data before $default")
                      default
                    }
