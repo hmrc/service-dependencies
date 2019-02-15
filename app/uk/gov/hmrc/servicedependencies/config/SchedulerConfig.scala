@@ -19,7 +19,7 @@ package uk.gov.hmrc.servicedependencies.config
 import javax.inject.{Inject, Singleton}
 import play.api.Configuration
 
-import scala.concurrent.duration.FiniteDuration
+import scala.concurrent.duration.{DurationInt, FiniteDuration}
 
 @Singleton
 class SchedulerConfig @Inject()(configuration: Configuration) extends ConfigUtils {
@@ -37,9 +37,12 @@ class SchedulerConfig @Inject()(configuration: Configuration) extends ConfigUtil
   }
 
   object DataReload {
-    val enabled                       : Boolean     = configuration.get[Boolean]("scheduler.enabled")
-    val dependenciesReloadIntervalMins: Option[Int] = configuration.getOptional[Int]("dependency.reload.intervalminutes")
-    val libraryReloadIntervalMins     : Option[Int] = configuration.getOptional[Int]("library.reload.intervalminutes")
-    val sbtReloadIntervalMins         : Option[Int] = configuration.getOptional[Int]("sbtPlugin.reload.intervalminutes")
+    val enabled                   : Boolean                = configuration.get[Boolean]("scheduler.enabled")
+    val dependenciesReloadInterval: Option[FiniteDuration] = configuration.getOptional[Int]("dependency.reload.intervalminutes").map(_.minutes)
+    val libraryReloadInterval     : Option[FiniteDuration] = configuration.getOptional[Int]("library.reload.intervalminutes").map(_.minutes)
+    val sbtReloadInterval         : Option[FiniteDuration] = configuration.getOptional[Int]("sbtPlugin.reload.intervalminutes").map(_.minutes)
+    val dependenciesReloadInitialDelay = 100.milliseconds
+    val libraryReloadInitialDelay      = 100.milliseconds
+    val sbtReloadInitialDelay          = 100.milliseconds
   }
 }

@@ -30,13 +30,14 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.concurrent.duration._
 
-class UpdateSchedulerSpec extends TestKit(ActorSystem("UpdateSchedulerSpec"))
-  with FunSpecLike
-  with MockitoSugar
-  with Matchers
-  with GuiceOneAppPerSuite
-  with BeforeAndAfterAll
-  with BeforeAndAfterEach {
+class DataUpdaterSpec
+  extends TestKit(ActorSystem("DataUpdaterSpec"))
+     with FunSpecLike
+     with MockitoSugar
+     with Matchers
+     with GuiceOneAppPerSuite
+     with BeforeAndAfterAll
+     with BeforeAndAfterEach {
 
   trait Counter {
     var count                = 0
@@ -51,9 +52,9 @@ class UpdateSchedulerSpec extends TestKit(ActorSystem("UpdateSchedulerSpec"))
   }
 
   def schedulerF(dependencyDataUpdatingService: DependencyDataUpdatingService) =
-    new UpdateScheduler(system, dependencyDataUpdatingService)
+    new DataUpdater(system, dependencyDataUpdatingService)
 
-  describe("Scheduler") {
+  describe("DataUpdater") {
     it("should schedule startUpdatingLibraryData based on configured interval") {
       val dependencyDataUpdatingService = mock[DependencyDataUpdatingService]
       Mockito.when(dependencyDataUpdatingService.reloadLatestLibraryVersions()).thenReturn(Future(Seq.empty))
