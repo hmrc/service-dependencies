@@ -28,7 +28,10 @@ import scala.concurrent.ExecutionContext.Implicits.global
 case class Team(
   name: String,
   repos: Option[Map[String, Seq[String]]]
-)
+) {
+  def allRepos: Seq[String] =
+    repos.map(_.values.toSeq.flatten).getOrElse(Seq.empty)
+}
 
 object Team {
   implicit val format = Json.format[Team]
@@ -52,6 +55,7 @@ class TeamsAndRepositoriesConnector @Inject()(httpClient: HttpClient, serviceCon
   def getRepository(repositoryName: String)(implicit hc: HeaderCarrier): Future[Option[Repository]] =
     httpClient.GET[Option[Repository]](s"$teamsAndRepositoriesApiBase/api/repositories/$repositoryName")
 
+  // TODO add cache
   def getTeamsForServices()(implicit hc: HeaderCarrier): Future[TeamsForServices] =
     httpClient.GET[Map[String, Seq[String]]](s"$teamsAndRepositoriesApiBase/api/services?teamDetails=true")
       .map(TeamsForServices.apply)
@@ -59,6 +63,7 @@ class TeamsAndRepositoriesConnector @Inject()(httpClient: HttpClient, serviceCon
   def getAllRepositories()(implicit hc: HeaderCarrier): Future[Seq[RepositoryInfo]] =
     httpClient.GET[Seq[RepositoryInfo]](s"$teamsAndRepositoriesApiBase/api/repositories")
 
+  // TODO add cache
   def getTeamsWithRepositories()(implicit hc: HeaderCarrier): Future[Seq[Team]] =
     httpClient.GET[Seq[Team]](s"$teamsAndRepositoriesApiBase/api/teams_with_repositories")
 
