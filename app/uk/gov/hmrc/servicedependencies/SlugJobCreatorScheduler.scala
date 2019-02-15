@@ -20,7 +20,7 @@ import akka.actor.ActorSystem
 import javax.inject.Inject
 import play.api.Logger
 import play.api.inject.ApplicationLifecycle
-import uk.gov.hmrc.servicedependencies.config.SchedulerConfig
+import uk.gov.hmrc.servicedependencies.config.SchedulerConfigs
 import uk.gov.hmrc.servicedependencies.service.{SlugJobCreator, SlugJobProcessor}
 import uk.gov.hmrc.servicedependencies.persistence.MongoLocks
 
@@ -29,7 +29,7 @@ import scala.util.control.NonFatal
 
 class SlugJobCreatorScheduler @Inject()(
     actorSystem         : ActorSystem,
-    schedulerConfig     : SchedulerConfig,
+    schedulerConfigs    : SchedulerConfigs,
     slugJobCreator      : SlugJobCreator,
     slugJobProcessor    : SlugJobProcessor,
     mongoLocks          : MongoLocks,
@@ -37,11 +37,11 @@ class SlugJobCreatorScheduler @Inject()(
 
   import ExecutionContext.Implicits.global
 
-  private val slSchedulerConfig = schedulerConfig.SlugJobCreator
+  private val schedulerConfig = schedulerConfigs.slugJobCreator
 
-  if (slSchedulerConfig.enabled) {
-    Logger.info(s"Slug Job Creator is ENABLED, checking for new slugs every ${slSchedulerConfig.interval}.")
-    val cancellable = actorSystem.scheduler.schedule(slSchedulerConfig.initialDelay, slSchedulerConfig.interval) {
+  if (schedulerConfig.enabled) {
+    Logger.info(s"Slug Job Creator is ENABLED, checking for new slugs every ${schedulerConfig.frequency}.")
+    val cancellable = actorSystem.scheduler.schedule(schedulerConfig.initialDelay, schedulerConfig.frequency) {
       Logger.info(s"Starting slug job creator scheduler")
 
       mongoLocks.slugJobSchedulerLock.tryLock {

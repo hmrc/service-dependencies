@@ -22,7 +22,7 @@ import javax.inject.Inject
 import play.api.Logger
 import play.api.inject.ApplicationLifecycle
 import uk.gov.hmrc.http.HeaderCarrier
-import uk.gov.hmrc.servicedependencies.config.SchedulerConfig
+import uk.gov.hmrc.servicedependencies.config.{SchedulerConfig, SchedulerConfigs}
 import uk.gov.hmrc.servicedependencies.service.DependencyDataUpdatingService
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -31,7 +31,7 @@ import scala.util.control.NonFatal
 
 @Singleton
 class DataReloadScheduler @Inject()(
-  schedulerConfig              : SchedulerConfig,
+  schedulerConfigs             : SchedulerConfigs,
   actorSystem                  : ActorSystem,
   dependencyDataUpdatingService: DependencyDataUpdatingService,
   applicationLifecycle         : ApplicationLifecycle) {
@@ -40,54 +40,35 @@ class DataReloadScheduler @Inject()(
   import ExecutionContext.Implicits.global
 
 
-  private val drSchedulerConfig = schedulerConfig.DataReload
+  schedule("libraryDependencyDataReloader", schedulerConfigs.dependenciesReload){
+    dependencyDataUpdatingService.reloadCurrentDependenciesDataForAllRepositories()
+      .map(_ => ())
+  }
 
-  if (drSchedulerConfig.enabled) {
-    schedule(
-        "libraryDependencyDataReloader"
-      , initialDelay = drSchedulerConfig.dependenciesReloadInitialDelay
-      , optFrequency = drSchedulerConfig.dependenciesReloadInterval
-      ){
-        dependencyDataUpdatingService.reloadCurrentDependenciesDataForAllRepositories()
-          .map(_ => ())
-      }
+  schedule("libraryDataReloader", schedulerConfigs.libraryReload){
+    dependencyDataUpdatingService.reloadLatestLibraryVersions()
+      .map(_ => ())
+  }
 
-    schedule(
-        "libraryDataReloader"
-      , initialDelay = drSchedulerConfig.libraryReloadInitialDelay
-      , optFrequency = drSchedulerConfig.libraryReloadInterval
-      ){
-        dependencyDataUpdatingService.reloadLatestLibraryVersions()
-          .map(_ => ())
-      }
-
-    schedule(
-        "SbtPluginDataReloader"
-      , initialDelay = drSchedulerConfig.sbtReloadInitialDelay
-      , optFrequency = drSchedulerConfig.sbtReloadInterval
-      ) {
-        dependencyDataUpdatingService.reloadLatestSbtPluginVersions()
-          .map(_ => ())
-      }
-  } else {
-    Logger.info("DataReloadScheduler is DISABLED. to enabled, configure scheduler.enabled=true in config.")
+  schedule("SbtPluginDataReloader", schedulerConfigs.sbtReload){
+    dependencyDataUpdatingService.reloadLatestSbtPluginVersions()
+      .map(_ => ())
   }
 
   private def schedule(
-      label       : String
-    , initialDelay: FiniteDuration
-    , optFrequency: Option[FiniteDuration]
+      label          : String
+    , schedulerConfig: SchedulerConfig
     )(f: => Future[Unit]) =
-      optFrequency.fold {
-        Logger.warn(s"interval config missing for $label - will be disabled")
-      } { frequency =>
-        Logger.info(s"Initialising $label update every $frequency")
+      if (schedulerConfig.enabled) {
+        Logger.info(s"Initialising $label update every ${schedulerConfig.frequency}")
         val cancellable =
-          actorSystem.scheduler.schedule(initialDelay, frequency) {
+          actorSystem.scheduler.schedule(schedulerConfig.initialDelay, schedulerConfig.frequency) {
             f.recover {
-               case NonFatal(e) => Logger.error(s"$label interrupted because: ${e.getMessage}", e)
-             }
+                case NonFatal(e) => Logger.error(s"$label interrupted because: ${e.getMessage}", e)
+              }
           }
         applicationLifecycle.addStopHook(() => Future(cancellable.cancel()))
+      } else {
+        Logger.info(s"$label is DISABLED. to enable, configure configure ${schedulerConfig.enabledKey}=true in config.")
       }
 }
