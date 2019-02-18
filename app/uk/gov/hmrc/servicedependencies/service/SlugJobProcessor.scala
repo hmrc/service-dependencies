@@ -37,29 +37,20 @@ import scala.util.control.NonFatal
 
 @Singleton
 class SlugJobProcessor @Inject()(
-   slugParserJobsRepository     : SlugParserJobsRepository,
-   slugInfoRepository           : SlugInfoRepository,
-   gzippedResourceConnector     : GzippedResourceConnector,
-   teamsAndRepositoriesConnector: TeamsAndRepositoriesConnector,
-   futureHelpers                : FutureHelpers)(
+   slugParserJobsRepository: SlugParserJobsRepository,
+   slugInfoRepository      : SlugInfoRepository,
+   gzippedResourceConnector: GzippedResourceConnector,
+   futureHelpers           : FutureHelpers)(
    implicit val materializer: Materializer) {
 
   import ExecutionContext.Implicits.global
 
-  def run(): Future[Unit] = {
-    implicit val hc = HeaderCarrier()
-    for {
-      teamsForServices <- teamsAndRepositoriesConnector.getTeamsForServices
-      _                <- run(teamsForServices)
-    } yield ()
-  }
-
-  private def run(teamsForServices: TeamsForServices): Future[akka.Done] =
+  def run(): Future[Unit] =
     Source.fromFuture(slugParserJobsRepository.getUnprocessed)
       .map { jobs => Logger.debug(s"found ${jobs.size} Slug parser jobs"); jobs }
       .mapConcat(_.toList)
       .mapAsyncUnordered(2) { job =>
-        processJob(job, teamsForServices)
+        processJob(job)
           .map(_ => slugParserJobsRepository.markProcessed(job.id))
           .recoverWith {
             case NonFatal(e) => Logger.error(s"An error occurred processing slug parser job ${job.id}: ${e.getMessage}", e)
@@ -67,14 +58,15 @@ class SlugJobProcessor @Inject()(
           }
       }
       .runWith(Sink.ignore)
+      .map(_ => ())
 
 
-  def processJob(job: MongoSlugParserJob, teamsForServices: TeamsForServices): Future[Unit] =
+  def processJob(job: MongoSlugParserJob): Future[Unit] =
     futureHelpers.withTimerAndCounter("slug.process")(
       for {
         _     <- Future(Logger.debug(s"processing slug job ${job.id} (${job.slugUri})"))
         is    <- gzippedResourceConnector.openGzippedResource(job.slugUri)
-        si    =  SlugParser.parse(job.slugUri, is, teamsForServices)
+        si    =  SlugParser.parse(job.slugUri, is)
         added <- slugInfoRepository.add(si)
         _     =  if (added) Logger.debug(s"added slugInfo for ${job.slugUri}: ${si.name} ${si.version}")
                  else       Logger.warn(s"slug ${job.slugUri} not added - already processed")
@@ -85,7 +77,7 @@ class SlugJobProcessor @Inject()(
 
 object SlugParser {
 
-  def parse(slugUri: String, in: InputStream, teamsForServices: TeamsForServices): SlugInfo = {
+  def parse(slugUri: String, in: InputStream): SlugInfo = {
     val tar = new ArchiveStreamFactory().createArchiveInputStream(new BufferedInputStream(in))
 
     val (runnerVersion, slugVersion, slugName, versionLong) =
@@ -101,7 +93,7 @@ object SlugParser {
       name            = slugName,
       version         = slugVersion,
       versionLong     = versionLong,
-      teams           = teamsForServices.getTeams(slugName).toList,
+      teams           = List.empty,
       runnerVersion   = runnerVersion,
       classpath       = "",
       jdkVersion      = "",
