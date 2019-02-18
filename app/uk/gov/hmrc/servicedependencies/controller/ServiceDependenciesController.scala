@@ -84,11 +84,11 @@ class ServiceDependenciesController @Inject()(
       } yield Ok(Json.toJson(teamDeps))
     }
 
-  def getServicesWithDependency(group: String, artefact: String, team: Option[String]) =
+  def getServicesWithDependency(group: String, artefact: String) =
     Action.async { implicit request =>
       implicit val format = ApiServiceDependencyFormats.sdFormat
       slugInfoService
-        .findServicesWithDependency(group, artefact, team)
+        .findServicesWithDependency(group, artefact)
         .map(res => Ok(Json.toJson(res)))
     }
 

@@ -44,30 +44,13 @@ class SlugInfoService @Inject()(
   def getSlugInfos(name: String, version: Option[String]): Future[Seq[SlugInfo]] =
     slugInfoRepository.getSlugInfos(name, version)
 
-  def findServicesWithDependency(group: String, artefact: String, optTeam: Option[String])(implicit hc: HeaderCarrier): Future[Seq[ServiceDependency]] =
-    optTeam match {
-      case None       => for {
-                           res <- slugInfoRepository.findServices(group, artefact, optServices = None)
-                           teamsForServices <- teamsAndRepositoriesConnector.getTeamsForServices
-                         } yield res.map { r =>
-                             r.copy(teams = teamsForServices.getTeams(r.slugName).toList)
-                           }
-      case Some(team) => findServicesWithDependency(group, artefact, team)
-    }
-
-  def findServicesWithDependency(group: String, artefact: String, team: String)(implicit hc: HeaderCarrier): Future[Seq[ServiceDependency]] =
+  def findServicesWithDependency(group: String, artefact: String)(implicit hc: HeaderCarrier): Future[Seq[ServiceDependency]] =
     for {
-      teams <- teamsAndRepositoriesConnector.getTeamsWithRepositories
-      mTeam =  teams.find(_.name == team)
-      res   <- mTeam match {
-                 case None       => Future(Seq.empty)
-                 case Some(team) => slugInfoRepository.findServices(group, artefact, optServices = Some(team.allRepos.toList))
-               }
+      res              <- slugInfoRepository.findServices(group, artefact)
       teamsForServices <- teamsAndRepositoriesConnector.getTeamsForServices
     } yield res.map { r =>
-              r.copy(teams = teamsForServices.getTeams(r.slugName).toList)
-            }
-
+        r.copy(teams = teamsForServices.getTeams(r.slugName).toList)
+      }
 
   def findGroupsArtefacts: Future[Seq[GroupArtefacts]] =
     slugInfoRepository

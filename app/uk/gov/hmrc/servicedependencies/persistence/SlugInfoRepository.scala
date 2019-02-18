@@ -92,8 +92,7 @@ class SlugInfoRepository @Inject()(mongo: ReactiveMongoComponent)
     }
   }
 
-  def findServices(group: String, artefact: String, optServices: Option[List[String]]): Future[Seq[ServiceDependency]] = {
-    println(s"findServices: $group:$artefact$optServices")
+  def findServices(group: String, artefact: String): Future[Seq[ServiceDependency]] = {
     val col: BSONCollection = mongo.mongoConnector.db().collection(collectionName)
 
     import col.BatchCommands.AggregationFramework.{Ascending, Descending, FirstField, Group, Match, Project, Sort, UnwindField}
@@ -138,7 +137,7 @@ class SlugInfoRepository @Inject()(mongo: ReactiveMongoComponent)
           , unwindDependencies
           , matchArtifact
           , projectIntoServiceDependency
-          ) ++ optServices.map(services => List(Match(document("slugName" -> document("$in" -> services))))).getOrElse(List.empty)
+          )
       , allowDiskUse = true
       )
       .prepared
