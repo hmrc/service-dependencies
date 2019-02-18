@@ -25,7 +25,8 @@ import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
 
 @Singleton
 class ServiceDependenciesConfig @Inject()(configuration: Configuration,
-                                          serviceConfig: ServicesConfig) {
+                                          serviceConfig: ServicesConfig)
+  extends ConfigUtils {
 
   lazy val artifactoryBase: String    = configuration.get[String]("artifactory.url")
   lazy val artifactoryUser            = configuration.getOptional[String]("artifactory.api.user")
@@ -57,4 +58,5 @@ class ServiceDependenciesConfig @Inject()(configuration: Configuration,
       case _ => GitApiConfig("user_not_set", "key_not_set", "https://hostnotset.com")
     }
 
+  lazy val teamsAndRepositoriesCacheExpiration = getDuration(configuration, "microservice.services.teams-and-repositories.cache.expiration")
 }
