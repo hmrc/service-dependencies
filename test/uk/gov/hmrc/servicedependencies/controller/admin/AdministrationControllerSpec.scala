@@ -21,15 +21,13 @@ import org.mockito.Mockito.{verify, when}
 import org.scalatest.concurrent.{IntegrationPatience, ScalaFutures}
 import org.scalatest.mockito.MockitoSugar
 import org.scalatest.{BeforeAndAfterEach, FreeSpec, Matchers, OptionValues}
-import play.api.test.Helpers._
 import org.scalatestplus.play.guice.GuiceOneServerPerSuite
 import play.api.test.FakeRequest
+import play.api.test.Helpers._
 import uk.gov.hmrc.servicedependencies.connector.TeamsAndRepositoriesConnector
 import uk.gov.hmrc.servicedependencies.model.MongoRepositoryDependencies
-import uk.gov.hmrc.servicedependencies.service.{
-  DependencyDataUpdatingService, SlugInfoService, SlugJobCreator, SlugJobProcessor
-}
-
+import uk.gov.hmrc.servicedependencies.service.{DependencyDataUpdatingService, SlugInfoService, SlugJobCreator, SlugJobProcessor}
+import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
 class AdministrationControllerSpec
@@ -83,11 +81,11 @@ class AdministrationControllerSpec
 
   case class Boot(
     mockedDependencyDataUpdatingService: DependencyDataUpdatingService,
-    mockedSlugInfoService              : SlugInfoService,
-    mockedSlugJobProcessor             : SlugJobProcessor,
-    mockedSlugJobCreator               : SlugJobCreator,
+    mockedSlugInfoService: SlugInfoService,
+    mockedSlugJobProcessor: SlugJobProcessor,
+    mockedSlugJobCreator: SlugJobCreator,
     mockedTeamsAndRepositoriesConnector: TeamsAndRepositoriesConnector,
-    controller                         : AdministrationController)
+    controller: AdministrationController)
 
   object Boot {
     def init: Boot = {
@@ -102,7 +100,8 @@ class AdministrationControllerSpec
         mockedSlugJobProcessor,
         mockedSlugJobCreator,
         mockedTeamsAndRepositoriesConnector,
-        stubControllerComponents())
+        stubControllerComponents()
+      )
       Boot(
         mockedDependencyDataUpdatingService,
         mockedSlugInfoService,
