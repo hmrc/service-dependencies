@@ -16,7 +16,9 @@
 
 package uk.gov.hmrc.servicedependencies.model
 
-import play.api.libs.json.{Json, OFormat}
+import play.api.libs.json.{__, Json, OFormat, Reads, OWrites}
+import play.api.libs.functional.syntax._
+
 import scala.util.Try
 
 case class SlugDependency(
@@ -53,10 +55,21 @@ trait MongoSlugInfoFormats {
   implicit val sdFormat: OFormat[SlugDependency] =
     Json.format[SlugDependency]
 
-  implicit val siFormat: OFormat[SlugInfo] = {
-    implicit val vf = Version.mongoFormat
-    Json.format[SlugInfo]
-  }
+  val ignore = OWrites[Any](_ => Json.obj())
+
+  implicit val siFormat: OFormat[SlugInfo] =
+    ( (__ \ "uri"          ).format[String]
+    ~ (__ \ "name"         ).format[String]
+    ~ (__ \ "version"      ).format[String]
+    ~ (__ \ "versionLong"  ).format[Long]
+    ~ OFormat( Reads.pure(List.empty[String])
+             , ignore
+             )
+    ~ (__ \ "runnerVersion").format[String]
+    ~ (__ \ "classpath"    ).format[String]
+    ~ (__ \ "jdkVersion"   ).format[String]
+    ~ (__ \ "dependencies" ).format[List[SlugDependency]]
+    )(SlugInfo.apply, unlift(SlugInfo.unapply))
 }
 
 object MongoSlugInfoFormats extends MongoSlugInfoFormats
