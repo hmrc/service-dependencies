@@ -25,24 +25,19 @@ import uk.gov.hmrc.play.bootstrap.controller.BackendController
 import uk.gov.hmrc.servicedependencies.config.ServiceDependenciesConfig
 import uk.gov.hmrc.servicedependencies.connector.TeamsAndRepositoriesConnector
 import uk.gov.hmrc.servicedependencies.controller.model.Dependencies
-import uk.gov.hmrc.servicedependencies.model.{
-  ApiServiceDependencyFormats, ApiSlugInfoFormats, GroupArtefacts, ServiceDependency
-}
-import uk.gov.hmrc.servicedependencies.service.{
-  DependencyDataUpdatingService, SlugInfoService
-}
-
-import scala.concurrent.Future
+import uk.gov.hmrc.servicedependencies.model.{ApiServiceDependencyFormats, ApiSlugInfoFormats, GroupArtefacts}
+import uk.gov.hmrc.servicedependencies.service.{DependencyDataUpdatingService, SlugInfoService}
+import scala.concurrent.ExecutionContext
 
 @Singleton
 class ServiceDependenciesController @Inject()(
-    configuration  : Configuration,
-    dependencyDataUpdatingService: DependencyDataUpdatingService,
-    teamsAndRepositoriesConnector: TeamsAndRepositoriesConnector,
-    slugInfoService: SlugInfoService,
-    config         : ServiceDependenciesConfig,
-    cc             : ControllerComponents)
-  extends BackendController(cc) {
+  configuration: Configuration,
+  dependencyDataUpdatingService: DependencyDataUpdatingService,
+  teamsAndRepositoriesConnector: TeamsAndRepositoriesConnector,
+  slugInfoService: SlugInfoService,
+  config: ServiceDependenciesConfig,
+  cc: ControllerComponents)(implicit ec: ExecutionContext)
+    extends BackendController(cc) {
 
   val logger = LoggerFactory.getLogger(this.getClass)
 
@@ -52,15 +47,15 @@ class ServiceDependenciesController @Inject()(
     Action.async { implicit request =>
       dependencyDataUpdatingService
         .getDependencyVersionsForRepository(repositoryName)
-        .map { case None      => NotFound(s"$repositoryName not found")
-               case Some(res) => Ok(Json.toJson(res))
-             }
+        .map {
+          case None      => NotFound(s"$repositoryName not found")
+          case Some(res) => Ok(Json.toJson(res))
+        }
     }
 
   def dependencies() =
     Action.async { implicit request =>
-      dependencyDataUpdatingService
-        .getDependencyVersionsForAllRepositories
+      dependencyDataUpdatingService.getDependencyVersionsForAllRepositories
         .map(res => Ok(Json.toJson(res)))
     }
 
@@ -77,10 +72,10 @@ class ServiceDependenciesController @Inject()(
       for {
         teamRepos <- teamsAndRepositoriesConnector.getTeam(team)
         deps      <- dependencyDataUpdatingService.getDependencyVersionsForAllRepositories()
-        repos     =  teamRepos.getOrElse(Map())
-        services  =  repos.getOrElse("Service", List())
-        libraries =  repos.getOrElse("Library", List())
-        teamDeps  =  deps.filter(d => services.contains(d.repositoryName) || libraries.contains(d.repositoryName))
+        repos     = teamRepos.getOrElse(Map())
+        services  = repos.getOrElse("Service", List())
+        libraries = repos.getOrElse("Library", List())
+        teamDeps  = deps.filter(d => services.contains(d.repositoryName) || libraries.contains(d.repositoryName))
       } yield Ok(Json.toJson(teamDeps))
     }
 
@@ -89,14 +84,13 @@ class ServiceDependenciesController @Inject()(
       implicit val format = ApiServiceDependencyFormats.sdFormat
       slugInfoService
         .findServicesWithDependency(group, artefact)
-       .map(res => Ok(Json.toJson(res)))
+        .map(res => Ok(Json.toJson(res)))
     }
 
   def getGroupArtefacts =
     Action.async { implicit request =>
       implicit val format = GroupArtefacts.apiFormat
-      slugInfoService
-        .findGroupsArtefacts
+      slugInfoService.findGroupsArtefacts
         .map(res => Ok(Json.toJson(res)))
     }
 }

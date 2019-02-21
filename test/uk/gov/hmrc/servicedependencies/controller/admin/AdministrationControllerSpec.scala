@@ -25,9 +25,8 @@ import play.api.test.Helpers._
 import org.scalatestplus.play.guice.GuiceOneServerPerSuite
 import play.api.test.FakeRequest
 import uk.gov.hmrc.servicedependencies.model.MongoRepositoryDependencies
-import uk.gov.hmrc.servicedependencies.service.{
-  DependencyDataUpdatingService, SlugInfoService, SlugJobCreator, SlugJobProcessor
-}
+import uk.gov.hmrc.servicedependencies.service.{DependencyDataUpdatingService, SlugInfoService, SlugJobCreator, SlugJobProcessor}
+import scala.concurrent.ExecutionContext.Implicits.global
 
 import scala.concurrent.Future
 
@@ -82,17 +81,17 @@ class AdministrationControllerSpec
 
   case class Boot(
     mockedDependencyDataUpdatingService: DependencyDataUpdatingService,
-    mockedSlugInfoService              : SlugInfoService,
-    mockedSlugJobProcessor             : SlugJobProcessor,
-    mockedSlugJobCreator               : SlugJobCreator,
-    controller                         : AdministrationController)
+    mockedSlugInfoService: SlugInfoService,
+    mockedSlugJobProcessor: SlugJobProcessor,
+    mockedSlugJobCreator: SlugJobCreator,
+    controller: AdministrationController)
 
   object Boot {
     def init: Boot = {
       val mockedDependencyDataUpdatingService = mock[DependencyDataUpdatingService]
-      val mockedSlugInfoService = mock[SlugInfoService]
-      val mockedSlugJobProcessor = mock[SlugJobProcessor]
-      val mockedSlugJobCreator = mock[SlugJobCreator]
+      val mockedSlugInfoService               = mock[SlugInfoService]
+      val mockedSlugJobProcessor              = mock[SlugJobProcessor]
+      val mockedSlugJobCreator                = mock[SlugJobCreator]
       val controller = new AdministrationController(
         mockedDependencyDataUpdatingService,
         mockedSlugInfoService,
