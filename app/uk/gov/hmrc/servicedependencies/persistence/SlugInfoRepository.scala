@@ -137,6 +137,7 @@ class SlugInfoRepository @Inject()(mongo: ReactiveMongoComponent)
           , matchArtifact
           , projectIntoServiceDependency
           )
+      , allowDiskUse = true
       )
       .prepared
       .cursor
@@ -158,22 +159,20 @@ class SlugInfoRepository @Inject()(mongo: ReactiveMongoComponent)
 
   def findGroupsArtefacts: Future[Seq[GroupArtefacts]] = {
     val col: BSONCollection = mongo.mongoConnector.db().collection(collectionName)
-    import col.BatchCommands.AggregationFramework.{AddFieldToSet, Ascending, FirstField, Group, GroupField, Match, Project, Sort, UnwindField}
+    import col.BatchCommands.AggregationFramework.{AddFieldToSet, Ascending, Group, Project, Sort, UnwindField}
     import reactivemongo.bson._
     implicit val rga = readerGroupArtefacts
 
     col.aggregatorContext[GroupArtefacts](
-        Sort(Ascending("group"))
+      Project(
+        document("dependencies" -> "$dependencies")
+      )
       , List(
           UnwindField("dependencies")
-        , Project(
-            document(
-                "group"    -> "$dependencies.group"
-              , "artifact" -> "$dependencies.artifact"
-            )
-          )
-        , Group(BSONString("$group"))("artifacts" -> AddFieldToSet("artifact"))
+        , Group(BSONString("$dependencies.group"))("artifacts" -> AddFieldToSet("dependencies.artifact"))
+        , Sort(Ascending("_id"))
         )
+      , allowDiskUse = true
       )
       .prepared
       .cursor
