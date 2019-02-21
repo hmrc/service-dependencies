@@ -32,6 +32,7 @@ import uk.gov.hmrc.servicedependencies.connector.TeamsAndRepositoriesConnector
 import uk.gov.hmrc.servicedependencies.controller.model.Dependencies
 import uk.gov.hmrc.servicedependencies.service._
 import uk.gov.hmrc.time.DateTimeUtils
+import scala.concurrent.ExecutionContext.Implicits.global
 
 import scala.concurrent.Future
 
@@ -45,26 +46,27 @@ class ServiceDependenciesControllerSpec
     with IntegrationPatience
     with OptionValues {
 
-  override def fakeApplication(): Application = GuiceApplicationBuilder()
-    .configure("metrics.jvm" -> false)
-    .build()
+  override def fakeApplication(): Application =
+    GuiceApplicationBuilder()
+      .configure("metrics.jvm" -> false)
+      .build()
 
   "getDependencyVersionsForRepository" - {
     "should get dependency versions for a repository using the service" in {
-      val boot     = Boot.init
-      val repoName = "repo1"
-      val now      = DateTimeUtils.now
+      val boot                   = Boot.init
+      val repoName               = "repo1"
+      val now                    = DateTimeUtils.now
       val repositoryDependencies = Dependencies(repoName, Nil, Nil, Nil, now)
 
       when(boot.mockedDependencyDataUpdatingService.getDependencyVersionsForRepository(any()))
         .thenReturn(Future.successful(Some(repositoryDependencies)))
 
       val result = boot.controller
-                    .getDependencyVersionsForRepository(repoName)
-                    .apply(FakeRequest())
+        .getDependencyVersionsForRepository(repoName)
+        .apply(FakeRequest())
 
       contentAsJson(result).toString shouldBe
-         s"""{"repositoryName":"repo1","libraryDependencies":[],"sbtPluginsDependencies":[],"otherDependencies":[],"lastUpdated":"${now}"}"""
+        s"""{"repositoryName":"repo1","libraryDependencies":[],"sbtPluginsDependencies":[],"otherDependencies":[],"lastUpdated":"$now"}"""
       Mockito.verify(boot.mockedDependencyDataUpdatingService).getDependencyVersionsForRepository(repoName)
     }
   }
@@ -84,17 +86,17 @@ class ServiceDependenciesControllerSpec
       val result = boot.controller.dependencies().apply(FakeRequest())
 
       contentAsJson(result).toString shouldBe
-         s"""[{"repositoryName":"repo1","libraryDependencies":[],"sbtPluginsDependencies":[],"otherDependencies":[],"lastUpdated":"${now}"},""" +
-         s"""{"repositoryName":"repo2","libraryDependencies":[],"sbtPluginsDependencies":[],"otherDependencies":[],"lastUpdated":"${now}"},""" +
-         s"""{"repositoryName":"repo3","libraryDependencies":[],"sbtPluginsDependencies":[],"otherDependencies":[],"lastUpdated":"${now}"}]"""
+        s"""[{"repositoryName":"repo1","libraryDependencies":[],"sbtPluginsDependencies":[],"otherDependencies":[],"lastUpdated":"$now"},""" +
+          s"""{"repositoryName":"repo2","libraryDependencies":[],"sbtPluginsDependencies":[],"otherDependencies":[],"lastUpdated":"$now"},""" +
+          s"""{"repositoryName":"repo3","libraryDependencies":[],"sbtPluginsDependencies":[],"otherDependencies":[],"lastUpdated":"$now"}]"""
     }
   }
 
   case class Boot(
     mockedDependencyDataUpdatingService: DependencyDataUpdatingService,
     mockedTeamsAndRepositoriesConnector: TeamsAndRepositoriesConnector,
-    mockedSlugInfoService              : SlugInfoService,
-    controller                         : ServiceDependenciesController)
+    mockedSlugInfoService: SlugInfoService,
+    controller: ServiceDependenciesController)
 
   object Boot {
     def init: Boot = {
@@ -107,12 +109,9 @@ class ServiceDependenciesControllerSpec
         mockedTeamsAndRepositoriesConnector,
         mockedSlugInfoService,
         mock[ServiceDependenciesConfig],
-        stubControllerComponents())
-      Boot(
-        mockedDependencyDataUpdatingService,
-        mockedTeamsAndRepositoriesConnector,
-        mockedSlugInfoService,
-        controller)
+        stubControllerComponents()
+      )
+      Boot(mockedDependencyDataUpdatingService, mockedTeamsAndRepositoriesConnector, mockedSlugInfoService, controller)
     }
   }
 }
