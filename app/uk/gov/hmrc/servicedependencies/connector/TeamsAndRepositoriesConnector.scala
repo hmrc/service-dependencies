@@ -18,6 +18,7 @@ package uk.gov.hmrc.servicedependencies.connector
 
 import com.google.inject.{Inject, Singleton}
 import play.api.libs.json.Json
+import play.api.cache.AsyncCacheApi
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.play.bootstrap.http.HttpClient
 import uk.gov.hmrc.servicedependencies.config.ServiceDependenciesConfig
@@ -28,7 +29,10 @@ import scala.concurrent.ExecutionContext.Implicits.global
 case class Team(
   name: String,
   repos: Option[Map[String, Seq[String]]]
-)
+) {
+  def allRepos: Seq[String] =
+    repos.map(_.values.toSeq.flatten).getOrElse(Seq.empty)
+}
 
 object Team {
   implicit val format = Json.format[Team]
@@ -36,8 +40,13 @@ object Team {
   def normalisedName(name: String): String = name.toLowerCase.replaceAll(" ", "_")
 }
 
+case class TeamsForServices(toMap: Map[String, Seq[String]]) {
+  def getTeams(service: String): Seq[String] =
+    toMap.getOrElse(service, Seq.empty)
+}
+
 @Singleton
-class TeamsAndRepositoriesConnector @Inject()(httpClient: HttpClient, serviceConfiguration: ServiceDependenciesConfig) {
+class TeamsAndRepositoriesConnector @Inject()(httpClient: HttpClient, serviceConfiguration: ServiceDependenciesConfig, cache: AsyncCacheApi) {
 
   val teamsAndRepositoriesApiBase = serviceConfiguration.teamsAndRepositoriesServiceUrl
 
@@ -47,14 +56,19 @@ class TeamsAndRepositoriesConnector @Inject()(httpClient: HttpClient, serviceCon
   def getRepository(repositoryName: String)(implicit hc: HeaderCarrier): Future[Option[Repository]] =
     httpClient.GET[Option[Repository]](s"$teamsAndRepositoriesApiBase/api/repositories/$repositoryName")
 
-  def getTeamsForServices()(implicit hc: HeaderCarrier): Future[Map[String, Seq[String]]] =
-    httpClient.GET[Map[String, Seq[String]]](s"$teamsAndRepositoriesApiBase/api/services?teamDetails=true")
+  def getTeamsForServices()(implicit hc: HeaderCarrier): Future[TeamsForServices] =
+    cache.getOrElseUpdate("teams-for-services", serviceConfiguration.teamsAndRepositoriesCacheExpiration){
+      httpClient.GET[Map[String, Seq[String]]](s"$teamsAndRepositoriesApiBase/api/services?teamDetails=true")
+        .map(TeamsForServices.apply)
+    }
 
   def getAllRepositories()(implicit hc: HeaderCarrier): Future[Seq[RepositoryInfo]] =
     httpClient.GET[Seq[RepositoryInfo]](s"$teamsAndRepositoriesApiBase/api/repositories")
 
   def getTeamsWithRepositories()(implicit hc: HeaderCarrier): Future[Seq[Team]] =
-    httpClient.GET[Seq[Team]](s"$teamsAndRepositoriesApiBase/api/teams_with_repositories")
+    cache.getOrElseUpdate("teams-with-repositories", serviceConfiguration.teamsAndRepositoriesCacheExpiration){
+      httpClient.GET[Seq[Team]](s"$teamsAndRepositoriesApiBase/api/teams_with_repositories")
+    }
 
   def getTeam(team: String)(implicit hc: HeaderCarrier): Future[Option[Map[String, Seq[String]]]] =
     httpClient.GET[Option[Map[String, Seq[String]]]](s"$teamsAndRepositoriesApiBase/api/teams/$team")

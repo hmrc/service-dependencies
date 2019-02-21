@@ -21,7 +21,7 @@ import akka.stream.scaladsl.{Sink, Source}
 import javax.inject.{Inject, Singleton}
 import org.joda.time.{Duration, Instant}
 import play.api.Logger
-import uk.gov.hmrc.servicedependencies.config.SchedulerConfig
+import uk.gov.hmrc.servicedependencies.config.SchedulerConfigs
 import uk.gov.hmrc.servicedependencies.connector.ArtifactoryConnector
 import uk.gov.hmrc.servicedependencies.persistence.{SlugJobLastRunRepository, SlugParserJobsRepository}
 
@@ -32,10 +32,10 @@ case class RateLimit(invocations: Int, perDuration: FiniteDuration)
 
 @Singleton
 class SlugJobCreator @Inject()(
-  conn           : ArtifactoryConnector,
-  jobsRepo       : SlugParserJobsRepository,
-  jobRunRepo     : SlugJobLastRunRepository,
-  schedulerConfig: SchedulerConfig)(
+  conn            : ArtifactoryConnector,
+  jobsRepo        : SlugParserJobsRepository,
+  jobRunRepo      : SlugJobLastRunRepository,
+  schedulerConfigs: SchedulerConfigs)(
   implicit val materializer: Materializer) {
 
   import ExecutionContext.Implicits.global
@@ -61,7 +61,7 @@ class SlugJobCreator @Inject()(
       nextSince <- Future(Instant.now)
       lastRun   <- jobRunRepo.getLastRun
       since     =  lastRun.getOrElse {
-                     val default = Instant.now.minus(Duration.millis(schedulerConfig.SlugJobCreator.interval.toMillis))
+                     val default = Instant.now.minus(Duration.millis(schedulerConfigs.slugJobCreator.frequency().toMillis))
                      Logger.warn(s"This is the first run of SlugJobCreator - you may want to backfill data before $default")
                      default
                    }

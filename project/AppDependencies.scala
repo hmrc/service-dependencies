@@ -8,6 +8,7 @@ private object AppDependencies {
 
   val compile = Seq(
     ws,
+    ehcache,
     "uk.gov.hmrc"       %% "bootstrap-play-26"    % bootstrapPlayVersion,
     "uk.gov.hmrc"       %% "github-client"        % "2.5.0",
     "uk.gov.hmrc"       %% "metrix"               % "3.5.0-play-26",

@@ -16,15 +16,17 @@
 
 package uk.gov.hmrc.servicedependencies.service
 
+import akka.stream.Materializer
 import akka.stream.scaladsl.{Sink, Source}
 import com.google.inject.{Inject, Singleton}
 import java.io.{BufferedInputStream, InputStream}
-
-import akka.stream.Materializer
-import play.api.{Configuration, Logger}
 import org.apache.commons.compress.archivers.jar.JarArchiveInputStream
 import org.apache.commons.compress.archivers.{ArchiveEntry, ArchiveStreamFactory}
-import uk.gov.hmrc.servicedependencies.connector.GzippedResourceConnector
+import play.api.{Configuration, Logger}
+import uk.gov.hmrc.http.HeaderCarrier
+import uk.gov.hmrc.servicedependencies.connector.{
+  GzippedResourceConnector, TeamsAndRepositoriesConnector, TeamsForServices
+}
 import uk.gov.hmrc.servicedependencies.model.{MongoSlugParserJob, SlugDependency, SlugInfo, Version}
 import uk.gov.hmrc.servicedependencies.persistence.{SlugInfoRepository, SlugParserJobsRepository}
 import uk.gov.hmrc.servicedependencies.util.FutureHelpers
@@ -52,11 +54,12 @@ class SlugJobProcessor @Inject()(
           .map(_ => slugParserJobsRepository.markProcessed(job.id))
           .recoverWith {
             case NonFatal(e) => Logger.error(s"An error occurred processing slug parser job ${job.id}: ${e.getMessage}", e)
-              slugParserJobsRepository.markAttempted(job.id)
+                                slugParserJobsRepository.markAttempted(job.id)
           }
       }
       .runWith(Sink.ignore)
       .map(_ => ())
+
 
   def processJob(job: MongoSlugParserJob): Future[Unit] =
     futureHelpers.withTimerAndCounter("slug.process")(
@@ -90,6 +93,7 @@ object SlugParser {
       name            = slugName,
       version         = slugVersion,
       versionLong     = versionLong,
+      teams           = List.empty,
       runnerVersion   = runnerVersion,
       classpath       = "",
       jdkVersion      = "",

@@ -45,7 +45,9 @@ class RepositoryDependenciesSource @Inject()(
                          repos
                            .filterNot(_.repositoryName.endsWith("-history"))
                            .map(repoDependencies =>
-                             repoDependencies.repositoryName -> (repoDependencies.libraryDependencies ++ repoDependencies.sbtPluginDependencies ++ repoDependencies.otherDependencies)))
+                             repoDependencies.repositoryName -> (repoDependencies.libraryDependencies ++
+                                                                 repoDependencies.sbtPluginDependencies ++
+                                                                 repoDependencies.otherDependencies)))
     } yield
       teamsWithRepositories.map {
         case Team(name, Some(repos)) =>

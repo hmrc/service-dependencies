@@ -16,71 +16,42 @@
 
 package uk.gov.hmrc.servicedependencies
 
+import akka.actor.ActorSystem
 import com.google.inject.Singleton
-import play.api._
-import play.api.inject.ApplicationLifecycle
-
-import scala.concurrent.ExecutionContext.Implicits.global
-import uk.gov.hmrc.servicedependencies.service.UpdateScheduler
-
-import scala.concurrent.Future
 import javax.inject.Inject
+import play.api.inject.ApplicationLifecycle
 import uk.gov.hmrc.http.HeaderCarrier
-import uk.gov.hmrc.servicedependencies.config.SchedulerConfig
+import uk.gov.hmrc.servicedependencies.config.SchedulerConfigs
+import uk.gov.hmrc.servicedependencies.service.DependencyDataUpdatingService
+import uk.gov.hmrc.servicedependencies.util.SchedulerUtils
+
+import scala.concurrent.ExecutionContext
+
 
 @Singleton
 class DataReloadScheduler @Inject()(
-  schedulerConfig     : SchedulerConfig,
-  updateScheduler     : UpdateScheduler,
-  applicationLifecycle: ApplicationLifecycle) {
+      schedulerConfigs             : SchedulerConfigs
+    , dependencyDataUpdatingService: DependencyDataUpdatingService
+    )(implicit actorSystem         : ActorSystem
+             , applicationLifecycle: ApplicationLifecycle
+    ) extends SchedulerUtils {
 
   implicit val hc: HeaderCarrier = HeaderCarrier()
+  import ExecutionContext.Implicits.global
 
-  private val drSchedulerConfig = schedulerConfig.DataReload
-
-  if (drSchedulerConfig.enabled) {
-    scheduleRepositoryDependencyDataReloadSchedule(drSchedulerConfig.dependenciesReloadIntervalMins)
-    scheduleLibraryVersionDataReloadSchedule(drSchedulerConfig.libraryReloadIntervalMins)
-    scheduleSbtPluginVersionDataReloadSchedule(drSchedulerConfig.sbtReloadIntervalMins)
-  }
-  else {
-    Logger.info("DataReloadScheduler is DISABLED. to enabled, configure scheduler.enabled=false in config.")
+  // note, locks in service layer
+  schedule("libraryDependencyDataReloader", schedulerConfigs.dependenciesReload){
+    dependencyDataUpdatingService.reloadCurrentDependenciesDataForAllRepositories()
+      .map(_ => ())
   }
 
-
-
-  import scala.concurrent.duration._
-
-  private def scheduleRepositoryDependencyDataReloadSchedule(maybeReloadInterval: Option[Int])(implicit hc: HeaderCarrier) = {
-
-    maybeReloadInterval.fold {
-      Logger.warn(s"dependency.reload.intervalminutes is missing. repositoryDependencyDataReloadScheduler will be disabled")
-    } { reloadInterval =>
-      Logger.warn(s"repositoryDependenciesReloadInterval set to $reloadInterval minutes")
-      val cancellable = updateScheduler.startUpdatingLibraryDependencyData(reloadInterval minutes)
-      applicationLifecycle.addStopHook(() => Future(cancellable.cancel()))
-    }
+  schedule("libraryDataReloader", schedulerConfigs.libraryReload){
+    dependencyDataUpdatingService.reloadLatestLibraryVersions()
+      .map(_ => ())
   }
 
-  private def scheduleLibraryVersionDataReloadSchedule(maybeReloadInterval: Option[Int])(implicit hc: HeaderCarrier) = {
-
-    maybeReloadInterval.fold {
-      Logger.warn(s"library.reload.intervalminutes is missing. LibraryVersionDataReloadScheduler will be disabled")
-    } { reloadInterval =>
-      Logger.warn(s"libraryReloadIntervalKey set to $reloadInterval minutes")
-      val cancellable = updateScheduler.startUpdatingLibraryData(reloadInterval minutes)
-      applicationLifecycle.addStopHook(() => Future(cancellable.cancel()))
-    }
-  }
-
-  private def scheduleSbtPluginVersionDataReloadSchedule(maybeReloadInterval: Option[Int])(implicit hc: HeaderCarrier) = {
-
-    maybeReloadInterval.fold {
-      Logger.warn(s"sbtPlugin.reload.intervalminutes is missing. SbtPluginVersionDataReloadScheduler will be disabled")
-    } { reloadInterval =>
-      Logger.warn(s"sbtPluginReloadIntervalKey set to $reloadInterval minutes")
-      val cancellable = updateScheduler.startUpdatingSbtPluginVersionData(reloadInterval minutes)
-      applicationLifecycle.addStopHook(() => Future(cancellable.cancel()))
-    }
+  schedule("SbtPluginDataReloader", schedulerConfigs.sbtReload){
+    dependencyDataUpdatingService.reloadLatestSbtPluginVersions()
+      .map(_ => ())
   }
 }

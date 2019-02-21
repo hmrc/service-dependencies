@@ -22,16 +22,18 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.lock.LockFormats.Lock
 import uk.gov.hmrc.servicedependencies.config.CuratedDependencyConfigProvider
+import uk.gov.hmrc.servicedependencies.connector.TeamsAndRepositoriesConnector
 import uk.gov.hmrc.servicedependencies.controller.model.{Dependencies, Dependency}
 import uk.gov.hmrc.servicedependencies.model.{GroupArtefacts, NewSlugParserJob, ServiceDependency, SlugInfo}
-import uk.gov.hmrc.servicedependencies.persistence._
+import uk.gov.hmrc.servicedependencies.persistence.{SlugInfoRepository, SlugParserJobsRepository}
 import uk.gov.hmrc.time.DateTimeUtils
 import scala.concurrent.Future
 
 @Singleton
 class SlugInfoService @Inject()(
-  slugParserJobsRepository: SlugParserJobsRepository,
-  slugInfoRepository      : SlugInfoRepository
+  slugParserJobsRepository      : SlugParserJobsRepository,
+  slugInfoRepository            : SlugInfoRepository,
+  teamsAndRepositoriesConnector : TeamsAndRepositoriesConnector
 ) {
 
   lazy val logger = LoggerFactory.getLogger(this.getClass)
@@ -42,11 +44,15 @@ class SlugInfoService @Inject()(
   def getSlugInfos(name: String, version: Option[String]): Future[Seq[SlugInfo]] =
     slugInfoRepository.getSlugInfos(name, version)
 
-  def findServicesWithDependency(group: String,artefact : String): Future[Seq[ServiceDependency]] =
-    slugInfoRepository.findServices(group, artefact)
+  def findServicesWithDependency(group: String, artefact: String)(implicit hc: HeaderCarrier): Future[Seq[ServiceDependency]] =
+    for {
+      res              <- slugInfoRepository.findServices(group, artefact)
+      teamsForServices <- teamsAndRepositoriesConnector.getTeamsForServices
+    } yield res.map { r =>
+        r.copy(teams = teamsForServices.getTeams(r.slugName).toList)
+      }
 
   def findGroupsArtefacts: Future[Seq[GroupArtefacts]] =
     slugInfoRepository
       .findGroupsArtefacts
-
 }

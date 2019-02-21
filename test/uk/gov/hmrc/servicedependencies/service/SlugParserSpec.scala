@@ -20,6 +20,7 @@ import java.nio.charset.StandardCharsets
 
 import org.scalatest.{FlatSpec, Matchers}
 import uk.gov.hmrc.servicedependencies.model.SlugDependency
+import uk.gov.hmrc.servicedependencies.connector.TeamsForServices
 
 class SlugParserSpec extends FlatSpec with Matchers {
 

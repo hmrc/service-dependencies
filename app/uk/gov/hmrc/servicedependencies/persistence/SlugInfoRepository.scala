@@ -76,12 +76,14 @@ class SlugInfoRepository @Inject()(mongo: ReactiveMongoComponent)
       val opt: Option[ServiceDependency] = for {
         slugName     <- bson.getAs[String]("slugName")
         slugVersion  <- bson.getAs[String]("slugVersion")
+        teams        <- bson.getAs[List[String]]("teams").orElse(Some(List.empty))
         depGroup     <- bson.getAs[String]("depGroup")
         depArtifact  <- bson.getAs[String]("depArtifact")
         depVersion   <- bson.getAs[String]("depVersion")
       } yield ServiceDependency(
           slugName    = slugName
         , slugVersion = slugVersion
+        , teams       = teams
         , depGroup    = depGroup
         , depArtefact = depArtifact
         , depVersion  = depVersion
@@ -89,7 +91,6 @@ class SlugInfoRepository @Inject()(mongo: ReactiveMongoComponent)
       opt.get
     }
   }
-
 
   def findServices(group: String, artefact: String): Future[Seq[ServiceDependency]] = {
     val col: BSONCollection = mongo.mongoConnector.db().collection(collectionName)
@@ -115,7 +116,7 @@ class SlugInfoRepository @Inject()(mongo: ReactiveMongoComponent)
 
     val projectIntoServiceDependency = Project(
       document(
-         "_id" -> 0
+         "_id"          -> 0
         , "slugName"    -> "$_id"
         , "slugVersion" -> "$version"
         , "versionLong" -> "$versionLong"

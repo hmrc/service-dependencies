@@ -16,18 +16,19 @@
 
 package uk.gov.hmrc.servicedependencies.connector
 
-import org.scalatest.concurrent.{IntegrationPatience, ScalaFutures}
-import org.scalatest.mockito.MockitoSugar
-import org.scalatest.{BeforeAndAfterAll, FreeSpec, MustMatchers}
-import org.scalatestplus.play.guice.GuiceOneAppPerSuite
-import play.api.inject.guice.GuiceApplicationBuilder
-import play.api.Application
-import uk.gov.hmrc.http._
-import scala.concurrent.ExecutionContext.Implicits.global
-import uk.gov.hmrc.servicedependencies.WireMockConfig
 import com.github.tomakehurst.wiremock.client.WireMock._
 import org.joda.time.DateTime
+import org.scalatest.{BeforeAndAfterAll, FreeSpec, MustMatchers}
+import org.scalatest.concurrent.{IntegrationPatience, ScalaFutures}
+import org.scalatest.mockito.MockitoSugar
+import org.scalatestplus.play.guice.GuiceOneAppPerSuite
+import play.api.Application
+import play.api.inject.guice.GuiceApplicationBuilder
+import uk.gov.hmrc.http._
+import uk.gov.hmrc.servicedependencies.WireMockConfig
 import uk.gov.hmrc.servicedependencies.connector.model.RepositoryInfo
+
+import scala.concurrent.ExecutionContext.Implicits.global
 
 class TeamsAndRepositoriesConnectorSpec
     extends FreeSpec
@@ -85,7 +86,7 @@ class TeamsAndRepositoriesConnectorSpec
     "correctly parse json response" in {
 
       val teams = services.getTeamsForServices().futureValue
-      teams mustBe Map("test-repo" -> Seq("PlatOps", "WebOps"), "another-repo" -> Seq("PlatOps"))
+      teams mustBe TeamsForServices(Map("test-repo" -> Seq("PlatOps", "WebOps"), "another-repo" -> Seq("PlatOps")))
     }
   }
 

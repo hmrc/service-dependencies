@@ -89,7 +89,7 @@ class ServiceDependenciesController @Inject()(
       implicit val format = ApiServiceDependencyFormats.sdFormat
       slugInfoService
         .findServicesWithDependency(group, artefact)
-       .map(res => Ok(Json.toJson(res)))
+        .map(res => Ok(Json.toJson(res)))
     }
 
   def getGroupArtefacts =
