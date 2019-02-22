@@ -27,7 +27,7 @@ import uk.gov.hmrc.http.logging.Authorization
 import uk.gov.hmrc.play.bootstrap.http.HttpClient
 import uk.gov.hmrc.servicedependencies.config.ServiceDependenciesConfig
 import uk.gov.hmrc.servicedependencies.connector.model.{ArtifactoryChild, ArtifactoryRepo}
-import uk.gov.hmrc.servicedependencies.model.{NewSlugParserJob, SlugInfo}
+import uk.gov.hmrc.servicedependencies.model.{NewSlugParserJob, Version, SlugInfo}
 import uk.gov.hmrc.servicedependencies.service.SlugParser
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -92,7 +92,8 @@ class ArtifactoryConnector @Inject()(http: HttpClient, config: ServiceDependenci
         if (l.isEmpty) l
         else {
           val (max, i) = l.zipWithIndex.maxBy { j =>
-            SlugParser.extractVersionsFromUri(j._1.slugUri).map { case (_, v, _) => v }
+            SlugParser.extractVersionsFromUri(j._1.slugUri)
+              .flatMap { case (_, vStr, _) => Version.parse(vStr) }
           }
           l.updated(i, max.copy(processed = false))
         }
