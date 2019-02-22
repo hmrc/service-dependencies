@@ -39,6 +39,19 @@ class VersionSpec extends FreeSpec with MustMatchers {
 
     Version("1.1.0") < Version("1.1.1") mustBe true
     Version("1.1.1") < Version("1.1.0") mustBe false
+
+    for {
+      v1 <- Version.parse("0.52.0")
+      v2 <- Version.parse("0.9.0-2-ga163db3")
+    } {
+      println(s"v1=$v1, v2=$v2, v1 < v2 = ${v1 < v2}")
+
+      val max = List(v1, v2).maxBy(a => a)
+      println(s"max=$max")
+
+      v1 < v2 mustBe false
+    }
+
   }
 
   "Can be parsed from strings" in {
@@ -51,8 +64,8 @@ class VersionSpec extends FreeSpec with MustMatchers {
     Version.parse("2.19-SNAPSHOT")    mustBe Some(Version(2, 19, 0, "2.19-SNAPSHOT"))
     Version.parse("2.2-cj-1.1")       mustBe Some(Version(2, 2, 0, "2.2-cj-1.1"))
 
-    Version.parse("2")                mustBe Some(Version(0, 2, 0, "2"))
-    Version.parse("999-SNAPSHOT")     mustBe Some(Version(0, 999, 0, "999-SNAPSHOT"))
+    Version.parse("2")                mustBe Some(Version(0, 0, 2, "2"))
+    Version.parse("999-SNAPSHOT")     mustBe Some(Version(0, 0, 999, "999-SNAPSHOT"))
   }
 
   "Can be printed to strings" in {
