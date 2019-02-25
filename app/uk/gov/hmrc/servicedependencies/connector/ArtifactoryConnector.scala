@@ -17,7 +17,6 @@
 package uk.gov.hmrc.servicedependencies.connector
 
 import java.util.concurrent.Executors
-
 import javax.inject.{Inject, Singleton}
 import org.joda.time.Instant
 import play.api.Logger
@@ -91,6 +90,7 @@ class ArtifactoryConnector @Inject()(http: HttpClient, config: ServiceDependenci
       .map { l =>
         if (l.isEmpty) l
         else {
+          implicit val cmp = Ordering.Option(implicitly[Ordering[Version]]) // diverging implicit expansion?
           val (max, i) = l.zipWithIndex.maxBy { j =>
             SlugParser.extractVersionsFromUri(j._1.slugUri)
               .flatMap { case (_, vStr, _) => Version.parse(vStr) }
