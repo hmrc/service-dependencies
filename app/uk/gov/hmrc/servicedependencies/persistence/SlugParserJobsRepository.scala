@@ -53,7 +53,6 @@ class SlugParserJobsRepository @Inject()(mongo: ReactiveMongoComponent)
     collection
       .insert(
         MongoSlugParserJob(
-          id            = UUID.randomUUID().toString,
           slugUri       = newJob.slugUri,
           processed     = newJob.processed,
           attempts      = 0
@@ -61,21 +60,21 @@ class SlugParserJobsRepository @Inject()(mongo: ReactiveMongoComponent)
       .map(_ => true)
       .recover { case MongoErrors.Duplicate(_) =>  false }
 
-  def markProcessed(id: String): Future[Unit] = {
-    logger.info(s"mark job $id as processed")
+  def markProcessed(slugUri: String): Future[Unit] = {
+    logger.info(s"mark job $slugUri as processed")
     collection
       .update(
-        selector = Json.obj("_id" -> id),
-        update   = Json.obj("$set" -> Json.obj("processed" -> true)))
+        selector = Json.obj("slugUri" -> slugUri),
+        update   = Json.obj("$set"    -> Json.obj("processed" -> true)))
       .map(_ => ())
   }
 
-  def markAttempted(id: String): Future[Boolean] = {
-    logger.info(s"mark job $id as attempted")
+  def markAttempted(slugUri: String): Future[Boolean] = {
+    logger.info(s"mark job $slugUri as attempted")
     collection
       .update(
-        selector = Json.obj("_id" -> id),
-        update   = Json.obj("$inc" -> Json.obj("attempts" -> 1)))
+        selector = Json.obj("slugUri" -> slugUri),
+        update   = Json.obj("$inc"    -> Json.obj("attempts" -> 1)))
       .map(_.nModified == 1)
   }
 

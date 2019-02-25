@@ -51,10 +51,10 @@ class SlugJobProcessor @Inject()(
       .mapConcat(_.toList)
       .mapAsyncUnordered(2) { job =>
         processJob(job)
-          .map(_ => slugParserJobsRepository.markProcessed(job.id))
+          .map(_ => slugParserJobsRepository.markProcessed(job.slugUri))
           .recoverWith {
-            case NonFatal(e) => Logger.error(s"An error occurred processing slug parser job ${job.id}: ${e.getMessage}", e)
-                                slugParserJobsRepository.markAttempted(job.id)
+            case NonFatal(e) => Logger.error(s"An error occurred processing slug parser job ${job.slugUri}: ${e.getMessage}", e)
+                                slugParserJobsRepository.markAttempted(job.slugUri)
           }
       }
       .runWith(Sink.ignore)
@@ -64,12 +64,20 @@ class SlugJobProcessor @Inject()(
   def processJob(job: MongoSlugParserJob): Future[Unit] =
     futureHelpers.withTimerAndCounter("slug.process")(
       for {
-        _     <- Future(Logger.debug(s"processing slug job ${job.id} (${job.slugUri})"))
-        is    <- gzippedResourceConnector.openGzippedResource(job.slugUri)
-        si    =  SlugParser.parse(job.slugUri, is)
-        added <- slugInfoRepository.add(si)
-        _     =  if (added) Logger.debug(s"added slugInfo for ${job.slugUri}: ${si.name} ${si.version}")
-                 else       Logger.warn(s"slug ${job.slugUri} not added - already processed")
+        _        <- Future(Logger.debug(s"processing slug job ${job.slugUri}"))
+        is       <- gzippedResourceConnector.openGzippedResource(job.slugUri)
+        si       =  SlugParser.parse(job.slugUri, is)
+        added    <- slugInfoRepository.add(si)
+        isLatest <- slugInfoRepository.getSlugInfos(name = si.name, optVersion = None)
+                      .map { case Nil      => true
+                             case nonempty => val isLatest = nonempty.map(_.version).max == si.version
+                                              Logger.info(s"Slug ${si.name} ${si.version} isLatest=${isLatest} (out of: ${nonempty.map(_.version).sorted})")
+                                              isLatest
+                           }
+        _        <- if (isLatest) slugInfoRepository.markLatest(si.name, si.version)
+                    else Future(())
+        _        =  if (added) Logger.debug(s"added slugInfo for ${job.slugUri}: ${si.name} ${si.version}")
+                    else       Logger.warn(s"slug ${job.slugUri} not added - already processed")
       } yield ()
     )
 }
@@ -80,26 +88,25 @@ object SlugParser {
   def parse(slugUri: String, in: InputStream): SlugInfo = {
     val tar = new ArchiveStreamFactory().createArchiveInputStream(new BufferedInputStream(in))
 
-    val (runnerVersion, slugVersion, slugName, versionLong) =
+    val (runnerVersion, semanticVersion, slugName) =
       (for {
          (runnerVersion, slugVersion, slugName) <- extractVersionsFromUri(slugUri)
          semanticVersion                        <- Version.parse(slugVersion)
-         versionLong                            <- SlugInfo.toLong(slugVersion)
-       } yield (runnerVersion, slugVersion, slugName, versionLong)
+       } yield (runnerVersion, semanticVersion, slugName)
       ).getOrElse(sys.error(s"Could not extract slug data from uri $slugUri"))
 
     val slugInfo = SlugInfo(
-      uri             = slugUri,
-      name            = slugName,
-      version         = slugVersion,
-      versionLong     = versionLong,
-      teams           = List.empty,
-      runnerVersion   = runnerVersion,
-      classpath       = "",
-      jdkVersion      = "",
-      dependencies    = List.empty[SlugDependency])
+      uri           = slugUri,
+      name          = slugName,
+      version       = semanticVersion,
+      teams         = List.empty,
+      runnerVersion = runnerVersion,
+      classpath     = "",
+      jdkVersion    = "",
+      dependencies  = List.empty[SlugDependency],
+      latest        = false)
 
-    val Script = s"./$slugName-$slugVersion/bin/$slugName"
+    val Script = s"./$slugName-$semanticVersion/bin/$slugName"
 
     Iterator
       .continually(Try(tar.getNextEntry).recover { case e if e.getMessage == "Stream closed" => null }.get)

@@ -17,7 +17,6 @@
 package uk.gov.hmrc.servicedependencies.model
 
 case class MongoSlugParserJob(
-  id       : String,
   slugUri  : String,
   processed: Boolean,
   attempts : Int)
@@ -27,8 +26,7 @@ object MongoSlugParserJob {
   import play.api.libs.functional.syntax._
 
   implicit val format: OFormat[MongoSlugParserJob] =
-    ( (__ \ "_id"      ).format[String]
-    ~ (__ \ "slugUri"  ).format[String]
+    ( (__ \ "slugUri"  ).format[String]
     ~ (__ \ "processed").format[Boolean]
     ~ (__ \ "attempts" ).format[Int]
     )(MongoSlugParserJob.apply, unlift(MongoSlugParserJob.unapply))

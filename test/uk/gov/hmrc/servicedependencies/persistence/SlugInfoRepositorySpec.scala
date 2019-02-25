@@ -111,8 +111,7 @@ class SlugInfoRepositorySpec
     SlugInfo(
       uri             = "https://store/slugs/my-slug/my-slug_0.27.0_0.5.2.tgz",
       name            = "my-slug",
-      version         = "0.27.0",
-      versionLong     = 27000,
+      version         = Version.apply("0.27.0"),
       teams           = List.empty,
       runnerVersion   = "0.5.2",
       classpath       = "",
@@ -128,28 +127,30 @@ class SlugInfoRepositorySpec
           path     = "lib2",
           version  = "0.66",
           group    = "com.test.group",
-          artifact = "lib2")))
+          artifact = "lib2")),
+      latest          = true)
 
   val oldSlugInfo = slugInfo.copy(
-    uri         = "https://store/slugs/my-slug/my-slug_0.26.0_0.5.2.tgz",
-    version     = "0.26.0",
-    versionLong = 26000
+    uri             = "https://store/slugs/my-slug/my-slug_0.26.0_0.5.2.tgz",
+    version         = Version.apply("0.26.0"),
+    latest          = false
   )
 
-  val otherSlug =   SlugInfo(
-    uri             = "https://store/slugs/other-slug/other-slug_0.55.0_0.5.2.tgz",
-    name            = "other-slug",
-    version         = "0.55.0",
-    versionLong     = 55000,
-    teams           = List.empty,
-    runnerVersion   = "0.5.2",
-    classpath       = "",
-    jdkVersion      = "",
-    dependencies    = List(
-      SlugDependency(
-        path     = "lib3",
-        version  = "1.66.1",
-        group    = "io.stuff",
-        artifact = "lib3"
-      )))
+  val otherSlug =
+    SlugInfo(
+      uri             = "https://store/slugs/other-slug/other-slug_0.55.0_0.5.2.tgz",
+      name            = "other-slug",
+      version         = Version.apply("0.55.0"),
+      teams           = List.empty,
+      runnerVersion   = "0.5.2",
+      classpath       = "",
+      jdkVersion      = "",
+      dependencies    = List(
+        SlugDependency(
+          path     = "lib3",
+          version  = "1.66.1",
+          group    = "io.stuff",
+          artifact = "lib3"
+        )),
+      latest          = true)
 }
