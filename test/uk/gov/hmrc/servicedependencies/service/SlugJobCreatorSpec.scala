@@ -59,7 +59,7 @@ class SlugJobCreatorSpec extends TestKit(ActorSystem("SlugJobCreatorSpec"))
     when(boot.mockedSlugParserJobsRepository.add(any()))
       .thenReturn(Future(true))
 
-    boot.slugJobCreator.runHistoric(limit = Some(1000))
+    boot.slugJobCreator.runHistoric
 
     Thread.sleep(1000)
     verify(boot.mockedArtifactoryConnector, times(1)).findAllServices()

@@ -79,23 +79,6 @@ class AdministrationController @Inject()(
     dependencyDataUpdatingService.locks().map(locks => Ok(Json.toJson(locks)))
   }
 
-  def addSlugParserJob =
-    Action.async(parse.json) { implicit request =>
-      withJsonBody[NewSlugParserJob] { newJob =>
-        slugInfoService
-          .addSlugParserJob(newJob)
-          .map {
-            case true =>
-              slugJobProcessor.run()
-              Created
-            case false => Conflict
-          }
-          .recover {
-            case ex => throw new RuntimeException("creation of slug job failed", ex)
-          }
-      }
-    }
-
   def processSlugParserJobs =
     Action { implicit request =>
       Logger.info("Processing slug parser jobs")
@@ -107,24 +90,11 @@ class AdministrationController @Inject()(
       Accepted
     }
 
-  def executeJob =
-    Action.async(parse.json) { implicit request =>
-      withJsonBody[NewSlugParserJob] { job =>
-        (slugJobProcessor
-          .processJob(MongoSlugParserJob(id = "0", slugUri = job.slugUri, processed = false, attempts = 0)))
-          .recover {
-            case NonFatal(e) =>
-              Logger.error(s"An error occurred processing slug parser job ${job.slugUri}: ${e.getMessage}", e)
-          }
-        Future(Accepted)
-      }
-    }
-
-  def createSlugParserJobs(from: Int, limit: Int) =
+  def backfillSlugParserJobs =
     Action { implicit request =>
-      Logger.info(s"Creating slug parser jobs: from=$from, limit=$limit")
+      Logger.info(s"Backfilling slug parser jobs")
       slugJobCreator
-        .runHistoric(from, Some(limit))
+        .runHistoric
         .flatMap { _ =>
           Logger.info("Finished creating slug jobs - now processing jobs")
           slugJobProcessor.run()
