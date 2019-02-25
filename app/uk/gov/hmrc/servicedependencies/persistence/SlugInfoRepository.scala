@@ -74,7 +74,7 @@ class SlugInfoRepository @Inject()(mongo: ReactiveMongoComponent)
       case Some(version) => find("name" -> name, "version" -> version)
     }
 
-  def markLatest(name: String, version: String): Future[Unit] = {
+  def markLatest(name: String, version: Version): Future[Unit] = {
     logger.info(s"mark slug $name $version as latest")
     for {
     _ <- collection
@@ -85,7 +85,7 @@ class SlugInfoRepository @Inject()(mongo: ReactiveMongoComponent)
     _ <- collection
           .update(
               selector = Json.obj( "name"    -> name
-                                 , "version" -> version
+                                 , "version" -> version.original
                                  )
             , update   = Json.obj("$set" -> Json.obj("latest" -> true))
             )

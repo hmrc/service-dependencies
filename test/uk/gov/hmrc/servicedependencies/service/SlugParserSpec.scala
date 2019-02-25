@@ -19,7 +19,7 @@ import java.io.{BufferedInputStream, ByteArrayInputStream}
 import java.nio.charset.StandardCharsets
 
 import org.scalatest.{FlatSpec, Matchers}
-import uk.gov.hmrc.servicedependencies.model.SlugDependency
+import uk.gov.hmrc.servicedependencies.model.{SlugDependency, Version}
 import uk.gov.hmrc.servicedependencies.connector.TeamsForServices
 
 class SlugParserSpec extends FlatSpec with Matchers {
@@ -97,7 +97,7 @@ class SlugParserSpec extends FlatSpec with Matchers {
 
     res.name shouldBe "example-service"
     res.runnerVersion shouldBe "0.5.2"
-    res.version shouldBe "0.1.2"
+    res.version shouldBe Version.apply("0.1.2")
 
     res.classpath.isEmpty shouldBe false
     res.classpath shouldNot startWith ("declare -r app_classpath")

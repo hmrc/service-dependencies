@@ -70,8 +70,8 @@ class SlugJobProcessor @Inject()(
         added    <- slugInfoRepository.add(si)
         isLatest <- slugInfoRepository.getSlugInfos(name = si.name, optVersion = None)
                       .map { case Nil      => true
-                             case nonempty => val isLatest = nonempty.map(_.semanticVersion).max == si.semanticVersion
-                                              Logger.info(s"Slug ${si.name} ${si.semanticVersion} isLatest=${isLatest} (out of: ${nonempty.map(_.semanticVersion).sorted})")
+                             case nonempty => val isLatest = nonempty.map(_.version).max == si.version
+                                              Logger.info(s"Slug ${si.name} ${si.version} isLatest=${isLatest} (out of: ${nonempty.map(_.version).sorted})")
                                               isLatest
                            }
         _        <- if (isLatest) slugInfoRepository.markLatest(si.name, si.version)
@@ -96,18 +96,17 @@ object SlugParser {
       ).getOrElse(sys.error(s"Could not extract slug data from uri $slugUri"))
 
     val slugInfo = SlugInfo(
-      uri             = slugUri,
-      name            = slugName,
-      version         = semanticVersion.original,
-      semanticVersion = semanticVersion,
-      teams           = List.empty,
-      runnerVersion   = runnerVersion,
-      classpath       = "",
-      jdkVersion      = "",
-      dependencies    = List.empty[SlugDependency],
-      latest          = false)
+      uri           = slugUri,
+      name          = slugName,
+      version       = semanticVersion,
+      teams         = List.empty,
+      runnerVersion = runnerVersion,
+      classpath     = "",
+      jdkVersion    = "",
+      dependencies  = List.empty[SlugDependency],
+      latest        = false)
 
-    val Script = s"./$slugName-${semanticVersion.original}/bin/$slugName"
+    val Script = s"./$slugName-$semanticVersion/bin/$slugName"
 
     Iterator
       .continually(Try(tar.getNextEntry).recover { case e if e.getMessage == "Stream closed" => null }.get)

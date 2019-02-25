@@ -31,8 +31,7 @@ case class SlugDependency(
 case class SlugInfo(
   uri             : String,
   name            : String,
-  version         : String,
-  semanticVersion : Version,
+  version         : Version,
   teams           : List[String],
   runnerVersion   : String,
   classpath       : String,
@@ -50,7 +49,6 @@ trait MongoSlugInfoFormats {
   implicit val siFormat: OFormat[SlugInfo] =
     ( (__ \ "uri"          ).format[String]
     ~ (__ \ "name"         ).format[String]
-    ~ (__ \ "version"      ).format[String]
     ~ (__ \ "version"      ).format[String].inmap[Version](Version.apply, _.original)
     ~ OFormat( Reads.pure(List.empty[String])
              , ignore

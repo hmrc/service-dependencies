@@ -111,8 +111,7 @@ class SlugInfoRepositorySpec
     SlugInfo(
       uri             = "https://store/slugs/my-slug/my-slug_0.27.0_0.5.2.tgz",
       name            = "my-slug",
-      version         = "0.27.0",
-      semanticVersion = Version.apply("0.27.0"),
+      version         = Version.apply("0.27.0"),
       teams           = List.empty,
       runnerVersion   = "0.5.2",
       classpath       = "",
@@ -133,8 +132,7 @@ class SlugInfoRepositorySpec
 
   val oldSlugInfo = slugInfo.copy(
     uri             = "https://store/slugs/my-slug/my-slug_0.26.0_0.5.2.tgz",
-    version         = "0.26.0",
-    semanticVersion = Version.apply("0.26.0"),
+    version         = Version.apply("0.26.0"),
     latest          = false
   )
 
@@ -142,8 +140,7 @@ class SlugInfoRepositorySpec
     SlugInfo(
       uri             = "https://store/slugs/other-slug/other-slug_0.55.0_0.5.2.tgz",
       name            = "other-slug",
-      version         = "0.55.0",
-      semanticVersion = Version.apply("0.55.0"),
+      version         = Version.apply("0.55.0"),
       teams           = List.empty,
       runnerVersion   = "0.5.2",
       classpath       = "",
