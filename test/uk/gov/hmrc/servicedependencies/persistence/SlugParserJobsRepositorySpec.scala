@@ -75,7 +75,7 @@ class SlugParserJobsRepositorySpec
       await(slugParserJobsRepository.add(newJob))
       val createdJob = checkSingleEntry(expectedSlugUri = newJob.slugUri, expectedProcessed = false)
 
-      await(slugParserJobsRepository.markProcessed(createdJob.id))
+      await(slugParserJobsRepository.markProcessed(createdJob.slugUri))
       checkSingleEntry(expectedSlugUri = newJob.slugUri, expectedProcessed = true)
     }
   }
@@ -97,10 +97,10 @@ class SlugParserJobsRepositorySpec
       await(slugParserJobsRepository.add(newJob))
       val createdJob = checkSingleEntry(newJob.slugUri, false, 0)
 
-      await(slugParserJobsRepository.markAttempted(createdJob.id))
+      await(slugParserJobsRepository.markAttempted(createdJob.slugUri))
       checkSingleEntry(newJob.slugUri, false, 1)
 
-      await(slugParserJobsRepository.markAttempted(createdJob.id))
+      await(slugParserJobsRepository.markAttempted(createdJob.slugUri))
       checkSingleEntry(newJob.slugUri, false, 2)
     }
   }
@@ -115,7 +115,7 @@ class SlugParserJobsRepositorySpec
       await(slugParserJobsRepository.add(newJob2))
       await(slugParserJobsRepository.getAllEntries) should have size 2
 
-      await(slugParserJobsRepository.markProcessed(createdJob1.id))
+      await(slugParserJobsRepository.markProcessed(createdJob1.slugUri))
 
       val unprocessed = await(slugParserJobsRepository.getUnprocessed)
       unprocessed should have size 1
@@ -132,9 +132,9 @@ class SlugParserJobsRepositorySpec
       await(slugParserJobsRepository.add(newJob2))
       await(slugParserJobsRepository.getAllEntries) should have size 2
 
-      await(slugParserJobsRepository.markAttempted(createdJob1.id))
-      await(slugParserJobsRepository.markAttempted(createdJob1.id))
-      await(slugParserJobsRepository.markAttempted(createdJob1.id))
+      await(slugParserJobsRepository.markAttempted(createdJob1.slugUri))
+      await(slugParserJobsRepository.markAttempted(createdJob1.slugUri))
+      await(slugParserJobsRepository.markAttempted(createdJob1.slugUri))
 
       val unprocessed = await(slugParserJobsRepository.getUnprocessed)
       unprocessed should have size 1

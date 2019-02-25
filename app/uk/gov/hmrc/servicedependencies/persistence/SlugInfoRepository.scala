@@ -25,7 +25,7 @@ import reactivemongo.api.indexes.{Index, IndexType}
 import reactivemongo.bson.{BSONDocument, BSONDocumentReader, BSONObjectID}
 import reactivemongo.play.json.ImplicitBSONHandlers._
 import uk.gov.hmrc.mongo.ReactiveRepository
-import uk.gov.hmrc.servicedependencies.model.{GroupArtefacts, MongoSlugInfoFormats, ServiceDependency, SlugInfo}
+import uk.gov.hmrc.servicedependencies.model.{GroupArtefacts, MongoSlugInfoFormats, ServiceDependency, SlugInfo, Version}
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -48,6 +48,10 @@ class SlugInfoRepository @Inject()(mongo: ReactiveMongoComponent)
       Index(
         Seq("name" -> IndexType.Hashed),
         name       = Some("slugInfoIdx"),
+        background = true),
+      Index(
+        Seq("latest" -> IndexType.Hashed),
+        name       = Some("slugInfoLatestIdx"),
         background = true))
 
   def add(slugInfo: SlugInfo): Future[Boolean] =
@@ -70,6 +74,25 @@ class SlugInfoRepository @Inject()(mongo: ReactiveMongoComponent)
       case Some(version) => find("name" -> name, "version" -> version)
     }
 
+  def markLatest(name: String, version: String): Future[Unit] = {
+    logger.info(s"mark slug $name $version as latest")
+    for {
+    _ <- collection
+          .update(
+              selector = Json.obj("name" -> name)
+            , update   = Json.obj("$set" -> Json.obj("latest" -> false))
+            )
+    _ <- collection
+          .update(
+              selector = Json.obj( "name"    -> name
+                                 , "version" -> version
+                                 )
+            , update   = Json.obj("$set" -> Json.obj("latest" -> true))
+            )
+    } yield ()
+  }
+
+
 
   private val readerServiceDependency = new BSONDocumentReader[ServiceDependency]{
     override def read(bson: BSONDocument): ServiceDependency = {
@@ -88,7 +111,7 @@ class SlugInfoRepository @Inject()(mongo: ReactiveMongoComponent)
         , depArtefact = depArtifact
         , depVersion  = depVersion
         )
-      opt.get
+      opt.getOrElse(sys.error(s"Could not extract result from ${bson.elements.toList}"))
     }
   }
 
@@ -100,43 +123,27 @@ class SlugInfoRepository @Inject()(mongo: ReactiveMongoComponent)
 
     implicit val rsd = readerServiceDependency
 
-    // pipeline functions
-    val sortBySlug = Sort(Ascending("name"), Descending("versionLong"))
-
-    val groupByLatestSlug = Group(BSONString(f"$$name"))(
-        "version"      -> FirstField("version")
-      , "uri"          -> FirstField("uri")
-      , "dependencies" -> FirstField("dependencies")
-      , "versionLong"  -> FirstField("versionLong")
-      )
-
-
-    val unwindDependencies = UnwindField("dependencies")
-
-
-    val projectIntoServiceDependency = Project(
-      document(
-         "_id"          -> 0
-        , "slugName"    -> "$_id"
-        , "slugVersion" -> "$version"
-        , "versionLong" -> "$versionLong"
-        , "lib"         -> "$dependencies"
-        , "depGroup"    -> "$dependencies.group"
-        , "depArtifact" -> "$dependencies.artifact"
-        , "depVersion"  -> "$dependencies.version"
-        )
-    )
-
-    val matchArtifact = Match(document("dependencies.artifact" -> artefact, "dependencies.group" -> group))
-
-    // run the pipeline
     col.aggregatorContext[ServiceDependency](
-        sortBySlug
+        Match(document("latest" -> true))
       , List(
-            groupByLatestSlug
-          , unwindDependencies
-          , matchArtifact
-          , projectIntoServiceDependency
+            Sort(Ascending("name"))
+          , UnwindField("dependencies")
+          , Match(
+              document( "dependencies.artifact" -> artefact
+                      , "dependencies.group"    -> group
+                      )
+            )
+          , Project(
+              document( "_id"         -> 0
+                      , "slugName"    -> "$name"
+                      , "slugVersion" -> "$version"
+                      , "versionLong" -> "$versionLong"
+                      , "lib"         -> "$dependencies"
+                      , "depGroup"    -> "$dependencies.group"
+                      , "depArtifact" -> "$dependencies.artifact"
+                      , "depVersion"  -> "$dependencies.version"
+                      )
+            )
           )
       , allowDiskUse = true
       )

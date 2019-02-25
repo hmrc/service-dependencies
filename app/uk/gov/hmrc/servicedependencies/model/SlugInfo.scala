@@ -32,24 +32,14 @@ case class SlugInfo(
   uri             : String,
   name            : String,
   version         : String,
-  versionLong     : Long,
+  semanticVersion : Version,
   teams           : List[String],
   runnerVersion   : String,
   classpath       : String,
   jdkVersion      : String,
-  dependencies    : List[SlugDependency])
-
-object SlugInfo {
-  def toLong(s: String): Option[Long] =
-    for {
-      v   <- Version.parse(s)
-      res <- Try {
-               v.major.toLong * 1000 * 1000 +
-               v.minor.toLong * 1000 +
-               v.patch.toLong
-             }.toOption
-    } yield res
-}
+  dependencies    : List[SlugDependency],
+  latest          : Boolean
+  )
 
 trait MongoSlugInfoFormats {
   implicit val sdFormat: OFormat[SlugDependency] =
@@ -61,7 +51,7 @@ trait MongoSlugInfoFormats {
     ( (__ \ "uri"          ).format[String]
     ~ (__ \ "name"         ).format[String]
     ~ (__ \ "version"      ).format[String]
-    ~ (__ \ "versionLong"  ).format[Long]
+    ~ (__ \ "version"      ).format[String].inmap[Version](Version.apply, _.original)
     ~ OFormat( Reads.pure(List.empty[String])
              , ignore
              )
@@ -69,6 +59,7 @@ trait MongoSlugInfoFormats {
     ~ (__ \ "classpath"    ).format[String]
     ~ (__ \ "jdkVersion"   ).format[String]
     ~ (__ \ "dependencies" ).format[List[SlugDependency]]
+    ~ (__ \ "latest"       ).formatNullable[Boolean].inmap[Boolean](_.getOrElse(false), Option.apply)
     )(SlugInfo.apply, unlift(SlugInfo.unapply))
 }
 
