@@ -42,6 +42,12 @@ class VersionSpec extends FreeSpec with MustMatchers {
 
     Version("0.9.0-2-ga163db3") < Version("0.52.0") mustBe true
     Version("0.52.0") < Version("0.9.0-2-ga163db3") mustBe false
+
+    Version("0.9.0-2-ga163db3") < Version("0.9.0") mustBe true
+    Version("0.9.0") < Version("0.9.0-2-ga163db3") mustBe false
+
+    Version("0.9.0-SNAPSHOT") < Version("0.9.0") mustBe true
+    Version("0.9.0") < Version("0.9.0-SNAPSHOT") mustBe false
   }
 
   "Can be parsed from strings" in {
