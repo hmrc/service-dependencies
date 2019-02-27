@@ -145,9 +145,14 @@ object SlugParser {
       (runnerVersion, slugVersion, rest.mkString("_"))
     }.toOption
 
-  def extractVersionsFromUri(slugUri: String) =
+  def extractVersionsFromUri(slugUri: String): Option[(String, String, String)] =
     extractVersionsFromFilename(extractFilename(slugUri))
 
+  def extractVersionFromUri(slugUri: String): Option[Version] =
+    extractVersionsFromUri(slugUri)
+      .flatMap {
+        case (_, vStr, _) => Version.parse(vStr)
+      }
 
   sealed trait Dep { def sd: SlugDependency }
   object Dep {

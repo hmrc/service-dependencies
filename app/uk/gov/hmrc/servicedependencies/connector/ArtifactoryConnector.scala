@@ -51,19 +51,19 @@ class ArtifactoryConnector @Inject()(http: HttpClient, config: ServiceDependenci
     http.GET[ArtifactoryRepo](artifactoryRoot).map(_.children.filter(_.folder).toList)
   }
 
-  def findSlugsForBackFill(now: Instant = Instant.now()) : Future[List[NewSlugParserJob]] = {
+  def findSlugsForBackFill(now: Instant = Instant.now()): Future[List[NewSlugParserJob]] =
     Future.sequence(
-      // query has been broken into 60 day blocks to avoid timeouts
-      // TODO: review timeout after artifactory db upgrade
-      Range.inclusive(0,6*5).map( i =>
-        findAllSlugsSince(
-          from = now.minus(Duration.standardDays(60*(1+i))),
-          to   = now.minus(Duration.standardDays(60*i)))))
+        // query has been broken into 60 day blocks to avoid timeouts
+        // TODO: review timeout after artifactory db upgrade
+        Range.inclusive(0, 6 * 5)
+          .map(i =>
+            findAllSlugsSince(
+              from = now.minus(Duration.standardDays(60 * (1 + i))),
+              to   = now.minus(Duration.standardDays(60 * i)))))
       .map(_.flatten.toList)
-  }
 
 
-  def findAllSlugsSince(from: Instant, to: Instant = Instant.now()) : Future[List[NewSlugParserJob]] = {
+  def findAllSlugsSince(from: Instant, to: Instant = Instant.now()): Future[List[NewSlugParserJob]] = {
     Logger.info(s"finding all slugs since $from from artifactory")
 
     val endpoint = s"${config.artifactoryBase}/api/search/creation?from=${from.getMillis}&to=${to.getMillis}&repo=webstore-local"
@@ -78,37 +78,6 @@ class ArtifactoryConnector @Inject()(http: HttpClient, config: ServiceDependenci
           .map(ArtifactoryConnector.toDownloadURL)
           .map(url => NewSlugParserJob(url))
           .toList
-      }
-  }
-
-
-  /**
-    * Connect to artifactory and retrieve a list of all available slugs
-    */
-  def findAllSlugsForService(service: String): Future[List[NewSlugParserJob]] = {
-    Logger.info(s"finding all slugUris for service $service from artifactory")
-    implicit val hc: HeaderCarrier = HeaderCarrier(authorization)
-    http.GET[ArtifactoryRepo](s"$artifactoryRoot$service")
-      .map {
-        _.children
-          .filterNot(_.folder)
-          .map(repo => convertToSlugParserJob(service, repo.uri, webstoreRoot))
-          .toList
-      }
-      // temporarily only process the latest:
-      // for now mark all as processed
-      .map(_.map(_.copy(processed = true)))
-      // and mark the latest version as not processed
-      .map { l =>
-        if (l.isEmpty) l
-        else {
-          implicit val cmp = Ordering.Option(implicitly[Ordering[Version]]) // diverging implicit expansion?
-          val (max, i) = l.zipWithIndex.maxBy { j =>
-            SlugParser.extractVersionsFromUri(j._1.slugUri)
-              .flatMap { case (_, vStr, _) => Version.parse(vStr) }
-          }
-          l.updated(i, max.copy(processed = false))
-        }
       }
   }
 
