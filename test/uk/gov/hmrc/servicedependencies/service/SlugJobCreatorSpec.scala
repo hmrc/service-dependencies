@@ -18,19 +18,17 @@ package uk.gov.hmrc.servicedependencies.service
 import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer
 import akka.testkit.{ImplicitSender, TestKit}
-import org.scalatest.mockito.MockitoSugar
-import org.mockito.ArgumentMatchers.{any, eq => eqTo}
+import org.mockito.ArgumentMatchers.any
 import org.mockito.Mockito._
+import org.scalatest.mockito.MockitoSugar
 import org.scalatest.{FlatSpecLike, Matchers}
 import uk.gov.hmrc.servicedependencies.config.SchedulerConfigs
 import uk.gov.hmrc.servicedependencies.connector.ArtifactoryConnector
-import uk.gov.hmrc.servicedependencies.connector.model.ArtifactoryChild
 import uk.gov.hmrc.servicedependencies.model.NewSlugParserJob
 import uk.gov.hmrc.servicedependencies.persistence.{SlugJobLastRunRepository, SlugParserJobsRepository}
 
-import scala.concurrent.Future
-import scala.concurrent.duration.FiniteDuration
 import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.Future
 
 class SlugJobCreatorSpec extends TestKit(ActorSystem("SlugJobCreatorSpec"))
   with ImplicitSender
@@ -38,33 +36,92 @@ class SlugJobCreatorSpec extends TestKit(ActorSystem("SlugJobCreatorSpec"))
   with MockitoSugar
   with Matchers {
 
-
-  "SlugJobCreator.add" should "write a number of mongojobs to the database" in {
+  "SlugJobCreator.runBackfill" should "write a number of mongojobs to the database" in {
 
     val boot = Boot.init
 
-    val slug1 = ArtifactoryChild("/test-service", true)
-    val slug2 = ArtifactoryChild("/abc", true)
-    val slugJob = NewSlugParserJob("http://")
-
-    when(boot.mockedArtifactoryConnector.findAllServices())
+    val slug1 = NewSlugParserJob("http://abc/abc.2.3-0.5.2.tgz")
+    val slug2 = NewSlugParserJob("http://test-service/test-service_1.2.3-0.5.2.tgz")
+    when(boot.mockedArtifactoryConnector.findSlugsForBackFill(any()))
       .thenReturn(Future(List(slug1, slug2)))
-
-    when(boot.mockedArtifactoryConnector.findAllSlugsForService("/test-service"))
-      .thenReturn(Future(List(NewSlugParserJob("http://test-service/test-service_1.2.3-0.5.2.tgz"))))
-
-    when(boot.mockedArtifactoryConnector.findAllSlugsForService("/abc"))
-      .thenReturn(Future(List(NewSlugParserJob("http://abc/abc.2.3-0.5.2.tgz"))))
 
     when(boot.mockedSlugParserJobsRepository.add(any()))
       .thenReturn(Future(true))
 
-    boot.slugJobCreator.runHistoric
+    boot.slugJobCreator.runBackfill
 
     Thread.sleep(1000)
-    verify(boot.mockedArtifactoryConnector, times(1)).findAllServices()
-    verify(boot.mockedArtifactoryConnector, times(1)).findAllSlugsForService("/test-service")
-    verify(boot.mockedArtifactoryConnector, times(1)).findAllSlugsForService("/abc")
+    verify(boot.mockedSlugParserJobsRepository).add(slug1)
+    verify(boot.mockedSlugParserJobsRepository).add(slug2)
+    verify(boot.mockedArtifactoryConnector).findSlugsForBackFill(any())
+  }
+
+  it should "only select the latest version to backfill" in {
+
+    val boot = Boot.init
+
+    val slug020 =  NewSlugParserJob("https://artifact.store.uk/artifactory/webstore/slugs/address-lookup/address-lookup_0.3.0_0.5.2.tgz")
+    val slug120 =  NewSlugParserJob("https://artifact.store.uk/artifactory/webstore/slugs/address-lookup/address-lookup_1.2.0_0.5.2.tgz")
+    val slug130 =  NewSlugParserJob("https://artifact.store.uk/artifactory/webstore/slugs/address-lookup/address-lookup_1.3.0_0.5.2.tgz")
+    val slug131 =  NewSlugParserJob("https://artifact.store.uk/artifactory/webstore/slugs/address-lookup/address-lookup_1.3.1_0.5.2.tgz")
+
+    when(boot.mockedArtifactoryConnector.findSlugsForBackFill(any()))
+      .thenReturn(Future(List(slug130, slug020, slug120, slug131)))
+
+    when(boot.mockedSlugParserJobsRepository.add(any()))
+      .thenReturn(Future(true))
+
+    boot.slugJobCreator.runBackfill
+
+    Thread.sleep(1000)
+    verify(boot.mockedSlugParserJobsRepository, times(1)).add(slug131)
+    verify(boot.mockedArtifactoryConnector, times(1)).findSlugsForBackFill(any())
+  }
+
+
+  it should "treat single digit versioned slugs as lower than sem-ver slugs" in {
+
+    val boot = Boot.init
+
+    val slug010 = NewSlugParserJob("https://artifact.store.uk/artifactory/webstore/slugs/auth-agents-stub/auth-agents-stub_0.1.0_0.5.2.tgz")
+    val slug43 =  NewSlugParserJob("https://artifact.store.uk/artifactory/webstore/slugs/auth-agents-stub/auth-agents-stub_43_0.5.2.tgz")
+    val slug52 =  NewSlugParserJob("https://artifact.store.uk/artifactory/webstore/slugs/auth-agents-stub/auth-agents-stub_52_0.5.2.tgz")
+    val slug53 =  NewSlugParserJob("https://artifact.store.uk/artifactory/webstore/slugs/auth-agents-stub/auth-agents-stub_53_0.5.2.tgz")
+
+    when(boot.mockedArtifactoryConnector.findSlugsForBackFill(any()))
+      .thenReturn(Future(List(slug52, slug010, slug43, slug53)))
+
+    when(boot.mockedSlugParserJobsRepository.add(any()))
+      .thenReturn(Future(true))
+
+    boot.slugJobCreator.runBackfill
+
+    Thread.sleep(1000)
+    verify(boot.mockedSlugParserJobsRepository, times(1)).add(slug010)
+
+    verify(boot.mockedArtifactoryConnector, times(1)).findSlugsForBackFill(any())
+  }
+
+  it should "treat suffixed sem-ver versions as lower than a suffixed version with the same version" in {
+
+    val boot = Boot.init
+
+    val suffixed = NewSlugParserJob("https://artifact.store.uk/artifactory/webstore/slugs/cgt-calculator/cgt-calculator_1.38.0-3-g8117097_0.5.2.tgz")
+    val semvered = NewSlugParserJob("https://artifact.store.uk/artifactory/webstore/slugs/cgt-calculator/cgt-calculator_1.38.0_0.5.2.tgz")
+
+
+    when(boot.mockedArtifactoryConnector.findSlugsForBackFill(any()))
+      .thenReturn(Future(List(semvered, suffixed)))
+
+    when(boot.mockedSlugParserJobsRepository.add(any()))
+      .thenReturn(Future(true))
+
+    boot.slugJobCreator.runBackfill
+
+    Thread.sleep(1000)
+    verify(boot.mockedSlugParserJobsRepository).add(semvered)
+
+    verify(boot.mockedArtifactoryConnector, times(1)).findSlugsForBackFill(any())
   }
 
   case class Boot(
@@ -81,7 +138,7 @@ class SlugJobCreatorSpec extends TestKit(ActorSystem("SlugJobCreatorSpec"))
       val mockedJobLastRunRepository     = mock[SlugJobLastRunRepository]
       val configs                        = mock[SchedulerConfigs]
       val slugJobCreator = new SlugJobCreator(mockedArtifactoryConnector, mockedSlugParserJobsRepository, mockedJobLastRunRepository, configs)(ActorMaterializer()) {
-        override val rateLimit: RateLimit = RateLimit(1000, FiniteDuration(10, "seconds"))
+
       }
       Boot(
         mockedArtifactoryConnector,

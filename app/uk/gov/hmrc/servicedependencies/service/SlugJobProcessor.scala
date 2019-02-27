@@ -125,6 +125,10 @@ object SlugParser {
       )
   }
 
+  def extractSlugNameFromUri(slugUri: String): Option[String] = {
+    slugUri.split("/").lastOption.map(_.replaceAll("""_.+\.tgz""", ""))
+  }
+
   def extractFilename(slugUri: String): String =
     // e.g. https://store/slugs/my-slug/my-slug_0.27.0_0.5.2.tgz
     slugUri
