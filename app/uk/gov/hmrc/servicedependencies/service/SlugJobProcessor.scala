@@ -54,7 +54,7 @@ class SlugJobProcessor @Inject()(
           .map(_ => slugParserJobsRepository.markProcessed(job.slugUri))
           .recoverWith {
             case NonFatal(e) => Logger.error(s"An error occurred processing slug parser job ${job.slugUri}: ${e.getMessage}", e)
-                                slugParserJobsRepository.markAttempted(job.slugUri)
+                                slugParserJobsRepository.incAttempts(job.slugUri)
           }
       }
       .runWith(Sink.ignore)
