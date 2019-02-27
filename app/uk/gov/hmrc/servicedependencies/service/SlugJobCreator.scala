@@ -16,19 +16,19 @@
 
 package uk.gov.hmrc.servicedependencies.service
 
+import java.time.Period
+
 import akka.stream.Materializer
-import akka.stream.scaladsl.{Sink, Source}
 import javax.inject.{Inject, Singleton}
 import org.joda.time.{Duration, Instant}
 import play.api.Logger
 import uk.gov.hmrc.servicedependencies.config.SchedulerConfigs
 import uk.gov.hmrc.servicedependencies.connector.ArtifactoryConnector
+import uk.gov.hmrc.servicedependencies.model.{NewSlugParserJob, Version}
 import uk.gov.hmrc.servicedependencies.persistence.{SlugJobLastRunRepository, SlugParserJobsRepository}
 
 import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.duration.{DurationInt, FiniteDuration}
-
-case class RateLimit(invocations: Int, perDuration: FiniteDuration)
 
 @Singleton
 class SlugJobCreator @Inject()(
@@ -40,18 +40,24 @@ class SlugJobCreator @Inject()(
 
   import ExecutionContext.Implicits.global
 
-  val rateLimit: RateLimit = RateLimit(1, 2.seconds)
+  def runBackfill = {
 
-  def runHistoric: Future[Unit] = {
-    Logger.info(s"backfilling slug jobs from artefactory")
-    Source.fromFuture(conn.findAllServices())
-      .mapConcat(identity)
-      .throttle(rateLimit.invocations, rateLimit.perDuration)
-      .mapAsyncUnordered(1)(r => conn.findAllSlugsForService(r.uri))
-      .mapConcat(identity)
-      .mapAsyncUnordered(1)(jobsRepo.add)
-      .runWith(Sink.ignore)
-      .map(_ => ())
+    val now = Instant.now()
+
+    implicit val cmp = Ordering.Option(implicitly[Ordering[Version]])
+
+    for {
+      jobs      <- conn.findSlugsForBackFill(now)
+      grouped   =  jobs.groupBy(j => SlugParser.extractSlugNameFromUri(j.slugUri).getOrElse(""))
+      latest    =  grouped.mapValues(
+                    _.maxBy(f => SlugParser.extractVersionsFromUri(f.slugUri)
+                      .flatMap {
+                        case (_, vStr, _) => Version.parse(vStr)
+                      }
+                    )).values
+      _         <- Future.sequence( latest.map(jobsRepo.add))
+      _         <- jobRunRepo.setLastRun(now)
+    } yield ()
   }
 
   def run(): Future[Unit] =

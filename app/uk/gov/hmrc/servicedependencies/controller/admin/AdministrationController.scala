@@ -94,7 +94,7 @@ class AdministrationController @Inject()(
     Action { implicit request =>
       Logger.info(s"Backfilling slug parser jobs")
       slugJobCreator
-        .runHistoric
+        .runBackfill
         .flatMap { _ =>
           Logger.info("Finished creating slug jobs - now processing jobs")
           slugJobProcessor.run()
