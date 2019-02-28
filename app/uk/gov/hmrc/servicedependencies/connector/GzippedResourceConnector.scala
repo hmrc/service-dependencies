@@ -42,7 +42,7 @@ class GzippedResourceConnector @Inject()(
     import ExecutionContext.Implicits.global
 
     ws.url(resourceUrl).withMethod("GET").stream.map { resp =>
-      resp.bodyAsSource.via(Compression.gunzip()).runWith(StreamConverters.asInputStream(readTimeout = 20.seconds))
+      resp.bodyAsSource.async.via(Compression.gunzip()).runWith(StreamConverters.asInputStream(readTimeout = 20.seconds))
     }
   }
 }
