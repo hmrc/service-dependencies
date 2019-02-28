@@ -36,27 +36,7 @@ class SlugJobCreatorSpec extends TestKit(ActorSystem("SlugJobCreatorSpec"))
   with MockitoSugar
   with Matchers {
 
-  "SlugJobCreator.runBackfill" should "write a number of mongojobs to the database" in {
-
-    val boot = Boot.init
-
-    val slug1 = NewSlugParserJob("http://abc/abc.2.3-0.5.2.tgz")
-    val slug2 = NewSlugParserJob("http://test-service/test-service_1.2.3-0.5.2.tgz")
-    when(boot.mockedArtifactoryConnector.findSlugsForBackFill(any()))
-      .thenReturn(Future(List(slug1, slug2)))
-
-    when(boot.mockedSlugParserJobsRepository.add(any()))
-      .thenReturn(Future(true))
-
-    boot.slugJobCreator.runBackfill
-
-    Thread.sleep(1000)
-    verify(boot.mockedSlugParserJobsRepository).add(slug1)
-    verify(boot.mockedSlugParserJobsRepository).add(slug2)
-    verify(boot.mockedArtifactoryConnector).findSlugsForBackFill(any())
-  }
-
-  it should "only select the latest version to backfill" in {
+  "SlugJobCreator.runBackfill" should "only select the latest version to backfill" in {
 
     val boot = Boot.init
 
