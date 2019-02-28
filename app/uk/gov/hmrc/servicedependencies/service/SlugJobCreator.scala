@@ -40,21 +40,27 @@ class SlugJobCreator @Inject()(
 
   import ExecutionContext.Implicits.global
 
-  def runBackfill: Future[Unit] = {
-    implicit val cmp = Ordering.Option(implicitly[Ordering[Version]]) // diverging implicit expansion?
+  def runBackfill: Future[Unit] =
     for {
       now       <- Future(Instant.now)
       jobs      <- conn.findSlugsForBackFill(now)
-      grouped   =  jobs.groupBy(j => SlugParser.extractSlugNameFromUri(j.slugUri).getOrElse(""))
-                     .mapValues(_.sortBy(f => SlugParser.extractVersionFromUri(f.slugUri)))
-      _         =  grouped.foreach { case (k, v) =>
-                     Logger.debug(s"backfill identified service=$k, versions=${v.map(s => SlugParser.extractVersionFromUri(s.slugUri)).collect{case Some(v) => v}} (only downloading the last))")
-                   }
-      latest    =  grouped.values.map(_.last) // last since we sorted by version
+      latest    =  jobs.groupBy(j => SlugParser.extractSlugNameFromUri(j.slugUri).getOrElse(""))
+                     .flatMap { case (k, fs) =>
+                       (fs
+                         .map(f => (f, SlugParser.extractVersionFromUri(f.slugUri)))
+                         .collect { case (f, Some(v)) => (f, v) }
+                         .sortBy(_._2)
+                       ) match {
+                         case Nil => Logger.debug(s"backfill will skip slug $k - no valid versions")
+                                     None
+                         case vs  => val (f, v) = vs.last
+                                     Logger.debug(s"backfill identified slug $k, will download latest $v (out of ${vs.map(_._2)})")
+                                     Some((k, f))
+                       }
+                     }.values
       _         <- Future.sequence(latest.map(jobsRepo.add))
       _         <- jobRunRepo.setLastRun(now)
     } yield ()
-  }
 
   def run(): Future[Unit] =
     for {
