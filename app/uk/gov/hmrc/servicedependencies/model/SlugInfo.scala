@@ -57,7 +57,7 @@ trait MongoSlugInfoFormats {
     ~ (__ \ "classpath"    ).format[String]
     ~ (__ \ "jdkVersion"   ).format[String]
     ~ (__ \ "dependencies" ).format[List[SlugDependency]]
-    ~ (__ \ "latest"       ).formatNullable[Boolean].inmap[Boolean](_.getOrElse(false), Option.apply)
+    ~ (__ \ "latest"       ).format[Boolean]
     )(SlugInfo.apply, unlift(SlugInfo.unapply))
 }
 

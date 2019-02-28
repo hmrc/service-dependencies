@@ -81,6 +81,7 @@ class SlugInfoRepository @Inject()(mongo: ReactiveMongoComponent)
           .update(
               selector = Json.obj("name" -> name)
             , update   = Json.obj("$set" -> Json.obj("latest" -> false))
+            , multi    = true
             )
     _ <- collection
           .update(

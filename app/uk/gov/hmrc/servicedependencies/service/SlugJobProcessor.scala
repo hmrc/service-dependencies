@@ -54,7 +54,7 @@ class SlugJobProcessor @Inject()(
           .map(_ => slugParserJobsRepository.markProcessed(job.slugUri))
           .recoverWith {
             case NonFatal(e) => Logger.error(s"An error occurred processing slug parser job ${job.slugUri}: ${e.getMessage}", e)
-                                slugParserJobsRepository.markAttempted(job.slugUri)
+                                slugParserJobsRepository.incAttempts(job.slugUri)
           }
       }
       .runWith(Sink.ignore)
@@ -125,6 +125,10 @@ object SlugParser {
       )
   }
 
+  def extractSlugNameFromUri(slugUri: String): Option[String] = {
+    slugUri.split("/").lastOption.map(_.replaceAll("""_.+\.tgz""", ""))
+  }
+
   def extractFilename(slugUri: String): String =
     // e.g. https://store/slugs/my-slug/my-slug_0.27.0_0.5.2.tgz
     slugUri
@@ -141,9 +145,14 @@ object SlugParser {
       (runnerVersion, slugVersion, rest.mkString("_"))
     }.toOption
 
-  def extractVersionsFromUri(slugUri: String) =
+  def extractVersionsFromUri(slugUri: String): Option[(String, String, String)] =
     extractVersionsFromFilename(extractFilename(slugUri))
 
+  def extractVersionFromUri(slugUri: String): Option[Version] =
+    extractVersionsFromUri(slugUri)
+      .flatMap {
+        case (_, vStr, _) => Version.parse(vStr)
+      }
 
   sealed trait Dep { def sd: SlugDependency }
   object Dep {

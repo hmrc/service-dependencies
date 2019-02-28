@@ -29,7 +29,10 @@ case class Version(
   override def compare(other: Version): Int =
     if (major == other.major)
       if (minor == other.minor)
-        patch - other.patch
+        if (patch == other.patch)
+          other.original.length - original.length  // prefer pure semantic version (e.g. 1.0.0 > 1.0.0-SNAPSHOT)
+        else
+          patch - other.patch
       else
         minor - other.minor
     else

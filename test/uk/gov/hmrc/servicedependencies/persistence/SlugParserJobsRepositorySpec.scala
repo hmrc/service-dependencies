@@ -91,16 +91,16 @@ class SlugParserJobsRepositorySpec
     }
   }
 
-  "SlugParserJobsRepository.markAttempted" should {
+  "SlugParserJobsRepository.incAttempts" should {
     "increase the attempts flag" in {
       val newJob = NewSlugParserJob("https://store/slugs/my-slug/my-slug_0.27.0_0.5.2.tgz")
       await(slugParserJobsRepository.add(newJob))
       val createdJob = checkSingleEntry(newJob.slugUri, false, 0)
 
-      await(slugParserJobsRepository.markAttempted(createdJob.slugUri))
+      await(slugParserJobsRepository.incAttempts(createdJob.slugUri))
       checkSingleEntry(newJob.slugUri, false, 1)
 
-      await(slugParserJobsRepository.markAttempted(createdJob.slugUri))
+      await(slugParserJobsRepository.incAttempts(createdJob.slugUri))
       checkSingleEntry(newJob.slugUri, false, 2)
     }
   }
@@ -123,7 +123,7 @@ class SlugParserJobsRepositorySpec
       unprocessed.head.processed shouldBe false
     }
 
-    "return only job with attemps < 3" in {
+    "return only job with attempts < 3" in {
       val newJob1 = NewSlugParserJob("https://store/slugs/my-slug/my-slug_0.27.0_0.5.2.tgz")
       await(slugParserJobsRepository.add(newJob1))
       val createdJob1 = checkSingleEntry(expectedSlugUri = newJob1.slugUri, expectedProcessed = false)
@@ -132,9 +132,9 @@ class SlugParserJobsRepositorySpec
       await(slugParserJobsRepository.add(newJob2))
       await(slugParserJobsRepository.getAllEntries) should have size 2
 
-      await(slugParserJobsRepository.markAttempted(createdJob1.slugUri))
-      await(slugParserJobsRepository.markAttempted(createdJob1.slugUri))
-      await(slugParserJobsRepository.markAttempted(createdJob1.slugUri))
+      await(slugParserJobsRepository.incAttempts(createdJob1.slugUri))
+      await(slugParserJobsRepository.incAttempts(createdJob1.slugUri))
+      await(slugParserJobsRepository.incAttempts(createdJob1.slugUri))
 
       val unprocessed = await(slugParserJobsRepository.getUnprocessed)
       unprocessed should have size 1

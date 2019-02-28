@@ -69,7 +69,7 @@ class SlugParserJobsRepository @Inject()(mongo: ReactiveMongoComponent)
       .map(_ => ())
   }
 
-  def markAttempted(slugUri: String): Future[Boolean] = {
+  def incAttempts(slugUri: String): Future[Boolean] = {
     logger.info(s"mark job $slugUri as attempted")
     collection
       .update(

@@ -146,6 +146,18 @@ class SlugParserSpec extends FlatSpec with Matchers {
   }
 
 
+  "extractSlugNameFromUri" should "extract my-slug" in {
+    val uri = "https://store/slugs/my-slug/my-slug_0.27.0_0.5.2.tgz"
+    SlugParser.extractSlugNameFromUri(uri) shouldBe Some("my-slug")
+  }
+
+  it should "extract add-taxes-frontend" in {
+    val uri = "https://storeslugs/add-taxes-frontend/add-taxes-frontend_0.100.0_0.5.2.tgz"
+    SlugParser.extractSlugNameFromUri(uri) shouldBe Some("add-taxes-frontend")
+  }
+
+
+
   /****** TEST DATA *******/
 
   val manifest = """Manifest-Version: 1.0

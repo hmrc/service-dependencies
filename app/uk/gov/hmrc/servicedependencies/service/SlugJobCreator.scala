@@ -16,19 +16,19 @@
 
 package uk.gov.hmrc.servicedependencies.service
 
+import java.time.Period
+
 import akka.stream.Materializer
-import akka.stream.scaladsl.{Sink, Source}
 import javax.inject.{Inject, Singleton}
 import org.joda.time.{Duration, Instant}
 import play.api.Logger
 import uk.gov.hmrc.servicedependencies.config.SchedulerConfigs
 import uk.gov.hmrc.servicedependencies.connector.ArtifactoryConnector
+import uk.gov.hmrc.servicedependencies.model.{NewSlugParserJob, Version}
 import uk.gov.hmrc.servicedependencies.persistence.{SlugJobLastRunRepository, SlugParserJobsRepository}
 
 import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.duration.{DurationInt, FiniteDuration}
-
-case class RateLimit(invocations: Int, perDuration: FiniteDuration)
 
 @Singleton
 class SlugJobCreator @Inject()(
@@ -40,19 +40,27 @@ class SlugJobCreator @Inject()(
 
   import ExecutionContext.Implicits.global
 
-  val rateLimit: RateLimit = RateLimit(1, 2.seconds)
-
-  def runHistoric: Future[Unit] = {
-    Logger.info(s"backfilling slug jobs from artefactory")
-    Source.fromFuture(conn.findAllServices())
-      .mapConcat(identity)
-      .throttle(rateLimit.invocations, rateLimit.perDuration)
-      .mapAsyncUnordered(1)(r => conn.findAllSlugsForService(r.uri))
-      .mapConcat(identity)
-      .mapAsyncUnordered(1)(jobsRepo.add)
-      .runWith(Sink.ignore)
-      .map(_ => ())
-  }
+  def runBackfill: Future[Unit] =
+    for {
+      now       <- Future(Instant.now)
+      jobs      <- conn.findSlugsForBackFill(now)
+      latest    =  jobs.groupBy(j => SlugParser.extractSlugNameFromUri(j.slugUri).getOrElse(""))
+                     .flatMap { case (k, fs) =>
+                       (fs
+                         .map(f => (f, SlugParser.extractVersionFromUri(f.slugUri)))
+                         .collect { case (f, Some(v)) => (f, v) }
+                         .sortBy(_._2)
+                       ) match {
+                         case Nil => Logger.debug(s"backfill will skip slug $k - no valid versions")
+                                     None
+                         case vs  => val (f, v) = vs.last
+                                     Logger.debug(s"backfill identified slug $k, will download latest $v (out of ${vs.map(_._2)})")
+                                     Some((k, f))
+                       }
+                     }.values
+      _         <- Future.sequence(latest.map(jobsRepo.add))
+      _         <- jobRunRepo.setLastRun(now)
+    } yield ()
 
   def run(): Future[Unit] =
     for {
