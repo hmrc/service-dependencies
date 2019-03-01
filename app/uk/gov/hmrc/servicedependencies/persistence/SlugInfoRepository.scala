@@ -25,7 +25,7 @@ import reactivemongo.api.indexes.{Index, IndexType}
 import reactivemongo.bson.{BSONDocument, BSONDocumentReader, BSONObjectID}
 import reactivemongo.play.json.ImplicitBSONHandlers._
 import uk.gov.hmrc.mongo.ReactiveRepository
-import uk.gov.hmrc.servicedependencies.model.{GroupArtefacts, MongoSlugInfoFormats, ServiceDependency, SlugInfo, Version}
+import uk.gov.hmrc.servicedependencies.model.{GroupArtefacts, MongoSlugInfoFormats, ServiceDependency, SlugInfo, SlugInfoFlag, Version}
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -74,32 +74,22 @@ class SlugInfoRepository @Inject()(mongo: ReactiveMongoComponent)
       case Some(version) => find("name" -> name, "version" -> version)
     }
 
-  def markLatest(name: String, version: Version): Future[Unit] = {
-    logger.info(s"mark slug $name $version as latest")
-    for {
-    _ <- collection
-          .update(
-              selector = Json.obj("name" -> name)
-            , update   = Json.obj("$set" -> Json.obj("latest" -> false))
-            , multi    = true
-            )
-    _ <- collection
-          .update(
-              selector = Json.obj( "name"    -> name
-                                 , "version" -> version.original
-                                 )
-            , update   = Json.obj("$set" -> Json.obj("latest" -> true))
-            )
-    } yield ()
-  }
+  def markLatest(name: String, version: Version): Future[Unit] =
+    setFlag(SlugInfoFlag.Latest, name, version)
 
-  def markProduction(name: String, version: Version): Future[Unit] = {
-    logger.info(s"mark slug $name $version as production")
+  def markProduction(name: String, version: Version): Future[Unit] =
+    setFlag(SlugInfoFlag.Production, name, version)
+
+  def markQa(name: String, version: Version): Future[Unit] =
+    setFlag(SlugInfoFlag.QA, name, version)
+
+  def setFlag(flag: SlugInfoFlag, name: String, version: Version): Future[Unit] = {
+    logger.info(s"mark slug $name $version with ${flag.s} flag")
     for {
     _ <- collection
           .update(
               selector = Json.obj("name" -> name)
-            , update   = Json.obj("$set" -> Json.obj("production" -> false))
+            , update   = Json.obj("$set" -> Json.obj(flag.s -> false))
             , multi    = true
             )
     _ <- collection
@@ -107,7 +97,7 @@ class SlugInfoRepository @Inject()(mongo: ReactiveMongoComponent)
               selector = Json.obj( "name"    -> name
                                  , "version" -> version.original
                                  )
-            , update   = Json.obj("$set" -> Json.obj("production" -> true))
+            , update   = Json.obj("$set" -> Json.obj(flag.s -> true))
             )
     } yield ()
   }
@@ -135,7 +125,7 @@ class SlugInfoRepository @Inject()(mongo: ReactiveMongoComponent)
     }
   }
 
-  def findServices(group: String, artefact: String): Future[Seq[ServiceDependency]] = {
+  def findServices(flag: SlugInfoFlag, group: String, artefact: String): Future[Seq[ServiceDependency]] = {
     val col: BSONCollection = mongo.mongoConnector.db().collection(collectionName)
 
     import col.BatchCommands.AggregationFramework.{Ascending, Descending, FirstField, Group, Match, Project, Sort, UnwindField}
@@ -144,7 +134,7 @@ class SlugInfoRepository @Inject()(mongo: ReactiveMongoComponent)
     implicit val rsd = readerServiceDependency
 
     col.aggregatorContext[ServiceDependency](
-        Match(document("latest" -> true))
+        Match(document(flag.s -> true))
       , List(
             Sort(Ascending("name"))
           , UnwindField("dependencies")

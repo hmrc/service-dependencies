@@ -21,6 +21,18 @@ import play.api.libs.functional.syntax._
 
 import scala.util.Try
 
+sealed trait SlugInfoFlag { def s: String }
+object SlugInfoFlag {
+  case object Latest     extends SlugInfoFlag { val s = "latest"     }
+  case object Production extends SlugInfoFlag { val s = "production" }
+  case object QA         extends SlugInfoFlag { val s = "qa"         }
+
+  val values = List(Latest, Production, QA)
+
+  def parse(s: String): Option[SlugInfoFlag] =
+    values.find(_.s == s)
+}
+
 case class SlugDependency(
   path       : String,
   version    : String,

@@ -25,18 +25,20 @@ import uk.gov.hmrc.play.bootstrap.controller.BackendController
 import uk.gov.hmrc.servicedependencies.config.ServiceDependenciesConfig
 import uk.gov.hmrc.servicedependencies.connector.TeamsAndRepositoriesConnector
 import uk.gov.hmrc.servicedependencies.controller.model.Dependencies
-import uk.gov.hmrc.servicedependencies.model.{ApiServiceDependencyFormats, ApiSlugInfoFormats, GroupArtefacts}
+import uk.gov.hmrc.servicedependencies.model.{ApiServiceDependencyFormats, ApiSlugInfoFormats, GroupArtefacts, SlugInfoFlag}
 import uk.gov.hmrc.servicedependencies.service.{DependencyDataUpdatingService, SlugInfoService}
-import scala.concurrent.ExecutionContext
+
+import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
 class ServiceDependenciesController @Inject()(
-  configuration: Configuration,
+  configuration                : Configuration,
   dependencyDataUpdatingService: DependencyDataUpdatingService,
   teamsAndRepositoriesConnector: TeamsAndRepositoriesConnector,
-  slugInfoService: SlugInfoService,
-  config: ServiceDependenciesConfig,
-  cc: ControllerComponents)(implicit ec: ExecutionContext)
+  slugInfoService              : SlugInfoService,
+  config                       : ServiceDependenciesConfig,
+  cc                           : ControllerComponents
+  )(implicit ec: ExecutionContext)
     extends BackendController(cc) {
 
   val logger = LoggerFactory.getLogger(this.getClass)
@@ -72,19 +74,22 @@ class ServiceDependenciesController @Inject()(
       for {
         teamRepos <- teamsAndRepositoriesConnector.getTeam(team)
         deps      <- dependencyDataUpdatingService.getDependencyVersionsForAllRepositories()
-        repos     = teamRepos.getOrElse(Map())
-        services  = repos.getOrElse("Service", List())
-        libraries = repos.getOrElse("Library", List())
-        teamDeps  = deps.filter(d => services.contains(d.repositoryName) || libraries.contains(d.repositoryName))
+        repos     =  teamRepos.getOrElse(Map())
+        services  =  repos.getOrElse("Service", List())
+        libraries =  repos.getOrElse("Library", List())
+        teamDeps  =  deps.filter(d => services.contains(d.repositoryName) || libraries.contains(d.repositoryName))
       } yield Ok(Json.toJson(teamDeps))
     }
 
-  def getServicesWithDependency(group: String, artefact: String) =
+  def getServicesWithDependency(flag: String, group: String, artefact: String) =
     Action.async { implicit request =>
-      implicit val format = ApiServiceDependencyFormats.sdFormat
-      slugInfoService
-        .findServicesWithDependency(group, artefact)
-        .map(res => Ok(Json.toJson(res)))
+      SlugInfoFlag.parse(flag) match {
+        case None       => Future(BadRequest("invalid flag"))
+        case Some(flag) => implicit val format = ApiServiceDependencyFormats.sdFormat
+                           slugInfoService
+                             .findServicesWithDependency(flag, group, artefact)
+                             .map(res => Ok(Json.toJson(res)))
+      }
     }
 
   def getGroupArtefacts =

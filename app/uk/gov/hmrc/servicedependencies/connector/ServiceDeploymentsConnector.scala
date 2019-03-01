@@ -45,18 +45,20 @@ class ServiceDeploymentsConnector @Inject()(httpClient: HttpClient, servicesConf
 object ServiceDeploymentsConnector {
   sealed trait Environment
   object Environment {
-    case object Production  extends Environment
-    case object QA          extends Environment
-    case object Staging     extends Environment
-    case object Development extends Environment
+    case object Production   extends Environment
+    case object QA           extends Environment
+    case object Staging      extends Environment
+    case object Development  extends Environment
+    case object ExternalTest extends Environment
 
     val reads: Reads[Option[Environment]] =
       (__ \ "name").read[String].map(_ match {
-        case "production"  => Some(Production)
-        case "qa"          => Some(QA)
-        case "staging"     => Some(Staging)
-        case "development" => Some(Development)
-        case other         => Logger.debug(s"Unsupported envionment '$other'"); None
+        case "production"    => Some(Production)
+        case "qa"            => Some(QA)
+        case "staging"       => Some(Staging)
+        case "development"   => Some(Development)
+        case "external test" => Some(ExternalTest)
+        case other           => Logger.debug(s"Unsupported envionment '$other'"); None
       })
   }
 

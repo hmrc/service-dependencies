@@ -23,7 +23,7 @@ import uk.gov.hmrc.lock.LockFormats.Lock
 import uk.gov.hmrc.servicedependencies.config.CuratedDependencyConfigProvider
 import uk.gov.hmrc.servicedependencies.connector.{ServiceDeploymentsConnector, TeamsAndRepositoriesConnector}
 import uk.gov.hmrc.servicedependencies.controller.model.{Dependencies, Dependency}
-import uk.gov.hmrc.servicedependencies.model.{GroupArtefacts, NewSlugParserJob, ServiceDependency, SlugInfo}
+import uk.gov.hmrc.servicedependencies.model.{GroupArtefacts, NewSlugParserJob, ServiceDependency, SlugInfo, SlugInfoFlag}
 import uk.gov.hmrc.servicedependencies.persistence.{SlugInfoRepository, SlugParserJobsRepository}
 import uk.gov.hmrc.time.DateTimeUtils
 
@@ -46,9 +46,9 @@ class SlugInfoService @Inject()(
   def getSlugInfos(name: String, version: Option[String]): Future[Seq[SlugInfo]] =
     slugInfoRepository.getSlugInfos(name, version)
 
-  def findServicesWithDependency(group: String, artefact: String)(implicit hc: HeaderCarrier): Future[Seq[ServiceDependency]] =
+  def findServicesWithDependency(flag: SlugInfoFlag, group: String, artefact: String)(implicit hc: HeaderCarrier): Future[Seq[ServiceDependency]] =
     for {
-      res              <- slugInfoRepository.findServices(group, artefact)
+      res              <- slugInfoRepository.findServices(flag, group, artefact)
       teamsForServices <- teamsAndRepositoriesConnector.getTeamsForServices
     } yield res.map { r =>
         r.copy(teams = teamsForServices.getTeams(r.slugName).toList)
@@ -67,7 +67,8 @@ class SlugInfoService @Inject()(
                                     case ServiceDeploymentInformation(serviceName, deployments) =>
                                       deployments.map {
                                         case Deployment(Some(Environment.Production), version) => slugInfoRepository.markProduction(serviceName, version)
-                                        case Deployment(optEnv, version)                       => Future(logger.debug(s"ignoring $serviceName $version $optEnv"))
+                                        case Deployment(Some(Environment.QA        ), version) => slugInfoRepository.markQa(serviceName, version)
+                                        case Deployment(optEnv, version)                       => Future(())
                                       }
                                   }
                                 }
