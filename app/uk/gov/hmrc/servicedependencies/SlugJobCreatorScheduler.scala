@@ -20,6 +20,7 @@ import akka.actor.ActorSystem
 import javax.inject.Inject
 import play.api.Logger
 import play.api.inject.ApplicationLifecycle
+import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.servicedependencies.config.SchedulerConfigs
 import uk.gov.hmrc.servicedependencies.service.{SlugInfoService, SlugJobCreator, SlugJobProcessor}
 import uk.gov.hmrc.servicedependencies.persistence.MongoLocks
@@ -38,6 +39,7 @@ class SlugJobCreatorScheduler @Inject()(
              applicationLifecycle: ApplicationLifecycle)
   extends SchedulerUtils {
 
+  implicit val hc: HeaderCarrier = HeaderCarrier()
   import ExecutionContext.Implicits.global
 
   scheduleWithLock("Slug Info Reloader", schedulerConfigs.slugJobCreator, mongoLocks.slugJobSchedulerLock) {
@@ -45,8 +47,9 @@ class SlugJobCreatorScheduler @Inject()(
       _ <- slugJobCreator.run
       _ =  Logger.info("Finished creating slug jobs - now processing jobs")
       _ <- slugJobProcessor.run
-      _ =  Logger.info("Finished processing slug jobs") /* - now updating meta data")
-      _ <- slugInfoService.updateMetaData*/
+      _ =  Logger.info("Finished processing slug jobs - now updating meta data")
+      _ <- slugInfoService.updateMetaData
+      _ =  Logger.info("Finished updating meta data")
       } yield ()
   }
 }

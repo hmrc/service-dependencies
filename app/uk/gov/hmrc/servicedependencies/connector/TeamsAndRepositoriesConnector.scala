@@ -23,8 +23,7 @@ import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.play.bootstrap.http.HttpClient
 import uk.gov.hmrc.servicedependencies.config.ServiceDependenciesConfig
 import uk.gov.hmrc.servicedependencies.connector.model.{Repository, RepositoryInfo}
-import scala.concurrent.Future
-import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.{ExecutionContext, Future}
 
 case class Team(
   name: String,
@@ -52,6 +51,7 @@ class TeamsAndRepositoriesConnector @Inject()(httpClient: HttpClient, serviceCon
 
   implicit val formats = Repository.format
   implicit val repositoryInfoFormats = RepositoryInfo.format
+  import ExecutionContext.Implicits.global
 
   def getRepository(repositoryName: String)(implicit hc: HeaderCarrier): Future[Option[Repository]] =
     httpClient.GET[Option[Repository]](s"$teamsAndRepositoriesApiBase/api/repositories/$repositoryName")

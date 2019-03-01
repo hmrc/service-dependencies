@@ -93,6 +93,25 @@ class SlugInfoRepository @Inject()(mongo: ReactiveMongoComponent)
     } yield ()
   }
 
+  def markProduction(name: String, version: Version): Future[Unit] = {
+    logger.info(s"mark slug $name $version as production")
+    for {
+    _ <- collection
+          .update(
+              selector = Json.obj("name" -> name)
+            , update   = Json.obj("$set" -> Json.obj("production" -> false))
+            , multi    = true
+            )
+    _ <- collection
+          .update(
+              selector = Json.obj( "name"    -> name
+                                 , "version" -> version.original
+                                 )
+            , update   = Json.obj("$set" -> Json.obj("production" -> true))
+            )
+    } yield ()
+  }
+
 
 
   private val readerServiceDependency = new BSONDocumentReader[ServiceDependency]{
