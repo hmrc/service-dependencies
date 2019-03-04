@@ -18,23 +18,25 @@ package uk.gov.hmrc.servicedependencies.service
 
 import com.google.inject.{Inject, Singleton}
 import org.slf4j.LoggerFactory
-import scala.concurrent.ExecutionContext.Implicits.global
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.lock.LockFormats.Lock
 import uk.gov.hmrc.servicedependencies.config.CuratedDependencyConfigProvider
-import uk.gov.hmrc.servicedependencies.connector.TeamsAndRepositoriesConnector
+import uk.gov.hmrc.servicedependencies.connector.{ServiceDeploymentsConnector, TeamsAndRepositoriesConnector}
 import uk.gov.hmrc.servicedependencies.controller.model.{Dependencies, Dependency}
-import uk.gov.hmrc.servicedependencies.model.{GroupArtefacts, NewSlugParserJob, ServiceDependency, SlugInfo}
+import uk.gov.hmrc.servicedependencies.model.{GroupArtefacts, NewSlugParserJob, ServiceDependency, SlugInfo, SlugInfoFlag}
 import uk.gov.hmrc.servicedependencies.persistence.{SlugInfoRepository, SlugParserJobsRepository}
 import uk.gov.hmrc.time.DateTimeUtils
-import scala.concurrent.Future
+
+import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
 class SlugInfoService @Inject()(
   slugParserJobsRepository      : SlugParserJobsRepository,
   slugInfoRepository            : SlugInfoRepository,
-  teamsAndRepositoriesConnector : TeamsAndRepositoriesConnector
+  teamsAndRepositoriesConnector : TeamsAndRepositoriesConnector,
+  serviceDeploymentsConnector   : ServiceDeploymentsConnector
 ) {
+  import ExecutionContext.Implicits.global
 
   lazy val logger = LoggerFactory.getLogger(this.getClass)
 
@@ -44,9 +46,9 @@ class SlugInfoService @Inject()(
   def getSlugInfos(name: String, version: Option[String]): Future[Seq[SlugInfo]] =
     slugInfoRepository.getSlugInfos(name, version)
 
-  def findServicesWithDependency(group: String, artefact: String)(implicit hc: HeaderCarrier): Future[Seq[ServiceDependency]] =
+  def findServicesWithDependency(flag: SlugInfoFlag, group: String, artefact: String)(implicit hc: HeaderCarrier): Future[Seq[ServiceDependency]] =
     for {
-      res              <- slugInfoRepository.findServices(group, artefact)
+      res              <- slugInfoRepository.findServices(flag, group, artefact)
       teamsForServices <- teamsAndRepositoriesConnector.getTeamsForServices
     } yield res.map { r =>
         r.copy(teams = teamsForServices.getTeams(r.slugName).toList)
@@ -55,4 +57,21 @@ class SlugInfoService @Inject()(
   def findGroupsArtefacts: Future[Seq[GroupArtefacts]] =
     slugInfoRepository
       .findGroupsArtefacts
+
+  def updateMetaData(implicit hc: HeaderCarrier): Future[Unit] = {
+    import ServiceDeploymentsConnector._
+    for {
+      serviceDeploymentInfos <- serviceDeploymentsConnector.getWhatIsRunningWhere
+      _                      <- Future.sequence {
+                                  serviceDeploymentInfos.flatMap {
+                                    case ServiceDeploymentInformation(serviceName, deployments) =>
+                                      deployments.map {
+                                        case Deployment(Some(Environment.Production), version) => slugInfoRepository.markProduction(serviceName, version)
+                                        case Deployment(Some(Environment.QA        ), version) => slugInfoRepository.markQa(serviceName, version)
+                                        case Deployment(optEnv, version)                       => Future(())
+                                      }
+                                  }
+                                }
+    } yield ()
+  }
 }

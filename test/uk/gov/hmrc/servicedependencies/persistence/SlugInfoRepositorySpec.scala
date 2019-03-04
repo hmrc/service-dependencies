@@ -21,7 +21,7 @@ import org.scalatest.{BeforeAndAfterEach, Matchers, WordSpecLike}
 import org.scalatest.mockito.MockitoSugar
 import play.modules.reactivemongo.ReactiveMongoComponent
 import uk.gov.hmrc.mongo.{FailOnUnindexedQueries, MongoConnector, MongoSpecSupport, RepositoryPreparation}
-import uk.gov.hmrc.servicedependencies.model.{SlugInfo, SlugDependency, Version}
+import uk.gov.hmrc.servicedependencies.model.{SlugDependency, SlugInfo, SlugInfoFlag, Version}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
@@ -80,7 +80,7 @@ class SlugInfoRepositorySpec
       await(slugInfoRepository.add(oldSlugInfo))
       await(slugInfoRepository.add(slugInfo))
 
-      val result = await(slugInfoRepository.findServices( "com.test.group",  "lib1"))
+      val result = await(slugInfoRepository.findServices(SlugInfoFlag.Latest, "com.test.group",  "lib1"))
 
       result.length shouldBe 1
 
@@ -97,7 +97,7 @@ class SlugInfoRepositorySpec
       await(slugInfoRepository.add(slugInfo))
       await(slugInfoRepository.add(otherSlug))
 
-      val result = await(slugInfoRepository.findServices( "com.test.group",  "lib2"))
+      val result = await(slugInfoRepository.findServices(SlugInfoFlag.Latest,  "com.test.group",  "lib2"))
       result.length shouldBe 1
 
       result.head.slugVersion shouldBe "0.27.0"
