@@ -134,7 +134,10 @@ class SlugInfoRepository @Inject()(mongo: ReactiveMongoComponent)
     implicit val rsd = readerServiceDependency
 
     col.aggregatorContext[ServiceDependency](
-        Match(document(flag.s -> true))
+        Match(document(
+            flag.s -> true
+          , "name" -> document("$nin" -> SlugBlacklist.blacklistedSlugs)
+          ))
       , List(
             Sort(Ascending("name"))
           , UnwindField("dependencies")
