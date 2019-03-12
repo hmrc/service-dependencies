@@ -44,6 +44,7 @@ object SlugBlacklist {
       , "enrolment-exception-list"
       , "enrolments-migrator"
       , "file-keys-manager"
+      , "fuaas-api-mock-up-frontend"
       , "gap-login-mock"
       , "hello-flask-open"
       , "http-outbound-gateway"
