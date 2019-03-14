@@ -27,7 +27,7 @@ import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.servicedependencies.connector.{
   GzippedResourceConnector, TeamsAndRepositoriesConnector, TeamsForServices
 }
-import uk.gov.hmrc.servicedependencies.model.{MongoSlugParserJob, SlugDependency, SlugInfo, Version}
+import uk.gov.hmrc.servicedependencies.model.{Config, MongoSlugParserJob, SlugDependency, SlugInfo, Version}
 import uk.gov.hmrc.servicedependencies.persistence.{SlugInfoRepository, SlugParserJobsRepository}
 import uk.gov.hmrc.servicedependencies.util.FutureHelpers
 
@@ -80,6 +80,16 @@ class SlugJobProcessor @Inject()(
                     else       Logger.warn(s"slug ${job.slugUri} not added - already processed")
       } yield ()
     )
+
+  // TEMP
+  val slugUri = "https://webstore.tax.service.gov.uk/slugs/service-dependencies/service-dependencies_1.55.0_0.5.2.tgz"
+  (for {
+    is <- gzippedResourceConnector.openGzippedResource(slugUri)
+    si =  SlugParser.parse(slugUri, is)
+    _  =  Logger.warn(s"-------------- $slugUri: extracted ${si.configs.mkString(",")}")
+  } yield ()
+  ).recover { case e => Logger.error(s"Parse failed: ${e.getMessage}", e); () }
+
 }
 
 
@@ -103,7 +113,8 @@ object SlugParser {
       runnerVersion = runnerVersion,
       classpath     = "",
       jdkVersion    = "",
-      dependencies  = List.empty[SlugDependency],
+      dependencies  = List.empty,
+      configs       = List.empty,
       latest        = false)
 
     val Script = s"./$slugName-$semanticVersion/bin/$slugName"
@@ -112,22 +123,20 @@ object SlugParser {
       .continually(Try(tar.getNextEntry).recover { case e if e.getMessage == "Stream closed" => null }.get)
       .takeWhile(_ != null)
       .foldLeft(slugInfo)( (result, entry) =>
-        (entry.getName match {
+        entry.getName match {
           case n if n.startsWith(s"./$slugName")
-                 && n.toLowerCase.endsWith(".jar") => extractVersionFromJar(n, tar)
-                                                        .map(v => result.copy(dependencies = result.dependencies ++ List(v)))
-          case Script                              => extractClasspath(tar)
-                                                        .map(cp => result.copy(classpath = cp))
-          case "./.jdk/release"                    => extractJdkVersion(tar)
-                                                        .map(jdkv => result.copy(jdkVersion = jdkv))
-          case _                                   => None
-        }).getOrElse(result)
+                 && n.toLowerCase.endsWith(".jar") => val (optDependency, configs) = parseJar(n, tar)
+                                                      result.copy(dependencies = result.dependencies ++ optDependency.toList)
+                                                            .copy(configs      = result.configs      ++ configs)
+          case Script                              => result.copy(classpath    = extractClasspath(tar).getOrElse(result.classpath))
+          case "./.jdk/release"                    => result.copy(jdkVersion   = extractJdkVersion(tar).getOrElse(result.jdkVersion))
+          case _                                   => result
+        }
       )
   }
 
-  def extractSlugNameFromUri(slugUri: String): Option[String] = {
+  def extractSlugNameFromUri(slugUri: String): Option[String] =
     slugUri.split("/").lastOption.map(_.replaceAll("""_.+\.tgz""", ""))
-  }
 
   def extractFilename(slugUri: String): String =
     // e.g. https://store/slugs/my-slug/my-slug_0.27.0_0.5.2.tgz
@@ -168,22 +177,31 @@ object SlugParser {
       }
   }
 
-  def extractVersionFromJar(libraryName: String, inputStream: InputStream): Option[SlugDependency] =
+  def parseJar(libraryName: String, inputStream: InputStream): (Option[SlugDependency], List[Config]) =
     Try {
       val jar = new JarArchiveInputStream(inputStream)
-      Iterator
+      val l = Iterator
         .continually(jar.getNextJarEntry)
         .takeWhile(_ != null)
         .map(_.getName match {
-          //case "reference.conf"                 => None; // TODO: extract reference.conf & send to serviceConfigs
-          case "META-INF/MANIFEST.MF"           => extractVersionFromManifest(libraryName, jar).map(Dep.Manifest)
-          case file if file.endsWith("pom.xml") => extractVersionFromPom(libraryName, jar).map(Dep.Pom)
-          case _                                => None
-        })
-        .collect { case Some(d) => d }
-        .reduceOption(Dep.precedence)
-        .map(_.sd)
-    }.recover { case e => throw new RuntimeException(s"Could not extract version from $libraryName", e) } // just return None?
+          case "META-INF/MANIFEST.MF"           => (extractVersionFromManifest(libraryName, jar).map(Dep.Manifest), None)
+          case file if file.endsWith("pom.xml") => (extractVersionFromPom(libraryName, jar).map(Dep.Pom), None)
+          case "reference.conf"                 => (None, Some(Config( path    = s"$libraryName#reference.conf"
+                                                                     , content = scala.io.Source.fromInputStream(jar).mkString
+                                                                     ))) // TODO: send tcontent serviceConfigs
+          case n if n.endsWith(".conf")         => (None, Some(Config( path    = s"$libraryName#$n"
+                                                                     , content = scala.io.Source.fromInputStream(jar).mkString
+                                                                     ))) // TODO: keep this only if referenced with `include <n>.conf`
+          case _                                => (None, None)
+        }).toList
+        val optSlugDependency = l
+          .collect { case (Some(d), _) => d }
+          .reduceOption(Dep.precedence)
+          .map(_.sd)
+        val configs = l
+          .collect { case (_, Some(c)) => c }
+        (optSlugDependency, configs)
+    }.recover { case e => throw new RuntimeException(s"Could not parse $libraryName: ${e.getMessage}", e) } // just return None?
     .get
 
 

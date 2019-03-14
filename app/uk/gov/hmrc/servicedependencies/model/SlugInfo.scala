@@ -40,6 +40,11 @@ case class SlugDependency(
   artifact   : String,
   meta       : String = "")
 
+case class Config(
+  path   : String,
+  content: String
+)
+
 case class SlugInfo(
   uri             : String,
   name            : String,
@@ -49,12 +54,16 @@ case class SlugInfo(
   classpath       : String,
   jdkVersion      : String,
   dependencies    : List[SlugDependency],
+  configs         : List[Config],
   latest          : Boolean
   )
 
 trait MongoSlugInfoFormats {
   implicit val sdFormat: OFormat[SlugDependency] =
     Json.format[SlugDependency]
+
+  implicit val configFormat: OFormat[Config] =
+    Json.format[Config]
 
   val ignore = OWrites[Any](_ => Json.obj())
 
@@ -69,6 +78,7 @@ trait MongoSlugInfoFormats {
     ~ (__ \ "classpath"    ).format[String]
     ~ (__ \ "jdkVersion"   ).format[String]
     ~ (__ \ "dependencies" ).format[List[SlugDependency]]
+    ~ (__ \ "configs"      ).format[List[Config]]
     ~ (__ \ "latest"       ).format[Boolean]
     )(SlugInfo.apply, unlift(SlugInfo.unapply))
 }
@@ -79,6 +89,9 @@ object MongoSlugInfoFormats extends MongoSlugInfoFormats
 trait ApiSlugInfoFormats {
   implicit val sdFormat: OFormat[SlugDependency] =
     Json.format[SlugDependency]
+
+  implicit val configFormat: OFormat[Config] =
+    Json.format[Config]
 
   implicit val siFormat: OFormat[SlugInfo] = {
     implicit val vf = Version.apiFormat
