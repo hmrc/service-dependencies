@@ -41,9 +41,12 @@ case class SlugDependency(
   meta       : String = "")
 
 case class Config(
-  path   : String,
-  content: String
-)
+  path    : String,
+  filename: String,
+  content : String
+) {
+  override def toString: String = s"<Config path=$path filename=$filename>"
+}
 
 case class SlugInfo(
   uri             : String,
@@ -56,7 +59,10 @@ case class SlugInfo(
   dependencies    : List[SlugDependency],
   configs         : List[Config],
   latest          : Boolean
-  )
+  ) {
+    def classpathJars: List[String] =
+      classpath.split(":").map(_.stripPrefix("$lib_dir/")).toList
+  }
 
 trait MongoSlugInfoFormats {
   implicit val sdFormat: OFormat[SlugDependency] =

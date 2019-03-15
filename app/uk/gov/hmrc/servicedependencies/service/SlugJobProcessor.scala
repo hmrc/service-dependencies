@@ -82,11 +82,43 @@ class SlugJobProcessor @Inject()(
     )
 
   // TEMP
+  import com.typesafe.config.ConfigFactory
+  // TODO consideration for deprecated naming. e.g. application.secret -> play.crypto.secret -> play.http.secret.key
   val slugUri = "https://webstore.tax.service.gov.uk/slugs/service-dependencies/service-dependencies_1.55.0_0.5.2.tgz"
   (for {
     is <- gzippedResourceConnector.openGzippedResource(slugUri)
     si =  SlugParser.parse(slugUri, is)
-    _  =  Logger.warn(s"-------------- $slugUri: extracted ${si.configs.mkString(",")}")
+    _  =  Logger.warn(s"-------------- configs: ${si.configs.mkString("\n", "\n,", "")}")
+    _  =  Logger.warn(s"-------------- classpath: ${si.classpathJars.mkString("\n", "\n", "")}")
+    orderedConfigs = si.classpathJars
+                      .flatMap(path => si.configs.filter(_.path == path))
+                      // ensure for a given path, ordered by play/reference-overrides.conf -> reference.conf -> includes
+                      // TODO tidy
+                      .sortWith((l, r) => l.path == r.path && (   l.filename == "play/reference-overrides.conf"
+                                                               || (l.filename == "reference.conf" && r.filename != "play/reference-overrides.conf")))
+    _  =  Logger.warn(s"-------------- orderedConfigs: ${orderedConfigs.mkString("\n", "\n", "")}")
+
+    includeRegex = "(?m)^include \"(.*)\"$".r
+    combinedConfig = orderedConfigs
+                       .tails
+                       .map {
+                         case config :: rest if List("reference.conf", "play/reference-overrides.conf").contains(config.filename) =>
+                           val includes = includeRegex.findAllMatchIn(config.content).map(_.group(1)).toList
+                           val content = includes.foldLeft(config.content){ (acc, include) =>
+                             val toInclude = rest.find(r => List(include, s"$include.conf").contains(r.filename)).map(_.content).getOrElse { Logger.warn(s"include `$include` not found"); ""}
+                             Logger.warn(s"replacing include with $toInclude")
+                             acc.replace(s"""include "$include"""", toInclude)
+                           }
+                           val conf = ConfigFactory.parseString(content)
+                           if (includes.isEmpty) conf
+                           else {
+                             Logger.warn(s"\n\n$config -> includes = $includes - $conf")
+                             conf
+                           }
+                         case _ => ConfigFactory.empty
+                        }
+                       .reduceLeft(_ withFallback _)
+    //_  =  Logger.warn(s"-------------- combinedConfig: $combinedConfig")
   } yield ()
   ).recover { case e => Logger.error(s"Parse failed: ${e.getMessage}", e); () }
 
@@ -118,6 +150,8 @@ object SlugParser {
       latest        = false)
 
     val Script = s"./$slugName-$semanticVersion/bin/$slugName"
+    val Conf = s"./conf/$slugName.conf"
+    val Conf2 = s"./$slugName-$semanticVersion/conf/application.conf"
 
     Iterator
       .continually(Try(tar.getNextEntry).recover { case e if e.getMessage == "Stream closed" => null }.get)
@@ -129,6 +163,8 @@ object SlugParser {
                                                       result.copy(dependencies = result.dependencies ++ optDependency.toList)
                                                             .copy(configs      = result.configs      ++ configs)
           case Script                              => result.copy(classpath    = extractClasspath(tar).getOrElse(result.classpath))
+          case Conf                                => result.copy(configs      = result.configs ++ List(extractConfig("../conf/", s"$slugName.conf", tar)))
+          case Conf2                               => result.copy(configs      = result.configs ++ List(extractConfig("../conf/", s"application.conf", tar)))
           case "./.jdk/release"                    => result.copy(jdkVersion   = extractJdkVersion(tar).getOrElse(result.jdkVersion))
           case _                                   => result
         }
@@ -186,12 +222,8 @@ object SlugParser {
         .map(_.getName match {
           case "META-INF/MANIFEST.MF"           => (extractVersionFromManifest(libraryName, jar).map(Dep.Manifest), None)
           case file if file.endsWith("pom.xml") => (extractVersionFromPom(libraryName, jar).map(Dep.Pom), None)
-          case "reference.conf"                 => (None, Some(Config( path    = s"$libraryName#reference.conf"
-                                                                     , content = scala.io.Source.fromInputStream(jar).mkString
-                                                                     ))) // TODO: send tcontent serviceConfigs
-          case n if n.endsWith(".conf")         => (None, Some(Config( path    = s"$libraryName#$n"
-                                                                     , content = scala.io.Source.fromInputStream(jar).mkString
-                                                                     ))) // TODO: keep this only if referenced with `include <n>.conf`
+          case n if n.endsWith(".conf")         => val filename = libraryName.drop(libraryName.lastIndexOf("/") + 1)
+                                                   (None, Some(extractConfig(filename, n, jar))) // TODO: send content serviceConfigs s// TODO: keep this only if referenced with `include <n>.conf`
           case _                                => (None, None)
         }).toList
         val optSlugDependency = l
@@ -205,17 +237,23 @@ object SlugParser {
     .get
 
 
-  def extractClasspath(inputStream: InputStream) : Option[String] = {
+  def extractConfig(path: String, filename: String, in: InputStream): Config =
+    Config( path     = path
+          , filename = filename
+          , content  = scala.io.Source.fromInputStream(in).mkString
+          )
+
+  def extractClasspath(in: InputStream): Option[String] = {
     val prefix = "declare -r app_classpath=\""
-    scala.io.Source.fromInputStream(inputStream)
+    scala.io.Source.fromInputStream(in)
       .getLines
       .find(_.startsWith(prefix))
       .map(_.replace(prefix, "").replace("\"", ""))
   }
 
-  def extractJdkVersion(inputStream: InputStream): Option[String] = {
+  def extractJdkVersion(in: InputStream): Option[String] = {
     val prefix = "JAVA_VERSION="
-    scala.io.Source.fromInputStream(inputStream)
+    scala.io.Source.fromInputStream(in)
       .getLines
       .find(_.startsWith(prefix))
       .map(_.replace(prefix, "").replace("\"", ""))
