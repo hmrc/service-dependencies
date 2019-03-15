@@ -30,7 +30,7 @@ object SlugInfoFlag {
   val values = List(Latest, Production, QA)
 
   def parse(s: String): Option[SlugInfoFlag] =
-    values.find(_.s == s)
+    values.find(_.s.equalsIgnoreCase(s))
 }
 
 case class SlugDependency(

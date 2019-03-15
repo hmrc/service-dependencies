@@ -17,15 +17,16 @@
 package uk.gov.hmrc.servicedependencies.persistence
 
 import com.google.inject.{Inject, Singleton}
-import play.api.libs.json.Json
+import play.api.libs.json.{JsResult, JsValue, Json, OFormat}
 import play.modules.reactivemongo.ReactiveMongoComponent
 import reactivemongo.api.Cursor
 import reactivemongo.api.collections.bson.BSONCollection
 import reactivemongo.api.indexes.{Index, IndexType}
 import reactivemongo.bson.{BSONDocument, BSONDocumentReader, BSONObjectID}
 import reactivemongo.play.json.ImplicitBSONHandlers._
+import reactivemongo.play.json.JSONSerializationPack.Reader
 import uk.gov.hmrc.mongo.ReactiveRepository
-import uk.gov.hmrc.servicedependencies.model.{GroupArtefacts, MongoSlugInfoFormats, ServiceDependency, SlugInfo, SlugInfoFlag, Version}
+import uk.gov.hmrc.servicedependencies.model._
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -198,5 +199,16 @@ class SlugInfoRepository @Inject()(mongo: ReactiveMongoComponent)
       .prepared
       .cursor
       .collect[List](-1, Cursor.FailOnError[List[GroupArtefacts]]())
+  }
+
+  def findJDKUsage(flag: SlugInfoFlag) : Future[Seq[JDKVersion]] = {
+
+    val query = BSONDocument(flag.s -> true, "jdkVersion" -> BSONDocument("$ne" -> ""), "name" -> BSONDocument("$nin" -> SlugBlacklist.blacklistedSlugs))
+    val projection = BSONDocument("name" -> 1, "jdkVersion" -> 1, "flag" -> flag.s)
+    implicit val reads: OFormat[JDKVersion] = JDKVersionFormats.jdkFormat
+
+    collection.find(query, Some(projection))
+      .cursor[JDKVersion]()
+      .collect(-1, Cursor.FailOnError[List[JDKVersion]]())
   }
 }
