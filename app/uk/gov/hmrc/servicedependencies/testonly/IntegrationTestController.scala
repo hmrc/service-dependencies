@@ -21,7 +21,7 @@ import play.api.mvc.ControllerComponents
 import uk.gov.hmrc.mongo.json.ReactiveMongoFormats
 import uk.gov.hmrc.play.bootstrap.controller.BackendController
 import uk.gov.hmrc.servicedependencies.model.{
-  Config, MongoLibraryVersion, MongoRepositoryDependencies, MongoSbtPluginVersion, SlugDependency, SlugInfo, Version
+  MongoLibraryVersion, MongoRepositoryDependencies, MongoSbtPluginVersion, SlugDependency, SlugInfo, Version
 }
 import uk.gov.hmrc.servicedependencies.persistence.{
   LibraryVersionRepository, RepositoryLibraryDependenciesRepository, SbtPluginVersionRepository, SlugInfoRepository
@@ -45,7 +45,6 @@ class IntegrationTestController @Inject()(
   implicit val dependenciesFormat   = Json.using[Json.WithDefaultValues].format[MongoRepositoryDependencies]
   implicit val sluginfoFormat       = {
     implicit val sdf = Json.using[Json.WithDefaultValues].format[SlugDependency]
-    implicit val cf  = Json.using[Json.WithDefaultValues].format[Config]
     Json.using[Json.WithDefaultValues].format[SlugInfo]
   }
 

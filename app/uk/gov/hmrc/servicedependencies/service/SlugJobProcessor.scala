@@ -27,7 +27,7 @@ import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.servicedependencies.connector.{
   GzippedResourceConnector, TeamsAndRepositoriesConnector, TeamsForServices
 }
-import uk.gov.hmrc.servicedependencies.model.{Config, MongoSlugParserJob, SlugDependency, SlugInfo, Version}
+import uk.gov.hmrc.servicedependencies.model.{MongoSlugParserJob, SlugDependency, SlugInfo, Version}
 import uk.gov.hmrc.servicedependencies.persistence.{SlugInfoRepository, SlugParserJobsRepository}
 import uk.gov.hmrc.servicedependencies.util.FutureHelpers
 
@@ -88,37 +88,6 @@ class SlugJobProcessor @Inject()(
   (for {
     is <- gzippedResourceConnector.openGzippedResource(slugUri)
     si =  SlugParser.parse(slugUri, is)
-    _  =  Logger.warn(s"-------------- configs: ${si.configs.mkString("\n", "\n,", "")}")
-    _  =  Logger.warn(s"-------------- classpath: ${si.classpathJars.mkString("\n", "\n", "")}")
-    orderedConfigs = si.classpathJars
-                      .flatMap(path => si.configs.filter(_.path == path))
-                      // ensure for a given path, ordered by play/reference-overrides.conf -> reference.conf -> includes
-                      // TODO tidy
-                      .sortWith((l, r) => l.path == r.path && (   l.filename == "play/reference-overrides.conf"
-                                                               || (l.filename == "reference.conf" && r.filename != "play/reference-overrides.conf")))
-    _  =  Logger.warn(s"-------------- orderedConfigs: ${orderedConfigs.mkString("\n", "\n", "")}")
-
-    includeRegex = "(?m)^include \"(.*)\"$".r
-    combinedConfig = orderedConfigs
-                       .tails
-                       .map {
-                         case config :: rest if List("reference.conf", "play/reference-overrides.conf").contains(config.filename) =>
-                           val includes = includeRegex.findAllMatchIn(config.content).map(_.group(1)).toList
-                           val content = includes.foldLeft(config.content){ (acc, include) =>
-                             val toInclude = rest.find(r => List(include, s"$include.conf").contains(r.filename)).map(_.content).getOrElse { Logger.warn(s"include `$include` not found"); ""}
-                             Logger.warn(s"replacing include with $toInclude")
-                             acc.replace(s"""include "$include"""", toInclude)
-                           }
-                           val conf = ConfigFactory.parseString(content)
-                           if (includes.isEmpty) conf
-                           else {
-                             Logger.warn(s"\n\n$config -> includes = $includes - $conf")
-                             conf
-                           }
-                         case _ => ConfigFactory.empty
-                        }
-                       .reduceLeft(_ withFallback _)
-    //_  =  Logger.warn(s"-------------- combinedConfig: $combinedConfig")
   } yield ()
   ).recover { case e => Logger.error(s"Parse failed: ${e.getMessage}", e); () }
 
@@ -126,6 +95,21 @@ class SlugJobProcessor @Inject()(
 
 
 object SlugParser {
+
+  case class Config(
+    path    : String,
+    filename: String,
+    content : String
+  ) {
+    override def toString: String = s"<Config path=$path filename=$filename>"
+  }
+
+  case class SlugInfo1(
+    classpath   : String,
+    jdkVersion  : String,
+    dependencies: List[SlugDependency],
+    configs     : List[Config]
+  )
 
   def parse(slugUri: String, in: InputStream): SlugInfo = {
     val tar = new ArchiveStreamFactory().createArchiveInputStream(new BufferedInputStream(in))
@@ -137,26 +121,20 @@ object SlugParser {
        } yield (runnerVersion, semanticVersion, slugName)
       ).getOrElse(sys.error(s"Could not extract slug data from uri $slugUri"))
 
-    val slugInfo = SlugInfo(
-      uri           = slugUri,
-      name          = slugName,
-      version       = semanticVersion,
-      teams         = List.empty,
-      runnerVersion = runnerVersion,
+    val si0 = SlugInfo1(
       classpath     = "",
       jdkVersion    = "",
       dependencies  = List.empty,
-      configs       = List.empty,
-      latest        = false)
+      configs       = List.empty)
 
     val Script = s"./$slugName-$semanticVersion/bin/$slugName"
     val Conf = s"./conf/$slugName.conf"
     val Conf2 = s"./$slugName-$semanticVersion/conf/application.conf"
 
-    Iterator
+    val si1 = Iterator
       .continually(Try(tar.getNextEntry).recover { case e if e.getMessage == "Stream closed" => null }.get)
       .takeWhile(_ != null)
-      .foldLeft(slugInfo)( (result, entry) =>
+      .foldLeft(si0)( (result, entry) =>
         entry.getName match {
           case n if n.startsWith(s"./$slugName")
                  && n.toLowerCase.endsWith(".jar") => val (optDependency, configs) = parseJar(n, tar)
@@ -169,6 +147,23 @@ object SlugParser {
           case _                                   => result
         }
       )
+
+    val (referenceConfig, applicationConfig, finalConfig) = reduceConfigs(si1.classpath, si1.configs)
+
+    SlugInfo(
+      uri               = slugUri,
+      name              = slugName,
+      version           = semanticVersion,
+      teams             = List.empty,
+      runnerVersion     = runnerVersion,
+      classpath         = si1.classpath,
+      jdkVersion        = si1.jdkVersion,
+      dependencies      = si1.dependencies,
+      referenceConfig   = referenceConfig,
+      applicationConfig = applicationConfig,
+      finalConfig       = finalConfig,
+      latest            = false
+    )
   }
 
   def extractSlugNameFromUri(slugUri: String): Option[String] =
@@ -283,5 +278,68 @@ object SlugParser {
       group    <- (pom \ "groupId").headOption.getOrElse(pom \ "parent" \ "groupId").map(_.text).headOption
       artifact <- (pom \ "artifactId").headOption.map(_.text)
     } yield SlugDependency(libraryName, version, group, artifact, meta = "fromPom")
+  }
+
+
+
+  // TODO consideration for deprecated naming? e.g. application.secret -> play.crypto.secret -> play.http.secret.key
+  def reduceConfigs(classpath: String, configs: Seq[Config]): (String, String, String) = {
+    import com.typesafe.config.ConfigFactory
+
+    val classpathJars: List[String] =
+      classpath.split(":").map(_.stripPrefix("$lib_dir/")).toList
+
+    val orderedConfigs =
+      classpathJars
+        .flatMap(path => configs.filter(_.path == path))
+        // ensure for a given path, ordered by play/reference-overrides.conf -> reference.conf -> includes
+        // TODO tidy
+        .sortWith((l, r) => l.path == r.path && (   l.filename == "play/reference-overrides.conf"
+                                                || (l.filename == "reference.conf" && r.filename != "play/reference-overrides.conf")))
+
+    Logger.warn(s"-------------- orderedConfigs: ${orderedConfigs.mkString("\n", "\n", "")}")
+
+    val includeRegex = "(?m)^include \"(.*)\"$".r
+    def combineConfigs(orderedConfigs: Seq[Config]) =
+      orderedConfigs
+        .tails
+        .map {
+          case config :: rest if List("reference.conf", "play/reference-overrides.conf").contains(config.filename) =>
+            val includes = includeRegex.findAllMatchIn(config.content).map(_.group(1)).toList
+            val content = includes.foldLeft(config.content){ (acc, include) =>
+              val toInclude = rest.find(r => List(include, s"$include.conf").contains(r.filename)).map(_.content).getOrElse { Logger.warn(s"include `$include` not found"); ""}
+              Logger.warn(s"replacing include with $toInclude")
+              acc.replace(s"""include "$include"""", toInclude)
+            }
+            val conf = ConfigFactory.parseString(content)
+            if (includes.isEmpty) conf
+            else {
+              Logger.warn(s"\n\n$config -> includes = $includes - $conf")
+              conf
+            }
+          case _ => ConfigFactory.empty
+          }
+        .reduceLeft(_ withFallback _)
+
+    // TODO refactor this - relies on knowledge that first two look like...
+    // <Config path=../conf/ filename=service-dependencies.conf>
+    // <Config path=../conf/ filename=application.conf>
+    // <...>
+
+    val (finalConf :: appConf :: referenceAndIncludes) = orderedConfigs
+
+    // TODO can we assume finalConfig will not contain includes? if so, can return finalConf if not merging with reference configs
+    val finalConfig       = combineConfigs(finalConf :: referenceAndIncludes)
+
+    // TODO better to return appConfig with includes and without merging with reference configs?
+    val applicationConfig = combineConfigs(appConf :: referenceAndIncludes)
+
+    val referenceConfig   = combineConfigs(referenceAndIncludes)
+
+    Logger.warn(s"-------------- referenceConfig: $referenceConfig")
+    Logger.warn(s"-------------- applicationConfig: $applicationConfig")
+    Logger.warn(s"-------------- finalConfig: $finalConfig")
+
+    (referenceConfig.toString, applicationConfig.toString, finalConfig.toString)
   }
 }
