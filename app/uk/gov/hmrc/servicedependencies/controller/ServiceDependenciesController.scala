@@ -98,4 +98,16 @@ class ServiceDependenciesController @Inject()(
       slugInfoService.findGroupsArtefacts
         .map(res => Ok(Json.toJson(res)))
     }
+
+  def getConfig(flag: String, name: String) =
+    Action.async { implicit request =>
+      SlugInfoFlag.parse(flag) match {
+        case None       => Future(BadRequest("invalid flag"))
+        case Some(flag) => implicit val format = ApiSlugInfoFormats.siFormat // TODO only return config fields rather than whole slug?
+                           slugInfoService.getSlugInfo(name, flag).map {
+                             case None      => NotFound("")
+                             case Some(res) => Ok(Json.toJson(res))
+                           }
+      }
+    }
 }

@@ -46,6 +46,9 @@ class SlugInfoService @Inject()(
   def getSlugInfos(name: String, version: Option[String]): Future[Seq[SlugInfo]] =
     slugInfoRepository.getSlugInfos(name, version)
 
+  def getSlugInfo(name: String, flag: SlugInfoFlag): Future[Option[SlugInfo]] =
+    slugInfoRepository.getSlugInfo(name, flag)
+
   def findServicesWithDependency(flag: SlugInfoFlag, group: String, artefact: String)(implicit hc: HeaderCarrier): Future[Seq[ServiceDependency]] =
     for {
       res              <- slugInfoRepository.findServices(flag, group, artefact)

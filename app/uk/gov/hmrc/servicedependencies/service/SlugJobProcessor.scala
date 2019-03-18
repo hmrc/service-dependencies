@@ -80,17 +80,6 @@ class SlugJobProcessor @Inject()(
                     else       Logger.warn(s"slug ${job.slugUri} not added - already processed")
       } yield ()
     )
-
-  // TEMP
-  import com.typesafe.config.ConfigFactory
-  // TODO consideration for deprecated naming. e.g. application.secret -> play.crypto.secret -> play.http.secret.key
-  val slugUri = "https://webstore.tax.service.gov.uk/slugs/service-dependencies/service-dependencies_1.55.0_0.5.2.tgz"
-  (for {
-    is <- gzippedResourceConnector.openGzippedResource(slugUri)
-    si =  SlugParser.parse(slugUri, is)
-  } yield ()
-  ).recover { case e => Logger.error(s"Parse failed: ${e.getMessage}", e); () }
-
 }
 
 
@@ -148,7 +137,7 @@ object SlugParser {
         }
       )
 
-    val (referenceConfig, applicationConfig, finalConfig) = reduceConfigs(si1.classpath, si1.configs)
+    val (referenceConfig, applicationConfig, slugConfig) = reduceConfigs(si1.classpath, si1.configs)
 
     SlugInfo(
       uri               = slugUri,
@@ -161,7 +150,7 @@ object SlugParser {
       dependencies      = si1.dependencies,
       referenceConfig   = referenceConfig,
       applicationConfig = applicationConfig,
-      finalConfig       = finalConfig,
+      slugConfig        = slugConfig,
       latest            = false
     )
   }
@@ -300,46 +289,62 @@ object SlugParser {
     Logger.warn(s"-------------- orderedConfigs: ${orderedConfigs.mkString("\n", "\n", "")}")
 
     val includeRegex = "(?m)^include \"(.*)\"$".r
+
+    // recursively applies includes by inlining
+    def applyIncludes(config: Config, allIncludes: Seq[Config]): String = {
+      val includes = includeRegex.findAllMatchIn(config.content).map(_.group(1)).toList
+      val conf = includes.foldLeft(config.content){ (acc, include) =>
+        val toInclude = allIncludes
+          .tails
+          .flatMap {
+            case includeCandidate :: rest if List(include, s"$include.conf").contains(includeCandidate.filename) =>
+                Some(applyIncludes(includeCandidate, rest))
+            case _ => None
+          }
+          .toList
+          .headOption
+          .getOrElse { Logger.warn(s"include `$include` not found"); ""}
+        Logger.warn(s"replacing include with $toInclude")
+        acc.replace(s"""include "$include"""", toInclude)
+      }
+      if (includes.isEmpty) conf
+      else {
+        Logger.warn(s"\n\n$config -> includes = $includes - $conf")
+        conf
+      }
+    }
+
     def combineConfigs(orderedConfigs: Seq[Config]) =
       orderedConfigs
         .tails
         .map {
           case config :: rest if List("reference.conf", "play/reference-overrides.conf").contains(config.filename) =>
-            val includes = includeRegex.findAllMatchIn(config.content).map(_.group(1)).toList
-            val content = includes.foldLeft(config.content){ (acc, include) =>
-              val toInclude = rest.find(r => List(include, s"$include.conf").contains(r.filename)).map(_.content).getOrElse { Logger.warn(s"include `$include` not found"); ""}
-              Logger.warn(s"replacing include with $toInclude")
-              acc.replace(s"""include "$include"""", toInclude)
-            }
-            val conf = ConfigFactory.parseString(content)
-            if (includes.isEmpty) conf
-            else {
-              Logger.warn(s"\n\n$config -> includes = $includes - $conf")
-              conf
-            }
+            val content = applyIncludes(config, rest)
+            ConfigFactory.parseString(content)
           case _ => ConfigFactory.empty
-          }
+        }
         .reduceLeft(_ withFallback _)
 
-    // TODO refactor this - relies on knowledge that first two look like...
+    // TODO refactor this - relies on knowledge that first two look like... (just confirm it's true and bomb if not?)
     // <Config path=../conf/ filename=service-dependencies.conf>
     // <Config path=../conf/ filename=application.conf>
     // <...>
+    val (slugConf :: appConf :: referenceAndIncludes) = orderedConfigs
 
-    val (finalConf :: appConf :: referenceAndIncludes) = orderedConfigs
+    def config2String(config: com.typesafe.config.Config): String =
+      config.root.render(com.typesafe.config.ConfigRenderOptions.concise)
 
-    // TODO can we assume finalConfig will not contain includes? if so, can return finalConf if not merging with reference configs
-    val finalConfig       = combineConfigs(finalConf :: referenceAndIncludes)
-
-    // TODO better to return appConfig with includes and without merging with reference configs?
-    val applicationConfig = combineConfigs(appConf :: referenceAndIncludes)
-
+    val slugConfig        = applyIncludes(slugConf, appConf :: referenceAndIncludes)
+    val applicationConfig = applyIncludes(appConf, referenceAndIncludes)
     val referenceConfig   = combineConfigs(referenceAndIncludes)
 
     Logger.warn(s"-------------- referenceConfig: $referenceConfig")
     Logger.warn(s"-------------- applicationConfig: $applicationConfig")
-    Logger.warn(s"-------------- finalConfig: $finalConfig")
+    Logger.warn(s"-------------- slugConfig: $slugConfig")
 
-    (referenceConfig.toString, applicationConfig.toString, finalConfig.toString)
+    ( config2String(referenceConfig)
+    , config2String(ConfigFactory.parseString(applicationConfig))
+    , config2String(ConfigFactory.parseString(slugConfig))
+    )
   }
 }

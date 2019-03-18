@@ -4,3 +4,4 @@ GET     /api/sluginfos                         @uk.gov.hmrc.servicedependencies.
 GET     /api/teams/:team/dependencies          @uk.gov.hmrc.servicedependencies.controller.ServiceDependenciesController.dependenciesForTeam(team)
 GET     /api/serviceDeps                       @uk.gov.hmrc.servicedependencies.controller.ServiceDependenciesController.getServicesWithDependency(flag: String ?= "latest", group: String, artefact: String)
 GET     /api/groupArtefacts                    @uk.gov.hmrc.servicedependencies.controller.ServiceDependenciesController.getGroupArtefacts
+GET     /api/configs/:name                     @uk.gov.hmrc.servicedependencies.controller.ServiceDependenciesController.getConfig(flag: String ?= "latest", name: String)

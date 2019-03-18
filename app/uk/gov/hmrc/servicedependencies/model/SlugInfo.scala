@@ -51,7 +51,7 @@ case class SlugInfo(
   dependencies     : List[SlugDependency],
   referenceConfig  : String,
   applicationConfig: String,
-  finalConfig      : String,
+  slugConfig       : String,
   latest           : Boolean
   )
 
@@ -72,9 +72,9 @@ trait MongoSlugInfoFormats {
     ~ (__ \ "classpath"        ).format[String]
     ~ (__ \ "jdkVersion"       ).format[String]
     ~ (__ \ "dependencies"     ).format[List[SlugDependency]]
-    ~ (__ \ "referenceConfig"  ).format[String]
-    ~ (__ \ "applicationConfig").format[String]
-    ~ (__ \ "finalConfig"      ).format[String]
+    ~ (__ \ "referenceConfig"  ).formatNullable[String].inmap[String](_.getOrElse(""), Option.apply)
+    ~ (__ \ "applicationConfig").formatNullable[String].inmap[String](_.getOrElse(""), Option.apply)
+    ~ (__ \ "slugConfig"       ).formatNullable[String].inmap[String](_.getOrElse(""), Option.apply)
     ~ (__ \ "latest"           ).format[Boolean]
     )(SlugInfo.apply, unlift(SlugInfo.unapply))
 }
@@ -89,7 +89,19 @@ trait ApiSlugInfoFormats {
   // TODO remove config from slug info?
   implicit val siFormat: OFormat[SlugInfo] = {
     implicit val vf = Version.apiFormat
-    Json.format[SlugInfo]
+    ( (__ \ "uri"              ).format[String]
+    ~ (__ \ "name"             ).format[String]
+    ~ (__ \ "version"          ).format[String].inmap[Version](Version.apply, _.original)
+    ~ (__ \ "teams"            ).format[List[String]]
+    ~ (__ \ "runnerVersion")    .format[String]
+    ~ (__ \ "classpath"        ).format[String]
+    ~ (__ \ "jdkVersion"       ).format[String]
+    ~ (__ \ "dependencies"     ).format[List[SlugDependency]]
+    ~ (__ \ "referenceConfig"  ).format[String]
+    ~ (__ \ "applicationConfig").format[String]
+    ~ (__ \ "slugConfig"       ).format[String]
+    ~ (__ \ "latest"           ).format[Boolean]
+    )(SlugInfo.apply, unlift(SlugInfo.unapply))
   }
 }
 
