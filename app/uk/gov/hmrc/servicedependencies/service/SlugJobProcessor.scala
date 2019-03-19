@@ -19,6 +19,7 @@ package uk.gov.hmrc.servicedependencies.service
 import akka.stream.Materializer
 import akka.stream.scaladsl.{Sink, Source}
 import com.google.inject.{Inject, Singleton}
+import com.typesafe.config.{ConfigFactory, ConfigRenderOptions}
 import java.io.{BufferedInputStream, InputStream}
 import org.apache.commons.compress.archivers.jar.JarArchiveInputStream
 import org.apache.commons.compress.archivers.{ArchiveEntry, ArchiveStreamFactory}
@@ -137,7 +138,7 @@ object SlugParser {
         }
       )
 
-    val (referenceConfig, applicationConfig, slugConfig) = reduceConfigs(si1.classpath, si1.configs)
+    val (slugConfig, applicationConfig, referenceConfig) = reduceConfigs(si1.classpath, si1.configs)
 
     SlugInfo(
       uri               = slugUri,
@@ -207,7 +208,7 @@ object SlugParser {
           case "META-INF/MANIFEST.MF"           => (extractVersionFromManifest(libraryName, jar).map(Dep.Manifest), None)
           case file if file.endsWith("pom.xml") => (extractVersionFromPom(libraryName, jar).map(Dep.Pom), None)
           case n if n.endsWith(".conf")         => val filename = libraryName.drop(libraryName.lastIndexOf("/") + 1)
-                                                   (None, Some(extractConfig(filename, n, jar))) // TODO: send content serviceConfigs s// TODO: keep this only if referenced with `include <n>.conf`
+                                                   (None, Some(extractConfig(filename, n, jar)))
           case _                                => (None, None)
         }).toList
         val optSlugDependency = l
@@ -271,80 +272,74 @@ object SlugParser {
 
 
 
-  // TODO consideration for deprecated naming? e.g. application.secret -> play.crypto.secret -> play.http.secret.key
-  def reduceConfigs(classpath: String, configs: Seq[Config]): (String, String, String) = {
-    import com.typesafe.config.ConfigFactory
-
+  def orderConfigs(classpath: String, configs: Seq[Config]): List[Config] = {
     val classpathJars: List[String] =
       classpath.split(":").map(_.stripPrefix("$lib_dir/")).toList
 
-    val orderedConfigs =
-      classpathJars
-        .flatMap(path => configs.filter(_.path == path))
-        // ensure for a given path, ordered by play/reference-overrides.conf -> reference.conf -> includes
-        // TODO tidy
-        .sortWith((l, r) => l.path == r.path && (   l.filename == "play/reference-overrides.conf"
-                                                || (l.filename == "reference.conf" && r.filename != "play/reference-overrides.conf")))
+    classpathJars
+      .flatMap(path => configs.filter(_.path == path))
+      // ensure for a given path, ordered by play/reference-overrides.conf -> reference.conf -> others (for including)
+      .sortWith((l, r) => l.path == r.path && (   l.filename == "play/reference-overrides.conf"
+                                              || (l.filename == "reference.conf" && r.filename != "play/reference-overrides.conf")))
+  }
 
-    Logger.warn(s"-------------- orderedConfigs: ${orderedConfigs.mkString("\n", "\n", "")}")
 
-    val includeRegex = "(?m)^include \"(.*)\"$".r
+  val includeRegex = "(?m)^include \"(.*)\"$".r
 
-    // recursively applies includes by inlining
-    def applyIncludes(config: Config, allIncludes: Seq[Config]): String = {
-      val includes = includeRegex.findAllMatchIn(config.content).map(_.group(1)).toList
-      val conf = includes.foldLeft(config.content){ (acc, include) =>
-        val toInclude = allIncludes
-          .tails
-          .flatMap {
-            case includeCandidate :: rest if List(include, s"$include.conf").contains(includeCandidate.filename) =>
-                Some(applyIncludes(includeCandidate, rest))
-            case _ => None
-          }
-          .toList
-          .headOption
-          .getOrElse { Logger.warn(s"include `$include` not found"); ""}
-        Logger.warn(s"replacing include with $toInclude")
-        acc.replace(s"""include "$include"""", toInclude)
-      }
-      if (includes.isEmpty) conf
-      else {
-        Logger.warn(s"\n\n$config -> includes = $includes - $conf")
-        conf
-      }
-    }
-
-    def combineConfigs(orderedConfigs: Seq[Config]) =
-      orderedConfigs
+  /** recursively applies includes by inlining
+    */
+  def applyIncludes(config: Config, includeCandidates: Seq[Config]): String = {
+    val includes = includeRegex.findAllMatchIn(config.content).map(_.group(1)).toList
+    includes.foldLeft(config.content){ (acc, include) =>
+      val includeContent = includeCandidates
         .tails
-        .map {
-          case config :: rest if List("reference.conf", "play/reference-overrides.conf").contains(config.filename) =>
-            val content = applyIncludes(config, rest)
-            ConfigFactory.parseString(content)
-          case _ => ConfigFactory.empty
+        .flatMap {
+          case includeCandidate :: rest if List(include, s"$include.conf").contains(includeCandidate.filename) =>
+              Some(applyIncludes(includeCandidate, rest))
+          case _ => None
         }
-        .reduceLeft(_ withFallback _)
+        .toList
+        .headOption
+        .getOrElse { Logger.warn(s"include `$include` not found"); ""}
+      Logger.debug(s"replacing include with $includeContent")
+      acc.replace(s"""include "$include"""", includeContent)
+    }
+  }
 
+  def config2String(config: com.typesafe.config.Config): String =
+    config.root.render(ConfigRenderOptions.concise)
+
+  def combineConfigs(orderedConfigs: Seq[Config]) =
+    orderedConfigs
+      .tails
+      .map {
+        case config :: rest if List("reference.conf", "play/reference-overrides.conf").contains(config.filename) =>
+          val content = applyIncludes(config, rest)
+          ConfigFactory.parseString(content)
+        case _ => ConfigFactory.empty
+      }
+      .reduceLeft(_ withFallback _)
+
+  /** Combine the configs according to classpath order.
+    *
+    * @return (slugConfig, applicationConfig, referenceConfig)
+    * where slugConfig is the <slugname>.conf (and any includes) excluding referenceConfig,
+    *       applicationConfig is the application.conf (and any includes) excluding referenceConfig,
+    *       referenceConfig is the reference.conf (and play/reference-overrides.conf) combined (and any includes).
+    */
+  def reduceConfigs(classpath: String, configs: Seq[Config]): (String, String, String) = {
     // TODO refactor this - relies on knowledge that first two look like... (just confirm it's true and bomb if not?)
     // <Config path=../conf/ filename=service-dependencies.conf>
     // <Config path=../conf/ filename=application.conf>
     // <...>
-    val (slugConf :: appConf :: referenceAndIncludes) = orderedConfigs
-
-    def config2String(config: com.typesafe.config.Config): String =
-      config.root.render(com.typesafe.config.ConfigRenderOptions.concise)
-
-    val slugConfig        = applyIncludes(slugConf, appConf :: referenceAndIncludes)
-    val applicationConfig = applyIncludes(appConf, referenceAndIncludes)
+    val (slugConf :: appConf :: unorderedReferenceAndIncludes) = configs
+    val referenceAndIncludes = orderConfigs(classpath, unorderedReferenceAndIncludes)
+    val slugConfig        = ConfigFactory.parseString(applyIncludes(slugConf, appConf :: referenceAndIncludes))
+    val applicationConfig = ConfigFactory.parseString(applyIncludes(appConf, referenceAndIncludes))
     val referenceConfig   = combineConfigs(referenceAndIncludes)
-
-    Logger.warn(s"-------------- referenceConfig: $referenceConfig")
-    Logger.warn(s"-------------- applicationConfig: $applicationConfig")
-    Logger.warn(s"-------------- slugConfig: $slugConfig")
-
-    ( config2String(referenceConfig)
-    , config2String(ConfigFactory.parseString(applicationConfig))
-    , config2String(ConfigFactory.parseString(slugConfig))
+    ( config2String(slugConfig)
+    , config2String(applicationConfig)
+    , config2String(referenceConfig)
     )
   }
 }

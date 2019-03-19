@@ -24,6 +24,8 @@ import uk.gov.hmrc.servicedependencies.connector.TeamsForServices
 
 class SlugParserSpec extends FlatSpec with Matchers {
 
+  import SlugParser._
+
   "extractVersionFromManifest" should "extract return nothing if no version is available in manifest" in {
     val is = new ByteArrayInputStream("Manifest-Version: 1.0".getBytes(StandardCharsets.UTF_8))
     SlugParser.extractVersionFromManifest("testlib.jar", is) shouldBe None
@@ -64,7 +66,8 @@ class SlugParserSpec extends FlatSpec with Matchers {
 
   "extractConfFromJar" should "extract the version from a jar built with sbt" in {
     val is = new BufferedInputStream(getClass.getResourceAsStream("/slugs/example-ivy_2.11-3.2.0.jar"))
-    val output = SlugParser.extractVersionFromJar("bob.jar", is).get
+    val (optDependency, configs) = SlugParser.parseJar("bob.jar", is)
+    val output = optDependency.get
     output.version   shouldBe "3.2.0"
     output.group     shouldBe "uk.gov.hmrc"
     output.artifact shouldBe "time"
@@ -72,7 +75,8 @@ class SlugParserSpec extends FlatSpec with Matchers {
 
   it should "extract the version from a jar built with maven" in {
     val is = new BufferedInputStream(getClass.getResourceAsStream("/slugs/example-maven-3.2.5.jar"))
-    val output = SlugParser.extractVersionFromJar("bob.jar", is).get
+    val (optDependency, configs) = SlugParser.parseJar("bob.jar", is)
+    val output = optDependency.get
     output.version  shouldBe "1.2.3"
     output.group    shouldBe "com.test"
     output.artifact shouldBe "mavenlibrary"
@@ -156,7 +160,130 @@ class SlugParserSpec extends FlatSpec with Matchers {
     SlugParser.extractSlugNameFromUri(uri) shouldBe Some("add-taxes-frontend")
   }
 
+  "orderConfigs" should "order the configs" in {
+    val orderedConfigs = List(
+        Config(
+            path     = "jar1"
+          , filename = "play/reference-overrides.conf"
+          , content  = "key3=val3"
+          )
+      , Config(
+            path     = "jar1"
+          , filename = "reference.conf"
+          , content  = "key3=val3"
+          )
+      , Config(
+            path     = "jar1"
+          , filename = "other.conf"
+          , content  = "key4=val4"
+          )
+      , Config(
+            path     = "jar2"
+          , filename = "play/reference-overrides.conf"
+          , content  = "key3=val3"
+          )
+      , Config(
+            path     = "jar2"
+          , filename = "reference.conf"
+          , content  = "key4=val4"
+          )
+      , Config(
+            path     = "jar2"
+          , filename = "other.conf"
+          , content  = "key4=val4"
+          )
+      )
+    val classpath = "jar1:jar2"
+    SlugParser.orderConfigs(classpath, scala.util.Random.shuffle(orderedConfigs)) shouldBe orderedConfigs
+  }
 
+  "applyIncludes" should "inline the include with first candidate found" in {
+    val config =
+      Config(
+          path     = "../conf/"
+        , filename = "slug.conf"
+        , content  = """include "included1.conf"
+                       |key1=val1""".stripMargin
+        )
+    val includeCandidates =
+      Seq(
+        Config(
+            path     = ".."
+          , filename = "included1.conf"
+          , content  = "key2=val2"
+          )
+      , Config(
+            path     = ".."
+          , filename = "included2.conf"
+          , content  = "key3=val3"
+          )
+      , Config(
+            path     = ".."
+          , filename = "included1.conf"
+          , content  = "key4=val4"
+          )
+      )
+    SlugParser.applyIncludes(config, includeCandidates) shouldBe """key2=val2
+                                                                   |key1=val1""".stripMargin
+  }
+
+  it should "inline the include recursively" in {
+    val config =
+      Config(
+          path     = "../conf/"
+        , filename = "slug.conf"
+        , content  = """include "included1.conf"
+                       |key1=val1""".stripMargin
+        )
+    val includeCandidates =
+      Seq(
+        Config(
+            path     = ".."
+          , filename = "included1.conf"
+          , content  = """include "included2.conf"
+                         |key2=val2""".stripMargin
+          )
+      , Config(
+            path     = ".."
+          , filename = "included2.conf"
+          , content  = "key3=val3"
+          )
+      , Config(
+            path     = ".."
+          , filename = "included1.conf"
+          , content  = "key4=val4"
+          )
+      )
+    SlugParser.applyIncludes(config, includeCandidates) shouldBe """key3=val3
+                                                                   |key2=val2
+                                                                   |key1=val1""".stripMargin
+  }
+
+  "reduceConfigs" should "combine the configs" in {
+    val configs = Seq(
+      Config(
+        path     = "../conf/",
+        filename = "slug.conf",
+        content  = "key1=val1"),
+      Config(
+        path     = "../conf/",
+        filename = "application.conf",
+        content  = "key2=val2"),
+      Config(
+        path     = "jar1",
+        filename = "reference.conf",
+        content  = "key3=val3"),
+      Config(
+        path     = "jar2",
+        filename = "reference.conf",
+        content  = "key4=val4")
+        )
+    val classpath = "../conf/:jar1:jar2"
+    val (slugConfig, applicationConfig, referenceConfig) = SlugParser.reduceConfigs(classpath, configs)
+    slugConfig        shouldBe """{"key1":"val1"}"""
+    applicationConfig shouldBe """{"key2":"val2"}"""
+    referenceConfig   shouldBe """{"key3":"val3","key4":"val4"}"""
+  }
 
   /****** TEST DATA *******/
 

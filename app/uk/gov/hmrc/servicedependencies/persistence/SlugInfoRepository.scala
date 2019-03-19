@@ -78,7 +78,7 @@ class SlugInfoRepository @Inject()(mongo: ReactiveMongoComponent)
     find(
       "name" -> name,
       flag.s -> true)
-      .map(_.headOption) // TODO bomb if more than one
+      .map(_.headOption)
 
   def markLatest(name: String, version: Version): Future[Unit] =
     setFlag(SlugInfoFlag.Latest, name, version)

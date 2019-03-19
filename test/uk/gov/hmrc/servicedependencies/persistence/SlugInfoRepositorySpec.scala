@@ -128,7 +128,10 @@ class SlugInfoRepositorySpec
           version  = "0.66",
           group    = "com.test.group",
           artifact = "lib2")),
-      latest          = true)
+      referenceConfig   = "",
+      applicationConfig = "",
+      slugConfig        = "",
+      latest            = true)
 
   val oldSlugInfo = slugInfo.copy(
     uri             = "https://store/slugs/my-slug/my-slug_0.26.0_0.5.2.tgz",
@@ -152,5 +155,8 @@ class SlugInfoRepositorySpec
           group    = "io.stuff",
           artifact = "lib3"
         )),
-      latest          = true)
+      referenceConfig   = "",
+      applicationConfig = "",
+      slugConfig        = "",
+      latest            = true)
 }
