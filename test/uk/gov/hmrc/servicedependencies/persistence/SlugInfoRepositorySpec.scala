@@ -21,6 +21,7 @@ import org.scalatest.{BeforeAndAfterEach, Matchers, WordSpecLike}
 import org.scalatest.mockito.MockitoSugar
 import play.modules.reactivemongo.ReactiveMongoComponent
 import uk.gov.hmrc.mongo.{FailOnUnindexedQueries, MongoConnector, MongoSpecSupport, RepositoryPreparation}
+import uk.gov.hmrc.servicedependencies.model.SlugInfoFlag.Latest
 import uk.gov.hmrc.servicedependencies.model.{SlugDependency, SlugInfo, SlugInfoFlag, Version}
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -107,6 +108,19 @@ class SlugInfoRepositorySpec
     }
   }
 
+  "SlugInfoRepository.findJDKUsage" should {
+    "find all the jdk version for a given environment" in {
+      await(slugInfoRepository.add(slugInfo))
+
+      val result = await(slugInfoRepository.findJDKUsage(Latest))
+
+      result.length       shouldBe 1
+      result.head.version shouldBe slugInfo.jdkVersion
+      result.head.name    shouldBe slugInfo.name
+
+    }
+  }
+
   val slugInfo =
     SlugInfo(
       uri             = "https://store/slugs/my-slug/my-slug_0.27.0_0.5.2.tgz",
@@ -115,7 +129,7 @@ class SlugInfoRepositorySpec
       teams           = List.empty,
       runnerVersion   = "0.5.2",
       classpath       = "",
-      jdkVersion      = "",
+      jdkVersion      = "1.181.0",
       dependencies    = List(
         SlugDependency(
           path     = "lib1",
@@ -133,6 +147,7 @@ class SlugInfoRepositorySpec
   val oldSlugInfo = slugInfo.copy(
     uri             = "https://store/slugs/my-slug/my-slug_0.26.0_0.5.2.tgz",
     version         = Version.apply("0.26.0"),
+    jdkVersion      = "1.161.0",
     latest          = false
   )
 
@@ -144,7 +159,7 @@ class SlugInfoRepositorySpec
       teams           = List.empty,
       runnerVersion   = "0.5.2",
       classpath       = "",
-      jdkVersion      = "",
+      jdkVersion      = "1.191.",
       dependencies    = List(
         SlugDependency(
           path     = "lib3",

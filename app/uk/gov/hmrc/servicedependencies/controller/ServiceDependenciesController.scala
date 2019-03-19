@@ -25,7 +25,7 @@ import uk.gov.hmrc.play.bootstrap.controller.BackendController
 import uk.gov.hmrc.servicedependencies.config.ServiceDependenciesConfig
 import uk.gov.hmrc.servicedependencies.connector.TeamsAndRepositoriesConnector
 import uk.gov.hmrc.servicedependencies.controller.model.Dependencies
-import uk.gov.hmrc.servicedependencies.model.{ApiServiceDependencyFormats, ApiSlugInfoFormats, GroupArtefacts, SlugInfoFlag}
+import uk.gov.hmrc.servicedependencies.model._
 import uk.gov.hmrc.servicedependencies.service.{DependencyDataUpdatingService, SlugInfoService}
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -44,6 +44,7 @@ class ServiceDependenciesController @Inject()(
   val logger = LoggerFactory.getLogger(this.getClass)
 
   implicit val dependenciesFormat = Dependencies.format
+  implicit val jdkVersionFormat   = JDKVersionFormats.jdkFormat
 
   def getDependencyVersionsForRepository(repositoryName: String) =
     Action.async { implicit request =>
@@ -97,5 +98,15 @@ class ServiceDependenciesController @Inject()(
       implicit val format = GroupArtefacts.apiFormat
       slugInfoService.findGroupsArtefacts
         .map(res => Ok(Json.toJson(res)))
+    }
+
+  def findJDKForEnvironment(flag: String) =
+    Action.async { implicit request =>
+      SlugInfoFlag.parse(flag) match {
+        case None       => Future(BadRequest("invalid flag"))
+        case Some(flag) => slugInfoService.findJDKVersions(flag)
+          .map(res => Ok(Json.toJson(res)))
+      }
+
     }
 }
