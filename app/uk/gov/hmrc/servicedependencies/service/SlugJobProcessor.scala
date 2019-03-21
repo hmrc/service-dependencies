@@ -19,17 +19,13 @@ package uk.gov.hmrc.servicedependencies.service
 import akka.stream.Materializer
 import akka.stream.scaladsl.{Sink, Source}
 import com.google.inject.{Inject, Singleton}
-import com.typesafe.config.{ConfigFactory, ConfigRenderOptions}
 import java.io.{BufferedInputStream, InputStream}
 import org.apache.commons.compress.archivers.jar.JarArchiveInputStream
 import org.apache.commons.compress.archivers.{ArchiveEntry, ArchiveStreamFactory}
-import play.api.{Configuration, Logger}
-import uk.gov.hmrc.http.HeaderCarrier
-import uk.gov.hmrc.servicedependencies.connector.{
-  GzippedResourceConnector, TeamsAndRepositoriesConnector, TeamsForServices
-}
-import uk.gov.hmrc.servicedependencies.model.{MongoSlugParserJob, SlugDependency, SlugInfo, Version}
-import uk.gov.hmrc.servicedependencies.persistence.{SlugInfoRepository, SlugParserJobsRepository}
+import play.api.Logger
+import uk.gov.hmrc.servicedependencies.connector.GzippedResourceConnector
+import uk.gov.hmrc.servicedependencies.model.{DependencyConfig, MongoSlugParserJob, SlugDependency, SlugInfo, Version}
+import uk.gov.hmrc.servicedependencies.persistence.{DependencyConfigRepository, SlugInfoRepository, SlugParserJobsRepository}
 import uk.gov.hmrc.servicedependencies.util.FutureHelpers
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -38,10 +34,11 @@ import scala.util.control.NonFatal
 
 @Singleton
 class SlugJobProcessor @Inject()(
-   slugParserJobsRepository: SlugParserJobsRepository,
-   slugInfoRepository      : SlugInfoRepository,
-   gzippedResourceConnector: GzippedResourceConnector,
-   futureHelpers           : FutureHelpers)(
+   slugParserJobsRepository  : SlugParserJobsRepository,
+   slugInfoRepository        : SlugInfoRepository,
+   dependencyConfigRepository: DependencyConfigRepository,
+   gzippedResourceConnector  : GzippedResourceConnector,
+   futureHelpers             : FutureHelpers)(
    implicit val materializer: Materializer) {
 
   import ExecutionContext.Implicits.global
@@ -65,20 +62,21 @@ class SlugJobProcessor @Inject()(
   def processJob(job: MongoSlugParserJob): Future[Unit] =
     futureHelpers.withTimerAndCounter("slug.process")(
       for {
-        _        <- Future(Logger.debug(s"processing slug job ${job.slugUri}"))
-        is       <- gzippedResourceConnector.openGzippedResource(job.slugUri)
-        si       =  SlugParser.parse(job.slugUri, is)
-        added    <- slugInfoRepository.add(si)
-        isLatest <- slugInfoRepository.getSlugInfos(name = si.name, optVersion = None)
-                      .map { case Nil      => true
-                             case nonempty => val isLatest = nonempty.map(_.version).max == si.version
-                                              Logger.info(s"Slug ${si.name} ${si.version} isLatest=${isLatest} (out of: ${nonempty.map(_.version).sorted})")
-                                              isLatest
-                           }
-        _        <- if (isLatest) slugInfoRepository.markLatest(si.name, si.version)
-                    else Future(())
-        _        =  if (added) Logger.debug(s"added slugInfo for ${job.slugUri}: ${si.name} ${si.version}")
-                    else       Logger.warn(s"slug ${job.slugUri} not added - already processed")
+        _         <- Future(Logger.debug(s"processing slug job ${job.slugUri}"))
+        is        <- gzippedResourceConnector.openGzippedResource(job.slugUri)
+        (si, dcs) =  SlugParser.parse(job.slugUri, is)
+        added     <- slugInfoRepository.add(si)
+        _         <- Future.sequence(dcs.map(dc => dependencyConfigRepository.add(dc)))
+        isLatest  <- slugInfoRepository.getSlugInfos(name = si.name, optVersion = None)
+                       .map { case Nil      => true
+                              case nonempty => val isLatest = nonempty.map(_.version).max == si.version
+                                               Logger.info(s"Slug ${si.name} ${si.version} isLatest=${isLatest} (out of: ${nonempty.map(_.version).sorted})")
+                                               isLatest
+                            }
+        _         <- if (isLatest) slugInfoRepository.markLatest(si.name, si.version)
+                     else Future(())
+        _         =  if (added) Logger.debug(s"added slugInfo for ${job.slugUri}: ${si.name} ${si.version}")
+                     else       Logger.warn(s"slug ${job.slugUri} not added - already processed")
       } yield ()
     )
 }
@@ -86,22 +84,17 @@ class SlugJobProcessor @Inject()(
 
 object SlugParser {
 
-  case class Config(
-    path    : String,
-    filename: String,
-    content : String
-  ) {
-    override def toString: String = s"<Config path=$path filename=$filename>"
-  }
-
-  case class SlugInfo1(
-    classpath   : String,
-    jdkVersion  : String,
-    dependencies: List[SlugDependency],
-    configs     : List[Config]
+  /** temp object for collecting parsing information */
+  case class SlugInfoCollector(
+    classpath        : String,
+    jdkVersion       : String,
+    dependencies     : List[SlugDependency],
+    slugConfig       : String,
+    applicationConfig: String,
+    configs          : List[DependencyConfig]
   )
 
-  def parse(slugUri: String, in: InputStream): SlugInfo = {
+  def parse(slugUri: String, in: InputStream): (SlugInfo, Seq[DependencyConfig]) = {
     val tar = new ArchiveStreamFactory().createArchiveInputStream(new BufferedInputStream(in))
 
     val (runnerVersion, semanticVersion, slugName) =
@@ -111,49 +104,59 @@ object SlugParser {
        } yield (runnerVersion, semanticVersion, slugName)
       ).getOrElse(sys.error(s"Could not extract slug data from uri $slugUri"))
 
-    val si0 = SlugInfo1(
-      classpath     = "",
-      jdkVersion    = "",
-      dependencies  = List.empty,
-      configs       = List.empty)
+    val sic0 = SlugInfoCollector(
+      classpath         = "",
+      jdkVersion        = "",
+      dependencies      = List.empty,
+      slugConfig        = "",
+      applicationConfig = "",
+      configs           = List.empty)
 
     val Script = s"./$slugName-$semanticVersion/bin/$slugName"
     val Conf = s"./conf/$slugName.conf"
     val Conf2 = s"./$slugName-$semanticVersion/conf/application.conf"
 
-    val si1 = Iterator
+    val sic1 = Iterator
       .continually(Try(tar.getNextEntry).recover { case e if e.getMessage == "Stream closed" => null }.get)
       .takeWhile(_ != null)
-      .foldLeft(si0)( (result, entry) =>
+      .foldLeft(sic0)( (result, entry) =>
         entry.getName match {
           case n if n.startsWith(s"./$slugName")
                  && n.toLowerCase.endsWith(".jar") => val (optDependency, configs) = parseJar(n, tar)
-                                                      result.copy(dependencies = result.dependencies ++ optDependency.toList)
-                                                            .copy(configs      = result.configs      ++ configs)
-          case Script                              => result.copy(classpath    = extractClasspath(tar).getOrElse(result.classpath))
-          case Conf                                => result.copy(configs      = result.configs ++ List(extractConfig("../conf/", s"$slugName.conf", tar)))
-          case Conf2                               => result.copy(configs      = result.configs ++ List(extractConfig("../conf/", s"application.conf", tar)))
-          case "./.jdk/release"                    => result.copy(jdkVersion   = extractJdkVersion(tar).getOrElse(result.jdkVersion))
+                                                      val optConfig = for {
+                                                        d <- optDependency
+                                                        if !configs.isEmpty
+                                                      } yield DependencyConfig(
+                                                          group    = d.group
+                                                        , artefact = d.artifact
+                                                        , version  = d.version
+                                                        , configs  = configs
+                                                        )
+                                                      result.copy(dependencies      = result.dependencies ++ optDependency.toList)
+                                                            .copy(configs           = result.configs      ++ optConfig.toList)
+          case Script                              => result.copy(classpath         = extractClasspath(tar).getOrElse(result.classpath))
+          case Conf                                => result.copy(slugConfig        = scala.io.Source.fromInputStream(tar).mkString)
+          case Conf2                               => result.copy(applicationConfig = scala.io.Source.fromInputStream(tar).mkString)
+          case "./.jdk/release"                    => result.copy(jdkVersion        = extractJdkVersion(tar).getOrElse(result.jdkVersion))
           case _                                   => result
         }
       )
 
-    val (slugConfig, applicationConfig, referenceConfig) = reduceConfigs(si1.classpath, si1.configs)
-
-    SlugInfo(
+    val si = SlugInfo(
       uri               = slugUri,
       name              = slugName,
       version           = semanticVersion,
       teams             = List.empty,
       runnerVersion     = runnerVersion,
-      classpath         = si1.classpath,
-      jdkVersion        = si1.jdkVersion,
-      dependencies      = si1.dependencies,
-      referenceConfig   = referenceConfig,
-      applicationConfig = applicationConfig,
-      slugConfig        = slugConfig,
+      classpath         = sic1.classpath,
+      jdkVersion        = sic1.jdkVersion,
+      dependencies      = sic1.dependencies,
+      applicationConfig = sic1.applicationConfig,
+      slugConfig        = sic1.slugConfig,
       latest            = false
     )
+
+    (si, sic1.configs)
   }
 
   def extractSlugNameFromUri(slugUri: String): Option[String] =
@@ -198,7 +201,7 @@ object SlugParser {
       }
   }
 
-  def parseJar(libraryName: String, inputStream: InputStream): (Option[SlugDependency], List[Config]) =
+  def parseJar(libraryName: String, inputStream: InputStream): (Option[SlugDependency], Map[String, String]) =
     Try {
       val jar = new JarArchiveInputStream(inputStream)
       val l = Iterator
@@ -207,8 +210,7 @@ object SlugParser {
         .map(_.getName match {
           case "META-INF/MANIFEST.MF"           => (extractVersionFromManifest(libraryName, jar).map(Dep.Manifest), None)
           case file if file.endsWith("pom.xml") => (extractVersionFromPom(libraryName, jar).map(Dep.Pom), None)
-          case n if n.endsWith(".conf")         => val filename = libraryName.drop(libraryName.lastIndexOf("/") + 1)
-                                                   (None, Some(extractConfig(filename, n, jar)))
+          case n if n.endsWith(".conf")         => (None, Some(Map(n -> scala.io.Source.fromInputStream(jar).mkString)))
           case _                                => (None, None)
         }).toList
         val optSlugDependency = l
@@ -217,16 +219,12 @@ object SlugParser {
           .map(_.sd)
         val configs = l
           .collect { case (_, Some(c)) => c }
+          .reduceOption(_ ++ _)
+          .getOrElse(Map.empty)
         (optSlugDependency, configs)
     }.recover { case e => throw new RuntimeException(s"Could not parse $libraryName: ${e.getMessage}", e) } // just return None?
     .get
 
-
-  def extractConfig(path: String, filename: String, in: InputStream): Config =
-    Config( path     = path
-          , filename = filename
-          , content  = scala.io.Source.fromInputStream(in).mkString
-          )
 
   def extractClasspath(in: InputStream): Option[String] = {
     val prefix = "declare -r app_classpath=\""
@@ -268,78 +266,5 @@ object SlugParser {
       group    <- (pom \ "groupId").headOption.getOrElse(pom \ "parent" \ "groupId").map(_.text).headOption
       artifact <- (pom \ "artifactId").headOption.map(_.text)
     } yield SlugDependency(libraryName, version, group, artifact, meta = "fromPom")
-  }
-
-
-
-  def orderConfigs(classpath: String, configs: Seq[Config]): List[Config] = {
-    val classpathJars: List[String] =
-      classpath.split(":").map(_.stripPrefix("$lib_dir/")).toList
-
-    classpathJars
-      .flatMap(path => configs.filter(_.path == path))
-      // ensure for a given path, ordered by play/reference-overrides.conf -> reference.conf -> others (for including)
-      .sortWith((l, r) => l.path == r.path && (   l.filename == "play/reference-overrides.conf"
-                                              || (l.filename == "reference.conf" && r.filename != "play/reference-overrides.conf")))
-  }
-
-
-  val includeRegex = "(?m)^include \"(.*)\"$".r
-
-  /** recursively applies includes by inlining
-    */
-  def applyIncludes(config: Config, includeCandidates: Seq[Config]): String = {
-    val includes = includeRegex.findAllMatchIn(config.content).map(_.group(1)).toList
-    includes.foldLeft(config.content){ (acc, include) =>
-      val includeContent = includeCandidates
-        .tails
-        .flatMap {
-          case includeCandidate :: rest if List(include, s"$include.conf").contains(includeCandidate.filename) =>
-              Some(applyIncludes(includeCandidate, rest))
-          case _ => None
-        }
-        .toList
-        .headOption
-        .getOrElse { Logger.warn(s"include `$include` not found"); ""}
-      Logger.debug(s"replacing include with $includeContent")
-      acc.replace(s"""include "$include"""", includeContent)
-    }
-  }
-
-  def config2String(config: com.typesafe.config.Config): String =
-    config.root.render(ConfigRenderOptions.concise)
-
-  def combineConfigs(orderedConfigs: Seq[Config]) =
-    orderedConfigs
-      .tails
-      .map {
-        case config :: rest if List("reference.conf", "play/reference-overrides.conf").contains(config.filename) =>
-          val content = applyIncludes(config, rest)
-          ConfigFactory.parseString(content)
-        case _ => ConfigFactory.empty
-      }
-      .reduceLeft(_ withFallback _)
-
-  /** Combine the configs according to classpath order.
-    *
-    * @return (slugConfig, applicationConfig, referenceConfig)
-    * where slugConfig is the <slugname>.conf (and any includes) excluding referenceConfig,
-    *       applicationConfig is the application.conf (and any includes) excluding referenceConfig,
-    *       referenceConfig is the reference.conf (and play/reference-overrides.conf) combined (and any includes).
-    */
-  def reduceConfigs(classpath: String, configs: Seq[Config]): (String, String, String) = {
-    // TODO refactor this - relies on knowledge that first two look like... (just confirm it's true and bomb if not?)
-    // <Config path=../conf/ filename=service-dependencies.conf>
-    // <Config path=../conf/ filename=application.conf>
-    // <...>
-    val (slugConf :: appConf :: unorderedReferenceAndIncludes) = configs
-    val referenceAndIncludes = orderConfigs(classpath, unorderedReferenceAndIncludes)
-    val slugConfig        = ConfigFactory.parseString(applyIncludes(slugConf, appConf :: referenceAndIncludes))
-    val applicationConfig = ConfigFactory.parseString(applyIncludes(appConf, referenceAndIncludes))
-    val referenceConfig   = combineConfigs(referenceAndIncludes)
-    ( config2String(slugConfig)
-    , config2String(applicationConfig)
-    , config2String(referenceConfig)
-    )
   }
 }

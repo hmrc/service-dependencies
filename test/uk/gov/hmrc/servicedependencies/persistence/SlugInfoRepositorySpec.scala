@@ -128,7 +128,6 @@ class SlugInfoRepositorySpec
           version  = "0.66",
           group    = "com.test.group",
           artifact = "lib2")),
-      referenceConfig   = "",
       applicationConfig = "",
       slugConfig        = "",
       latest            = true)
@@ -155,7 +154,6 @@ class SlugInfoRepositorySpec
           group    = "io.stuff",
           artifact = "lib3"
         )),
-      referenceConfig   = "",
       applicationConfig = "",
       slugConfig        = "",
       latest            = true)

@@ -49,10 +49,22 @@ case class SlugInfo(
   classpath        : String,
   jdkVersion       : String,
   dependencies     : List[SlugDependency],
-  referenceConfig  : String,
   applicationConfig: String,
   slugConfig       : String,
   latest           : Boolean
+  ) {
+    lazy val classpathOrderedDependencies: List[SlugDependency] =
+      classpath.split(":")
+        .map(_.replace("$lib_dir/", s"./$name-$version/lib/"))
+        .toList
+        .flatMap(path => dependencies.filter(_.path == path))
+  }
+
+case class DependencyConfig(
+    group   : String
+  , artefact: String
+  , version : String
+  , configs : Map[String, String]
   )
 
 trait MongoSlugInfoFormats {
@@ -68,15 +80,22 @@ trait MongoSlugInfoFormats {
     ~ OFormat( Reads.pure(List.empty[String])
              , ignore
              )
-    ~ (__ \ "runnerVersion")    .format[String]
+    ~ (__ \ "runnerVersion"    ).format[String]
     ~ (__ \ "classpath"        ).format[String]
     ~ (__ \ "jdkVersion"       ).format[String]
     ~ (__ \ "dependencies"     ).format[List[SlugDependency]]
-    ~ (__ \ "referenceConfig"  ).formatNullable[String].inmap[String](_.getOrElse(""), Option.apply)
     ~ (__ \ "applicationConfig").formatNullable[String].inmap[String](_.getOrElse(""), Option.apply)
     ~ (__ \ "slugConfig"       ).formatNullable[String].inmap[String](_.getOrElse(""), Option.apply)
     ~ (__ \ "latest"           ).format[Boolean]
     )(SlugInfo.apply, unlift(SlugInfo.unapply))
+
+
+  val dcFormat: OFormat[DependencyConfig] =
+    ( (__ \ "group"   ).format[String]
+    ~ (__ \ "artefact").format[String]
+    ~ (__ \ "version" ).format[String]
+    ~ (__ \ "configs" ).format[Map[String, String]]
+    )(DependencyConfig.apply, unlift(DependencyConfig.unapply))
 }
 
 object MongoSlugInfoFormats extends MongoSlugInfoFormats
@@ -86,7 +105,6 @@ trait ApiSlugInfoFormats {
   implicit val sdFormat: OFormat[SlugDependency] =
     Json.format[SlugDependency]
 
-  // TODO remove config from slug info?
   implicit val siFormat: OFormat[SlugInfo] = {
     implicit val vf = Version.apiFormat
     ( (__ \ "uri"              ).format[String]
@@ -97,12 +115,18 @@ trait ApiSlugInfoFormats {
     ~ (__ \ "classpath"        ).format[String]
     ~ (__ \ "jdkVersion"       ).format[String]
     ~ (__ \ "dependencies"     ).format[List[SlugDependency]]
-    ~ (__ \ "referenceConfig"  ).format[String]
     ~ (__ \ "applicationConfig").format[String]
     ~ (__ \ "slugConfig"       ).format[String]
     ~ (__ \ "latest"           ).format[Boolean]
     )(SlugInfo.apply, unlift(SlugInfo.unapply))
   }
+
+  val dcFormat: OFormat[DependencyConfig] =
+    ( (__ \ "group"   ).format[String]
+    ~ (__ \ "artefact").format[String]
+    ~ (__ \ "version" ).format[String]
+    ~ (__ \ "configs" ).format[Map[String, String]]
+    )(DependencyConfig.apply, unlift(DependencyConfig.unapply))
 }
 
 object ApiSlugInfoFormats extends ApiSlugInfoFormats
