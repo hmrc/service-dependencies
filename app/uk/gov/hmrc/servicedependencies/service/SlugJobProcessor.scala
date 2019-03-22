@@ -22,13 +22,10 @@ import com.google.inject.{Inject, Singleton}
 import java.io.{BufferedInputStream, InputStream}
 import org.apache.commons.compress.archivers.jar.JarArchiveInputStream
 import org.apache.commons.compress.archivers.{ArchiveEntry, ArchiveStreamFactory}
-import play.api.{Configuration, Logger}
-import uk.gov.hmrc.http.HeaderCarrier
-import uk.gov.hmrc.servicedependencies.connector.{
-  GzippedResourceConnector, TeamsAndRepositoriesConnector, TeamsForServices
-}
-import uk.gov.hmrc.servicedependencies.model.{MongoSlugParserJob, SlugDependency, SlugInfo, Version}
-import uk.gov.hmrc.servicedependencies.persistence.{SlugInfoRepository, SlugParserJobsRepository}
+import play.api.Logger
+import uk.gov.hmrc.servicedependencies.connector.GzippedResourceConnector
+import uk.gov.hmrc.servicedependencies.model.{DependencyConfig, MongoSlugParserJob, SlugDependency, SlugInfo, Version}
+import uk.gov.hmrc.servicedependencies.persistence.{DependencyConfigRepository, SlugInfoRepository, SlugParserJobsRepository}
 import uk.gov.hmrc.servicedependencies.util.FutureHelpers
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -37,10 +34,11 @@ import scala.util.control.NonFatal
 
 @Singleton
 class SlugJobProcessor @Inject()(
-   slugParserJobsRepository: SlugParserJobsRepository,
-   slugInfoRepository      : SlugInfoRepository,
-   gzippedResourceConnector: GzippedResourceConnector,
-   futureHelpers           : FutureHelpers)(
+   slugParserJobsRepository  : SlugParserJobsRepository,
+   slugInfoRepository        : SlugInfoRepository,
+   dependencyConfigRepository: DependencyConfigRepository,
+   gzippedResourceConnector  : GzippedResourceConnector,
+   futureHelpers             : FutureHelpers)(
    implicit val materializer: Materializer) {
 
   import ExecutionContext.Implicits.global
@@ -64,20 +62,21 @@ class SlugJobProcessor @Inject()(
   def processJob(job: MongoSlugParserJob): Future[Unit] =
     futureHelpers.withTimerAndCounter("slug.process")(
       for {
-        _        <- Future(Logger.debug(s"processing slug job ${job.slugUri}"))
-        is       <- gzippedResourceConnector.openGzippedResource(job.slugUri)
-        si       =  SlugParser.parse(job.slugUri, is)
-        added    <- slugInfoRepository.add(si)
-        isLatest <- slugInfoRepository.getSlugInfos(name = si.name, optVersion = None)
-                      .map { case Nil      => true
-                             case nonempty => val isLatest = nonempty.map(_.version).max == si.version
-                                              Logger.info(s"Slug ${si.name} ${si.version} isLatest=${isLatest} (out of: ${nonempty.map(_.version).sorted})")
-                                              isLatest
-                           }
-        _        <- if (isLatest) slugInfoRepository.markLatest(si.name, si.version)
-                    else Future(())
-        _        =  if (added) Logger.debug(s"added slugInfo for ${job.slugUri}: ${si.name} ${si.version}")
-                    else       Logger.warn(s"slug ${job.slugUri} not added - already processed")
+        _         <- Future(Logger.debug(s"processing slug job ${job.slugUri}"))
+        is        <- gzippedResourceConnector.openGzippedResource(job.slugUri)
+        (si, dcs) =  SlugParser.parse(job.slugUri, is)
+        added     <- slugInfoRepository.add(si)
+        _         <- Future.sequence(dcs.map(dc => dependencyConfigRepository.add(dc)))
+        isLatest  <- slugInfoRepository.getSlugInfos(name = si.name, optVersion = None)
+                       .map { case Nil      => true
+                              case nonempty => val isLatest = nonempty.map(_.version).max == si.version
+                                               Logger.info(s"Slug ${si.name} ${si.version} isLatest=${isLatest} (out of: ${nonempty.map(_.version).sorted})")
+                                               isLatest
+                            }
+        _         <- if (isLatest) slugInfoRepository.markLatest(si.name, si.version)
+                     else Future(())
+        _         =  if (added) Logger.debug(s"added slugInfo for ${job.slugUri}: ${si.name} ${si.version}")
+                     else       Logger.warn(s"slug ${job.slugUri} not added - already processed")
       } yield ()
     )
 }
@@ -85,7 +84,17 @@ class SlugJobProcessor @Inject()(
 
 object SlugParser {
 
-  def parse(slugUri: String, in: InputStream): SlugInfo = {
+  /** temp object for collecting parsing information */
+  case class SlugInfoCollector(
+    classpath        : String,
+    jdkVersion       : String,
+    dependencies     : List[SlugDependency],
+    slugConfig       : String,
+    applicationConfig: String,
+    configs          : List[DependencyConfig]
+  )
+
+  def parse(slugUri: String, in: InputStream): (SlugInfo, Seq[DependencyConfig]) = {
     val tar = new ArchiveStreamFactory().createArchiveInputStream(new BufferedInputStream(in))
 
     val (runnerVersion, semanticVersion, slugName) =
@@ -95,39 +104,63 @@ object SlugParser {
        } yield (runnerVersion, semanticVersion, slugName)
       ).getOrElse(sys.error(s"Could not extract slug data from uri $slugUri"))
 
-    val slugInfo = SlugInfo(
-      uri           = slugUri,
-      name          = slugName,
-      version       = semanticVersion,
-      teams         = List.empty,
-      runnerVersion = runnerVersion,
-      classpath     = "",
-      jdkVersion    = "",
-      dependencies  = List.empty[SlugDependency],
-      latest        = false)
+    val sic0 = SlugInfoCollector(
+      classpath         = "",
+      jdkVersion        = "",
+      dependencies      = List.empty,
+      slugConfig        = "",
+      applicationConfig = "",
+      configs           = List.empty)
 
     val Script = s"./$slugName-$semanticVersion/bin/$slugName"
+    val Conf = s"./conf/$slugName.conf"
+    val Conf2 = s"./$slugName-$semanticVersion/conf/application.conf"
 
-    Iterator
+    val sic1 = Iterator
       .continually(Try(tar.getNextEntry).recover { case e if e.getMessage == "Stream closed" => null }.get)
       .takeWhile(_ != null)
-      .foldLeft(slugInfo)( (result, entry) =>
-        (entry.getName match {
+      .foldLeft(sic0)( (result, entry) =>
+        entry.getName match {
           case n if n.startsWith(s"./$slugName")
-                 && n.toLowerCase.endsWith(".jar") => extractVersionFromJar(n, tar)
-                                                        .map(v => result.copy(dependencies = result.dependencies ++ List(v)))
-          case Script                              => extractClasspath(tar)
-                                                        .map(cp => result.copy(classpath = cp))
-          case "./.jdk/release"                    => extractJdkVersion(tar)
-                                                        .map(jdkv => result.copy(jdkVersion = jdkv))
-          case _                                   => None
-        }).getOrElse(result)
+                 && n.toLowerCase.endsWith(".jar") => val (optDependency, configs) = parseJar(n, tar)
+                                                      val optConfig = for {
+                                                        d <- optDependency
+                                                        if !configs.isEmpty
+                                                      } yield DependencyConfig(
+                                                          group    = d.group
+                                                        , artefact = d.artifact
+                                                        , version  = d.version
+                                                        , configs  = configs
+                                                        )
+                                                      result.copy(dependencies      = result.dependencies ++ optDependency.toList)
+                                                            .copy(configs           = result.configs      ++ optConfig.toList)
+          case Script                              => result.copy(classpath         = extractClasspath(tar).getOrElse(result.classpath))
+          case Conf                                => result.copy(slugConfig        = scala.io.Source.fromInputStream(tar).mkString)
+          case Conf2                               => result.copy(applicationConfig = scala.io.Source.fromInputStream(tar).mkString)
+          case "./.jdk/release"                    => result.copy(jdkVersion        = extractJdkVersion(tar).getOrElse(result.jdkVersion))
+          case _                                   => result
+        }
       )
+
+    val si = SlugInfo(
+      uri               = slugUri,
+      name              = slugName,
+      version           = semanticVersion,
+      teams             = List.empty,
+      runnerVersion     = runnerVersion,
+      classpath         = sic1.classpath,
+      jdkVersion        = sic1.jdkVersion,
+      dependencies      = sic1.dependencies,
+      applicationConfig = sic1.applicationConfig,
+      slugConfig        = sic1.slugConfig,
+      latest            = false
+    )
+
+    (si, sic1.configs)
   }
 
-  def extractSlugNameFromUri(slugUri: String): Option[String] = {
+  def extractSlugNameFromUri(slugUri: String): Option[String] =
     slugUri.split("/").lastOption.map(_.replaceAll("""_.+\.tgz""", ""))
-  }
 
   def extractFilename(slugUri: String): String =
     // e.g. https://store/slugs/my-slug/my-slug_0.27.0_0.5.2.tgz
@@ -168,36 +201,42 @@ object SlugParser {
       }
   }
 
-  def extractVersionFromJar(libraryName: String, inputStream: InputStream): Option[SlugDependency] =
+  def parseJar(libraryName: String, inputStream: InputStream): (Option[SlugDependency], Map[String, String]) =
     Try {
       val jar = new JarArchiveInputStream(inputStream)
-      Iterator
+      val l = Iterator
         .continually(jar.getNextJarEntry)
         .takeWhile(_ != null)
         .map(_.getName match {
-          //case "reference.conf"                 => None; // TODO: extract reference.conf & send to serviceConfigs
-          case "META-INF/MANIFEST.MF"           => extractVersionFromManifest(libraryName, jar).map(Dep.Manifest)
-          case file if file.endsWith("pom.xml") => extractVersionFromPom(libraryName, jar).map(Dep.Pom)
-          case _                                => None
-        })
-        .collect { case Some(d) => d }
-        .reduceOption(Dep.precedence)
-        .map(_.sd)
-    }.recover { case e => throw new RuntimeException(s"Could not extract version from $libraryName", e) } // just return None?
+          case "META-INF/MANIFEST.MF"           => (extractVersionFromManifest(libraryName, jar).map(Dep.Manifest), None)
+          case file if file.endsWith("pom.xml") => (extractVersionFromPom(libraryName, jar).map(Dep.Pom), None)
+          case n if n.endsWith(".conf")         => (None, Some(Map(n -> scala.io.Source.fromInputStream(jar).mkString)))
+          case _                                => (None, None)
+        }).toList
+        val optSlugDependency = l
+          .collect { case (Some(d), _) => d }
+          .reduceOption(Dep.precedence)
+          .map(_.sd)
+        val configs = l
+          .collect { case (_, Some(c)) => c }
+          .reduceOption(_ ++ _)
+          .getOrElse(Map.empty)
+        (optSlugDependency, configs)
+    }.recover { case e => throw new RuntimeException(s"Could not parse $libraryName: ${e.getMessage}", e) } // just return None?
     .get
 
 
-  def extractClasspath(inputStream: InputStream) : Option[String] = {
+  def extractClasspath(in: InputStream): Option[String] = {
     val prefix = "declare -r app_classpath=\""
-    scala.io.Source.fromInputStream(inputStream)
+    scala.io.Source.fromInputStream(in)
       .getLines
       .find(_.startsWith(prefix))
       .map(_.replace(prefix, "").replace("\"", ""))
   }
 
-  def extractJdkVersion(inputStream: InputStream): Option[String] = {
+  def extractJdkVersion(in: InputStream): Option[String] = {
     val prefix = "JAVA_VERSION="
-    scala.io.Source.fromInputStream(inputStream)
+    scala.io.Source.fromInputStream(in)
       .getLines
       .find(_.startsWith(prefix))
       .map(_.replace(prefix, "").replace("\"", ""))

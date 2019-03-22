@@ -19,10 +19,12 @@ import java.io.{BufferedInputStream, ByteArrayInputStream}
 import java.nio.charset.StandardCharsets
 
 import org.scalatest.{FlatSpec, Matchers}
-import uk.gov.hmrc.servicedependencies.model.{SlugDependency, Version}
+import uk.gov.hmrc.servicedependencies.model.{DependencyConfig, SlugDependency, Version}
 import uk.gov.hmrc.servicedependencies.connector.TeamsForServices
 
 class SlugParserSpec extends FlatSpec with Matchers {
+
+  import SlugParser._
 
   "extractVersionFromManifest" should "extract return nothing if no version is available in manifest" in {
     val is = new ByteArrayInputStream("Manifest-Version: 1.0".getBytes(StandardCharsets.UTF_8))
@@ -64,7 +66,8 @@ class SlugParserSpec extends FlatSpec with Matchers {
 
   "extractConfFromJar" should "extract the version from a jar built with sbt" in {
     val is = new BufferedInputStream(getClass.getResourceAsStream("/slugs/example-ivy_2.11-3.2.0.jar"))
-    val output = SlugParser.extractVersionFromJar("bob.jar", is).get
+    val (optDependency, configs) = SlugParser.parseJar("bob.jar", is)
+    val output = optDependency.get
     output.version   shouldBe "3.2.0"
     output.group     shouldBe "uk.gov.hmrc"
     output.artifact shouldBe "time"
@@ -72,7 +75,8 @@ class SlugParserSpec extends FlatSpec with Matchers {
 
   it should "extract the version from a jar built with maven" in {
     val is = new BufferedInputStream(getClass.getResourceAsStream("/slugs/example-maven-3.2.5.jar"))
-    val output = SlugParser.extractVersionFromJar("bob.jar", is).get
+    val (optDependency, configs) = SlugParser.parseJar("bob.jar", is)
+    val output = optDependency.get
     output.version  shouldBe "1.2.3"
     output.group    shouldBe "com.test"
     output.artifact shouldBe "mavenlibrary"
@@ -91,9 +95,9 @@ class SlugParserSpec extends FlatSpec with Matchers {
   }
 
 
-  "slugparser" should "parse a slug" in {
+  "SlugParser.parse" should "parse SlugInfo out of a slug" in {
     val in = getClass.getResourceAsStream("/slugs/example-service_0.1.2_0.5.2.tar")
-    val res = SlugParser.parse("https://webstore.uk/slugs/example-service/example-service_0.1.2_0.5.2.tgz", in)
+    val (res, _) = SlugParser.parse("https://webstore.uk/slugs/example-service/example-service_0.1.2_0.5.2.tgz", in)
 
     res.name shouldBe "example-service"
     res.runnerVersion shouldBe "0.5.2"
@@ -115,6 +119,34 @@ class SlugParserSpec extends FlatSpec with Matchers {
     maven.version  shouldBe "1.2.3"
     maven.group    shouldBe "com.test"
     maven.artifact shouldBe "mavenlibrary"
+  }
+
+  it should "parse configs out of a slug" in {
+    val in = getClass.getResourceAsStream("/slugs/example-service_0.1.2_0.5.2.tar")
+    val (_, configs) = SlugParser.parse("https://webstore.uk/slugs/example-service/example-service_0.1.2_0.5.2.tgz", in)
+
+    configs shouldBe List(
+        DependencyConfig(
+            group    = "uk.gov.hmrc"
+          , artefact = "time"
+          , version  = "3.2.0"
+          , configs  = Map(
+                "includes.conf"  -> "a = 1"
+              , "reference.conf" -> """|include "includes.conf"
+                                       |
+                                       |b = 2""".stripMargin
+              )
+          )
+      , DependencyConfig(
+            group    = "com.test"
+          , artefact = "mavenlibrary"
+          , version  = "1.2.3"
+          , configs  = Map(
+                "includes.conf"  -> "c = 3"
+              , "reference.conf" -> """include "includes.conf"""".stripMargin
+              )
+          )
+      )
   }
 
   "extractClasspath" should "strip the prefix and quotes" in {
@@ -155,7 +187,6 @@ class SlugParserSpec extends FlatSpec with Matchers {
     val uri = "https://storeslugs/add-taxes-frontend/add-taxes-frontend_0.100.0_0.5.2.tgz"
     SlugParser.extractSlugNameFromUri(uri) shouldBe Some("add-taxes-frontend")
   }
-
 
 
   /****** TEST DATA *******/

@@ -75,6 +75,12 @@ class SlugInfoRepository @Inject()(mongo: ReactiveMongoComponent)
       case Some(version) => find("name" -> name, "version" -> version)
     }
 
+  def getSlugInfo(name: String, flag: SlugInfoFlag): Future[Option[SlugInfo]] =
+    find(
+      "name" -> name,
+      flag.s -> true)
+      .map(_.headOption)
+
   def markLatest(name: String, version: Version): Future[Unit] =
     setFlag(SlugInfoFlag.Latest, name, version)
 

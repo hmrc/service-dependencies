@@ -1,7 +1,10 @@
 GET     /api/dependencies                      @uk.gov.hmrc.servicedependencies.controller.ServiceDependenciesController.dependencies()
 GET     /api/dependencies/:repository          @uk.gov.hmrc.servicedependencies.controller.ServiceDependenciesController.getDependencyVersionsForRepository(repository)
 GET     /api/sluginfos                         @uk.gov.hmrc.servicedependencies.controller.ServiceDependenciesController.slugInfos(name: String, version: Option[String])
+GET     /api/sluginfo                          @uk.gov.hmrc.servicedependencies.controller.ServiceDependenciesController.slugInfo(name: String, flag: String ?= "latest")
 GET     /api/teams/:team/dependencies          @uk.gov.hmrc.servicedependencies.controller.ServiceDependenciesController.dependenciesForTeam(team)
 GET     /api/serviceDeps                       @uk.gov.hmrc.servicedependencies.controller.ServiceDependenciesController.getServicesWithDependency(flag: String ?= "latest", group: String, artefact: String)
 GET     /api/groupArtefacts                    @uk.gov.hmrc.servicedependencies.controller.ServiceDependenciesController.getGroupArtefacts
+GET     /api/dependencyConfig                  @uk.gov.hmrc.servicedependencies.controller.ServiceDependenciesController.dependencyConfig(group: String, artefact: String, version: String)
+GET     /api/slugDependencyConfigs             @uk.gov.hmrc.servicedependencies.controller.ServiceDependenciesController.slugDependencyConfigs(name: String, flag: String ?= "latest")
 GET     /api/jdkVersions                       @uk.gov.hmrc.servicedependencies.controller.ServiceDependenciesController.findJDKForEnvironment(flag: String ?= "latest")

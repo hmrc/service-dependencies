@@ -19,12 +19,9 @@ package uk.gov.hmrc.servicedependencies.service
 import com.google.inject.{Inject, Singleton}
 import org.slf4j.LoggerFactory
 import uk.gov.hmrc.http.HeaderCarrier
-import uk.gov.hmrc.lock.LockFormats.Lock
-import uk.gov.hmrc.servicedependencies.config.CuratedDependencyConfigProvider
 import uk.gov.hmrc.servicedependencies.connector.{ServiceDeploymentsConnector, TeamsAndRepositoriesConnector}
-import uk.gov.hmrc.servicedependencies.controller.model.{Dependencies, Dependency}
+import uk.gov.hmrc.servicedependencies.persistence.{DependencyConfigRepository, SlugInfoRepository, SlugParserJobsRepository}
 import uk.gov.hmrc.servicedependencies.model._
-import uk.gov.hmrc.servicedependencies.persistence.{SlugInfoRepository, SlugParserJobsRepository}
 import uk.gov.hmrc.time.DateTimeUtils
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -33,6 +30,7 @@ import scala.concurrent.{ExecutionContext, Future}
 class SlugInfoService @Inject()(
   slugParserJobsRepository      : SlugParserJobsRepository,
   slugInfoRepository            : SlugInfoRepository,
+  dependencyConfigRepository    : DependencyConfigRepository,
   teamsAndRepositoriesConnector : TeamsAndRepositoriesConnector,
   serviceDeploymentsConnector   : ServiceDeploymentsConnector
 ) {
@@ -45,6 +43,9 @@ class SlugInfoService @Inject()(
 
   def getSlugInfos(name: String, version: Option[String]): Future[Seq[SlugInfo]] =
     slugInfoRepository.getSlugInfos(name, version)
+
+  def getSlugInfo(name: String, flag: SlugInfoFlag): Future[Option[SlugInfo]] =
+    slugInfoRepository.getSlugInfo(name, flag)
 
   def findServicesWithDependency(flag: SlugInfoFlag, group: String, artefact: String)(implicit hc: HeaderCarrier): Future[Seq[ServiceDependency]] =
     for {
@@ -74,6 +75,9 @@ class SlugInfoService @Inject()(
                                 }
     } yield ()
   }
+
+  def findDependencyConfig(group: String, artefact: String, version: String): Future[Option[DependencyConfig]] =
+    dependencyConfigRepository.getDependencyConfig(group, artefact, version)
 
   def findJDKVersions(flag: SlugInfoFlag): Future[Seq[JDKVersion]] =
     slugInfoRepository.findJDKUsage(flag)
