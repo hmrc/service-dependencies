@@ -20,8 +20,9 @@ import com.google.inject.{Inject, Singleton}
 import org.slf4j.LoggerFactory
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.servicedependencies.connector.{ServiceDeploymentsConnector, TeamsAndRepositoriesConnector}
-import uk.gov.hmrc.servicedependencies.model.{DependencyConfig, GroupArtefacts, NewSlugParserJob, ServiceDependency, SlugInfo, SlugInfoFlag}
 import uk.gov.hmrc.servicedependencies.persistence.{DependencyConfigRepository, SlugInfoRepository, SlugParserJobsRepository}
+import uk.gov.hmrc.servicedependencies.model._
+import uk.gov.hmrc.time.DateTimeUtils
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -51,7 +52,7 @@ class SlugInfoService @Inject()(
       res              <- slugInfoRepository.findServices(flag, group, artefact)
       teamsForServices <- teamsAndRepositoriesConnector.getTeamsForServices
     } yield res.map { r =>
-        r.copy(teams = teamsForServices.getTeams(r.slugName).toList)
+        r.copy(teams = teamsForServices.getTeams(r.slugName).toList.sorted)
       }
 
   def findGroupsArtefacts: Future[Seq[GroupArtefacts]] =
@@ -77,4 +78,7 @@ class SlugInfoService @Inject()(
 
   def findDependencyConfig(group: String, artefact: String, version: String): Future[Option[DependencyConfig]] =
     dependencyConfigRepository.getDependencyConfig(group, artefact, version)
+
+  def findJDKVersions(flag: SlugInfoFlag): Future[Seq[JDKVersion]] =
+    slugInfoRepository.findJDKUsage(flag)
 }
