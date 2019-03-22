@@ -51,7 +51,7 @@ class SlugInfoService @Inject()(
       res              <- slugInfoRepository.findServices(flag, group, artefact)
       teamsForServices <- teamsAndRepositoriesConnector.getTeamsForServices
     } yield res.map { r =>
-        r.copy(teams = teamsForServices.getTeams(r.slugName).toList)
+        r.copy(teams = teamsForServices.getTeams(r.slugName).toList.sorted)
       }
 
   def findGroupsArtefacts: Future[Seq[GroupArtefacts]] =
