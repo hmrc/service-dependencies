@@ -127,19 +127,20 @@ class ServiceDependenciesController @Inject()(
 
   def slugDependencyConfigs(name: String, flag: String) =
     Action.async { implicit request =>
-    implicit val format = ApiSlugInfoFormats.dcFormat
-    (for {
-      flag <- OptionT
-               .fromOption[Future](SlugInfoFlag.parse(flag))
-               .toRight(BadRequest("invalid flag"))
-      slugInfo <- OptionT(slugInfoService.getSlugInfo(name, flag))
-                   .toRight(NotFound(""))
-      configs <- EitherT.liftT[Future, Result, List[DependencyConfig]] {
-                  slugInfo.classpathOrderedDependencies
-                    .traverse(d => slugInfoService.findDependencyConfig(d.group, d.artifact, d.version))
-                    .map(_.flatten)
-                }
-      } yield Ok(Json.toJson(configs))).merge
+      implicit val format = ApiSlugInfoFormats.dcFormat
+      (for {
+       flag     <- OptionT
+                     .fromOption[Future](SlugInfoFlag.parse(flag))
+                     .toRight(BadRequest("invalid flag"))
+       slugInfo <- OptionT(slugInfoService.getSlugInfo(name, flag))
+                    .toRight(NotFound(""))
+       configs  <- EitherT.liftT[Future, Result, List[DependencyConfig]] {
+                     slugInfo.classpathOrderedDependencies
+                       .traverse(d => slugInfoService.findDependencyConfig(d.group, d.artifact, d.version))
+                       .map(_.flatten)
+                  }
+       } yield Ok(Json.toJson(configs))
+      ).merge
     }
 
 
