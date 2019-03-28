@@ -95,6 +95,9 @@ trait MongoSlugInfoFormats {
     ~ (__ \ "artefact").format[String]
     ~ (__ \ "version" ).format[String]
     ~ (__ \ "configs" ).format[Map[String, String]]
+                       .inmap[Map[String, String]]( _.map { case (k, v) => (k.replaceAll("_DOT_", "."), v) }
+                                                  , _.map { case (k, v) => (k.replaceAll("\\.", "_DOT_"), v) }
+                                                  )
     )(DependencyConfig.apply, unlift(DependencyConfig.unapply))
 }
 
@@ -111,7 +114,7 @@ trait ApiSlugInfoFormats {
     ~ (__ \ "name"             ).format[String]
     ~ (__ \ "version"          ).format[String].inmap[Version](Version.apply, _.original)
     ~ (__ \ "teams"            ).format[List[String]]
-    ~ (__ \ "runnerVersion")    .format[String]
+    ~ (__ \ "runnerVersion"    ).format[String]
     ~ (__ \ "classpath"        ).format[String]
     ~ (__ \ "jdkVersion"       ).format[String]
     ~ (__ \ "dependencies"     ).format[List[SlugDependency]]
