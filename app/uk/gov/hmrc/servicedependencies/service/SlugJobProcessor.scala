@@ -201,15 +201,15 @@ object SlugParser {
       }
   }
 
-  def parseJar(libraryName: String, inputStream: InputStream): (Option[SlugDependency], Map[String, String]) =
+  def parseJar(libraryPath: String, inputStream: InputStream): (Option[SlugDependency], Map[String, String]) =
     Try {
       val jar = new JarArchiveInputStream(inputStream)
       val l = Iterator
         .continually(jar.getNextJarEntry)
         .takeWhile(_ != null)
         .map(_.getName match {
-          case "META-INF/MANIFEST.MF"           => (extractVersionFromManifest(libraryName, jar).map(Dep.Manifest), None)
-          case file if file.endsWith("pom.xml") => (extractVersionFromPom(libraryName, jar).map(Dep.Pom), None)
+          case "META-INF/MANIFEST.MF"           => (extractVersionFromManifest(libraryPath, jar).map(Dep.Manifest), None)
+          case file if file.endsWith("pom.xml") => (extractVersionFromPom(libraryPath, jar).map(Dep.Pom), None)
           case n if n.endsWith(".conf")         => (None, Some(Map(n -> scala.io.Source.fromInputStream(jar).mkString)))
           case _                                => (None, None)
         }).toList
@@ -217,12 +217,13 @@ object SlugParser {
           .collect { case (Some(d), _) => d }
           .reduceOption(Dep.precedence)
           .map(_.sd)
+          .orElse(extractVersionFromFilepath(libraryPath))
         val configs = l
           .collect { case (_, Some(c)) => c }
           .reduceOption(_ ++ _)
           .getOrElse(Map.empty)
         (optSlugDependency, configs)
-    }.recover { case e => throw new RuntimeException(s"Could not parse $libraryName: ${e.getMessage}", e) } // just return None?
+    }.recover { case e => throw new RuntimeException(s"Could not parse $libraryPath: ${e.getMessage}", e) } // just return None?
     .get
 
 
@@ -243,21 +244,20 @@ object SlugParser {
   }
 
 
-  def extractVersionFromManifest(libraryName: String, in: InputStream): Option[SlugDependency] = {
-    val versionRegex  = "Implementation-Version: (.+)".r
-    val groupRegex    = "Implementation-Vendor-Id: (.+)".r
-    val artifactRegex = "Implementation-Title: (.+)".r
+  val manifestVersionRegex  = "Implementation-Version: (.+)".r
+  val manifestGroupRegex    = "Implementation-Vendor-Id: (.+)".r
+  val manifestArtifactRegex = "Implementation-Title: (.+)".r
 
+  def extractVersionFromManifest(libraryPath: String, in: InputStream): Option[SlugDependency] =
     for {
       manifest <- Option(scala.io.Source.fromInputStream(in).mkString)
-      version  <- versionRegex.findFirstMatchIn(manifest).map(_.group(1))
-      group    <- groupRegex.findFirstMatchIn(manifest).map(_.group(1))
-      artifact <- artifactRegex.findFirstMatchIn(manifest).map(_.group(1).toLowerCase)
-    } yield SlugDependency(libraryName, version, group, artifact, meta = "fromManifest")
-  }
+      version  <- manifestVersionRegex.findFirstMatchIn(manifest).map(_.group(1))
+      group    <- manifestGroupRegex.findFirstMatchIn(manifest).map(_.group(1))
+      artifact <- manifestArtifactRegex.findFirstMatchIn(manifest).map(_.group(1).toLowerCase)
+    } yield SlugDependency(libraryPath, version, group, artifact, meta = "fromManifest")
 
 
-  def extractVersionFromPom(libraryName: String, in: InputStream): Option[SlugDependency] = {
+  def extractVersionFromPom(libraryPath: String, in: InputStream): Option[SlugDependency] = {
     import xml._
     for {
       raw      <- Try(scala.io.Source.fromInputStream(in).mkString).toOption
@@ -265,6 +265,21 @@ object SlugParser {
       version  <- (pom \ "version").headOption.getOrElse(pom \ "parent" \ "version").map(_.text).headOption
       group    <- (pom \ "groupId").headOption.getOrElse(pom \ "parent" \ "groupId").map(_.text).headOption
       artifact <- (pom \ "artifactId").headOption.map(_.text)
-    } yield SlugDependency(libraryName, version, group, artifact, meta = "fromPom")
+    } yield SlugDependency(libraryPath, version, group, artifact, meta = "fromPom")
+  }
+
+  val versionFilenameRegex = "(.+?)\\.([\\w|\\d|\\-]+)(_2.\\d+){0,1}-(.+)\\.jar".r
+
+  def extractVersionFromFilepath(libraryPath: String): Option[SlugDependency] = {
+    val filename = java.nio.file.Paths.get(libraryPath).getFileName.toString
+    versionFilenameRegex.findFirstMatchIn(filename)
+      .map { x => SlugDependency(
+                      libraryPath
+                    , version  = x.group(4)
+                    , group    = x.group(1)
+                    , artifact = x.group(2)
+                    , meta     = "fromFilename"
+                    )
+           }
   }
 }
