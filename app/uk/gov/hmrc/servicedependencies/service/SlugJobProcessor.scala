@@ -273,17 +273,13 @@ object SlugParser {
   def extractVersionFromFilepath(libraryPath: String): Option[SlugDependency] = {
     val filename = java.nio.file.Paths.get(libraryPath).getFileName.toString
     versionFilenameRegex.findFirstMatchIn(filename)
-      .flatMap { x =>
-        val version  = x.group(4)
-        if (version.endsWith("-assets") || version.endsWith("-sans-externalized"))
-          None
-        else Some(SlugDependency(
+      .map { x => SlugDependency(
                       libraryPath
                     , version  = x.group(4)
                     , group    = x.group(1)
                     , artifact = x.group(2)
                     , meta     = "fromFilename"
-                    ))
-      }
+                    )
+           }
   }
 }
