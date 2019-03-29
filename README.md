@@ -47,6 +47,12 @@ repositoryDependencies.metricsGauges.enabled   # enable the metrics reporter
 repositoryDependencies.metricsGauges.interval  # how often stats are uploaded
 ````
 
+### Backfill
+
+All the latest versions of slugs can be looked up from Artifactory and processed. Generally this will not be necessary, as the schedulers will process new slugs as the are identified in Artifactory, but it can be required for an initial deployment, or a change in parsing rules.
+
+To run the backfill, drop the slugParserJobs collection, and call the admin endpoint `POST api/admin/dependencies/slug-parser-jobs/backfill`.
+
 ### License
 
 This code is open source software licensed under the [Apache 2.0 License]("http://www.apache.org/licenses/LICENSE-2.0.html")

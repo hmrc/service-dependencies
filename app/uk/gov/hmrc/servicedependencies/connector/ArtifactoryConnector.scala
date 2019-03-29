@@ -76,7 +76,7 @@ class ArtifactoryConnector @Inject()(http: HttpClient, config: ServiceDependenci
           .filter(_.startsWith(s"${config.artifactoryBase}/api/storage/webstore-local/slugs/"))
           .filter(uri => uri.endsWith(".tgz") || uri.endsWith(".tar.gz"))
           .map(ArtifactoryConnector.toDownloadURL)
-          .map(url => NewSlugParserJob(url))
+          .map(NewSlugParserJob.apply)
           .toList
       }
   }
@@ -91,15 +91,6 @@ class ArtifactoryConnector @Inject()(http: HttpClient, config: ServiceDependenci
 
 
 object ArtifactoryConnector {
-
-  def convertToSlugParserJob(serviceName: String, uri: String, webStoreRoot: String): NewSlugParserJob =
-    NewSlugParserJob(
-      slugUri   = s"$webStoreRoot$serviceName$uri",
-      processed = false)
-
-  def convertToWebStoreURL(url: String): String =
-    url.replace("https://artefacts.", "https://webstore.")
-       .replace("/artifactory/webstore", "")
 
   def toDownloadURL(url: String): String =
     url.replace("https://artefacts.", "https://webstore.")

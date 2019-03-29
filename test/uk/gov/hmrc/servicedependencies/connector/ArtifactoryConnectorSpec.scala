@@ -22,26 +22,6 @@ class ArtifactoryConnectorSpec extends FlatSpec
   with Matchers
   with MockitoSugar {
 
-
-  "convertToWebstoreURL" should "convert an artifactory link to a webstore link" in {
-    val url = "https://artefacts.test.test.test.uk/artifactory/webstore/slugs/pensions-frontend/pensions-frontend_2.62.0-5-g11e827d_0.5.2.tgz"
-    val res = ArtifactoryConnector.convertToWebStoreURL(url)
-    res shouldBe "https://webstore.test.test.test.uk/slugs/pensions-frontend/pensions-frontend_2.62.0-5-g11e827d_0.5.2.tgz"
-  }
-
-
-  "convertToSlugParserJob" should "convert a uri to a MongoSlugParserJob" in {
-
-    val service = "/pensions-frontend"
-    val slug = "/pensions-frontend_2.62.0-5-g11e827d_0.5.2.tgz"
-    val webroot = "https://webstore.test.uk/slugs"
-
-    val result = ArtifactoryConnector.convertToSlugParserJob(service, slug, webroot)
-
-    result.slugUri shouldBe "https://webstore.test.uk/slugs/pensions-frontend/pensions-frontend_2.62.0-5-g11e827d_0.5.2.tgz"
-  }
-
-
   "toDownloadURL" should "Convert an artifactory API link to a downloadable url" in {
 
     val url = "https://artefacts.test.test.test.uk/artifactory/api/storage/webstore-local/slugs/api-platform-test-user/api-platform-test-user_0.73.0_0.5.2.tgz"
@@ -50,6 +30,4 @@ class ArtifactoryConnectorSpec extends FlatSpec
 
     res shouldBe "https://webstore.test.test.test.uk/slugs/api-platform-test-user/api-platform-test-user_0.73.0_0.5.2.tgz"
   }
-
-
 }

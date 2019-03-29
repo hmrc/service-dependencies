@@ -33,15 +33,13 @@ object MongoSlugParserJob {
 }
 
 case class NewSlugParserJob(
-  slugUri  : String,
-  processed: Boolean = false)
+    slugUri: String
+  )
 
 object NewSlugParserJob {
   import play.api.libs.json._
   import play.api.libs.functional.syntax._
 
   implicit val reads: Reads[NewSlugParserJob] =
-    ( (__ \ "slugUri").read[String]
-    ~ Reads.pure(false)
-    )(NewSlugParserJob.apply _)
+    (__ \ "slugUri").read[String].map(NewSlugParserJob.apply _)
 }

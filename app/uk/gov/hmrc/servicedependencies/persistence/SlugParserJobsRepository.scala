@@ -54,7 +54,7 @@ class SlugParserJobsRepository @Inject()(mongo: ReactiveMongoComponent)
       .insert(
         MongoSlugParserJob(
           slugUri       = newJob.slugUri,
-          processed     = newJob.processed,
+          processed     = false,
           attempts      = 0
         ))
       .map(_ => true)
