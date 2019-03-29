@@ -95,8 +95,8 @@ trait MongoSlugInfoFormats {
     ~ (__ \ "artefact").format[String]
     ~ (__ \ "version" ).format[String]
     ~ (__ \ "configs" ).format[Map[String, String]]
-                       .inmap[Map[String, String]]( _.map { case (k, v) => (k.replaceAll("_DOT_", "."), v) }
-                                                  , _.map { case (k, v) => (k.replaceAll("\\.", "_DOT_"), v) }
+                       .inmap[Map[String, String]]( _.map { case (k, v) => (k.replaceAll("_DOT_", "."    ), v) }  // for mongo < 3.6 compatibility - '.' and '$'' not permitted in keys
+                                                  , _.map { case (k, v) => (k.replaceAll("\\."  , "_DOT_"), v) }
                                                   )
     )(DependencyConfig.apply, unlift(DependencyConfig.unapply))
 }
