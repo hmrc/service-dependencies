@@ -16,6 +16,8 @@
 
 package uk.gov.hmrc.servicedependencies.service
 
+import cats.instances.all._
+import cats.syntax.all._
 import com.google.inject.{Inject, Singleton}
 import org.slf4j.LoggerFactory
 import uk.gov.hmrc.http.HeaderCarrier
@@ -62,15 +64,27 @@ class SlugInfoService @Inject()(
   def updateMetaData(implicit hc: HeaderCarrier): Future[Unit] = {
     import ServiceDeploymentsConnector._
     for {
+      serviceNames           <- slugInfoRepository.getUniqueSlugNames
       serviceDeploymentInfos <- serviceDeploymentsConnector.getWhatIsRunningWhere
-      _                      <- Future.sequence {
-                                  serviceDeploymentInfos.flatMap {
-                                    case ServiceDeploymentInformation(serviceName, deployments) =>
-                                      deployments.map {
-                                        case Deployment(Some(Environment.Production), version) => slugInfoRepository.markProduction(serviceName, version)
-                                        case Deployment(Some(Environment.QA        ), version) => slugInfoRepository.markQa(serviceName, version)
-                                        case Deployment(optEnv, version)                       => Future(())
-                                      }
+      allServiceDeployments  =  serviceNames.map { serviceName =>
+                                  val deployments       = serviceDeploymentInfos.find(_.serviceName == serviceName).map(_.deployments)
+                                  val deploymentsByFlag = List( (SlugInfoFlag.Production, Environment.Production)
+                                                              , (SlugInfoFlag.QA        , Environment.QA)
+                                                              )
+                                                           .map { case (flag, env) =>
+                                                                    ( flag
+                                                                    , deployments.flatMap(
+                                                                          _.find(_.optEnvironment == Some(env))
+                                                                            .map(_.version)
+                                                                        )
+                                                                    )
+                                                                }
+                                  (serviceName, deploymentsByFlag)
+                                }
+      _                      <- allServiceDeployments.toList.traverse { case (serviceName, deployments) =>
+                                  deployments.traverse {
+                                    case (flag, None         ) => slugInfoRepository.clearFlag(flag, serviceName)
+                                    case (flag, Some(version)) => slugInfoRepository.setFlag(flag, serviceName, version)
                                   }
                                 }
     } yield ()

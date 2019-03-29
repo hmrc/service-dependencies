@@ -69,6 +69,10 @@ class SlugInfoRepository @Inject()(mongo: ReactiveMongoComponent)
   def clearAllData: Future[Boolean] =
     super.removeAll().map(_.ok)
 
+  def getUniqueSlugNames: Future[Seq[String]] =
+    collection
+      .distinct[String, Seq]("name", None)
+
   def getSlugInfos(name: String, optVersion: Option[String]): Future[Seq[SlugInfo]] =
     optVersion match {
       case None          => find("name" -> name)
@@ -81,34 +85,32 @@ class SlugInfoRepository @Inject()(mongo: ReactiveMongoComponent)
       flag.s -> true)
       .map(_.headOption)
 
+  def clearFlag(flag: SlugInfoFlag, name: String): Future[Unit] = {
+    logger.info(s"clear ${flag.s} flag on $name")
+    collection
+      .update(
+          selector = Json.obj("name" -> name)
+        , update   = Json.obj("$set" -> Json.obj(flag.s -> false))
+        , multi    = true
+        )
+      .map(_ => ())
+  }
+
   def markLatest(name: String, version: Version): Future[Unit] =
     setFlag(SlugInfoFlag.Latest, name, version)
 
-  def markProduction(name: String, version: Version): Future[Unit] =
-    setFlag(SlugInfoFlag.Production, name, version)
-
-  def markQa(name: String, version: Version): Future[Unit] =
-    setFlag(SlugInfoFlag.QA, name, version)
-
-  def setFlag(flag: SlugInfoFlag, name: String, version: Version): Future[Unit] = {
-    logger.info(s"mark slug $name $version with ${flag.s} flag")
+  def setFlag(flag: SlugInfoFlag, name: String, version: Version): Future[Unit] =
     for {
-    _ <- collection
-          .update(
-              selector = Json.obj("name" -> name)
-            , update   = Json.obj("$set" -> Json.obj(flag.s -> false))
-            , multi    = true
-            )
-    _ <- collection
-          .update(
-              selector = Json.obj( "name"    -> name
-                                 , "version" -> version.original
-                                 )
-            , update   = Json.obj("$set" -> Json.obj(flag.s -> true))
-            )
+      _ <- clearFlag(flag, name)
+      _ =  logger.info(s"mark slug $name $version with ${flag.s} flag")
+      _ <- collection
+            .update(
+                selector = Json.obj( "name"    -> name
+                                   , "version" -> version.original
+                                   )
+              , update   = Json.obj("$set" -> Json.obj(flag.s -> true))
+              )
     } yield ()
-  }
-
 
 
   private val readerServiceDependency = new BSONDocumentReader[ServiceDependency]{
