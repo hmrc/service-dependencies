@@ -64,6 +64,37 @@ class SlugParserSpec extends FlatSpec with Matchers {
       meta     = "fromPom"))
   }
 
+  "extractVersionFromFilepath" should "extract the correct version from filepath" in {
+    val is = new ByteArrayInputStream(pomParent.getBytes(StandardCharsets.UTF_8))
+    SlugParser.extractVersionFromFilepath("./cbcr-1.97.0/lib/xml-apis.xml-apis-1.4.01.jar") shouldBe Some(SlugDependency(
+      "./cbcr-1.97.0/lib/xml-apis.xml-apis-1.4.01.jar",
+      version  = "1.4.01",
+      group    = "xml-apis",
+      artifact = "xml-apis",
+      meta     = "fromFilename"))
+  }
+
+  it should "extract the correct version from filepath for cross compiled for scala" in {
+    val is = new ByteArrayInputStream(pomParent.getBytes(StandardCharsets.UTF_8))
+    SlugParser.extractVersionFromFilepath("./cbcr-1.97.0/lib/com.typesafe.akka.akka-actor_2.11-2.5.18.jar") shouldBe Some(SlugDependency(
+      "./cbcr-1.97.0/lib/com.typesafe.akka.akka-actor_2.11-2.5.18.jar",
+      version  = "2.5.18",
+      group    = "com.typesafe.akka",
+      artifact = "akka-actor",
+      meta     = "fromFilename"))
+  }
+
+  it should "extract the correct version from filepath with version suffix" in {
+    val is = new ByteArrayInputStream(pomParent.getBytes(StandardCharsets.UTF_8))
+    SlugParser.extractVersionFromFilepath("./cbcr-1.97.0/lib/uk.gov.hmrc.play-auditing_2.11-3.16.0-play-25.jar") shouldBe Some(SlugDependency(
+      "./cbcr-1.97.0/lib/uk.gov.hmrc.play-auditing_2.11-3.16.0-play-25.jar",
+      version  = "3.16.0-play-25",
+      group    = "uk.gov.hmrc",
+      artifact = "play-auditing",
+      meta     = "fromFilename"))
+  }
+
+
   "extractConfFromJar" should "extract the version from a jar built with sbt" in {
     val is = new BufferedInputStream(getClass.getResourceAsStream("/slugs/example-ivy_2.11-3.2.0.jar"))
     val (optDependency, configs) = SlugParser.parseJar("bob.jar", is)
