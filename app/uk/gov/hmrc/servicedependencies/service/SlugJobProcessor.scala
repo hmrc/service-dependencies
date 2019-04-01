@@ -268,7 +268,7 @@ object SlugParser {
     } yield SlugDependency(libraryPath, version, group, artifact, meta = "fromPom")
   }
 
-  val versionFilenameRegex = "(.+?)\\.([\\w|\\d|\\-]+)(_2.\\d+){0,1}-(.+)\\.jar".r
+  val versionFilenameRegex = "(.+?)\\.([\\w|\\d|\\-]+)(_2.\\d+){0,1}-(\\d.*)\\.jar".r
 
   def extractVersionFromFilepath(libraryPath: String): Option[SlugDependency] = {
     val filename = java.nio.file.Paths.get(libraryPath).getFileName.toString
