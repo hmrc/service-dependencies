@@ -94,13 +94,22 @@ class SlugParserSpec extends FlatSpec with Matchers {
       meta     = "fromFilename"))
   }
 
+  it should "extract the correct version from filepath with version suffix without scala version" in {
+    val is = new ByteArrayInputStream(pomParent.getBytes(StandardCharsets.UTF_8))
+    SlugParser.extractVersionFromFilepath("./bbsi-stubs-999-SNAPSHOT/lib/uk.gov.hmrc.bbsi-stubs-999-SNAPSHOT-assets.jar") shouldBe Some(SlugDependency(
+      "./bbsi-stubs-999-SNAPSHOT/lib/uk.gov.hmrc.bbsi-stubs-999-SNAPSHOT-assets.jar",
+      version  = "999-SNAPSHOT-assets",
+      group    = "uk.gov.hmrc",
+      artifact = "bbsi-stubs",
+      meta     = "fromFilename"))
+  }
 
   "extractConfFromJar" should "extract the version from a jar built with sbt" in {
     val is = new BufferedInputStream(getClass.getResourceAsStream("/slugs/example-ivy_2.11-3.2.0.jar"))
     val (optDependency, configs) = SlugParser.parseJar("bob.jar", is)
     val output = optDependency.get
-    output.version   shouldBe "3.2.0"
-    output.group     shouldBe "uk.gov.hmrc"
+    output.version  shouldBe "3.2.0"
+    output.group    shouldBe "uk.gov.hmrc"
     output.artifact shouldBe "time"
   }
 
