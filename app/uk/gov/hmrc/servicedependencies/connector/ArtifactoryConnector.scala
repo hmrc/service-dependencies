@@ -22,7 +22,7 @@ import javax.inject.{Inject, Singleton}
 import org.joda.time.{Duration, Instant}
 import play.api.Logger
 import play.api.libs.json._
-import uk.gov.hmrc.http.HeaderCarrier
+import uk.gov.hmrc.http.{HeaderCarrier, NotFoundException}
 import uk.gov.hmrc.http.logging.Authorization
 import uk.gov.hmrc.play.bootstrap.http.HttpClient
 import uk.gov.hmrc.servicedependencies.config.ServiceDependenciesConfig
@@ -78,6 +78,9 @@ class ArtifactoryConnector @Inject()(http: HttpClient, config: ServiceDependenci
           .map(ArtifactoryConnector.toDownloadURL)
           .map(NewSlugParserJob.apply)
           .toList
+      }
+      .recover {
+        case _: NotFoundException => List.empty
       }
   }
 

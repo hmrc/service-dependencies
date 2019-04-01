@@ -17,14 +17,13 @@
 package uk.gov.hmrc.servicedependencies.persistence
 
 import com.google.inject.{Inject, Singleton}
-import play.api.libs.json.{JsResult, JsValue, Json, OFormat}
+import play.api.libs.json.{Json, OFormat}
 import play.modules.reactivemongo.ReactiveMongoComponent
 import reactivemongo.api.Cursor
 import reactivemongo.api.collections.bson.BSONCollection
 import reactivemongo.api.indexes.{Index, IndexType}
 import reactivemongo.bson.{BSONDocument, BSONDocumentReader, BSONObjectID}
 import reactivemongo.play.json.ImplicitBSONHandlers._
-import reactivemongo.play.json.JSONSerializationPack.Reader
 import uk.gov.hmrc.mongo.ReactiveRepository
 import uk.gov.hmrc.servicedependencies.model._
 
@@ -189,7 +188,7 @@ class SlugInfoRepository @Inject()(mongo: ReactiveMongoComponent)
 
   def findGroupsArtefacts: Future[Seq[GroupArtefacts]] = {
     val col: BSONCollection = mongo.mongoConnector.db().collection(collectionName)
-    import col.BatchCommands.AggregationFramework.{AddFieldToSet, Ascending, Group, Project, Sort, UnwindField}
+    import col.BatchCommands.AggregationFramework.{AddFieldToSet, Ascending, Group, Match, Project, Sort, UnwindField}
     import reactivemongo.bson._
     implicit val rga = readerGroupArtefacts
 
@@ -199,6 +198,7 @@ class SlugInfoRepository @Inject()(mongo: ReactiveMongoComponent)
       )
       , List(
           UnwindField("dependencies")
+        , Match(document("dependencies.version" -> document("$regex" -> "^(?!.*-assets$)(?!.*-sans-externalized$).*$"))) // exclude slug internals
         , Group(BSONString("$dependencies.group"))("artifacts" -> AddFieldToSet("dependencies.artifact"))
         , Sort(Ascending("_id"))
         )
@@ -210,12 +210,19 @@ class SlugInfoRepository @Inject()(mongo: ReactiveMongoComponent)
   }
 
   def findJDKUsage(flag: SlugInfoFlag) : Future[Seq[JDKVersion]] = {
-
-    val query = BSONDocument(flag.s -> true, "jdkVersion" -> BSONDocument("$ne" -> ""), "name" -> BSONDocument("$nin" -> SlugBlacklist.blacklistedSlugs))
-    val projection = BSONDocument("name" -> 1, "jdkVersion" -> 1, "flag" -> flag.s)
     implicit val reads: OFormat[JDKVersion] = JDKVersionFormats.jdkFormat
-
-    collection.find(query, Some(projection))
+    collection.find(
+          selector   = BSONDocument(
+                           flag.s       -> true
+                         , "jdkVersion" -> BSONDocument("$ne" -> "")
+                         , "name"       -> BSONDocument("$nin" -> SlugBlacklist.blacklistedSlugs)
+                         )
+        , projection = Some(BSONDocument(
+                           "name"       -> 1
+                         , "jdkVersion" -> 1
+                         , "flag"       -> flag.s
+                         ))
+        )
       .cursor[JDKVersion]()
       .collect(-1, Cursor.FailOnError[List[JDKVersion]]())
   }
