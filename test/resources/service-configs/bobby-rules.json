@@ -1,0 +1,10 @@
+{
+  "libraries":
+  [
+    { "organisation" : "uk.gov.hmrc", "name" : "play-frontend", "range" : "(,99.99.99)", "reason" : "Post Play Frontend upgrade", "from" : "2015-11-02" }
+  ],
+  "plugins":
+  [
+    { "organisation" : "uk.gov.hmrc", "name" : "sbt-auto-build", "range" : "(,1.4.0)", "reason" : "Play 2.5 upgrade", "from" : "2017-05-01" }
+  ]
+}
