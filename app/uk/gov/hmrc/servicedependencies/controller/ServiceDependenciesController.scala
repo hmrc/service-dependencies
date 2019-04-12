@@ -22,7 +22,7 @@ import cats.syntax.all._
 import com.google.inject.{Inject, Singleton}
 import org.slf4j.LoggerFactory
 import play.api.Configuration
-import play.api.libs.json.Json
+import play.api.libs.json.{Json, OFormat, OWrites}
 import play.api.mvc._
 import uk.gov.hmrc.play.bootstrap.controller.BackendController
 import uk.gov.hmrc.servicedependencies.config.ServiceDependenciesConfig
@@ -44,12 +44,10 @@ class ServiceDependenciesController @Inject()(
   )(implicit ec: ExecutionContext)
     extends BackendController(cc) {
 
-  val logger = LoggerFactory.getLogger(this.getClass)
+  implicit val dependenciesFormat: OWrites[Dependencies] = Dependencies.format
+  implicit val jdkVersionFormat: OFormat[JDKVersion] = JDKVersionFormats.jdkFormat
 
-  implicit val dependenciesFormat = Dependencies.format
-  implicit val jdkVersionFormat   = JDKVersionFormats.jdkFormat
-
-  def getDependencyVersionsForRepository(repositoryName: String) =
+  def getDependencyVersionsForRepository(repositoryName: String): Action[AnyContent] =
     Action.async { implicit request =>
       dependencyDataUpdatingService
         .getDependencyVersionsForRepository(repositoryName)
@@ -59,21 +57,21 @@ class ServiceDependenciesController @Inject()(
         }
     }
 
-  def dependencies() =
+  def dependencies(): Action[AnyContent] =
     Action.async { implicit request =>
-      dependencyDataUpdatingService.getDependencyVersionsForAllRepositories
+      dependencyDataUpdatingService.getDependencyVersionsForAllRepositories()
         .map(res => Ok(Json.toJson(res)))
     }
 
-  def slugInfos(name: String, version: Option[String]) =
+  def slugInfos(name: String, version: Option[String]): Action[AnyContent] =
     Action.async { implicit request =>
-      implicit val format = ApiSlugInfoFormats.siFormat
+      implicit val format: OFormat[SlugInfo] = ApiSlugInfoFormats.siFormat
       slugInfoService
         .getSlugInfos(name, version)
         .map(res => Ok(Json.toJson(res)))
     }
 
-  def dependenciesForTeam(team: String) =
+  def dependenciesForTeam(team: String): Action[AnyContent] =
     Action.async { implicit request =>
       for {
         teamRepos <- teamsAndRepositoriesConnector.getTeam(team)
@@ -85,37 +83,37 @@ class ServiceDependenciesController @Inject()(
       } yield Ok(Json.toJson(teamDeps))
     }
 
-  def getServicesWithDependency(flag: String, group: String, artefact: String) =
+  def getServicesWithDependency(flag: String, group: String, artefact: String): Action[AnyContent] =
     Action.async { implicit request =>
       SlugInfoFlag.parse(flag) match {
         case None       => Future(BadRequest("invalid flag"))
-        case Some(flag) => implicit val format = ApiServiceDependencyFormats.sdFormat
+        case Some(f) => implicit val format: OFormat[ServiceDependency] = ApiServiceDependencyFormats.sdFormat
                            slugInfoService
-                             .findServicesWithDependency(flag, group, artefact)
+                             .findServicesWithDependency(f, group, artefact)
                              .map(res => Ok(Json.toJson(res)))
       }
     }
 
-  def getGroupArtefacts =
+  def getGroupArtefacts: Action[AnyContent] =
     Action.async { implicit request =>
-      implicit val format = GroupArtefacts.apiFormat
+      implicit val format: OFormat[GroupArtefacts] = GroupArtefacts.apiFormat
       slugInfoService.findGroupsArtefacts
         .map(res => Ok(Json.toJson(res)))
     }
 
-  def slugInfo(name: String, flag: String) =
+  def slugInfo(name: String, flag: String): Action[AnyContent] =
     Action.async { implicit request =>
       SlugInfoFlag.parse(flag) match {
         case None       => Future(BadRequest("invalid flag"))
-        case Some(flag) => implicit val format = ApiSlugInfoFormats.siFormat
-                           slugInfoService.getSlugInfo(name, flag).map {
+        case Some(f) => implicit val format: OFormat[SlugInfo] = ApiSlugInfoFormats.siFormat
+                           slugInfoService.getSlugInfo(name, f).map {
                              case None      => NotFound("")
                              case Some(res) => Ok(Json.toJson(res))
                            }
       }
     }
 
-  def dependencyConfig(group: String, artefact: String, version: String) =
+  def dependencyConfig(group: String, artefact: String, version: String): Action[AnyContent] =
     Action.async { implicit request =>
       slugInfoService
         .findDependencyConfig(group, artefact, version)
@@ -125,9 +123,9 @@ class ServiceDependenciesController @Inject()(
         }
     }
 
-  def slugDependencyConfigs(name: String, flag: String) =
+  def slugDependencyConfigs(name: String, flag: String): Action[AnyContent] =
     Action.async { implicit request =>
-      implicit val format = ApiSlugInfoFormats.dcFormat
+      implicit val format: OFormat[DependencyConfig] = ApiSlugInfoFormats.dcFormat
       (for {
        flag     <- OptionT
                      .fromOption[Future](SlugInfoFlag.parse(flag))
@@ -144,13 +142,13 @@ class ServiceDependenciesController @Inject()(
     }
 
 
-    def findJDKForEnvironment(flag: String) =
+    def findJDKForEnvironment(flag: String): Action[AnyContent] =
       Action.async { implicit request =>
         SlugInfoFlag.parse(flag) match {
           case None => Future(BadRequest("invalid flag"))
-          case Some(flag) =>
+          case Some(f) =>
             slugInfoService
-              .findJDKVersions(flag)
+              .findJDKVersions(f)
               .map(res => Ok(Json.toJson(res)))
         }
       }
