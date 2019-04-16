@@ -119,6 +119,10 @@ class BobbyVersionRangeSpec extends FlatSpec with Matchers {
     BobbyVersionRange("[1.2.0,1.3.0]").includes(Version("1.2.5")) shouldBe true
   }
 
+  it should "include 2.3 when the expression is (,2.4]" in {
+    BobbyVersionRange("(,2.4.0]").includes(Version("2.3")) shouldBe true
+  }
+
   it should "include 0.2.0 when the expression is (,1.0.0]" in {
     BobbyVersionRange("(,1.0.0]").includes(Version("0.2.0")) shouldBe true
   }

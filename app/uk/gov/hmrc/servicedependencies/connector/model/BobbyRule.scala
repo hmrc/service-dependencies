@@ -19,13 +19,22 @@ package uk.gov.hmrc.servicedependencies.connector.model
 import java.time.LocalDate
 
 import play.api.libs.json.{Json, Reads}
+import uk.gov.hmrc.servicedependencies.controller.model.DependencyBobbyRule
 
 final case class BobbyRule(
   organisation: String,
   name: String,
   range: BobbyVersionRange,
   reason: String,
-  from: LocalDate)
+  from: LocalDate) {
+
+  def asDependencyBobbyRule(): DependencyBobbyRule =
+    DependencyBobbyRule(
+      reason = this.reason,
+      from   = this.from,
+      range  = this.range
+    )
+}
 
 object BobbyRule {
   implicit val brf: Reads[BobbyRule] = Json.reads[BobbyRule]

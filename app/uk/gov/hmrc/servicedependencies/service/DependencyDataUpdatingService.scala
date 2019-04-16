@@ -30,14 +30,14 @@ import scala.concurrent.Future
 
 @Singleton
 class DependencyDataUpdatingService @Inject()(
-  curatedDependencyConfigProvider        : CuratedDependencyConfigProvider,
+  curatedDependencyConfigProvider: CuratedDependencyConfigProvider,
   repositoryLibraryDependenciesRepository: RepositoryLibraryDependenciesRepository,
-  libraryVersionRepository               : LibraryVersionRepository,
-  sbtPluginVersionRepository             : SbtPluginVersionRepository,
-  locksRepository                        : LocksRepository,
-  mongoLocks                             : MongoLocks,
-  dependenciesDataSource                 : DependenciesDataSource,
-  slugParserJobsRepository               : SlugParserJobsRepository
+  libraryVersionRepository: LibraryVersionRepository,
+  sbtPluginVersionRepository: SbtPluginVersionRepository,
+  locksRepository: LocksRepository,
+  mongoLocks: MongoLocks,
+  dependenciesDataSource: DependenciesDataSource,
+  slugParserJobsRepository: SlugParserJobsRepository
 ) {
 
   lazy val logger = LoggerFactory.getLogger(this.getClass)
@@ -86,21 +86,23 @@ class DependencyDataUpdatingService @Inject()(
   }
 
   private def runMongoUpdate[T](mongoLock: MongoLock)(f: => Future[Seq[T]]) =
-    mongoLock.tryLock {
-      logger.debug(s"Starting mongo update for ${mongoLock.lockId}")
-      f
-    }.map {
-      case Some(r) =>
-        logger.debug(s"mongo update completed ${mongoLock.lockId}")
-        r
-      case None =>
-        logger.debug(s"Mongo is locked for ${mongoLock.lockId}... skipping update")
-        Seq.empty
-    }
+    mongoLock
+      .tryLock {
+        logger.debug(s"Starting mongo update for ${mongoLock.lockId}")
+        f
+      }
+      .map {
+        case Some(r) =>
+          logger.debug(s"mongo update completed ${mongoLock.lockId}")
+          r
+        case None =>
+          logger.debug(s"Mongo is locked for ${mongoLock.lockId}... skipping update")
+          Seq.empty
+      }
 
   def getSbtPluginDependencyState(
-      repositoryDependencies: MongoRepositoryDependencies,
-      sbtPluginReferences   : Seq[MongoSbtPluginVersion]) =
+    repositoryDependencies: MongoRepositoryDependencies,
+    sbtPluginReferences: Seq[MongoSbtPluginVersion]) =
     repositoryDependencies.sbtPluginDependencies.map { sbtPluginDependency =>
       val mayBeExternalSbtPlugin =
         curatedDependencyConfig.sbtPlugins
@@ -108,10 +110,9 @@ class DependencyDataUpdatingService @Inject()(
 
       val latestVersion =
         mayBeExternalSbtPlugin
-          .map(_
-            .version
-            .getOrElse(sys.error(s"External sbt plugin ($mayBeExternalSbtPlugin) must specify the (latest) version"))
-          )
+          .map(
+            _.version
+              .getOrElse(sys.error(s"External sbt plugin ($mayBeExternalSbtPlugin) must specify the (latest) version")))
           .orElse(
             sbtPluginReferences
               .find(_.sbtPluginName == sbtPluginDependency.name)
@@ -122,6 +123,7 @@ class DependencyDataUpdatingService @Inject()(
         sbtPluginDependency.name,
         sbtPluginDependency.currentVersion,
         latestVersion,
+        List.empty,
         mayBeExternalSbtPlugin.isDefined
       )
     }
@@ -140,14 +142,17 @@ class DependencyDataUpdatingService @Inject()(
               Dependency(
                 d.name,
                 d.currentVersion,
-                libraryReferences.find(mlv => mlv.libraryName == d.name).flatMap(_.version))),
+                libraryReferences.find(mlv => mlv.libraryName == d.name).flatMap(_.version),
+                List.empty
+            )),
           getSbtPluginDependencyState(dep, sbtPluginReferences),
           dep.otherDependencies.map(
             other =>
               Dependency(
                 other.name,
                 other.currentVersion,
-                curatedDependencyConfig.otherDependencies.find(_.name == "sbt").flatMap(_.latestVersion))),
+                curatedDependencyConfig.otherDependencies.find(_.name == "sbt").flatMap(_.latestVersion),
+                List.empty)),
           dep.updateDate
         )
       }
@@ -166,14 +171,16 @@ class DependencyDataUpdatingService @Inject()(
               Dependency(
                 d.name,
                 d.currentVersion,
-                libraryReferences.find(_.libraryName == d.name).flatMap(_.version))),
+                libraryReferences.find(_.libraryName == d.name).flatMap(_.version),
+                List.empty)),
           getSbtPluginDependencyState(dep, sbtPluginReferences),
           dep.otherDependencies.map(
             other =>
               Dependency(
                 other.name,
                 other.currentVersion,
-                curatedDependencyConfig.otherDependencies.find(_.name == "sbt").flatMap(_.latestVersion))),
+                curatedDependencyConfig.otherDependencies.find(_.name == "sbt").flatMap(_.latestVersion),
+                List.empty)),
           dep.updateDate
         )
       }
