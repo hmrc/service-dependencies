@@ -16,8 +16,6 @@
 
 package uk.gov.hmrc.servicedependencies.connector
 
-import java.util.concurrent.TimeUnit
-
 import javax.inject.Inject
 import play.api.cache.AsyncCacheApi
 import uk.gov.hmrc.http.HeaderCarrier
@@ -33,11 +31,12 @@ class ServiceConfigsConnector @Inject()(httpClient: HttpClient, servicesConfig: 
   import ExecutionContext.Implicits.global
 
   private val serviceUrl: String = servicesConfig.baseUrl("service-configs")
-  private val cacheExpiration: Duration = servicesConfig.getConfDuration("service-configs.cache.expiration", Duration(1, TimeUnit.HOURS))
+  private val cacheExpiration: Duration =
+    servicesConfig
+      .getDuration("microservice.services.service-configs.cache.expiration")
 
-  def getBobbyRules()(implicit hc: HeaderCarrier): Future[DeprecatedDependencies] = {
-    cache.getOrElseUpdate("bobby-rules", cacheExpiration){
+  def getBobbyRules()(implicit hc: HeaderCarrier): Future[DeprecatedDependencies] =
+    cache.getOrElseUpdate("bobby-rules", cacheExpiration) {
       httpClient.GET[DeprecatedDependencies](s"$serviceUrl/bobby/rules")
     }
-  }
 }
