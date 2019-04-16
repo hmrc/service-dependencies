@@ -22,6 +22,6 @@ final case class DeprecatedDependencies(libraries: List[BobbyRule], plugins: Lis
 
 object DeprecatedDependencies {
 
-  implicit val ddf = Json.format[DeprecatedDependencies]
+  implicit val ddr = Json.reads[DeprecatedDependencies]
 
 }

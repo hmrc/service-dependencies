@@ -15,18 +15,6 @@
  */
 
 package uk.gov.hmrc.servicedependencies.connector.model
+import uk.gov.hmrc.servicedependencies.model.Version
 
-import java.time.LocalDate
-
-import play.api.libs.json.{Json, Reads}
-
-final case class BobbyRule(
-  organisation: String,
-  name: String,
-  range: BobbyVersionRange,
-  reason: String,
-  from: LocalDate)
-
-object BobbyRule {
-  implicit val brf: Reads[BobbyRule] = Json.reads[BobbyRule]
-}
+final case class BobbyVersion(version: Version, inclusive: Boolean)

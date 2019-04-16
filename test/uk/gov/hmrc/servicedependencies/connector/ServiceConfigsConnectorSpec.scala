@@ -27,8 +27,7 @@ import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.servicedependencies.WireMockConfig
-import uk.gov.hmrc.servicedependencies.connector.model.{BobbyRule, DeprecatedDependencies}
-
+import uk.gov.hmrc.servicedependencies.connector.model.{BobbyRule, BobbyVersionRange, DeprecatedDependencies}
 
 class ServiceConfigsConnectorSpec
   extends FreeSpec
@@ -39,11 +38,9 @@ class ServiceConfigsConnectorSpec
   with GuiceOneAppPerSuite
   with MockitoSugar {
 
-
-  implicit val hc = HeaderCarrier()
+  implicit val hc: HeaderCarrier = HeaderCarrier()
 
   val wireMock = new WireMockConfig()
-
 
   override protected def beforeAll(): Unit = {
     wireMock.start()
@@ -64,7 +61,6 @@ class ServiceConfigsConnectorSpec
 
   private val services = app.injector.instanceOf[ServiceConfigsConnector]
 
-
   "Retrieving bobby rules" - {
     "correctly parse json response" in {
 
@@ -73,22 +69,20 @@ class ServiceConfigsConnectorSpec
       val playFrontend = BobbyRule(
         organisation = "uk.gov.hmrc",
         name = "play-frontend",
-        range = "(,99.99.99)",
+        range = BobbyVersionRange("(,99.99.99)"),
         reason = "Post Play Frontend upgrade",
         from = LocalDate.of(2015, 11, 2)
       )
 
-
       val sbtAutoBuild = BobbyRule(
         organisation = "uk.gov.hmrc",
         name = "sbt-auto-build",
-        range = "(,1.4.0)",
+        range = BobbyVersionRange("(,1.4.0)"),
         reason = "Play 2.5 upgrade",
         from = LocalDate.of(2017, 5, 1)
-
       )
 
-      deprecatedDependencies mustBe DeprecatedDependencies(libraries = List(playFrontend), plugins = List(sbtAutoBuild))
+      deprecatedDependencies mustEqual DeprecatedDependencies(libraries = List(playFrontend), plugins = List(sbtAutoBuild))
     }
   }
 
