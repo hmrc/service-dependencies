@@ -16,14 +16,13 @@
 
 package uk.gov.hmrc.servicedependencies.connector
 
-import java.util.concurrent.TimeUnit
-
 import javax.inject.Inject
 import play.api.cache.AsyncCacheApi
+import play.api.libs.json.Reads
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
 import uk.gov.hmrc.play.bootstrap.http.HttpClient
-import uk.gov.hmrc.servicedependencies.connector.model.DeprecatedDependencies
+import uk.gov.hmrc.servicedependencies.connector.model.{BobbyRule, DeprecatedDependencies}
 
 import scala.concurrent.duration.Duration
 import scala.concurrent.{ExecutionContext, Future}
@@ -31,13 +30,18 @@ import scala.concurrent.{ExecutionContext, Future}
 class ServiceConfigsConnector @Inject()(httpClient: HttpClient, servicesConfig: ServicesConfig, cache: AsyncCacheApi) {
 
   import ExecutionContext.Implicits.global
+  private implicit val hc: HeaderCarrier                    = HeaderCarrier()
+  private implicit val reads: Reads[DeprecatedDependencies] = DeprecatedDependencies.reads
 
   private val serviceUrl: String = servicesConfig.baseUrl("service-configs")
-  private val cacheExpiration: Duration = servicesConfig.getConfDuration("service-configs.cache.expiration", Duration(1, TimeUnit.HOURS))
+  private val cacheExpiration: Duration =
+    servicesConfig
+      .getDuration("microservice.services.service-configs.cache.expiration")
 
-  def getBobbyRules()(implicit hc: HeaderCarrier): Future[DeprecatedDependencies] = {
-    cache.getOrElseUpdate("bobby-rules", cacheExpiration){
-      httpClient.GET[DeprecatedDependencies](s"$serviceUrl/bobby/rules")
+  def getBobbyRules(): Future[Map[String, List[BobbyRule]]] =
+    cache.getOrElseUpdate("bobby-rules", cacheExpiration) {
+      httpClient
+        .GET[DeprecatedDependencies](s"$serviceUrl/bobby/rules")
+        .map(dependency => (dependency.libraries.toList ++ dependency.plugins).groupBy(_.name))
     }
-  }
 }

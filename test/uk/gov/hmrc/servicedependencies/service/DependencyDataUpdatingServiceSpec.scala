@@ -52,9 +52,9 @@ class DependencyDataUpdatingServiceSpec
       .configure("metrics.jvm" -> false)
       .build()
 
-  val timeForTest = DateTimeUtils.now
+  private val timeForTest = DateTimeUtils.now
 
-  val curatedDependencyConfig = CuratedDependencyConfig(
+  private val curatedDependencyConfig = CuratedDependencyConfig(
     sbtPlugins        = Nil,
     libraries         = Nil,
     otherDependencies = Nil
@@ -208,8 +208,8 @@ class DependencyDataUpdatingServiceSpec
       maybeDependencies.value shouldBe Dependencies(
         repositoryName = repositoryName,
         libraryDependencies = Seq(
-          Dependency("lib1", Version(1, 0, 0), Some(Version(1, 1, 0))),
-          Dependency("lib2", Version(2, 0, 0), Some(Version(2, 1, 0)))
+          Dependency("lib1", Version(1, 0, 0), Some(Version(1, 1, 0)), List.empty),
+          Dependency("lib2", Version(2, 0, 0), Some(Version(2, 1, 0)), List.empty)
         ),
         sbtPluginsDependencies = Nil,
         otherDependencies      = Nil,
@@ -251,8 +251,8 @@ class DependencyDataUpdatingServiceSpec
         repositoryName,
         Nil,
         Seq(
-          Dependency("plugin1", Version(1, 0, 0), Some(Version(3, 1, 0)), false),
-          Dependency("plugin2", Version(2, 0, 0), Some(Version(4, 1, 0)), false)
+          Dependency("plugin1", Version(1, 0, 0), Some(Version(3, 1, 0)), List.empty),
+          Dependency("plugin2", Version(2, 0, 0), Some(Version(4, 1, 0)), List.empty)
         ),
         Nil,
         timeForTest
@@ -301,8 +301,8 @@ class DependencyDataUpdatingServiceSpec
         repositoryName      = repositoryName,
         libraryDependencies = Nil,
         sbtPluginsDependencies = Seq(
-          Dependency("internal-plugin", Version(1, 0, 0), Some(Version(3, 1, 0)), false),
-          Dependency("external-plugin", Version(2, 0, 0), Some(Version(11, 22, 33)), true)
+          Dependency("internal-plugin", Version(1, 0, 0), Some(Version(3, 1, 0)), List.empty),
+          Dependency("external-plugin", Version(2, 0, 0), Some(Version(11, 22, 33)), List.empty, isExternal = true)
         ),
         otherDependencies = Nil,
         timeForTest
@@ -360,8 +360,8 @@ class DependencyDataUpdatingServiceSpec
       maybeDependencies.value shouldBe Dependencies(
         repositoryName = repositoryName,
         libraryDependencies = Seq(
-          Dependency("lib1", Version(1, 0, 0), None),
-          Dependency("lib2", Version(2, 0, 0), None)
+          Dependency("lib1", Version(1, 0, 0), None, List.empty),
+          Dependency("lib2", Version(2, 0, 0), None, List.empty)
         ),
         sbtPluginsDependencies = Nil,
         otherDependencies      = Nil,
@@ -448,30 +448,30 @@ class DependencyDataUpdatingServiceSpec
         Dependencies(
           repositoryName = repository1,
           libraryDependencies = Seq(
-            Dependency("lib1", Version(1, 1, 0), Some(Version(3, 0, 0))),
-            Dependency("lib2", Version(1, 2, 0), Some(Version(4, 0, 0)))
+            Dependency("lib1", Version(1, 1, 0), Some(Version(3, 0, 0)), List.empty),
+            Dependency("lib2", Version(1, 2, 0), Some(Version(4, 0, 0)), List.empty)
           ),
           sbtPluginsDependencies = Seq(
-            Dependency("plugin1", Version(10, 1, 0), Some(Version(30, 0, 0)), false),
-            Dependency("plugin2", Version(10, 2, 0), Some(Version(40, 0, 0)), false)
+            Dependency("plugin1", Version(10, 1, 0), Some(Version(30, 0, 0)), List.empty),
+            Dependency("plugin2", Version(10, 2, 0), Some(Version(40, 0, 0)), List.empty)
           ),
           otherDependencies = Seq(
-            Dependency("sbt", Version(0, 13, 1), Some(Version(100, 10, 1)))
+            Dependency("sbt", Version(0, 13, 1), Some(Version(100, 10, 1)), List.empty)
           ),
           timeForTest
         ),
         Dependencies(
           repositoryName = repository2,
           libraryDependencies = Seq(
-            Dependency("lib1", Version(2, 1, 0), Some(Version(3, 0, 0))),
-            Dependency("lib2", Version(2, 2, 0), Some(Version(4, 0, 0)))
+            Dependency("lib1", Version(2, 1, 0), Some(Version(3, 0, 0)), List.empty),
+            Dependency("lib2", Version(2, 2, 0), Some(Version(4, 0, 0)), List.empty)
           ),
           sbtPluginsDependencies = Seq(
-            Dependency("plugin1", Version(20, 1, 0), Some(Version(30, 0, 0)), false),
-            Dependency("plugin2", Version(20, 2, 0), Some(Version(40, 0, 0)), false)
+            Dependency("plugin1", Version(20, 1, 0), Some(Version(30, 0, 0)), List.empty),
+            Dependency("plugin2", Version(20, 2, 0), Some(Version(40, 0, 0)), List.empty)
           ),
           otherDependencies = Seq(
-            Dependency("sbt", Version(0, 13, 2), Some(Version(100, 10, 1)))
+            Dependency("sbt", Version(0, 13, 2), Some(Version(100, 10, 1)), List.empty)
           ),
           timeForTest
         )

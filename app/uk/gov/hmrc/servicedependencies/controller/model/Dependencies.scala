@@ -17,32 +17,25 @@
 package uk.gov.hmrc.servicedependencies.controller.model
 
 import org.joda.time.DateTime
-import play.api.libs.json.Json
+import play.api.libs.functional.syntax._
+import play.api.libs.json.{OWrites, Writes, __}
 import uk.gov.hmrc.http.controllers.RestFormats
-import uk.gov.hmrc.servicedependencies.model.Version
-
-case class Dependency(
-  name          : String,
-  currentVersion: Version,
-  latestVersion : Option[Version],
-  isExternal    : Boolean = false
-)
 
 case class Dependencies(
-  repositoryName        : String,
-  libraryDependencies   : Seq[Dependency],
+  repositoryName: String,
+  libraryDependencies: Seq[Dependency],
   sbtPluginsDependencies: Seq[Dependency],
-  otherDependencies     : Seq[Dependency],
-  lastUpdated           : DateTime
+  otherDependencies: Seq[Dependency],
+  lastUpdated: DateTime
 )
 
 object Dependencies {
-  implicit val format = {
-    implicit val dtr = RestFormats.dateTimeFormats
-    implicit val osf = {
-      implicit val vf = Version.legacyApiWrites
-      Json.writes[Dependency]
-    }
-    Json.writes[Dependencies]
-  }
+
+  val writes: OWrites[Dependencies] =
+    ((__ \ "repositoryName").write[String]
+      ~ (__ \ "libraryDependencies").lazyWrite(Writes.seq[Dependency](Dependency.writes))
+      ~ (__ \ "sbtPluginsDependencies").lazyWrite(Writes.seq[Dependency](Dependency.writes))
+      ~ (__ \ "otherDependencies").lazyWrite(Writes.seq[Dependency](Dependency.writes))
+      ~ (__ \ "lastUpdated").write[DateTime](RestFormats.dateTimeFormats))(unlift(Dependencies.unapply))
+
 }

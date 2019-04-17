@@ -27,23 +27,20 @@ import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.servicedependencies.WireMockConfig
-import uk.gov.hmrc.servicedependencies.connector.model.{BobbyRule, DeprecatedDependencies}
-
+import uk.gov.hmrc.servicedependencies.connector.model.{BobbyRule, BobbyVersionRange, DeprecatedDependencies}
 
 class ServiceConfigsConnectorSpec
-  extends FreeSpec
-  with MustMatchers
-  with ScalaFutures
-  with IntegrationPatience
-  with BeforeAndAfterAll
-  with GuiceOneAppPerSuite
-  with MockitoSugar {
+    extends FreeSpec
+    with MustMatchers
+    with ScalaFutures
+    with IntegrationPatience
+    with BeforeAndAfterAll
+    with GuiceOneAppPerSuite
+    with MockitoSugar {
 
-
-  implicit val hc = HeaderCarrier()
+  implicit val hc: HeaderCarrier = HeaderCarrier()
 
   val wireMock = new WireMockConfig()
-
 
   override protected def beforeAll(): Unit = {
     wireMock.start()
@@ -58,12 +55,12 @@ class ServiceConfigsConnectorSpec
     new GuiceApplicationBuilder()
       .configure(
         "microservice.services.service-configs.port" -> wireMock.stubPort,
-        "play.http.requestHandler" -> "play.api.http.DefaultHttpRequestHandler",
-        "metrics.jvm" -> false
-      ).build()
+        "play.http.requestHandler"                   -> "play.api.http.DefaultHttpRequestHandler",
+        "metrics.jvm"                                -> false
+      )
+      .build()
 
   private val services = app.injector.instanceOf[ServiceConfigsConnector]
-
 
   "Retrieving bobby rules" - {
     "correctly parse json response" in {
@@ -72,23 +69,23 @@ class ServiceConfigsConnectorSpec
 
       val playFrontend = BobbyRule(
         organisation = "uk.gov.hmrc",
-        name = "play-frontend",
-        range = "(,99.99.99)",
-        reason = "Post Play Frontend upgrade",
-        from = LocalDate.of(2015, 11, 2)
+        name         = "play-frontend",
+        range        = BobbyVersionRange("(,99.99.99)"),
+        reason       = "Post Play Frontend upgrade",
+        from         = LocalDate.of(2015, 11, 2)
       )
-
 
       val sbtAutoBuild = BobbyRule(
         organisation = "uk.gov.hmrc",
-        name = "sbt-auto-build",
-        range = "(,1.4.0)",
-        reason = "Play 2.5 upgrade",
-        from = LocalDate.of(2017, 5, 1)
-
+        name         = "sbt-auto-build",
+        range        = BobbyVersionRange("(,1.4.0)"),
+        reason       = "Play 2.5 upgrade",
+        from         = LocalDate.of(2017, 5, 1)
       )
 
-      deprecatedDependencies mustBe DeprecatedDependencies(libraries = List(playFrontend), plugins = List(sbtAutoBuild))
+      deprecatedDependencies must contain theSameElementsAs Map(
+        sbtAutoBuild.name -> List(sbtAutoBuild),
+        playFrontend.name -> List(playFrontend))
     }
   }
 
