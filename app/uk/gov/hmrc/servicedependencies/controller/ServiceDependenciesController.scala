@@ -44,8 +44,8 @@ class ServiceDependenciesController @Inject()(
 )(implicit ec: ExecutionContext)
     extends BackendController(cc) {
 
-  implicit val dependenciesFormat: OWrites[Dependencies] = Dependencies.format
-  implicit val jdkVersionFormat: OFormat[JDKVersion]     = JDKVersionFormats.jdkFormat
+  implicit val writes: OWrites[Dependencies]         = Dependencies.writes
+  implicit val jdkVersionFormat: OFormat[JDKVersion] = JDKVersionFormats.jdkFormat
 
   def getDependencyVersionsForRepository(repositoryName: String): Action[AnyContent] =
     Action.async { implicit request =>

@@ -16,27 +16,10 @@
 
 package uk.gov.hmrc.servicedependencies.controller.model
 
-import java.time.LocalDate
-
 import org.joda.time.DateTime
-import play.api.libs.json._
+import play.api.libs.functional.syntax._
+import play.api.libs.json.{OWrites, Writes, __}
 import uk.gov.hmrc.http.controllers.RestFormats
-import uk.gov.hmrc.servicedependencies.connector.model.{BobbyVersion, BobbyVersionRange}
-import uk.gov.hmrc.servicedependencies.model.Version
-
-case class Dependency(
-  name: String,
-  currentVersion: Version,
-  latestVersion: Option[Version],
-  bobbyRuleViolations: List[DependencyBobbyRule],
-  isExternal: Boolean = false
-)
-
-case class DependencyBobbyRule(
-  reason: String,
-  from: LocalDate,
-  range: BobbyVersionRange
-)
 
 case class Dependencies(
   repositoryName: String,
@@ -47,15 +30,12 @@ case class Dependencies(
 )
 
 object Dependencies {
-  val format = {
-    implicit val dtr = RestFormats.dateTimeFormats
-    implicit val dr = {
-      implicit val vr   = Version.legacyApiWrites
-      implicit val bvw  = Json.writes[BobbyVersion]
-      implicit val bvrw = Json.writes[BobbyVersionRange]
-      implicit val dbrw = Json.writes[DependencyBobbyRule]
-      Json.writes[Dependency]
-    }
-    Json.writes[Dependencies]
-  }
+
+  val writes: OWrites[Dependencies] =
+    ((__ \ "repositoryName").write[String]
+      ~ (__ \ "libraryDependencies").lazyWrite(Writes.seq[Dependency](Dependency.writes))
+      ~ (__ \ "sbtPluginsDependencies").lazyWrite(Writes.seq[Dependency](Dependency.writes))
+      ~ (__ \ "otherDependencies").lazyWrite(Writes.seq[Dependency](Dependency.writes))
+      ~ (__ \ "lastUpdated").write[DateTime](RestFormats.dateTimeFormats))(unlift(Dependencies.unapply))
+
 }

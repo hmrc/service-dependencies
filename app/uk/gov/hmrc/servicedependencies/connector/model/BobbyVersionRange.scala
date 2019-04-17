@@ -47,7 +47,7 @@ object BobbyVersionRange {
   private val rangeRegex = """^[\[\(](\d+\.\d+.\d+),(\d+\.\d+.\d+)[\]\)]""".r
   private val qualifier  = """^\[[-\*]+(.*)\]""".r
 
-  implicit val bvrr: Reads[BobbyVersionRange] = JsPath.read[String].map(BobbyVersionRange.apply)
+  val reads: Reads[BobbyVersionRange] = JsPath.read[String].map(BobbyVersionRange.apply)
 
   def apply(range: String): BobbyVersionRange = {
     val trimmedRange = range.replaceAll(" ", "")

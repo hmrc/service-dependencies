@@ -18,6 +18,7 @@ package uk.gov.hmrc.servicedependencies.connector
 
 import javax.inject.Inject
 import play.api.cache.AsyncCacheApi
+import play.api.libs.json.Reads
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
 import uk.gov.hmrc.play.bootstrap.http.HttpClient
@@ -29,7 +30,8 @@ import scala.concurrent.{ExecutionContext, Future}
 class ServiceConfigsConnector @Inject()(httpClient: HttpClient, servicesConfig: ServicesConfig, cache: AsyncCacheApi) {
 
   import ExecutionContext.Implicits.global
-  implicit val hc: HeaderCarrier = HeaderCarrier()
+  private implicit val hc: HeaderCarrier                    = HeaderCarrier()
+  private implicit val reads: Reads[DeprecatedDependencies] = DeprecatedDependencies.reads
 
   private val serviceUrl: String = servicesConfig.baseUrl("service-configs")
   private val cacheExpiration: Duration =
@@ -40,6 +42,6 @@ class ServiceConfigsConnector @Inject()(httpClient: HttpClient, servicesConfig: 
     cache.getOrElseUpdate("bobby-rules", cacheExpiration) {
       httpClient
         .GET[DeprecatedDependencies](s"$serviceUrl/bobby/rules")
-        .map(dependency => (dependency.libraries ++ dependency.plugins).groupBy(_.name))
+        .map(dependency => (dependency.libraries.toList ++ dependency.plugins).groupBy(_.name))
     }
 }

@@ -16,12 +16,15 @@
 
 package uk.gov.hmrc.servicedependencies.connector.model
 
-import play.api.libs.json.Json
+import play.api.libs.functional.syntax._
+import play.api.libs.json.{Reads, __}
 
-final case class DeprecatedDependencies(libraries: List[BobbyRule], plugins: List[BobbyRule])
+final case class DeprecatedDependencies(libraries: Seq[BobbyRule], plugins: Seq[BobbyRule])
 
 object DeprecatedDependencies {
 
-  implicit val ddr = Json.reads[DeprecatedDependencies]
+  val reads: Reads[DeprecatedDependencies] =
+    ((__ \ "libraries").lazyRead(Reads.seq[BobbyRule](BobbyRule.reads))
+      ~ (__ \ "plugins").lazyRead(Reads.seq[BobbyRule](BobbyRule.reads)))(DeprecatedDependencies.apply _)
 
 }
