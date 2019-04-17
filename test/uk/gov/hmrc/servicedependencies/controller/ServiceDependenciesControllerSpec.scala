@@ -56,10 +56,13 @@ class ServiceDependenciesControllerSpec
       val boot                   = Boot.init
       val repoName               = "repo1"
       val now                    = DateTimeUtils.now
-      val repositoryDependencies = Dependencies(repoName, Nil, Nil, Nil, now)
+      val repositoryDependencies = Dependencies(repoName, Seq(), Seq(), Seq(), now)
 
       when(boot.mockedDependencyDataUpdatingService.getDependencyVersionsForRepository(any()))
         .thenReturn(Future.successful(Some(repositoryDependencies)))
+
+      when(boot.mockServiceConfigsService.getDependenciesWithBobbyRules(repositoryDependencies))
+        .thenReturn(Future.successful(repositoryDependencies))
 
       val result = boot.controller
         .getDependencyVersionsForRepository(repoName)
@@ -73,15 +76,24 @@ class ServiceDependenciesControllerSpec
 
   "get dependencies" - {
     "should get all dependencies using the service" in {
-      val boot = Boot.init
-      val now  = DateTimeUtils.now
-      val libraryDependencies = Seq(
-        Dependencies("repo1", Nil, Nil, Nil, now),
-        Dependencies("repo2", Nil, Nil, Nil, now),
-        Dependencies("repo3", Nil, Nil, Nil, now)
-      )
+      val boot                = Boot.init
+      val now                 = DateTimeUtils.now
+      val repo1               = Dependencies("repo1", Seq(), Seq(), Seq(), now)
+      val repo2               = Dependencies("repo2", Seq(), Seq(), Seq(), now)
+      val repo3               = Dependencies("repo3", Seq(), Seq(), Seq(), now)
+      val libraryDependencies = Seq(repo1, repo2, repo3)
+
       when(boot.mockedDependencyDataUpdatingService.getDependencyVersionsForAllRepositories())
         .thenReturn(Future.successful(libraryDependencies))
+
+      when(boot.mockServiceConfigsService.getDependenciesWithBobbyRules(repo1))
+        .thenReturn(Future.successful(repo1))
+
+      when(boot.mockServiceConfigsService.getDependenciesWithBobbyRules(repo2))
+        .thenReturn(Future.successful(repo2))
+
+      when(boot.mockServiceConfigsService.getDependenciesWithBobbyRules(repo3))
+        .thenReturn(Future.successful(repo3))
 
       val result = boot.controller.dependencies().apply(FakeRequest())
 
@@ -96,6 +108,7 @@ class ServiceDependenciesControllerSpec
     mockedDependencyDataUpdatingService: DependencyDataUpdatingService,
     mockedTeamsAndRepositoriesConnector: TeamsAndRepositoriesConnector,
     mockedSlugInfoService: SlugInfoService,
+    mockServiceConfigsService: ServiceConfigsService,
     controller: ServiceDependenciesController)
 
   object Boot {
@@ -103,15 +116,22 @@ class ServiceDependenciesControllerSpec
       val mockedDependencyDataUpdatingService = mock[DependencyDataUpdatingService]
       val mockedTeamsAndRepositoriesConnector = mock[TeamsAndRepositoriesConnector]
       val mockedSlugInfoService               = mock[SlugInfoService]
+      val mockServiceConfigsService           = mock[ServiceConfigsService]
       val controller = new ServiceDependenciesController(
         Configuration(),
         mockedDependencyDataUpdatingService,
         mockedTeamsAndRepositoriesConnector,
         mockedSlugInfoService,
         mock[ServiceDependenciesConfig],
+        mockServiceConfigsService,
         stubControllerComponents()
       )
-      Boot(mockedDependencyDataUpdatingService, mockedTeamsAndRepositoriesConnector, mockedSlugInfoService, controller)
+      Boot(
+        mockedDependencyDataUpdatingService,
+        mockedTeamsAndRepositoriesConnector,
+        mockedSlugInfoService,
+        mockServiceConfigsService,
+        controller)
     }
   }
 }
