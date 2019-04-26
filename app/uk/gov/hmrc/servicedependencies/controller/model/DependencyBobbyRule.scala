@@ -15,6 +15,7 @@
  */
 
 package uk.gov.hmrc.servicedependencies.controller.model
+
 import java.time.LocalDate
 
 import play.api.libs.functional.syntax._
@@ -23,21 +24,22 @@ import uk.gov.hmrc.servicedependencies.connector.model.{BobbyVersion, BobbyVersi
 
 case class DependencyBobbyRule(
   reason: String,
-  from: LocalDate,
+  from : LocalDate,
   range: BobbyVersionRange
 )
 
 object DependencyBobbyRule {
 
   private val writesBobbyVersionRange: OWrites[BobbyVersionRange] =
-    ((__ \ "lowerBound").writeNullable[BobbyVersion](BobbyVersion.writes)
-      ~ (__ \ "upperBound").writeNullable[BobbyVersion](BobbyVersion.writes)
-      ~ (__ \ "qualifier").writeNullable[String]
-      ~ (__ \ "range").write[String])(unlift(BobbyVersionRange.unapply))
+    ( (__ \ "lowerBound").writeNullable[BobbyVersion](BobbyVersion.writes)
+    ~ (__ \ "upperBound").writeNullable[BobbyVersion](BobbyVersion.writes)
+    ~ (__ \ "qualifier" ).writeNullable[String]
+    ~ (__ \ "range"     ).write[String]
+    )(unlift(BobbyVersionRange.unapply))
 
   val writes: OWrites[DependencyBobbyRule] =
-    ((__ \ "reason").write[String]
-      ~ (__ \ "from").write[LocalDate]
-      ~ (__ \ "range").write[BobbyVersionRange](writesBobbyVersionRange))(unlift(DependencyBobbyRule.unapply))
-
+    ( (__ \ "reason").write[String]
+    ~ (__ \ "from"  ).write[LocalDate]
+    ~ (__ \ "range" ).write[BobbyVersionRange](writesBobbyVersionRange)
+    )(unlift(DependencyBobbyRule.unapply))
 }
