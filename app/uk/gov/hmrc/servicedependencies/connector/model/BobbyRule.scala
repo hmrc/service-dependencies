@@ -24,10 +24,10 @@ import uk.gov.hmrc.servicedependencies.controller.model.DependencyBobbyRule
 
 final case class BobbyRule(
   organisation: String,
-  name: String,
-  range: BobbyVersionRange,
-  reason: String,
-  from: LocalDate) {
+  name        : String,
+  range       : BobbyVersionRange,
+  reason      : String,
+  from        : LocalDate) {
 
   def asDependencyBobbyRule(): DependencyBobbyRule =
     DependencyBobbyRule(
@@ -39,9 +39,10 @@ final case class BobbyRule(
 
 object BobbyRule {
   val reads: Reads[BobbyRule] =
-    ((__ \ "organisation").read[String]
-      ~ (__ \ "name").read[String]
-      ~ (__ \ "range").read[BobbyVersionRange](BobbyVersionRange.reads)
-      ~ (__ \ "reason").read[String]
-      ~ (__ \ "from").read[LocalDate])(BobbyRule.apply _)
+    ( (__ \ "organisation").read[String]
+    ~ (__ \ "name"        ).read[String]
+    ~ (__ \ "range"       ).read[BobbyVersionRange](BobbyVersionRange.reads)
+    ~ (__ \ "reason"      ).read[String]
+    ~ (__ \ "from"        ).read[LocalDate]
+    )(BobbyRule.apply _)
 }

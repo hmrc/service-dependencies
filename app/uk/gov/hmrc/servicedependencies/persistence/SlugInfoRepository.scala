@@ -193,11 +193,10 @@ class SlugInfoRepository @Inject()(mongo: ReactiveMongoComponent)
     implicit val rga = readerGroupArtefacts
 
     col.aggregatorContext[GroupArtefacts](
-      Project(
-        document("dependencies" -> "$dependencies")
-      )
+        Match(document("$or" -> SlugInfoFlag.values.map(f => document(f.s -> true)))) // filter for reachable data
       , List(
-          UnwindField("dependencies")
+          Project(document("dependencies" -> "$dependencies"))
+        , UnwindField("dependencies")
         , Match(document("dependencies.version" -> document("$regex" -> "^(?!.*-assets$)(?!.*-sans-externalized$).*$"))) // exclude slug internals
         , Group(BSONString("$dependencies.group"))("artifacts" -> AddFieldToSet("dependencies.artifact"))
         , Sort(Ascending("_id"))
