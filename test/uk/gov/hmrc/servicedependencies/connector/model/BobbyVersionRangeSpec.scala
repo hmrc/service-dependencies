@@ -159,6 +159,10 @@ class BobbyVersionRangeSpec extends FlatSpec with Matchers {
     BobbyVersionRange("(1.2.0,1.3.0)").toString shouldBe "(1.2.0,1.3.0)"
   }
 
+  it should "compare multidigit versions" in {
+    BobbyVersionRange("[1.0.0, 1.2.0]").includes(Version("1.12.0")) shouldBe false
+  }
+
   it should "understand play cross compiled libraries and ignore play suffixes" in {
     BobbyVersionRange("[1.0.0, 1.0.0]").includes(Version("1.0.0-play-25")) shouldBe true
     BobbyVersionRange("[1.0.0, 1.0.0]").includes(Version("1.0.0-play-26")) shouldBe true

@@ -22,20 +22,21 @@ import play.api.libs.json.{OWrites, Writes, __}
 import uk.gov.hmrc.http.controllers.RestFormats
 
 case class Dependencies(
-  repositoryName: String,
-  libraryDependencies: Seq[Dependency],
-  sbtPluginsDependencies: Seq[Dependency],
-  otherDependencies: Seq[Dependency],
-  lastUpdated: DateTime
-)
+    repositoryName        : String
+  , libraryDependencies   : Seq[Dependency]
+  , sbtPluginsDependencies: Seq[Dependency]
+  , otherDependencies     : Seq[Dependency]
+  , lastUpdated           : DateTime
+  )
 
 object Dependencies {
 
   val writes: OWrites[Dependencies] =
-    ((__ \ "repositoryName").write[String]
-      ~ (__ \ "libraryDependencies").lazyWrite(Writes.seq[Dependency](Dependency.writes))
-      ~ (__ \ "sbtPluginsDependencies").lazyWrite(Writes.seq[Dependency](Dependency.writes))
-      ~ (__ \ "otherDependencies").lazyWrite(Writes.seq[Dependency](Dependency.writes))
-      ~ (__ \ "lastUpdated").write[DateTime](RestFormats.dateTimeFormats))(unlift(Dependencies.unapply))
+    ( (__ \ "repositoryName"        ).write[String]
+    ~ (__ \ "libraryDependencies"   ).lazyWrite(Writes.seq[Dependency](Dependency.writes))
+    ~ (__ \ "sbtPluginsDependencies").lazyWrite(Writes.seq[Dependency](Dependency.writes))
+    ~ (__ \ "otherDependencies"     ).lazyWrite(Writes.seq[Dependency](Dependency.writes))
+    ~ (__ \ "lastUpdated"           ).write[DateTime](RestFormats.dateTimeFormats)
+    )(unlift(Dependencies.unapply))
 
 }

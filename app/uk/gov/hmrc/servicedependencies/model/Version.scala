@@ -39,7 +39,9 @@ case class Version(
       major - other.major
 
   override def toString: String = original
-  def normalise                 = s"${major}_${minor}_$patch"
+
+  def normalise: Version =
+    Version(major, minor, patch, original = s"$major.$minor.$patch")
 }
 
 object Version {
@@ -52,10 +54,10 @@ object Version {
     def fromVersion(v: Version) =
       (v.major, v.minor, v.patch, None)
 
-     ( (__ \ "major" ).format[Int]
-     ~ (__ \ "minor" ).format[Int]
-     ~ (__ \ "patch" ).format[Int]
-     ~ (__ \ "suffix").formatNullable[String]
+    ( (__ \ "major" ).format[Int]
+    ~ (__ \ "minor" ).format[Int]
+    ~ (__ \ "patch" ).format[Int]
+    ~ (__ \ "suffix").formatNullable[String]
     )(toVersion, fromVersion)
   }
 

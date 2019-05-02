@@ -64,9 +64,9 @@ class ServiceDependenciesController @Inject()(
       for {
         dependencies  <- dependencyDataUpdatingService
                            .getDependencyVersionsForAllRepositories()
-        depsWithRules <- Future.sequence(dependencies.map(serviceConfigsService.getDependenciesWithBobbyRules))
-        res           =  Ok(Json.toJson(depsWithRules))
-      } yield res
+        depsWithRules <- dependencies.toList
+                          .traverse(serviceConfigsService.getDependenciesWithBobbyRules)
+      } yield Ok(Json.toJson(depsWithRules))
     }
 
   def slugInfos(name: String, version: Option[String]): Action[AnyContent] =
@@ -86,7 +86,8 @@ class ServiceDependenciesController @Inject()(
         services      =  repos.getOrElse("Service", List())
         libraries     =  repos.getOrElse("Library", List())
         teamDeps      =  deps.filter(d => services.contains(d.repositoryName) || libraries.contains(d.repositoryName))
-        depsWithRules <- Future.sequence(teamDeps.map(serviceConfigsService.getDependenciesWithBobbyRules))
+        depsWithRules <- teamDeps.toList
+                           .traverse(serviceConfigsService.getDependenciesWithBobbyRules)
       } yield Ok(Json.toJson(depsWithRules))
     }
 

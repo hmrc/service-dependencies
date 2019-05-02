@@ -31,39 +31,35 @@
  */
 
 package uk.gov.hmrc.servicedependencies.service
+
 import com.google.inject.{Inject, Singleton}
 import uk.gov.hmrc.servicedependencies.connector.ServiceConfigsConnector
 import uk.gov.hmrc.servicedependencies.connector.model.BobbyRule
-import uk.gov.hmrc.servicedependencies.controller.model._
+import uk.gov.hmrc.servicedependencies.controller.model.{Dependencies, Dependency}
 
 import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
-class ServiceConfigsService @Inject()(serviceConfigsConnector: ServiceConfigsConnector) {
-
-  import ExecutionContext.Implicits.global
+class ServiceConfigsService @Inject()(serviceConfigsConnector: ServiceConfigsConnector)(implicit ec: ExecutionContext) {
 
   def getDependenciesWithBobbyRules(dependencies: Dependencies): Future[Dependencies] =
     serviceConfigsConnector
       .getBobbyRules()
-      .map(groupedDeps => {
+      .map { groupedDeps =>
 
-        val library = dependencies.libraryDependencies.map(addBobbyViolations(groupedDeps, _))
-        val plugin  = dependencies.sbtPluginsDependencies.map(addBobbyViolations(groupedDeps, _))
-        val other   = dependencies.otherDependencies.map(addBobbyViolations(groupedDeps, _))
+        def addBobbyViolations(dependency: Dependency): Dependency =
+            dependency.copy(bobbyRuleViolations =
+              groupedDeps
+                .getOrElse(s"${dependency.name}", List())
+                .filter(_.range.includes(dependency.currentVersion))
+                .map(_.asDependencyBobbyRule)
+            )
 
         dependencies
-          .copy(libraryDependencies = library, sbtPluginsDependencies = plugin, otherDependencies = other)
-      })
-
-  private def addBobbyViolations(
-    groupedBobbyRules: Map[String, List[BobbyRule]],
-    dependency: Dependency): Dependency = {
-    val bobbyRules = groupedBobbyRules
-      .getOrElse(s"${dependency.name}", List())
-      .filter(_.range.includes(dependency.currentVersion))
-      .map(_.asDependencyBobbyRule())
-
-    dependency.copy(bobbyRuleViolations = bobbyRules)
-  }
+          .copy(
+              libraryDependencies    = dependencies.libraryDependencies.map(addBobbyViolations)
+            , sbtPluginsDependencies = dependencies.sbtPluginsDependencies.map(addBobbyViolations)
+            , otherDependencies      = dependencies.otherDependencies.map(addBobbyViolations)
+            )
+      }
 }
