@@ -17,23 +17,23 @@
 package uk.gov.hmrc.servicedependencies.controller.model
 import play.api.libs.functional.syntax._
 import play.api.libs.json.{OWrites, Writes, __}
-import uk.gov.hmrc.servicedependencies.model
 import uk.gov.hmrc.servicedependencies.model.Version
 
 case class Dependency(
-  name: String,
-  currentVersion: Version,
-  latestVersion: Option[Version],
-  bobbyRuleViolations: List[DependencyBobbyRule],
-  isExternal: Boolean = false
-)
+    name               : String
+  , currentVersion     : Version
+  , latestVersion      : Option[Version]
+  , bobbyRuleViolations: List[DependencyBobbyRule]
+  , isExternal         : Boolean = false
+  )
 
 object Dependency {
 
   val writes: OWrites[Dependency] =
-    ((__ \ "name").write[String]
-      ~ (__ \ "currentVersion").write[Version](model.Version.legacyApiWrites)
-      ~ (__ \ "latestVersion").writeNullable[Version](model.Version.legacyApiWrites)
-      ~ (__ \ "bobbyRuleViolations").lazyWrite(Writes.seq[DependencyBobbyRule](DependencyBobbyRule.writes))
-      ~ (__ \ "isExternal").write[Boolean])(unlift(Dependency.unapply))
+    ( (__ \ "name"               ).write[String]
+    ~ (__ \ "currentVersion"     ).write[Version](Version.legacyApiWrites)
+    ~ (__ \ "latestVersion"      ).writeNullable[Version](Version.legacyApiWrites)
+    ~ (__ \ "bobbyRuleViolations").lazyWrite(Writes.seq[DependencyBobbyRule](DependencyBobbyRule.writes))
+    ~ (__ \ "isExternal"         ).write[Boolean]
+    )(unlift(Dependency.unapply))
 }

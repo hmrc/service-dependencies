@@ -52,10 +52,10 @@ object Version {
     def fromVersion(v: Version) =
       (v.major, v.minor, v.patch, None)
 
-     ( (__ \ "major" ).format[Int]
-     ~ (__ \ "minor" ).format[Int]
-     ~ (__ \ "patch" ).format[Int]
-     ~ (__ \ "suffix").formatNullable[String]
+    ( (__ \ "major" ).format[Int]
+    ~ (__ \ "minor" ).format[Int]
+    ~ (__ \ "patch" ).format[Int]
+    ~ (__ \ "suffix").formatNullable[String]
     )(toVersion, fromVersion)
   }
 

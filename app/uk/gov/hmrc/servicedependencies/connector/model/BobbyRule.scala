@@ -29,13 +29,14 @@ final case class BobbyRule(
   reason      : String,
   from        : LocalDate) {
 
-  def asDependencyBobbyRule(): DependencyBobbyRule =
+  def asDependencyBobbyRule: DependencyBobbyRule =
     DependencyBobbyRule(
       reason = this.reason,
       from   = this.from,
       range  = this.range
     )
 }
+
 
 object BobbyRule {
   val reads: Reads[BobbyRule] =

@@ -85,7 +85,7 @@ class ServiceConfigsServiceSpec
 
     val result = service.getDependenciesWithBobbyRules(dependencies)
 
-    val expected = dependency.copy(bobbyRuleViolations = List(bobbyRule1.asDependencyBobbyRule()))
+    val expected = dependency.copy(bobbyRuleViolations = List(bobbyRule1.asDependencyBobbyRule))
 
     result map { result =>
       result.repositoryName         shouldBe dependencies.repositoryName
@@ -110,8 +110,8 @@ class ServiceConfigsServiceSpec
 
     val expected = dependency.copy(
       bobbyRuleViolations = List(
-        bobbyRule1.asDependencyBobbyRule(),
-        bobbyRule2.asDependencyBobbyRule()
+        bobbyRule1.asDependencyBobbyRule,
+        bobbyRule2.asDependencyBobbyRule
       ))
 
     result map { result =>
@@ -145,9 +145,9 @@ class ServiceConfigsServiceSpec
     val result = service.getDependenciesWithBobbyRules(dependencies)
 
     val expectedLibraryDependency =
-      libraryDependency.copy(bobbyRuleViolations = List(bobbyRule1.asDependencyBobbyRule()))
+      libraryDependency.copy(bobbyRuleViolations = List(bobbyRule1.asDependencyBobbyRule))
 
-    val expectedPluginDependency = pluginDependency.copy(bobbyRuleViolations = List(bobbyRule3.asDependencyBobbyRule()))
+    val expectedPluginDependency = pluginDependency.copy(bobbyRuleViolations = List(bobbyRule3.asDependencyBobbyRule))
 
     result map { result =>
       result.repositoryName         shouldBe dependencies.repositoryName
