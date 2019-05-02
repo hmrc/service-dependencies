@@ -19,7 +19,7 @@ import com.google.inject.{Inject, Singleton}
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.metrix.domain.MetricSource
 import uk.gov.hmrc.servicedependencies.connector.{Team, TeamsAndRepositoriesConnector}
-import uk.gov.hmrc.servicedependencies.model.MongoRepositoryDependency
+import uk.gov.hmrc.servicedependencies.model.{MongoRepositoryDependency, Version}
 import uk.gov.hmrc.servicedependencies.persistence.RepositoryLibraryDependenciesRepository
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.{ExecutionContext, Future}
@@ -63,14 +63,12 @@ class RepositoryDependenciesSource @Inject()(
           TeamRepos(name, Map.empty)
       }
 
-  def collectTeamStats(teamRepos: TeamRepos): Map[String, Int] =
-    teamRepos.repos.foldLeft(Map.empty[String, Int]) {
-      case (acc, (repoName, deps)) =>
-        acc ++ deps
-          .map(dep =>
-            s"teams.${teamRepos.teamName}.services.$repoName.libraries.${dep.name}.versions.${dep.currentVersion.normalise}" -> 1)
-          .toMap ++ Map(s"teams.${teamRepos.teamName}.servicesCount" -> teamRepos.repos.size)
-
-    }
-
+  def collectTeamStats(teamRepos: TeamRepos): Map[String, Int] = {
+    def normalise(v: Version) = s"${v.major}_${v.minor}_${v.patch}"
+    Map(s"teams.${teamRepos.teamName}.servicesCount" -> teamRepos.repos.size) ++
+      teamRepos.repos.toList.flatMap { case (repoName, deps) =>
+        deps
+          .map(dep => s"teams.${teamRepos.teamName}.services.$repoName.libraries.${dep.name}.versions.${normalise(dep.currentVersion)}" -> 1)
+      }.toMap
+  }
 }
