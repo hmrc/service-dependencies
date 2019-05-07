@@ -20,10 +20,3 @@ import play.api.libs.json.{OWrites, __}
 import uk.gov.hmrc.servicedependencies.model.Version
 
 final case class BobbyVersion(version: Version, inclusive: Boolean)
-
-object BobbyVersion {
-  val writes: OWrites[BobbyVersion] =
-    ( (__ \ "version"  ).write[Version](Version.legacyApiWrites)
-    ~ (__ \ "inclusive").write[Boolean]
-    )(unlift(BobbyVersion.unapply))
-}

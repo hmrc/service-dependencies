@@ -30,16 +30,11 @@ case class DependencyBobbyRule(
 
 object DependencyBobbyRule {
 
-  private val writesBobbyVersionRange: OWrites[BobbyVersionRange] =
-    ( (__ \ "lowerBound").writeNullable[BobbyVersion](BobbyVersion.writes)
-    ~ (__ \ "upperBound").writeNullable[BobbyVersion](BobbyVersion.writes)
-    ~ (__ \ "qualifier" ).writeNullable[String]
-    ~ (__ \ "range"     ).write[String]
-    )(unlift(BobbyVersionRange.unapply))
-
-  val writes: OWrites[DependencyBobbyRule] =
+  val writes: OWrites[DependencyBobbyRule] = {
+    implicit val bvrw = BobbyVersionRange.writes
     ( (__ \ "reason").write[String]
     ~ (__ \ "from"  ).write[LocalDate]
-    ~ (__ \ "range" ).write[BobbyVersionRange](writesBobbyVersionRange)
+    ~ (__ \ "range" ).write[BobbyVersionRange]
     )(unlift(DependencyBobbyRule.unapply))
+  }
 }
