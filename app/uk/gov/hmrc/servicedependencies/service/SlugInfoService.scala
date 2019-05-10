@@ -22,6 +22,7 @@ import com.google.inject.{Inject, Singleton}
 import org.slf4j.LoggerFactory
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.servicedependencies.connector.{ServiceDeploymentsConnector, TeamsAndRepositoriesConnector}
+import uk.gov.hmrc.servicedependencies.connector.model.BobbyVersionRange
 import uk.gov.hmrc.servicedependencies.model._
 import uk.gov.hmrc.servicedependencies.persistence.{DependencyConfigRepository, SlugInfoRepository, SlugParserJobsRepository}
 
@@ -48,13 +49,19 @@ class SlugInfoService @Inject()(
   def getSlugInfo(name: String, flag: SlugInfoFlag): Future[Option[SlugInfo]] =
     slugInfoRepository.getSlugInfo(name, flag)
 
-  def findServicesWithDependency(flag: SlugInfoFlag, group: String, artefact: String)(implicit hc: HeaderCarrier): Future[Seq[ServiceDependency]] =
-    for {
-      res              <- slugInfoRepository.findServices(flag, group, artefact)
-      teamsForServices <- teamsAndRepositoriesConnector.getTeamsForServices
-    } yield res.map { r =>
-        r.copy(teams = teamsForServices.getTeams(r.slugName).toList.sorted)
-      }
+  def findServicesWithDependency(
+      flag        : SlugInfoFlag
+    , group       : String
+    , artefact    : String
+    , versionRange: BobbyVersionRange
+    )(implicit hc: HeaderCarrier): Future[Seq[ServiceDependency]] =
+      for {
+        services            <- slugInfoRepository.findServices(flag, group, artefact)
+        servicesWithinRange =  services.filter(_.depSemanticVersion.map(versionRange.includes).getOrElse(true)) // include invalid semanticVersion in results
+        teamsForServices    <- teamsAndRepositoriesConnector.getTeamsForServices
+      } yield servicesWithinRange.map { r =>
+          r.copy(teams = teamsForServices.getTeams(r.slugName).toList.sorted)
+        }
 
   def findGroupsArtefacts: Future[Seq[GroupArtefacts]] =
     slugInfoRepository

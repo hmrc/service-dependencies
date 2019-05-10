@@ -121,7 +121,7 @@ object BobbyVersionRange {
         case _           => JsError("Not a string")
       }
 
-    override def writes(v: BobbyVersionRange) =
-      JsString(v.range)
+    override def writes(bvr: BobbyVersionRange) =
+      JsString(bvr.range)
   }
 }

@@ -26,6 +26,7 @@ import play.api.mvc._
 import uk.gov.hmrc.play.bootstrap.controller.BackendController
 import uk.gov.hmrc.servicedependencies.config.ServiceDependenciesConfig
 import uk.gov.hmrc.servicedependencies.connector.TeamsAndRepositoriesConnector
+import uk.gov.hmrc.servicedependencies.connector.model.BobbyVersionRange
 import uk.gov.hmrc.servicedependencies.controller.model.Dependencies
 import uk.gov.hmrc.servicedependencies.model._
 import uk.gov.hmrc.servicedependencies.service.{DependencyDataUpdatingService, ServiceConfigsService, SlugInfoService}
@@ -91,15 +92,18 @@ class ServiceDependenciesController @Inject()(
       } yield Ok(Json.toJson(depsWithRules))
     }
 
-  def getServicesWithDependency(flag: String, group: String, artefact: String): Action[AnyContent] =
+  def getServicesWithDependency(flag: String, group: String, artefact: String, versionRange: String): Action[AnyContent] =
     Action.async { implicit request =>
-      SlugInfoFlag.parse(flag) match {
-        case None    => Future(BadRequest("invalid flag"))
-        case Some(f) => implicit val format = ApiServiceDependencyFormats.sdFormat
-                        slugInfoService
-                          .findServicesWithDependency(f, group, artefact)
-                          .map(res => Ok(Json.toJson(res)))
-      }
+      implicit val format = ApiServiceDependencyFormats.sdFormat
+      (for {
+         f   <- EitherT.fromOption[Future](SlugInfoFlag.parse(flag), BadRequest(s"invalid flag '$flag'"))
+         vr  <- EitherT.fromOption[Future](BobbyVersionRange.parse(versionRange), BadRequest(s"invalid versionRange '$versionRange'"))
+         res <- EitherT.right[Result] {
+                  slugInfoService
+                    .findServicesWithDependency(f, group, artefact, vr)
+                }
+      } yield Ok(Json.toJson(res))
+      ).merge
     }
 
   def getGroupArtefacts: Action[AnyContent] =
