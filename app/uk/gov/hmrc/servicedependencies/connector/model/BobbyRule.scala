@@ -39,11 +39,13 @@ final case class BobbyRule(
 
 
 object BobbyRule {
-  val reads: Reads[BobbyRule] =
+  val reads: Reads[BobbyRule] = {
+    implicit val bvrf = BobbyVersionRange.format
     ( (__ \ "organisation").read[String]
     ~ (__ \ "name"        ).read[String]
-    ~ (__ \ "range"       ).read[BobbyVersionRange](BobbyVersionRange.reads)
+    ~ (__ \ "range"       ).read[BobbyVersionRange]
     ~ (__ \ "reason"      ).read[String]
     ~ (__ \ "from"        ).read[LocalDate]
     )(BobbyRule.apply _)
+  }
 }
