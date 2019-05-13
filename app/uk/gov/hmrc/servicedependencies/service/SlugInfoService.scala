@@ -74,8 +74,11 @@ class SlugInfoService @Inject()(
       serviceDeploymentInfos <- serviceDeploymentsConnector.getWhatIsRunningWhere
       allServiceDeployments  =  serviceNames.map { serviceName =>
                                   val deployments       = serviceDeploymentInfos.find(_.serviceName == serviceName).map(_.deployments)
-                                  val deploymentsByFlag = List( (SlugInfoFlag.Production, Environment.Production)
-                                                              , (SlugInfoFlag.QA        , Environment.QA)
+                                  val deploymentsByFlag = List( (SlugInfoFlag.Production    , Environment.Production)
+                                                              , (SlugInfoFlag.QA            , Environment.QA)
+                                                              , (SlugInfoFlag.Staging       , Environment.Staging)
+                                                              , (SlugInfoFlag.Development   , Environment.Development)
+                                                              , (SlugInfoFlag.ExternalTest  , Environment.ExternalTest)
                                                               )
                                                            .map { case (flag, env) =>
                                                                     ( flag

@@ -142,7 +142,7 @@ class DependencyDataUpdatingServiceSpec
         eqTo(false))(any())
     }
 
-    it("should force the peristence of updates if the 'force' flag is true") {
+    it("should force the persistence of updates if the 'force' flag is true") {
       val underTest = new TestDependencyDataUpdatingService(noLockTestMongoLockBuilder, curatedDependencyConfig)
 
       val mongoRepositoryDependencies = Seq(MongoRepositoryDependencies("repoXyz", Nil, Nil, Nil, timeForTest))
