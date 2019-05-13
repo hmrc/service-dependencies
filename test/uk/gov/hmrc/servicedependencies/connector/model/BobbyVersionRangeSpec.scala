@@ -97,22 +97,27 @@ class BobbyVersionRangeSpec extends FlatSpec with Matchers {
 
   }
 
-  it should "set upperBound, lowerBound and qualifier to None when incomplete version is provided" in {
-    BobbyVersionRange("[1.5,)") shouldBe BobbyVersionRange(None, None, None, "[1.5,)")
+  it should "fail to parse when incomplete version is provided" in {
+    BobbyVersionRange.parse("[1.5,)") shouldBe None
   }
 
-  it should "set upperBound, lowerBound and qualifier to None when brackets are missing" in {
-    BobbyVersionRange("1.5,)") shouldBe BobbyVersionRange(None, None, None, "1.5,)")
-    BobbyVersionRange("[1.5,") shouldBe BobbyVersionRange(None, None, None, "[1.5,")
-    BobbyVersionRange("1.5")   shouldBe BobbyVersionRange(None, None, None, "1.5")
+  it should "fail to parse when brackets are missing" in {
+    BobbyVersionRange.parse("1.5,)") shouldBe None
+    BobbyVersionRange.parse("[1.5,") shouldBe None
+    BobbyVersionRange.parse("1.5")   shouldBe None
   }
 
-  it should "set upperBound, lowerBound and qualifier to None when the range is open on both sides" in {
-    BobbyVersionRange("(,1.5,)") shouldBe BobbyVersionRange(None, None, None, "(,1.5,)")
+  it should "fail to parse when the range is open on both sides" in {
+    BobbyVersionRange.parse("(,1.5,)") shouldBe None
   }
 
-  it should "set upperBound, lowerBound and qualifier to None when multiple sets are used" in {
-    BobbyVersionRange("(,1.0],[1.2,)") shouldBe BobbyVersionRange(None, None, None, "(,1.0],[1.2,)")
+  it should "fail to parse when multiple sets are used" in { // should we support this? Is valid
+    BobbyVersionRange.parse("(,1.0],[1.2,)") shouldBe None
+  }
+
+  it should "fail to parse when qualifier is not defined" in {
+    BobbyVersionRange.parse("[*-]") shouldBe None
+    BobbyVersionRange.parse("[*]")  shouldBe None
   }
 
   it should "include 1.2.5 when the expression is [1.2.0,1.3.0]" in {
@@ -166,10 +171,5 @@ class BobbyVersionRangeSpec extends FlatSpec with Matchers {
   it should "understand play cross compiled libraries and ignore play suffixes" in {
     BobbyVersionRange("[1.0.0, 1.0.0]").includes(Version("1.0.0-play-25")) shouldBe true
     BobbyVersionRange("[1.0.0, 1.0.0]").includes(Version("1.0.0-play-26")) shouldBe true
-  }
-
-  it should "set qualifier to None when qualifier is not defined" in {
-    BobbyVersionRange("[*-]") shouldBe BobbyVersionRange(None, None, None, "[*-]")
-    BobbyVersionRange("[*]")  shouldBe BobbyVersionRange(None, None, None, "[*]")
   }
 }

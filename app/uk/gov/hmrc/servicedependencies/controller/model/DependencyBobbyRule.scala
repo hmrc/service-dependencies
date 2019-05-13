@@ -31,7 +31,7 @@ case class DependencyBobbyRule(
 object DependencyBobbyRule {
 
   val writes: OWrites[DependencyBobbyRule] = {
-    implicit val bvrw = BobbyVersionRange.writes
+    implicit val bvrf = BobbyVersionRange.format
     ( (__ \ "reason").write[String]
     ~ (__ \ "from"  ).write[LocalDate]
     ~ (__ \ "range" ).write[BobbyVersionRange]
