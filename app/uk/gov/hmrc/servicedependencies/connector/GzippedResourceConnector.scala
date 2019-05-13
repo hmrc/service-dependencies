@@ -20,12 +20,13 @@ import akka.actor.ActorSystem
 import akka.stream.Materializer
 import akka.stream.scaladsl.{Compression, StreamConverters}
 import java.io.InputStream
+
 import javax.inject.Inject
 import play.api.Logger
 import play.api.libs.ws.WSClient
 
 import scala.concurrent.{ExecutionContext, Future}
-import scala.concurrent.duration.DurationInt
+import scala.concurrent.duration.{Duration, DurationInt}
 
 
 class GzippedResourceConnector @Inject()(
@@ -41,8 +42,8 @@ class GzippedResourceConnector @Inject()(
 
     import ExecutionContext.Implicits.global
 
-    ws.url(resourceUrl).withMethod("GET").stream.map { resp =>
-      resp.bodyAsSource.async.via(Compression.gunzip()).runWith(StreamConverters.asInputStream(readTimeout = 20.seconds))
+    ws.url(resourceUrl).withMethod("GET").withRequestTimeout(Duration.Inf).stream.map { resp =>
+      resp.bodyAsSource.async.via(Compression.gunzip()).runWith(StreamConverters.asInputStream(readTimeout = 20.hour))
     }
   }
 }
