@@ -17,36 +17,31 @@
 package uk.gov.hmrc.servicedependencies.controller.admin
 
 import com.google.inject.{Inject, Singleton}
-import play.api.Logger
-import play.api.libs.json.{JsError, Reads}
-import play.api.mvc.ControllerComponents
+import play.api.libs.json.{JsError, OFormat, Reads}
+import play.api.mvc.{Action, ControllerComponents}
 import uk.gov.hmrc.play.bootstrap.controller.BackendController
 import uk.gov.hmrc.servicedependencies.model.{ApiSlugInfoFormats, SlugInfo}
+import uk.gov.hmrc.servicedependencies.service.SlugInfoService
 
 import scala.concurrent.ExecutionContext
-import scala.concurrent.Future
 
 @Singleton
-class ServiceMetaController @Inject()(cc: ControllerComponents)
+class ServiceMetaController @Inject()(  slugInfoService: SlugInfoService,
+                                        cc: ControllerComponents)
                                      (implicit ec: ExecutionContext)
 extends BackendController(cc) {
 
-  implicit val slugInfoFormat = ApiSlugInfoFormats.siFormat
+  implicit val slugInfoFormat: OFormat[SlugInfo] = ApiSlugInfoFormats.siFormat
 
   private def validateJson[A: Reads] =
     parse.json.validate(
       _.validate[A].asEither.left.map(e => BadRequest(JsError.toJson(e)))
     )
 
-  def setSlugInfo =
+  def setSlugInfo(): Action[SlugInfo] =
     Action.async(validateJson[SlugInfo]) { implicit request =>
-      Future.successful(logSlugInfo(request.body))
+      slugInfoService.addSlugInfo(request.body)
         .map(_ => Ok("Done"))
     }
-
-  private def logSlugInfo(slugInfo: SlugInfo) = {
-    Logger.info(s"Setting slug data: ${slugInfo.name} ${slugInfo.version.original}")
-    true
-  }
 
 }
