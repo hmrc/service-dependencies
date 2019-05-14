@@ -58,7 +58,7 @@ object ServiceDeploymentsConnector {
         case "staging"       => Some(Staging)
         case "development"   => Some(Development)
         case "external test" => Some(ExternalTest)
-        case other           => Logger.debug(s"Unsupported envionment '$other'"); None
+        case other           => Logger.debug(s"Unsupported environment '$other'"); None
       })
   }
 
