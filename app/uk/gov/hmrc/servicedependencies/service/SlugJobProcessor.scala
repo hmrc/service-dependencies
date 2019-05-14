@@ -153,7 +153,12 @@ object SlugParser {
       dependencies      = sic1.dependencies,
       applicationConfig = sic1.applicationConfig,
       slugConfig        = sic1.slugConfig,
-      latest            = false
+      latest            = false,
+      production        = false,
+      qa                = false,
+      staging           = false,
+      development       = false,
+      externalTest      = false
     )
 
     (si, sic1.configs)
