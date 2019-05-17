@@ -42,9 +42,12 @@ class SlugJobCreatorScheduler @Inject()(
   import ExecutionContext.Implicits.global
 
   scheduleWithLock("Slug Info Reloader", schedulerConfigs.slugJobCreator, mongoLocks.slugJobSchedulerLock) {
-    Logger.info("Updating metadata")
-    slugInfoService.updateMetadata
-      .map(_ => Logger.info("Finished updating metadata"))
-  }
 
+    Logger.info("Updating metadata")
+    for {
+      _ <- slugInfoService.updateMetadata
+      _ = Logger.info("Finished updating metadata")
+    } yield ()
+
+  }
 }
