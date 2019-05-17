@@ -23,7 +23,7 @@ import play.api.inject.ApplicationLifecycle
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.servicedependencies.config.SchedulerConfigs
 import uk.gov.hmrc.servicedependencies.persistence.MongoLocks
-import uk.gov.hmrc.servicedependencies.service.{SlugInfoService, SlugJobCreator, SlugJobProcessor}
+import uk.gov.hmrc.servicedependencies.service.SlugInfoService
 import uk.gov.hmrc.servicedependencies.util.SchedulerUtils
 
 import scala.concurrent.ExecutionContext
@@ -31,8 +31,6 @@ import scala.concurrent.ExecutionContext
 
 class SlugJobCreatorScheduler @Inject()(
     schedulerConfigs    : SchedulerConfigs,
-    slugJobCreator      : SlugJobCreator,
-    slugJobProcessor    : SlugJobProcessor,
     slugInfoService     : SlugInfoService,
     mongoLocks          : MongoLocks)(
     implicit actorSystem         : ActorSystem,
