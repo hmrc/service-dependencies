@@ -22,8 +22,8 @@ import play.api.Logger
 import play.api.inject.ApplicationLifecycle
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.servicedependencies.config.SchedulerConfigs
-import uk.gov.hmrc.servicedependencies.service.{SlugInfoService, SlugJobCreator, SlugJobProcessor}
 import uk.gov.hmrc.servicedependencies.persistence.MongoLocks
+import uk.gov.hmrc.servicedependencies.service.SlugInfoService
 import uk.gov.hmrc.servicedependencies.util.SchedulerUtils
 
 import scala.concurrent.ExecutionContext
@@ -31,8 +31,6 @@ import scala.concurrent.ExecutionContext
 
 class SlugJobCreatorScheduler @Inject()(
     schedulerConfigs    : SchedulerConfigs,
-    slugJobCreator      : SlugJobCreator,
-    slugJobProcessor    : SlugJobProcessor,
     slugInfoService     : SlugInfoService,
     mongoLocks          : MongoLocks)(
     implicit actorSystem         : ActorSystem,
@@ -40,16 +38,16 @@ class SlugJobCreatorScheduler @Inject()(
   extends SchedulerUtils {
 
   implicit val hc: HeaderCarrier = HeaderCarrier()
+
   import ExecutionContext.Implicits.global
 
   scheduleWithLock("Slug Info Reloader", schedulerConfigs.slugJobCreator, mongoLocks.slugJobSchedulerLock) {
+
+    Logger.info("Updating metadata")
     for {
-      _ <- slugJobCreator.run
-      _ =  Logger.info("Finished creating slug jobs - now processing jobs")
-      _ <- slugJobProcessor.run
-      _ =  Logger.info("Finished processing slug jobs - now updating meta data")
-      _ <- slugInfoService.updateMetaData
-      _ =  Logger.info("Finished updating meta data")
-      } yield ()
+      _ <- slugInfoService.updateMetadata
+      _ = Logger.info("Finished updating metadata")
+    } yield ()
+
   }
 }

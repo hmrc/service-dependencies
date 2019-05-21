@@ -19,10 +19,9 @@ package uk.gov.hmrc.servicedependencies.service
 import cats.instances.all._
 import cats.syntax.all._
 import com.google.inject.{Inject, Singleton}
-import org.slf4j.LoggerFactory
 import uk.gov.hmrc.http.HeaderCarrier
-import uk.gov.hmrc.servicedependencies.connector.{ServiceDeploymentsConnector, TeamsAndRepositoriesConnector}
 import uk.gov.hmrc.servicedependencies.connector.model.BobbyVersionRange
+import uk.gov.hmrc.servicedependencies.connector.{ServiceDeploymentsConnector, TeamsAndRepositoriesConnector}
 import uk.gov.hmrc.servicedependencies.model._
 import uk.gov.hmrc.servicedependencies.persistence.{DependencyConfigRepository, SlugInfoRepository, SlugParserJobsRepository}
 
@@ -38,7 +37,11 @@ class SlugInfoService @Inject()(
 ) {
   import ExecutionContext.Implicits.global
 
-  lazy val logger = LoggerFactory.getLogger(this.getClass)
+  def addSlugInfo(slug: SlugInfo): Future[Boolean] =
+    for {
+      added     <- slugInfoRepository.add(slug)
+      _         <- if (slug.latest) slugInfoRepository.markLatest(slug.name, slug.version) else Future(())
+    } yield added
 
   def addSlugParserJob(newJob: NewSlugParserJob): Future[Boolean] =
     slugParserJobsRepository.add(newJob)
@@ -67,7 +70,8 @@ class SlugInfoService @Inject()(
     slugInfoRepository
       .findGroupsArtefacts
 
-  def updateMetaData(implicit hc: HeaderCarrier): Future[Unit] = {
+  def updateMetadata(implicit hc: HeaderCarrier): Future[Unit] = {
+
     import ServiceDeploymentsConnector._
     for {
       serviceNames           <- slugInfoRepository.getUniqueSlugNames
