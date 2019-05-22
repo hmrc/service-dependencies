@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.servicedependencies.controller.admin
+package uk.gov.hmrc.servicedependencies.controller
 
 import com.google.inject.{Inject, Singleton}
 import play.api.libs.json.{JsError, Reads}
