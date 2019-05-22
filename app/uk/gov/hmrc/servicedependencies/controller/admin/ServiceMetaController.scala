@@ -17,10 +17,10 @@
 package uk.gov.hmrc.servicedependencies.controller.admin
 
 import com.google.inject.{Inject, Singleton}
-import play.api.libs.json.{JsError, OFormat, Reads}
+import play.api.libs.json.{JsError, Reads}
 import play.api.mvc.{Action, ControllerComponents}
 import uk.gov.hmrc.play.bootstrap.controller.BackendController
-import uk.gov.hmrc.servicedependencies.model.{ApiSlugInfoFormats, SlugInfo}
+import uk.gov.hmrc.servicedependencies.controller.model.Slug
 import uk.gov.hmrc.servicedependencies.service.SlugInfoService
 
 import scala.concurrent.ExecutionContext
@@ -31,15 +31,13 @@ class ServiceMetaController @Inject()(  slugInfoService: SlugInfoService,
                                      (implicit ec: ExecutionContext)
 extends BackendController(cc) {
 
-  implicit val slugInfoFormat: OFormat[SlugInfo] = ApiSlugInfoFormats.siFormat
-
   private def validateJson[A: Reads] =
     parse.json.validate(
       _.validate[A].asEither.left.map(e => BadRequest(JsError.toJson(e)))
     )
 
-  def setSlugInfo(): Action[SlugInfo] =
-    Action.async(validateJson[SlugInfo]) { implicit request =>
+  def setSlugInfo(): Action[Slug] =
+    Action.async(validateJson[Slug]) { implicit request =>
       slugInfoService.addSlugInfo(request.body)
         .map(_ => Ok("Done"))
     }

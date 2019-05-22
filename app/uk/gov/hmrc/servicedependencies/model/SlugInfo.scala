@@ -16,10 +16,8 @@
 
 package uk.gov.hmrc.servicedependencies.model
 
-import play.api.libs.json.{__, Json, OFormat, Reads, OWrites}
 import play.api.libs.functional.syntax._
-
-import scala.util.Try
+import play.api.libs.json._
 
 sealed trait SlugInfoFlag { def s: String }
 object SlugInfoFlag {
