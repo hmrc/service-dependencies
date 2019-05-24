@@ -146,6 +146,26 @@ trait ApiSlugInfoFormats {
     ~ (__ \ "version" ).format[String]
     ~ (__ \ "configs" ).format[Map[String, String]]
     )(DependencyConfig.apply, unlift(DependencyConfig.unapply))
+
+  val slugReads: Reads[SlugInfo] = (
+    (__ \ "uri").read[String] and
+      (__ \ "name").read[String] and
+      (__ \ "version").read[String].map(Version.apply) and
+      (__ \ "teams").read[List[String]] and
+      (__ \ "runnerVersion").read[String] and
+      (__ \ "classpath").read[String] and
+      (__ \ "jdkVersion").read[String] and
+      (__ \ "dependencies").read[List[SlugDependency]] and
+      (__ \ "applicationConfig").read[String] and
+      (__ \ "slugConfig").read[String] and
+      (__ \ "latest").read[Boolean] and
+      Reads.pure(false) and
+      Reads.pure(false) and
+      Reads.pure(false) and
+      Reads.pure(false) and
+      Reads.pure(false)
+    )(SlugInfo.apply _)
+
 }
 
 object ApiSlugInfoFormats extends ApiSlugInfoFormats

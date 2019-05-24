@@ -22,12 +22,10 @@ import com.google.inject.{Inject, Singleton}
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.servicedependencies.connector.model.BobbyVersionRange
 import uk.gov.hmrc.servicedependencies.connector.{ServiceDeploymentsConnector, TeamsAndRepositoriesConnector}
-import uk.gov.hmrc.servicedependencies.controller.model.Slug
 import uk.gov.hmrc.servicedependencies.model._
 import uk.gov.hmrc.servicedependencies.persistence.{DependencyConfigRepository, SlugInfoRepository, SlugParserJobsRepository}
 
 import scala.concurrent.{ExecutionContext, Future}
-import uk.gov.hmrc.servicedependencies.service.SlugTransform.createSlugInfo
 
 @Singleton
 class SlugInfoService @Inject()(
@@ -39,11 +37,10 @@ class SlugInfoService @Inject()(
 ) {
   import ExecutionContext.Implicits.global
 
-  def addSlugInfo(slug: Slug): Future[Boolean] = {
-    val si = createSlugInfo(slug)
+  def addSlugInfo(slug: SlugInfo): Future[Boolean] = {
     for {
-      added <- slugInfoRepository.add(si)
-      _ <- if (si.latest) slugInfoRepository.markLatest(si.name, si.version) else Future(())
+      added <- slugInfoRepository.add(slug)
+      _ <- if (slug.latest) slugInfoRepository.markLatest(slug.name, slug.version) else Future(())
     } yield added
   }
 
@@ -112,20 +109,4 @@ class SlugInfoService @Inject()(
 
   def findJDKVersions(flag: SlugInfoFlag): Future[Seq[JDKVersion]] =
     slugInfoRepository.findJDKUsage(flag)
-}
-
-object SlugTransform {
-  def createSlugInfo(slug: Slug): SlugInfo =
-    SlugInfo(uri = slug.uri,
-      name = slug.name,
-      version = Version(slug.version),
-      teams = slug.teams,
-      runnerVersion = slug.runnerVersion,
-      classpath = slug.classpath,
-      jdkVersion = slug.jdkVersion,
-      dependencies = slug.dependencies,
-      applicationConfig = slug.applicationConfig,
-      slugConfig = slug.slugConfig,
-      latest = slug.latest,
-      production = false, qa = false, staging = false, development = false, externalTest = false)
 }
