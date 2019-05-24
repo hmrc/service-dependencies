@@ -14,10 +14,10 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.servicedependencies.controller.admin
+package uk.gov.hmrc.servicedependencies.controller
 
 import com.google.inject.{Inject, Singleton}
-import play.api.libs.json.{JsError, OFormat, Reads}
+import play.api.libs.json.{JsError, Reads}
 import play.api.mvc.{Action, ControllerComponents}
 import uk.gov.hmrc.play.bootstrap.controller.BackendController
 import uk.gov.hmrc.servicedependencies.model.{ApiSlugInfoFormats, SlugInfo}
@@ -31,17 +31,14 @@ class ServiceMetaController @Inject()(  slugInfoService: SlugInfoService,
                                      (implicit ec: ExecutionContext)
 extends BackendController(cc) {
 
-  implicit val slugInfoFormat: OFormat[SlugInfo] = ApiSlugInfoFormats.siFormat
+  private def validateJson[A: Reads] = parse.json.validate(_.validate[A].asEither.left.map(e => BadRequest(JsError.toJson(e))))
 
-  private def validateJson[A: Reads] =
-    parse.json.validate(
-      _.validate[A].asEither.left.map(e => BadRequest(JsError.toJson(e)))
-    )
-
-  def setSlugInfo(): Action[SlugInfo] =
+  def setSlugInfo(): Action[SlugInfo] = {
+    implicit val reads: Reads[SlugInfo] = ApiSlugInfoFormats.slugReads
     Action.async(validateJson[SlugInfo]) { implicit request =>
       slugInfoService.addSlugInfo(request.body)
         .map(_ => Ok("Done"))
     }
+  }
 
 }

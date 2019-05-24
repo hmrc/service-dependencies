@@ -8,5 +8,3 @@ GET     /mongo-locks                        @uk.gov.hmrc.servicedependencies.con
 
 POST    /slug-parser-jobs/backfill          @uk.gov.hmrc.servicedependencies.controller.admin.AdministrationController.backfillSlugParserJobs
 POST    /slug-parser-jobs/process           @uk.gov.hmrc.servicedependencies.controller.admin.AdministrationController.processSlugParserJobs
-
-POST    /slugs                              @uk.gov.hmrc.servicedependencies.controller.admin.ServiceMetaController.setSlugInfo()

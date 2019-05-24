@@ -37,11 +37,12 @@ class SlugInfoService @Inject()(
 ) {
   import ExecutionContext.Implicits.global
 
-  def addSlugInfo(slug: SlugInfo): Future[Boolean] =
+  def addSlugInfo(slug: SlugInfo): Future[Boolean] = {
     for {
-      added     <- slugInfoRepository.add(slug)
-      _         <- if (slug.latest) slugInfoRepository.markLatest(slug.name, slug.version) else Future(())
+      added <- slugInfoRepository.add(slug)
+      _ <- if (slug.latest) slugInfoRepository.markLatest(slug.name, slug.version) else Future(())
     } yield added
+  }
 
   def addSlugParserJob(newJob: NewSlugParserJob): Future[Boolean] =
     slugParserJobsRepository.add(newJob)
