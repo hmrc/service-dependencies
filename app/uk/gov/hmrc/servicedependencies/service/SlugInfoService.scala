@@ -23,13 +23,12 @@ import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.servicedependencies.connector.model.BobbyVersionRange
 import uk.gov.hmrc.servicedependencies.connector.{ServiceDeploymentsConnector, TeamsAndRepositoriesConnector}
 import uk.gov.hmrc.servicedependencies.model._
-import uk.gov.hmrc.servicedependencies.persistence.{DependencyConfigRepository, SlugInfoRepository, SlugParserJobsRepository}
+import uk.gov.hmrc.servicedependencies.persistence.{DependencyConfigRepository, SlugInfoRepository}
 
 import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
 class SlugInfoService @Inject()(
-  slugParserJobsRepository      : SlugParserJobsRepository,
   slugInfoRepository            : SlugInfoRepository,
   dependencyConfigRepository    : DependencyConfigRepository,
   teamsAndRepositoriesConnector : TeamsAndRepositoriesConnector,
@@ -43,9 +42,6 @@ class SlugInfoService @Inject()(
       _ <- if (slug.latest) slugInfoRepository.markLatest(slug.name, slug.version) else Future(())
     } yield added
   }
-
-  def addSlugParserJob(newJob: NewSlugParserJob): Future[Boolean] =
-    slugParserJobsRepository.add(newJob)
 
   def getSlugInfos(name: String, version: Option[String]): Future[Seq[SlugInfo]] =
     slugInfoRepository.getSlugInfos(name, version)
@@ -71,7 +67,7 @@ class SlugInfoService @Inject()(
     slugInfoRepository
       .findGroupsArtefacts
 
-  def updateMetadata(implicit hc: HeaderCarrier): Future[Unit] = {
+  def updateMetadata()(implicit hc: HeaderCarrier): Future[Unit] = {
 
     import ServiceDeploymentsConnector._
     for {

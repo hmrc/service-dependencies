@@ -21,19 +21,13 @@ import play.api.Logger
 import play.api.libs.json.Json
 import play.api.mvc.ControllerComponents
 import uk.gov.hmrc.play.bootstrap.controller.BackendController
-import uk.gov.hmrc.servicedependencies.connector.TeamsAndRepositoriesConnector
-import uk.gov.hmrc.servicedependencies.model.{MongoSlugParserJob, NewSlugParserJob}
-import uk.gov.hmrc.servicedependencies.service.{DependencyDataUpdatingService, SlugInfoService, SlugJobCreator, SlugJobProcessor}
-import scala.concurrent.{ExecutionContext, Future}
-import scala.util.control.NonFatal
+import uk.gov.hmrc.servicedependencies.service.DependencyDataUpdatingService
+
+import scala.concurrent.ExecutionContext
 
 @Singleton
 class AdministrationController @Inject()(
   dependencyDataUpdatingService: DependencyDataUpdatingService,
-  slugInfoService: SlugInfoService,
-  slugJobProcessor: SlugJobProcessor,
-  slugJobCreator: SlugJobCreator,
-  teamsAndRepositoriesConnector: TeamsAndRepositoriesConnector,
   cc: ControllerComponents)(implicit ec: ExecutionContext)
     extends BackendController(cc) {
 
@@ -78,30 +72,4 @@ class AdministrationController @Inject()(
   def mongoLocks() = Action.async { implicit request =>
     dependencyDataUpdatingService.locks().map(locks => Ok(Json.toJson(locks)))
   }
-
-  def processSlugParserJobs =
-    Action { implicit request =>
-      Logger.info("Processing slug parser jobs")
-      slugJobProcessor
-        .run()
-        .recover {
-          case NonFatal(e) => Logger.error(s"An error occurred processing slug parser jobs: ${e.getMessage}", e)
-        }
-      Accepted
-    }
-
-  def backfillSlugParserJobs =
-    Action { implicit request =>
-      Logger.info(s"Backfilling slug parser jobs")
-      slugJobCreator
-        .runBackfill
-        .flatMap { _ =>
-          Logger.info("Finished creating slug jobs - now processing jobs")
-          slugJobProcessor.run()
-        }
-        .recover {
-          case NonFatal(e) => Logger.error(s"An error occurred creating slug parser jobs: ${e.getMessage}", e)
-        }
-      Accepted
-    }
 }

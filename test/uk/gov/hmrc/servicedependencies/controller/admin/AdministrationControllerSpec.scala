@@ -26,7 +26,7 @@ import play.api.test.FakeRequest
 import play.api.test.Helpers._
 import uk.gov.hmrc.servicedependencies.connector.TeamsAndRepositoriesConnector
 import uk.gov.hmrc.servicedependencies.model.MongoRepositoryDependencies
-import uk.gov.hmrc.servicedependencies.service.{DependencyDataUpdatingService, SlugInfoService, SlugJobCreator, SlugJobProcessor}
+import uk.gov.hmrc.servicedependencies.service.{DependencyDataUpdatingService, SlugInfoService}
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
@@ -81,33 +81,17 @@ class AdministrationControllerSpec
 
   case class Boot(
     mockedDependencyDataUpdatingService: DependencyDataUpdatingService,
-    mockedSlugInfoService: SlugInfoService,
-    mockedSlugJobProcessor: SlugJobProcessor,
-    mockedSlugJobCreator: SlugJobCreator,
-    mockedTeamsAndRepositoriesConnector: TeamsAndRepositoriesConnector,
     controller: AdministrationController)
 
   object Boot {
     def init: Boot = {
       val mockedDependencyDataUpdatingService = mock[DependencyDataUpdatingService]
-      val mockedSlugInfoService               = mock[SlugInfoService]
-      val mockedSlugJobProcessor              = mock[SlugJobProcessor]
-      val mockedSlugJobCreator                = mock[SlugJobCreator]
-      val mockedTeamsAndRepositoriesConnector = mock[TeamsAndRepositoriesConnector]
       val controller = new AdministrationController(
         mockedDependencyDataUpdatingService,
-        mockedSlugInfoService,
-        mockedSlugJobProcessor,
-        mockedSlugJobCreator,
-        mockedTeamsAndRepositoriesConnector,
         stubControllerComponents()
       )
       Boot(
         mockedDependencyDataUpdatingService,
-        mockedSlugInfoService,
-        mockedSlugJobProcessor,
-        mockedSlugJobCreator,
-        mockedTeamsAndRepositoriesConnector,
         controller)
     }
   }

@@ -5,6 +5,3 @@ GET     /reload-dependencies                @uk.gov.hmrc.servicedependencies.con
 POST    /drop-collection/:collection        @uk.gov.hmrc.servicedependencies.controller.admin.AdministrationController.dropCollection(collection)
 POST    /clear-update-dates                 @uk.gov.hmrc.servicedependencies.controller.admin.AdministrationController.clearUpdateDates
 GET     /mongo-locks                        @uk.gov.hmrc.servicedependencies.controller.admin.AdministrationController.mongoLocks()
-
-POST    /slug-parser-jobs/backfill          @uk.gov.hmrc.servicedependencies.controller.admin.AdministrationController.backfillSlugParserJobs
-POST    /slug-parser-jobs/process           @uk.gov.hmrc.servicedependencies.controller.admin.AdministrationController.processSlugParserJobs

@@ -61,7 +61,7 @@ object SchedulerConfig {
 @Singleton
 class SchedulerConfigs @Inject()(configuration: Configuration) extends ConfigUtils {
 
-  val slugJobCreator = SchedulerConfig(
+  val slugMetadataUpdate = SchedulerConfig(
       configuration
     , enabledKey      = "repositoryDependencies.slugJob.enabled"
     , frequencyKey    = "repositoryDependencies.slugJob.interval"
