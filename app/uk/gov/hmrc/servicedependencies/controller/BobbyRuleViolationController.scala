@@ -20,7 +20,7 @@ import play.api.Configuration
 import play.api.libs.json.Json
 import play.api.mvc._
 import uk.gov.hmrc.play.bootstrap.controller.BackendController
-import uk.gov.hmrc.servicedependencies.model.SlugInfoFlag
+import uk.gov.hmrc.servicedependencies.model.{BobbyRuleViolation, SlugInfoFlag}
 import uk.gov.hmrc.servicedependencies.service.DependencyLookupService
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -31,11 +31,12 @@ class BobbyRuleViolationController @Inject() (configuration : Configuration,
                                              ) (implicit ec: ExecutionContext) extends BackendController(cc){
 
   def findBobbyRuleViolations(env: String): Action[AnyContent] = {
-    implicit val brw = uk.gov.hmrc.servicedependencies.connector.model.BobbyRule.writes
+    implicit val brw = BobbyRuleViolation.writes
     Action.async { implicit request =>
       SlugInfoFlag.parse(env) match {
         case None => Future(BadRequest("invalid environment"))
-        case Some(e) => slugLookup.countBobbyRuleViolations(e).map(v => Ok(Json.toJson(v)) )
+        case Some(e) => slugLookup.countBobbyRuleViolations(e)
+          .map(v => Ok(Json.toJson(v)) )
       }
     }
   }

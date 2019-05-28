@@ -20,7 +20,7 @@ import java.io.PrintStream
 
 import javax.inject.Inject
 import uk.gov.hmrc.servicedependencies.connector.ServiceConfigsConnector
-import uk.gov.hmrc.servicedependencies.connector.model.{BobbyRule, BobbyVersionRange}
+import uk.gov.hmrc.servicedependencies.connector.model.BobbyVersionRange
 import uk.gov.hmrc.servicedependencies.model._
 import uk.gov.hmrc.servicedependencies.persistence.{SlugBlacklist, SlugInfoRepository}
 
@@ -32,15 +32,13 @@ class DependencyLookupService @Inject() (serviceConfigs:ServiceConfigsConnector,
 
   import DependencyLookupService._
 
-  def countBobbyRuleViolations(env: SlugInfoFlag) : Future[Map[BobbyRule, Int]] =
+  def countBobbyRuleViolations(env: SlugInfoFlag) : Future[Seq[BobbyRuleViolation]] =
     for {
       rules      <- serviceConfigs.getBobbyRules().map(_.values.flatten.toSeq)
       slugs      <- slugRepo.getSlugsForEnv(env)
       lookup     =  DependencyLookupService.buildLookup(slugs)
       violations =  rules.map(
-        rule => {
-          rule -> DependencyLookupService.findSlugsUsing(lookup, rule.organisation, rule.name, rule.range).length
-        }).toMap
+        rule => BobbyRuleViolation(rule, DependencyLookupService.findSlugsUsing(lookup, rule.organisation, rule.name, rule.range).length))
     } yield violations
 
 
