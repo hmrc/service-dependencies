@@ -29,7 +29,7 @@ import uk.gov.hmrc.servicedependencies.util.SchedulerUtils
 import scala.concurrent.ExecutionContext
 
 
-class SlugJobCreatorScheduler @Inject()(
+class SlugMetadataUpdateScheduler @Inject()(
     schedulerConfigs    : SchedulerConfigs,
     slugInfoService     : SlugInfoService,
     mongoLocks          : MongoLocks)(
@@ -41,12 +41,12 @@ class SlugJobCreatorScheduler @Inject()(
 
   import ExecutionContext.Implicits.global
 
-  scheduleWithLock("Slug Info Reloader", schedulerConfigs.slugJobCreator, mongoLocks.slugJobSchedulerLock) {
+  scheduleWithLock("Slug Metadata Updater", schedulerConfigs.slugMetadataUpdate, mongoLocks.slugMetadataUpdateSchedulerLock) {
 
-    Logger.info("Updating metadata")
+    Logger.info("Updating slug metadata")
     for {
-      _ <- slugInfoService.updateMetadata
-      _ = Logger.info("Finished updating metadata")
+      _ <- slugInfoService.updateMetadata()
+      _ = Logger.info("Finished updating slug metadata")
     } yield ()
 
   }

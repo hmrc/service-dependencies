@@ -24,7 +24,7 @@ class Module() extends AbstractModule {
   override def configure(): Unit = {
     bind(classOf[DataReloadScheduler    ]).asEagerSingleton()
     bind(classOf[MetricsScheduler       ]).asEagerSingleton()
-    bind(classOf[SlugJobCreatorScheduler]).asEagerSingleton()
+    bind(classOf[SlugMetadataUpdateScheduler]).asEagerSingleton()
     bind(classOf[Github                 ]).toProvider(classOf[GithubProvider])
     bind(classOf[Materializer           ]).toProvider(classOf[MaterializerProvider])
   }

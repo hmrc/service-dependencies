@@ -16,18 +16,17 @@
 
 package uk.gov.hmrc.servicedependencies.service
 
-import org.scalatest.mockito.MockitoSugar
 import org.mockito.Mockito._
-import uk.gov.hmrc.play.test.UnitSpec
-import uk.gov.hmrc.servicedependencies.connector.{ServiceDeploymentsConnector, TeamsAndRepositoriesConnector, TeamsForServices}
-import uk.gov.hmrc.servicedependencies.connector.model.BobbyVersionRange
-import uk.gov.hmrc.servicedependencies.persistence.{DependencyConfigRepository, SlugParserJobsRepository, SlugInfoRepository}
-import uk.gov.hmrc.servicedependencies.model.{ServiceDependency, SlugInfoFlag}
+import org.scalatest.mockito.MockitoSugar
 import uk.gov.hmrc.http.HeaderCarrier
+import uk.gov.hmrc.play.test.UnitSpec
+import uk.gov.hmrc.servicedependencies.connector.model.BobbyVersionRange
+import uk.gov.hmrc.servicedependencies.connector.{ServiceDeploymentsConnector, TeamsAndRepositoriesConnector, TeamsForServices}
+import uk.gov.hmrc.servicedependencies.model.{ServiceDependency, SlugInfoFlag}
+import uk.gov.hmrc.servicedependencies.persistence.{DependencyConfigRepository, SlugInfoRepository}
 
-
-import scala.concurrent.Future
 import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.Future
 
 class SlugInfoServiceSpec
   extends UnitSpec
@@ -102,8 +101,7 @@ class SlugInfoServiceSpec
   }
 
   case class Boot(
-      mockedSlugParserJobsRepository     : SlugParserJobsRepository
-    , mockedSlugInfoRepository           : SlugInfoRepository
+      mockedSlugInfoRepository           : SlugInfoRepository
     , mockedDependencyConfigRepository   : DependencyConfigRepository
     , mockedTeamsAndRepositoriesConnector: TeamsAndRepositoriesConnector
     , mockedServiceDeploymentsConnector  : ServiceDeploymentsConnector
@@ -112,22 +110,19 @@ class SlugInfoServiceSpec
 
   object Boot {
     def init: Boot = {
-      val mockedSlugParserJobsRepository      = mock[SlugParserJobsRepository]
       val mockedSlugInfoRepository            = mock[SlugInfoRepository]
       val mockedDependencyConfigRepository    = mock[DependencyConfigRepository]
       val mockedTeamsAndRepositoriesConnector = mock[TeamsAndRepositoriesConnector]
       val mockedServiceDeploymentsConnector   = mock[ServiceDeploymentsConnector]
 
       val service = new SlugInfoService(
-            mockedSlugParserJobsRepository
-          , mockedSlugInfoRepository
+            mockedSlugInfoRepository
           , mockedDependencyConfigRepository
           , mockedTeamsAndRepositoriesConnector
           , mockedServiceDeploymentsConnector
           )
       Boot(
-          mockedSlugParserJobsRepository
-        , mockedSlugInfoRepository
+          mockedSlugInfoRepository
         , mockedDependencyConfigRepository
         , mockedTeamsAndRepositoriesConnector
         , mockedServiceDeploymentsConnector

@@ -22,14 +22,11 @@ The service gathers dependency information from two sources:
 
 #### Configuration
 
-The slug dependency parser is configured in two parts:
+The slug metadata updater is configured:
 
 ````
-### Artifactory Polling Service to find new slugs
-artifactory.url                                  # url to artifactory api
-artifactory.webstore                             # converts artifactory uri to uri to s3 slug mirror
-repositoryDependencies.slugJob.enabled           # enable polling of artifactory to find new slugs, and subsequent processing of slugs
-repositoryDependencies.slugJob.interval          # delay between polling artifactory
+repositoryDependencies.slugJob.enabled           # enable polling of service deployments and updating of slug metadata
+repositoryDependencies.slugJob.interval          # delay between polling service deployments
 ````
 
 The github/sbt dependency parser is configured:
@@ -46,12 +43,6 @@ The metrics reporter is configured:
 repositoryDependencies.metricsGauges.enabled   # enable the metrics reporter
 repositoryDependencies.metricsGauges.interval  # how often stats are uploaded
 ````
-
-### Backfill
-
-All the latest versions of slugs can be looked up from Artifactory and processed. Generally this will not be necessary, as the schedulers will process new slugs as the are identified in Artifactory, but it can be required for an initial deployment, or a change in parsing rules.
-
-To run the backfill, drop the slugParserJobs collection, and call the admin endpoint `POST api/admin/dependencies/slug-parser-jobs/backfill`.
 
 ### License
 

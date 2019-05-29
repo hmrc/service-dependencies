@@ -46,13 +46,13 @@ class DependencyConfigRepositorySpec
     prepare(dependencyConfigRepository)
   }
 
-  "dependencyConfigRepository.add" should {
-    "inserts correctly" in {
+  "DependencyConfigRepository.add" should {
+    "insert correctly" in {
       await(dependencyConfigRepository.add(dependencyConfig))
       await(dependencyConfigRepository.getAllEntries) shouldBe Seq(dependencyConfig)
     }
 
-    "replace exising" in {
+    "replace existing" in {
       await(dependencyConfigRepository.add(dependencyConfig)) shouldBe true
       await(dependencyConfigRepository.getAllEntries) should have size 1
 
@@ -62,8 +62,8 @@ class DependencyConfigRepositorySpec
     }
   }
 
-  "SlugParserJobsRepository.clearAllDependencyEntries" should {
-    "deletes everything" in {
+  "DependencyConfigRepository.clearAllData" should {
+    "delete everything" in {
       await(dependencyConfigRepository.add(dependencyConfig))
       await(dependencyConfigRepository.getAllEntries) should have size 1
 
@@ -73,7 +73,7 @@ class DependencyConfigRepositorySpec
   }
 
 
-  "dependencyConfigRepository.getDependencyConfig" should {
+  "DependencyConfigRepository.getDependencyConfig" should {
 
     "return match" in {
       await(dependencyConfigRepository.add(dependencyConfig))

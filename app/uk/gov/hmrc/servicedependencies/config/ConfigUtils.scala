@@ -16,14 +16,8 @@
 
 package uk.gov.hmrc.servicedependencies.config
 
-import akka.actor.ActorSystem
-import javax.inject.Inject
-import play.api.{Configuration, Logger}
-import play.api.inject.ApplicationLifecycle
-import uk.gov.hmrc.servicedependencies.service.{SlugJobCreator, SlugJobProcessor}
-import uk.gov.hmrc.servicedependencies.persistence.MongoLocks
+import play.api.Configuration
 
-import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.duration.{DurationLong, FiniteDuration}
 
 trait ConfigUtils {
