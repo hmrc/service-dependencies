@@ -28,22 +28,9 @@ class ServiceDependenciesConfig @Inject()(configuration: Configuration,
                                           serviceConfig: ServicesConfig)
   extends ConfigUtils {
 
-  lazy val artifactoryBase: String    = configuration.get[String]("artifactory.url")
-  lazy val artifactoryUser            = configuration.getOptional[String]("artifactory.api.user")
-  lazy val artifactoryPwd             = configuration.getOptional[String]("artifactory.apikey")
-  lazy val webstoreBase: String       = configuration.get[String]("artifactory.webstore")
-
   private val githubOpenConfigKey     = "github.open.api"
-  private val releaseServiceUrlKey    = "releases.api.url"
-  private val targetArtifactsKey      = "target.artifacts"
 
-  lazy val targetArtifact: String                 = configuration.getOptional[String](s"$targetArtifactsKey").getOrElse("sbt-plugin")
-  lazy val releasesServiceUrl: String             = configuration.get[String](s"$releaseServiceUrlKey")
   lazy val teamsAndRepositoriesServiceUrl: String = serviceConfig.baseUrl("teams-and-repositories")
-
-  private val gitOpenConfig = (key: String) => configuration.getOptional[String](s"$githubOpenConfigKey.$key")
-
-  lazy val localCredentialPath = s"${System.getProperty("user.home")}/.github/.credentials"
 
   private def gitPath(gitFolder: String): String = s"${System.getProperty("user.home")}/.github/$gitFolder"
 

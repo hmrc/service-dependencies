@@ -19,7 +19,7 @@ package uk.gov.hmrc.servicedependencies.persistence
 import com.google.inject.{Inject, Singleton}
 import org.joda.time.Duration
 import play.modules.reactivemongo.ReactiveMongoComponent
-import reactivemongo.api.{DB, DefaultDB}
+import reactivemongo.api.DB
 import uk.gov.hmrc.lock.{LockKeeper, LockMongoRepository, LockRepository}
 
 class MongoLock(db: () => DB, lockId_ : String) extends LockKeeper {
@@ -37,5 +37,5 @@ class MongoLocks @Inject()(mongo: ReactiveMongoComponent) {
   val repositoryDependencyMongoLock = new MongoLock(db, "repository-dependencies-data-reload-job")
   val libraryMongoLock              = new MongoLock(db, "libraries-data-reload-job")
   val sbtPluginMongoLock            = new MongoLock(db, "sbt-plugin-data-reload-job")
-  val slugJobSchedulerLock          = new MongoLock(db, "slug-job-scheduler")
+  val slugMetadataUpdateSchedulerLock          = new MongoLock(db, "slug-job-scheduler")
 }

@@ -17,14 +17,12 @@
 package uk.gov.hmrc.servicedependencies.persistence
 
 import org.mockito.Mockito.when
-import org.scalatest.{BeforeAndAfterEach, Matchers, WordSpecLike}
 import org.scalatest.mockito.MockitoSugar
+import org.scalatest.{BeforeAndAfterEach, Matchers, WordSpecLike}
 import play.modules.reactivemongo.ReactiveMongoComponent
 import uk.gov.hmrc.mongo.{FailOnUnindexedQueries, MongoConnector, MongoSpecSupport, RepositoryPreparation}
 import uk.gov.hmrc.servicedependencies.model.SlugInfoFlag.Latest
 import uk.gov.hmrc.servicedependencies.model.{SlugDependency, SlugInfo, SlugInfoFlag, Version}
-
-import scala.concurrent.ExecutionContext.Implicits.global
 
 class SlugInfoRepositorySpec
     extends WordSpecLike
@@ -50,12 +48,12 @@ class SlugInfoRepositorySpec
   }
 
   "SlugInfoRepository.add" should {
-    "inserts correctly" in {
+    "insert correctly" in {
       await(slugInfoRepository.add(slugInfo))
       await(slugInfoRepository.getAllEntries) shouldBe Seq(slugInfo)
     }
 
-    "replace exising" in {
+    "replace existing" in {
       await(slugInfoRepository.add(slugInfo)) shouldBe true
       await(slugInfoRepository.getAllEntries) should have size 1
 
@@ -65,8 +63,8 @@ class SlugInfoRepositorySpec
     }
   }
 
-  "SlugParserJobsRepository.clearAllDependencyEntries" should {
-    "deletes everything" in {
+  "SlugInfoRepository.clearAllData" should {
+    "delete everything" in {
       await(slugInfoRepository.add(slugInfo))
       await(slugInfoRepository.getAllEntries) should have size 1
 

@@ -36,8 +36,7 @@ class DependencyDataUpdatingService @Inject()(
   sbtPluginVersionRepository: SbtPluginVersionRepository,
   locksRepository: LocksRepository,
   mongoLocks: MongoLocks,
-  dependenciesDataSource: DependenciesDataSource,
-  slugParserJobsRepository: SlugParserJobsRepository
+  dependenciesDataSource: DependenciesDataSource
 ) {
 
   lazy val logger = LoggerFactory.getLogger(this.getClass)
@@ -194,7 +193,6 @@ class DependencyDataUpdatingService @Inject()(
       case "libraryVersions"               => libraryVersionRepository.clearAllData
       case "sbtPluginVersions"             => sbtPluginVersionRepository.clearAllData
       case "locks"                         => locksRepository.clearAllData
-      case "slugParserJobs"                => slugParserJobsRepository.clearAllData
       case other                           => throw new RuntimeException(s"dropping $other collection is not supported")
     }
 

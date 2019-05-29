@@ -9,3 +9,4 @@ GET     /api/dependencyConfig                  @uk.gov.hmrc.servicedependencies.
 GET     /api/slugDependencyConfigs             @uk.gov.hmrc.servicedependencies.controller.ServiceDependenciesController.slugDependencyConfigs(name: String, flag: String ?= "latest")
 GET     /api/jdkVersions                       @uk.gov.hmrc.servicedependencies.controller.ServiceDependenciesController.findJDKForEnvironment(flag: String ?= "latest")
 GET     /api/bobbyViolations                   @uk.gov.hmrc.servicedependencies.controller.BobbyRuleViolationController.findBobbyRuleViolations(flag: String ?= "latest")
+POST    /api/slugs                             @uk.gov.hmrc.servicedependencies.controller.ServiceMetaController.setSlugInfo()

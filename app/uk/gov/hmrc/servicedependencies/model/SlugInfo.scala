@@ -16,10 +16,8 @@
 
 package uk.gov.hmrc.servicedependencies.model
 
-import play.api.libs.json.{__, Json, OFormat, Reads, OWrites}
 import play.api.libs.functional.syntax._
-
-import scala.util.Try
+import play.api.libs.json._
 
 sealed trait SlugInfoFlag { def s: String }
 object SlugInfoFlag {
@@ -148,6 +146,26 @@ trait ApiSlugInfoFormats {
     ~ (__ \ "version" ).format[String]
     ~ (__ \ "configs" ).format[Map[String, String]]
     )(DependencyConfig.apply, unlift(DependencyConfig.unapply))
+
+  val slugReads: Reads[SlugInfo] = (
+    (__ \ "uri").read[String]
+      ~ (__ \ "name").read[String]
+      ~ (__ \ "version").read[String].map(Version.apply)
+      ~ (__ \ "teams").read[List[String]]
+      ~ (__ \ "runnerVersion").read[String]
+      ~ (__ \ "classpath").read[String]
+      ~ (__ \ "jdkVersion").read[String]
+      ~ (__ \ "dependencies").read[List[SlugDependency]]
+      ~ (__ \ "applicationConfig").read[String]
+      ~ (__ \ "slugConfig").read[String]
+      ~ (__ \ "latest").read[Boolean]
+      ~ Reads.pure(false)
+      ~ Reads.pure(false)
+      ~ Reads.pure(false)
+      ~ Reads.pure(false)
+      ~ Reads.pure(false)
+    )(SlugInfo.apply _)
+
 }
 
 object ApiSlugInfoFormats extends ApiSlugInfoFormats
