@@ -92,7 +92,7 @@ class DependencyLookupServiceTest extends FlatSpec with Matchers with MockitoSug
     val lookupService = new DependencyLookupService(configService, slugInfoRepository)
     val count         = Await.result(lookupService.countBobbyRuleViolations(SlugInfoFlag.Production), Duration(20, "seconds"))
 
-    count.get(bobbyRule) shouldBe Some(1)
+    count.length shouldBe 1
   }
 
 
