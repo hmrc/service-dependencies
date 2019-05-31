@@ -18,8 +18,10 @@ package uk.gov.hmrc.servicedependencies.connector.model
 
 import java.time.LocalDate
 
+import play.api.data.format.Formats
 import play.api.libs.functional.syntax._
-import play.api.libs.json.{Reads, __}
+import play.api.libs.json.{Reads, Writes, __}
+import uk.gov.hmrc.http.controllers.RestFormats
 import uk.gov.hmrc.servicedependencies.controller.model.DependencyBobbyRule
 
 final case class BobbyRule(
@@ -47,5 +49,15 @@ object BobbyRule {
     ~ (__ \ "reason"      ).read[String]
     ~ (__ \ "from"        ).read[LocalDate]
     )(BobbyRule.apply _)
+  }
+  val writes: Writes[BobbyRule] = {
+    implicit val ldw  = Formats.localDateFormat
+    implicit val bvwf = BobbyVersionRange.format
+    (   (__ \ "organisation").write[String]
+      ~ (__ \ "name"        ).write[String]
+      ~ (__ \ "range"       ).write[BobbyVersionRange]
+      ~ (__ \ "reason"      ).write[String]
+      ~ (__ \ "from"        ).write[LocalDate]
+    )(unlift(BobbyRule.unapply))
   }
 }

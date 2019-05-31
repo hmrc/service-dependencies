@@ -84,6 +84,10 @@ class SlugInfoRepository @Inject()(mongo: ReactiveMongoComponent)
       flag.s -> true)
       .map(_.headOption)
 
+  def getSlugsForEnv(flag: SlugInfoFlag): Future[Seq[SlugInfo]] =
+    find(flag.s -> true)
+
+
   def clearFlag(flag: SlugInfoFlag, name: String): Future[Unit] = {
     logger.info(s"clear ${flag.s} flag on $name")
     collection

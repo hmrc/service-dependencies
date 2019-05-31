@@ -72,4 +72,6 @@ object SlugBlacklist {
       , "verifiers-migrator"
       , "your-tax-calculator-frontend"
       )
+
+    val blacklistedSlugsSet = blacklistedSlugs.toSet
 }
