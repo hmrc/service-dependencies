@@ -16,12 +16,12 @@
 
 package uk.gov.hmrc.servicedependencies.controller
 
-import cats.data.{EitherT, OptionT}
+import cats.data.EitherT
 import cats.instances.all._
 import cats.syntax.all._
 import com.google.inject.{Inject, Singleton}
 import play.api.Configuration
-import play.api.libs.json.{Json, OFormat, OWrites}
+import play.api.libs.json.{Json, OWrites}
 import play.api.mvc._
 import uk.gov.hmrc.play.bootstrap.controller.BackendController
 import uk.gov.hmrc.servicedependencies.config.ServiceDependenciesConfig
@@ -123,34 +123,6 @@ class ServiceDependenciesController @Inject()(
                           case Some(res) => Ok(Json.toJson(res))
                         }
       }
-    }
-
-  def dependencyConfig(group: String, artefact: String, version: String): Action[AnyContent] =
-    Action.async { implicit request =>
-      slugInfoService
-        .findDependencyConfig(group, artefact, version)
-        .map { res =>
-          val res2 = res.map(_.configs).getOrElse(Map.empty)
-          Ok(Json.toJson(res2))
-        }
-    }
-
-  def slugDependencyConfigs(name: String, flag: String): Action[AnyContent] =
-    Action.async { implicit request =>
-      implicit val format: OFormat[DependencyConfig] = ApiSlugInfoFormats.dcFormat
-      (for {
-        flag     <- OptionT
-                      .fromOption[Future](SlugInfoFlag.parse(flag))
-                      .toRight(BadRequest("invalid flag"))
-        slugInfo <- OptionT(slugInfoService.getSlugInfo(name, flag))
-                      .toRight(NotFound(""))
-        configs  <- EitherT.liftF[Future, Result, List[DependencyConfig]] {
-                      slugInfo.classpathOrderedDependencies
-                        .traverse(d => slugInfoService.findDependencyConfig(d.group, d.artifact, d.version))
-                        .map(_.flatten)
-                    }
-       } yield Ok(Json.toJson(configs))
-      ).merge
     }
 
   def findJDKForEnvironment(flag: String): Action[AnyContent] =
