@@ -23,15 +23,18 @@ import play.api.inject.ApplicationLifecycle
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.servicedependencies.config.SchedulerConfigs
 import uk.gov.hmrc.servicedependencies.persistence.MongoLocks
-import uk.gov.hmrc.servicedependencies.service.SlugInfoService
+import uk.gov.hmrc.servicedependencies.service.{DependencyLookupCache, DependencyLookupService, SlugInfoService}
 import uk.gov.hmrc.servicedependencies.util.SchedulerUtils
 
 import scala.concurrent.ExecutionContext
+import scala.concurrent.duration.Duration
+import scala.concurrent.duration.MINUTES
 
 
 class SlugMetadataUpdateScheduler @Inject()(
     schedulerConfigs    : SchedulerConfigs,
     slugInfoService     : SlugInfoService,
+    lookupCache         : DependencyLookupCache,
     mongoLocks          : MongoLocks)(
     implicit actorSystem         : ActorSystem,
              applicationLifecycle: ApplicationLifecycle)
@@ -45,8 +48,11 @@ class SlugMetadataUpdateScheduler @Inject()(
 
     Logger.info("Updating slug metadata")
     for {
-      _ <- slugInfoService.updateMetadata()
-      _ = Logger.info("Finished updating slug metadata")
+      _   <- slugInfoService.updateMetadata()
+      _   =  Logger.info("Finished updating slug metadata")
+      //TODO: there's probably a nicer way of triggering the cache updates
+      ttl =  schedulerConfigs.slugMetadataUpdate.frequency().plus(Duration(5, MINUTES))
+      _   <- lookupCache.updateAllCaches(ttl)
     } yield ()
 
   }

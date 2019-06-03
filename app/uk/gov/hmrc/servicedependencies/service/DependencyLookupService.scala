@@ -18,7 +18,9 @@ package uk.gov.hmrc.servicedependencies.service
 
 import java.io.PrintStream
 
-import javax.inject.Inject
+import javax.inject.{Inject, Singleton}
+import play.api.Logger
+import play.api.cache.AsyncCacheApi
 import uk.gov.hmrc.servicedependencies.connector.ServiceConfigsConnector
 import uk.gov.hmrc.servicedependencies.connector.model.BobbyVersionRange
 import uk.gov.hmrc.servicedependencies.model._
@@ -26,6 +28,7 @@ import uk.gov.hmrc.servicedependencies.persistence.{SlugBlacklist, SlugInfoRepos
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
+import scala.concurrent.duration.Duration
 
 
 class DependencyLookupService @Inject() (serviceConfigs:ServiceConfigsConnector, slugRepo : SlugInfoRepository) {
@@ -58,6 +61,33 @@ class DependencyLookupService @Inject() (serviceConfigs:ServiceConfigsConnector,
 
 }
 
+@Singleton
+class DependencyLookupCache @Inject()(lookupService: DependencyLookupService, cache: AsyncCacheApi) {
+
+  private def keyForEnv(env: SlugInfoFlag): String = s"countBobbyRuleViolations.${env.s}"
+
+  private def updateCache(env: SlugInfoFlag, cache: AsyncCacheApi, ttl: Duration): Future[Unit] =
+    for {
+      counts <- lookupService.countBobbyRuleViolations(env)
+      key    =  keyForEnv(env)
+      _      <- cache.set(key, counts, ttl)
+      _      =  Logger.info(s"Cached countBobbyRuleViolations for ${env.s}")
+    } yield ()
+
+
+  def updateAllCaches(ttl: Duration): Future[Unit] =
+    for {
+      _ <- updateCache(SlugInfoFlag.Production, cache, ttl)
+      _ <- updateCache(SlugInfoFlag.Latest, cache, ttl)
+      _ <- updateCache(SlugInfoFlag.QA, cache, ttl)
+    } yield ()
+
+  def countBobbyRuleViolations(env: SlugInfoFlag) : Future[Seq[BobbyRuleViolation]] =
+    cache
+      .get(keyForEnv(env))
+      .flatMap(_.getOrElse(lookupService.countBobbyRuleViolations(env)))
+
+}
 
 object DependencyLookupService {
 
