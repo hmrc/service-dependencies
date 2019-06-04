@@ -23,7 +23,7 @@ import uk.gov.hmrc.play.test.UnitSpec
 import uk.gov.hmrc.servicedependencies.connector.model.BobbyVersionRange
 import uk.gov.hmrc.servicedependencies.connector.{ServiceDeploymentsConnector, TeamsAndRepositoriesConnector, TeamsForServices}
 import uk.gov.hmrc.servicedependencies.model.{ServiceDependency, SlugInfoFlag}
-import uk.gov.hmrc.servicedependencies.persistence.{DependencyConfigRepository, SlugInfoRepository}
+import uk.gov.hmrc.servicedependencies.persistence.SlugInfoRepository
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
@@ -102,7 +102,6 @@ class SlugInfoServiceSpec
 
   case class Boot(
       mockedSlugInfoRepository           : SlugInfoRepository
-    , mockedDependencyConfigRepository   : DependencyConfigRepository
     , mockedTeamsAndRepositoriesConnector: TeamsAndRepositoriesConnector
     , mockedServiceDeploymentsConnector  : ServiceDeploymentsConnector
     , service                            : SlugInfoService
@@ -111,19 +110,16 @@ class SlugInfoServiceSpec
   object Boot {
     def init: Boot = {
       val mockedSlugInfoRepository            = mock[SlugInfoRepository]
-      val mockedDependencyConfigRepository    = mock[DependencyConfigRepository]
       val mockedTeamsAndRepositoriesConnector = mock[TeamsAndRepositoriesConnector]
       val mockedServiceDeploymentsConnector   = mock[ServiceDeploymentsConnector]
 
       val service = new SlugInfoService(
             mockedSlugInfoRepository
-          , mockedDependencyConfigRepository
           , mockedTeamsAndRepositoriesConnector
           , mockedServiceDeploymentsConnector
           )
       Boot(
           mockedSlugInfoRepository
-        , mockedDependencyConfigRepository
         , mockedTeamsAndRepositoriesConnector
         , mockedServiceDeploymentsConnector
         , service

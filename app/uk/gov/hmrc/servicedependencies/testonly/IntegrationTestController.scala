@@ -24,7 +24,7 @@ import uk.gov.hmrc.servicedependencies.model.{
   DependencyConfig, MongoLibraryVersion, MongoRepositoryDependencies, MongoSbtPluginVersion, SlugDependency, SlugInfo, Version
 }
 import uk.gov.hmrc.servicedependencies.persistence.{
-  DependencyConfigRepository, LibraryVersionRepository, RepositoryLibraryDependenciesRepository, SbtPluginVersionRepository, SlugInfoRepository
+  LibraryVersionRepository, RepositoryLibraryDependenciesRepository, SbtPluginVersionRepository, SlugInfoRepository
 }
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -35,7 +35,6 @@ class IntegrationTestController @Inject()(
     sbtPluginVersionRepository: SbtPluginVersionRepository,
     dependenciesRepository    : RepositoryLibraryDependenciesRepository,
     sluginfoRepo              : SlugInfoRepository,
-    dependencyConfigRepo      : DependencyConfigRepository,
     cc                        : ControllerComponents)
   extends BackendController(cc) {
 
@@ -78,12 +77,6 @@ class IntegrationTestController @Inject()(
         .map(_ => Ok("Done"))
     }
 
-  def addSlugDependencyConfigs =
-    Action.async(validateJson[Seq[DependencyConfig]]) { implicit request =>
-      Future.sequence(request.body.map(dependencyConfigRepo.add))
-        .map(_ => Ok("Done"))
-    }
-
   def deleteSbt =
     Action.async { implicit request =>
       sbtPluginVersionRepository.clearAllData.map(_ => Ok("Done"))
@@ -104,11 +97,6 @@ class IntegrationTestController @Inject()(
       sluginfoRepo.clearAllData.map(_ => Ok("Done"))
     }
 
-  def deleteSlugDependencyConfigs =
-    Action.async { implicit request =>
-      dependencyConfigRepo.clearAllData.map(_ => Ok("Done"))
-    }
-
   def deleteAll =
     Action.async { implicit request =>
       for {
@@ -116,7 +104,6 @@ class IntegrationTestController @Inject()(
         _ <- dependenciesRepository.clearAllData
         _ <- libraryRepo.clearAllData
         _ <- sluginfoRepo.clearAllData
-        _ <- dependencyConfigRepo.clearAllData
       } yield Ok("Deleted")
     }
 }

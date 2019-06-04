@@ -15,11 +15,9 @@ POST       /test-only/sbt                   @uk.gov.hmrc.servicedependencies.tes
 POST       /test-only/library               @uk.gov.hmrc.servicedependencies.testonly.IntegrationTestController.addLibraryVersion
 POST       /test-only/dependencies          @uk.gov.hmrc.servicedependencies.testonly.IntegrationTestController.addDependencies
 POST       /test-only/sluginfos             @uk.gov.hmrc.servicedependencies.testonly.IntegrationTestController.addSluginfos
-POST       /test-only/slugDependencyConfigs @uk.gov.hmrc.servicedependencies.testonly.IntegrationTestController.addSlugDependencyConfigs
 DELETE     /test-only/sbt                   @uk.gov.hmrc.servicedependencies.testonly.IntegrationTestController.deleteSbt
 DELETE     /test-only/library               @uk.gov.hmrc.servicedependencies.testonly.IntegrationTestController.deleteVersions
 DELETE     /test-only/dependencies          @uk.gov.hmrc.servicedependencies.testonly.IntegrationTestController.deleteDependencies
 DELETE     /test-only/sluginfos             @uk.gov.hmrc.servicedependencies.testonly.IntegrationTestController.deleteSluginfos
-DELETE     /test-only/slugDependencyConfigs @uk.gov.hmrc.servicedependencies.testonly.IntegrationTestController.deleteSlugDependencyConfigs
 DELETE     /test-only/all                   @uk.gov.hmrc.servicedependencies.testonly.IntegrationTestController.deleteAll
 ->         /                                prod.Routes

@@ -23,14 +23,13 @@ import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.servicedependencies.connector.model.BobbyVersionRange
 import uk.gov.hmrc.servicedependencies.connector.{ServiceDeploymentsConnector, TeamsAndRepositoriesConnector}
 import uk.gov.hmrc.servicedependencies.model._
-import uk.gov.hmrc.servicedependencies.persistence.{DependencyConfigRepository, SlugInfoRepository}
+import uk.gov.hmrc.servicedependencies.persistence.SlugInfoRepository
 
 import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
 class SlugInfoService @Inject()(
   slugInfoRepository            : SlugInfoRepository,
-  dependencyConfigRepository    : DependencyConfigRepository,
   teamsAndRepositoriesConnector : TeamsAndRepositoriesConnector,
   serviceDeploymentsConnector   : ServiceDeploymentsConnector
 ) {
@@ -99,9 +98,6 @@ class SlugInfoService @Inject()(
                                 }
     } yield ()
   }
-
-  def findDependencyConfig(group: String, artefact: String, version: String): Future[Option[DependencyConfig]] =
-    dependencyConfigRepository.getDependencyConfig(group, artefact, version)
 
   def findJDKVersions(flag: SlugInfoFlag): Future[Seq[JDKVersion]] =
     slugInfoRepository.findJDKUsage(flag)
