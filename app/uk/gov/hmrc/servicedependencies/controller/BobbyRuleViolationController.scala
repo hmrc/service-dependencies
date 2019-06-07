@@ -25,20 +25,20 @@ import uk.gov.hmrc.servicedependencies.service.DependencyLookupService
 
 import scala.concurrent.{ExecutionContext, Future}
 
-class BobbyRuleViolationController @Inject() (configuration : Configuration,
-                                              slugLookup: DependencyLookupService,
-                                              cc: ControllerComponents
-                                             ) (implicit ec: ExecutionContext) extends BackendController(cc){
+class BobbyRuleViolationController @Inject() (
+  configuration: Configuration,
+  slugLookup   : DependencyLookupService,
+  cc           : ControllerComponents
+  )(implicit ec: ExecutionContext) extends BackendController(cc) {
 
   def findBobbyRuleViolations(env: String): Action[AnyContent] = {
     implicit val brw = BobbyRuleViolation.writes
     Action.async { implicit request =>
       SlugInfoFlag.parse(env) match {
-        case None => Future(BadRequest("invalid environment"))
+        case None    => Future(BadRequest("invalid environment"))
         case Some(e) => slugLookup.countBobbyRuleViolations(e)
-          .map(v => Ok(Json.toJson(v)) )
+                          .map(v => Ok(Json.toJson(v)) )
       }
     }
   }
-
 }
