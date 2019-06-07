@@ -32,12 +32,12 @@ class BobbyRuleViolationController @Inject() (
   )(implicit ec: ExecutionContext) extends BackendController(cc) {
 
   def findBobbyRuleViolations(env: String): Action[AnyContent] = {
-    implicit val brw = BobbyRuleViolation.writes
+    implicit val brf = BobbyRuleViolation.format
     Action.async { implicit request =>
       SlugInfoFlag.parse(env) match {
         case None    => Future(BadRequest("invalid environment"))
-        case Some(e) => slugLookup.countBobbyRuleViolations(e)
-                          .map(v => Ok(Json.toJson(v)) )
+        case Some(e) => slugLookup.getLatestBobbyRuleViolations(e)
+                          .map(v => Ok(Json.toJson(v)))
       }
     }
   }

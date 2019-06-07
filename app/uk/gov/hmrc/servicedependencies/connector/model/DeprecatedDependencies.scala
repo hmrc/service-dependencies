@@ -24,7 +24,8 @@ final case class DeprecatedDependencies(libraries: Seq[BobbyRule], plugins: Seq[
 object DeprecatedDependencies {
 
   val reads: Reads[DeprecatedDependencies] =
-    ((__ \ "libraries").lazyRead(Reads.seq[BobbyRule](BobbyRule.reads))
-      ~ (__ \ "plugins").lazyRead(Reads.seq[BobbyRule](BobbyRule.reads)))(DeprecatedDependencies.apply _)
+    ( (__ \ "libraries").lazyRead(Reads.seq[BobbyRule](BobbyRule.format))
+    ~ (__ \ "plugins"  ).lazyRead(Reads.seq[BobbyRule](BobbyRule.format))
+    )(DeprecatedDependencies.apply _)
 
 }

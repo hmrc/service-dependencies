@@ -33,7 +33,6 @@ import scala.concurrent.Future
 class AdministrationControllerSpec
     extends FreeSpec
     with BeforeAndAfterEach
-    with GuiceOneServerPerSuite
     with Matchers
     with MockitoSugar
     with ScalaFutures

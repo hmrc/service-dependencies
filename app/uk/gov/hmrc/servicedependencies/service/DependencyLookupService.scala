@@ -16,37 +16,51 @@
 
 package uk.gov.hmrc.servicedependencies.service
 
+import cats.implicits._
 import java.io.PrintStream
-
+import java.time.LocalDate
 import javax.inject.Inject
+import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.servicedependencies.connector.ServiceConfigsConnector
-import uk.gov.hmrc.servicedependencies.connector.model.BobbyVersionRange
+import uk.gov.hmrc.servicedependencies.connector.model.{BobbyRule, BobbyVersionRange} // TODO move from connector.model to model?
 import uk.gov.hmrc.servicedependencies.model._
-import uk.gov.hmrc.servicedependencies.persistence.{SlugBlacklist, SlugInfoRepository}
+import uk.gov.hmrc.servicedependencies.persistence.{BobbyRulesSummary, BobbyRulesSummaryRepo, SlugBlacklist, SlugInfoRepository}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
 
 class DependencyLookupService @Inject() (
-    serviceConfigs: ServiceConfigsConnector
-  , slugRepo      : SlugInfoRepository
+    serviceConfigs       : ServiceConfigsConnector
+  , slugRepo             : SlugInfoRepository
+  , bobbyRulesSummaryRepo: BobbyRulesSummaryRepo
   ) {
 
   import DependencyLookupService._
 
-  def countBobbyRuleViolations(env: SlugInfoFlag): Future[Seq[BobbyRuleViolation]] =
+  def getLatestBobbyRuleViolations(env: SlugInfoFlag): Future[Seq[BobbyRuleViolation]] =
+    bobbyRulesSummaryRepo.getLatest
+      .map(_.toSeq.flatMap(_.summary.getOrElse(env, Seq.empty)))
+
+  def updateBobbyRulesSummary(implicit hc: HeaderCarrier): Future[Unit] = {
+    def calculateBobbyRulesSummary(rules: Seq[BobbyRule])(env: SlugInfoFlag): Future[(SlugInfoFlag, Seq[BobbyRuleViolation])] = {
+      for {
+        slugs      <- slugRepo.getSlugsForEnv(env)
+        lookup     =  buildLookup(slugs)
+        violations =  rules.map(rule => BobbyRuleViolation(
+                          rule
+                        , findSlugsUsing(lookup, rule.organisation, rule.name, rule.range).length
+                        )
+                      )
+      } yield (env, violations)
+    }
+
     for {
-      rules      <- serviceConfigs.getBobbyRules.map(_.values.flatten.toSeq)
-      slugs      <- slugRepo.getSlugsForEnv(env)
-      lookup     =  buildLookup(slugs)
-      violations =  rules.map(
-                      rule => BobbyRuleViolation(
-                                  rule
-                                , findSlugsUsing(lookup, rule.organisation, rule.name, rule.range).length
-                                )
-                    )
-    } yield violations
+      rules   <- serviceConfigs.getBobbyRules.map(_.values.flatten.toSeq)
+      summary <- SlugInfoFlag.values.traverse(calculateBobbyRulesSummary(rules))
+      _       <- bobbyRulesSummaryRepo.add(BobbyRulesSummary(LocalDate.now, summary.toMap))
+    } yield ()
+  }
 
 
   /**

@@ -18,16 +18,16 @@ package uk.gov.hmrc.servicedependencies.model
 
 import uk.gov.hmrc.servicedependencies.connector.model.BobbyRule
 import play.api.libs.functional.syntax._
-import play.api.libs.json.{OWrites, __}
+import play.api.libs.json.{OFormat, __}
 
 
-case class BobbyRuleViolation(rule:BobbyRule, count: Int)
+case class BobbyRuleViolation(rule: BobbyRule, count: Int)
 
 object BobbyRuleViolation {
-  val writes: OWrites[BobbyRuleViolation] = {
-    implicit val brw = BobbyRule.writes
-    (   (__ \ "rule" ).write[BobbyRule]
-      ~ (__ \ "count").write[Int]
-      )(unlift(BobbyRuleViolation.unapply))
+  val format: OFormat[BobbyRuleViolation] = {
+    implicit val brf = BobbyRule.format
+    ( (__ \ "rule" ).format[BobbyRule]
+    ~ (__ \ "count").format[Int]
+    )(BobbyRuleViolation.apply, unlift(BobbyRuleViolation.unapply))
   }
 }

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.servicedependencies
+package uk.gov.hmrc.servicedependencies.scheduler
 
 import akka.actor.ActorSystem
 import com.kenshoo.play.metrics.Metrics

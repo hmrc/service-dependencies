@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.servicedependencies
+package uk.gov.hmrc.servicedependencies.scheduler
 
 import akka.actor.ActorSystem
 import javax.inject.Inject
@@ -25,14 +25,15 @@ import uk.gov.hmrc.servicedependencies.config.SchedulerConfigs
 import uk.gov.hmrc.servicedependencies.persistence.MongoLocks
 import uk.gov.hmrc.servicedependencies.service.SlugInfoService
 import uk.gov.hmrc.servicedependencies.util.SchedulerUtils
+import uk.gov.hmrc.servicedependencies.service.DependencyLookupService
 
 import scala.concurrent.ExecutionContext
 
 
-class SlugMetadataUpdateScheduler @Inject()(
-    schedulerConfigs    : SchedulerConfigs,
-    slugInfoService     : SlugInfoService,
-    mongoLocks          : MongoLocks)(
+class BobbyRulesSummaryScheduler @Inject()(
+    schedulerConfigs       : SchedulerConfigs,
+    dependencyLookupService: DependencyLookupService,
+    mongoLocks             : MongoLocks)(
     implicit actorSystem         : ActorSystem,
              applicationLifecycle: ApplicationLifecycle)
   extends SchedulerUtils {
@@ -41,12 +42,12 @@ class SlugMetadataUpdateScheduler @Inject()(
 
   import ExecutionContext.Implicits.global
 
-  scheduleWithLock("Slug Metadata Updater", schedulerConfigs.slugMetadataUpdate, mongoLocks.slugMetadataUpdateSchedulerLock) {
+  scheduleWithLock("Bobby Rules Summary", schedulerConfigs.bobbyRulesSummary, mongoLocks.bobbyRulesSummarySchedulerLock) {
 
-    Logger.info("Updating slug metadata")
+    Logger.info("Updating bobby rules summary")
     for {
-      _ <- slugInfoService.updateMetadata()
-      _ = Logger.info("Finished updating slug metadata")
+      _ <- dependencyLookupService.updateBobbyRulesSummary
+      _ = Logger.info("Finished updating bobby rules summary")
     } yield ()
 
   }
