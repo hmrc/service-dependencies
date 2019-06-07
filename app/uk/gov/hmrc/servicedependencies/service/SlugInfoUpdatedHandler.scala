@@ -61,24 +61,40 @@ class SlugInfoUpdatedHandler @Inject()
       settings)(awsSqsClient)
       .map(messageToSlugInfo)
       .mapAsync(1)(saveSlugInfo)
+      .map(acknowledge)
       .runWith(SqsAckSink(queueUrl)(awsSqsClient))
 
   actorSystem.registerOnTermination(awsSqsClient.close())
 
-  private def messageToSlugInfo(message: Message): (Message, SlugInfo) = {
-    Logger.debug("starting messageToSlugInfo")
-    val r = Json.parse(message.body()).as(ApiSlugInfoFormats.slugReads)
-    Logger.debug(s"finished messageToSlugInfo for ${r.name}")
-    (message, r)
+  private def acknowledge(input: (Message, Either[String, Unit])) = {
+    val (message, eitherResult) = input
+    eitherResult match {
+      case Left(error) =>
+        Logger.error(error)
+        Ignore(message)
+      case Right(_) => Delete(message)
+    }
   }
 
-  private def saveSlugInfo(input: (Message, SlugInfo)): Future[MessageAction] = {
-    val (message, slugInfo) = input
-    Logger.debug(s"starting messageToSlugInfo for ${slugInfo.name}")
-    slugInfoService.addSlugInfo(slugInfo).map {
-      value => if(value) Delete(message) else Ignore(message)
-    } recover {
-      case _ => Ignore(message)
-    }
+  private def messageToSlugInfo(message: Message): (Message, Either[String, SlugInfo]) =
+    (message,
+      Json.parse(message.body())
+        .validate(ApiSlugInfoFormats.slugReads)
+        .asEither.left.map(error => "could not parse: " + error.toString()))
+
+  private def saveSlugInfo(input: (Message, Either[String, SlugInfo])): Future[(Message, Either[String, Unit])] = {
+    val (message, eitherSlugInfo) = input
+
+    (eitherSlugInfo match {
+      case Left(error) => Future(Left(error))
+      case Right(slugInfo) =>
+        slugInfoService.addSlugInfo(slugInfo)
+          .map(saveResult => if (saveResult) Right(()) else Left("SlugInfo was sent on but not saved."))
+          .recover {
+          case e =>
+            Logger.error("Could not store slug info", e)
+            Left("Could not store slug info: " + e.getMessage)
+        }
+    }).map((message, _))
   }
 }
