@@ -26,8 +26,8 @@ import uk.gov.hmrc.servicedependencies.service.SlugInfoService
 import scala.concurrent.ExecutionContext
 
 @Singleton
-class ServiceMetaController @Inject()(  slugInfoService: SlugInfoService,
-                                        cc: ControllerComponents)
+class ServiceMetaController @Inject()(slugInfoService: SlugInfoService,
+                                      cc: ControllerComponents)
                                      (implicit ec: ExecutionContext)
 extends BackendController(cc) {
 
