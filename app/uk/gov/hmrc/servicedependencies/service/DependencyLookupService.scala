@@ -23,8 +23,8 @@ import javax.inject.Inject
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.servicedependencies.connector.ServiceConfigsConnector
 import uk.gov.hmrc.servicedependencies.connector.model.{BobbyRule, BobbyVersionRange} // TODO move from connector.model to model?
-import uk.gov.hmrc.servicedependencies.model._
-import uk.gov.hmrc.servicedependencies.persistence.{BobbyRulesSummary, BobbyRulesSummaryRepo, SlugBlacklist, SlugInfoRepository}
+import uk.gov.hmrc.servicedependencies.model.{BobbyRuleViolation, BobbyRulesSummary, ServiceDependency, SlugDependency, SlugInfo, SlugInfoFlag, Version}
+import uk.gov.hmrc.servicedependencies.persistence.{BobbyRulesSummaryRepo, SlugBlacklist, SlugInfoRepository}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
@@ -38,9 +38,8 @@ class DependencyLookupService @Inject() (
 
   import DependencyLookupService._
 
-  def getLatestBobbyRuleViolations(env: SlugInfoFlag): Future[Seq[BobbyRuleViolation]] =
+  def getLatestBobbyRuleViolations: Future[Option[BobbyRulesSummary]] =
     bobbyRulesSummaryRepo.getLatest
-      .map(_.toSeq.flatMap(_.summary.getOrElse(env, Seq.empty)))
 
   def updateBobbyRulesSummary(implicit hc: HeaderCarrier): Future[Unit] = {
     def calculateBobbyRulesSummary(rules: Seq[BobbyRule])(env: SlugInfoFlag): Future[(SlugInfoFlag, Seq[BobbyRuleViolation])] = {
@@ -62,6 +61,8 @@ class DependencyLookupService @Inject() (
     } yield ()
   }
 
+  def getHistoricBobbyRuleViolations: Future[List[BobbyRulesSummary]] =
+    bobbyRulesSummaryRepo.getHistoric
 
   /**
     * A alternative version of SlugInfoService's findServicesWithDependency.

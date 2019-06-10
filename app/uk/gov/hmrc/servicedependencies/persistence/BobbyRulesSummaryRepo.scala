@@ -32,35 +32,6 @@ import uk.gov.hmrc.servicedependencies.model._
 import scala.concurrent.{ExecutionContext, Future}
 
 
-case class BobbyRulesSummary(
-    date: LocalDate
-  , summary: Map[SlugInfoFlag, Seq[BobbyRuleViolation]]
-  )
-
-object BobbyRulesSummary {
-  import ReactiveMongoFormats.localDateFormats
-  import play.api.libs.json.{__, Json, JsValue, JsError, Reads}
-  import play.api.libs.functional.syntax._
-
-  def format: OFormat[BobbyRulesSummary] = {
-    implicit val brvf = BobbyRuleViolation.format
-
-    def f(map: Map[String, Seq[JsValue]]): Map[SlugInfoFlag, Seq[BobbyRuleViolation]] =
-    map.map { case (k, v) =>  (SlugInfoFlag.parse(k).getOrElse(sys.error("TODO handle failure")), v.map(_.as[BobbyRuleViolation]))
-    case other => sys.error(s"Was1 $other")
-    }
-
-    def g(map: Map[SlugInfoFlag, Seq[BobbyRuleViolation]]): Map[String, Seq[JsValue]] =
-      map.map { case (k, v) =>  (k.asString, v.map(Json.toJson(_)))
-      case other => sys.error(s"Was2 $other")
-       }
-
-    ( (__ \ "date"      ).format[LocalDate]
-    ~ (__ \ "summary"  ).format[Map[String, Seq[JsValue]]].inmap(f, g)
-    )(BobbyRulesSummary.apply _, unlift(BobbyRulesSummary.unapply _))
-  }
-}
-
 trait BobbyRulesSummaryRepo {
 
     def add(summary: BobbyRulesSummary): Future[Unit]
@@ -76,11 +47,11 @@ class BobbyRulesSummaryRepoImpl @Inject()(mongo: ReactiveMongoComponent)
   extends ReactiveRepository[BobbyRulesSummary, BSONObjectID](
       collectionName = "bobbyRulesSummary"
     , mongo          = mongo.mongoConnector.db
-    , domainFormat   = BobbyRulesSummary.format
+    , domainFormat   = BobbyRulesSummary.mongoFormat
     )
   with BobbyRulesSummaryRepo {
 
-    private implicit val brsf = BobbyRulesSummary.format
+    private implicit val brsf = BobbyRulesSummary.mongoFormat
     import ReactiveMongoFormats.localDateFormats
     import ExecutionContext.Implicits.global
 
@@ -99,11 +70,13 @@ class BobbyRulesSummaryRepoImpl @Inject()(mongo: ReactiveMongoComponent)
           )
         .map(_ => ())
 
-
-
     def getLatest: Future[Option[BobbyRulesSummary]] =
       find("date" -> Json.toJson(LocalDate.now))
         .map(_.headOption)
+        .flatMap {
+          case Some(a) => Future(Some(a))
+          case None => getHistoric.map(_.headOption)
+        }
 
     // Not time bound yet
     def getHistoric: Future[List[BobbyRulesSummary]] =

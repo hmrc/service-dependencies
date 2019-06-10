@@ -6,5 +6,6 @@ GET     /api/teams/:team/dependencies          @uk.gov.hmrc.servicedependencies.
 GET     /api/serviceDeps                       @uk.gov.hmrc.servicedependencies.controller.ServiceDependenciesController.getServicesWithDependency(flag: String ?= "latest", group: String, artefact: String, versionRange: String)
 GET     /api/groupArtefacts                    @uk.gov.hmrc.servicedependencies.controller.ServiceDependenciesController.getGroupArtefacts
 GET     /api/jdkVersions                       @uk.gov.hmrc.servicedependencies.controller.ServiceDependenciesController.findJDKForEnvironment(flag: String ?= "latest")
-GET     /api/bobbyViolations                   @uk.gov.hmrc.servicedependencies.controller.BobbyRuleViolationController.findBobbyRuleViolations(flag: String ?= "latest")
+GET     /api/bobbyViolations                   @uk.gov.hmrc.servicedependencies.controller.BobbyRuleViolationController.findBobbyRuleViolations
+GET     /api/historicBobbyViolations           @uk.gov.hmrc.servicedependencies.controller.BobbyRuleViolationController.findHistoricBobbyRuleViolations
 POST    /api/slugs                             @uk.gov.hmrc.servicedependencies.controller.ServiceMetaController.setSlugInfo()
