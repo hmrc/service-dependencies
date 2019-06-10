@@ -52,6 +52,8 @@ class SlugInfoUpdatedHandler @Inject()
 
   val settings = SqsSourceSettings()
     .withWaitTime(Duration.ofMillis(10))
+    .withParallelRequests(1)
+    .withMaxBatchSize(1)
     .withCloseOnEmptyReceive(true)
     .withVisibilityTimeout(FiniteDuration(10, TimeUnit.SECONDS))
 
@@ -72,7 +74,9 @@ class SlugInfoUpdatedHandler @Inject()
       case Left(error) =>
         Logger.error(error)
         Ignore(message)
-      case Right(_) => Delete(message)
+      case Right(_) =>
+        Logger.info("Message successfully processed.")
+        Delete(message)
     }
   }
 
