@@ -16,26 +16,21 @@
 
 package uk.gov.hmrc.servicedependencies.service
 
-import java.util.concurrent.TimeUnit
-
-import scala.concurrent.{ExecutionContext, Future}
 import akka.actor.ActorSystem
 import akka.stream.Materializer
-import akka.stream.alpakka.sqs.{MessageAction, SqsSourceSettings}
+import akka.stream.alpakka.sqs.MessageAction.{Delete, Ignore}
+import akka.stream.alpakka.sqs.SqsSourceSettings
 import akka.stream.alpakka.sqs.scaladsl.{SqsAckSink, SqsSource}
 import com.github.matsluni.akkahttpspi.AkkaHttpClient
 import com.google.inject.{Inject, Singleton}
+import play.api.Logger
 import play.api.libs.json.Json
 import software.amazon.awssdk.services.sqs.SqsAsyncClient
-import uk.gov.hmrc.servicedependencies.config.ArtefactReceivingConfig
-import java.time.Duration
-
-import akka.stream.alpakka.sqs.MessageAction.{Delete, Ignore}
-import play.api.Logger
 import software.amazon.awssdk.services.sqs.model.Message
+import uk.gov.hmrc.servicedependencies.config.ArtefactReceivingConfig
 import uk.gov.hmrc.servicedependencies.model.{ApiSlugInfoFormats, SlugInfo}
 
-import scala.concurrent.duration.FiniteDuration
+import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
 class SlugInfoUpdatedHandler @Inject()
@@ -51,40 +46,29 @@ class SlugInfoUpdatedHandler @Inject()
   val queueUrl = config.sqsSlugQueue
 
   val settings = SqsSourceSettings()
-    .withWaitTime(Duration.ofMillis(10))
-    .withParallelRequests(1)
-    .withMaxBatchSize(1)
-    .withCloseOnEmptyReceive(true)
-    .withVisibilityTimeout(FiniteDuration(10, TimeUnit.SECONDS))
 
   val sqsSource =
     SqsSource(
       queueUrl,
       settings)(awsSqsClient)
+      .map(logMessage)
       .map(messageToSlugInfo)
-      .mapAsync(1)(saveSlugInfo)
+      .mapAsync(10)(saveSlugInfo)
       .map(acknowledge)
       .runWith(SqsAckSink(queueUrl)(awsSqsClient))
 
   actorSystem.registerOnTermination(awsSqsClient.close())
 
-  private def acknowledge(input: (Message, Either[String, Unit])) = {
-    val (message, eitherResult) = input
-    eitherResult match {
-      case Left(error) =>
-        Logger.error(error)
-        Ignore(message)
-      case Right(_) =>
-        Logger.info("Message successfully processed.")
-        Delete(message)
-    }
+  private def logMessage(message: Message): Message = {
+    Logger.debug(s"Starting processing message with ID '${message.messageId()}'")
+    message
   }
 
   private def messageToSlugInfo(message: Message): (Message, Either[String, SlugInfo]) =
     (message,
       Json.parse(message.body())
         .validate(ApiSlugInfoFormats.slugReads)
-        .asEither.left.map(error => "could not parse: " + error.toString()))
+        .asEither.left.map(error => s"Could not message with ID '${message.messageId()}'.  Reason: " + error.toString()))
 
   private def saveSlugInfo(input: (Message, Either[String, SlugInfo])): Future[(Message, Either[String, Unit])] = {
     val (message, eitherSlugInfo) = input
@@ -93,12 +77,25 @@ class SlugInfoUpdatedHandler @Inject()
       case Left(error) => Future(Left(error))
       case Right(slugInfo) =>
         slugInfoService.addSlugInfo(slugInfo)
-          .map(saveResult => if (saveResult) Right(()) else Left("SlugInfo was sent on but not saved."))
+          .map(saveResult => if (saveResult) Right(()) else Left(s"SlugInfo for message (ID '${message.messageId()}') was sent on but not saved."))
           .recover {
-          case e =>
-            Logger.error("Could not store slug info", e)
-            Left("Could not store slug info: " + e.getMessage)
-        }
+            case e =>
+              val errorMessage = s"Could not store slug info for message with ID '${message.messageId()}'"
+              Logger.error(errorMessage, e)
+              Left(s"$errorMessage ${e.getMessage}")
+          }
     }).map((message, _))
+  }
+
+  private def acknowledge(input: (Message, Either[String, Unit])) = {
+    val (message, eitherResult) = input
+    eitherResult match {
+      case Left(error) =>
+        Logger.error(error)
+        Ignore(message)
+      case Right(_) =>
+        Logger.debug(s"Message with ID '${message.messageId()}' successfully processed.")
+        Delete(message)
+    }
   }
 }
