@@ -24,7 +24,7 @@ import org.scalatest.mockito.MockitoSugar
 import org.scalatest.{BeforeAndAfterEach, Matchers, WordSpecLike}
 import play.modules.reactivemongo.ReactiveMongoComponent
 import uk.gov.hmrc.mongo.{FailOnUnindexedQueries, MongoConnector, MongoSpecSupport, RepositoryPreparation}
-import uk.gov.hmrc.servicedependencies.model.{BobbyRuleViolation, BobbyRulesSummary, SlugDependency, SlugInfo, SlugInfoFlag, Version}
+import uk.gov.hmrc.servicedependencies.model.{BobbyRulesSummary, SlugDependency, SlugInfo, SlugInfoFlag, Version}
 import uk.gov.hmrc.servicedependencies.connector.model.BobbyRule
 import uk.gov.hmrc.servicedependencies.connector.model.BobbyVersionRange
 
@@ -112,5 +112,5 @@ class BobbyRulesSummaryRepoSpec
     )
 
   def bobbyRulesSummary(date: LocalDate, env: SlugInfoFlag, count: Int) =
-    BobbyRulesSummary(date, Map(env -> Seq(BobbyRuleViolation(playFrontend, count))))
+    BobbyRulesSummary(date, Map(playFrontend -> Map(env -> List(count))))
 }

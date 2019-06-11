@@ -26,7 +26,7 @@ import org.scalatest.concurrent.ScalaFutures
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.servicedependencies.connector.ServiceConfigsConnector
 import uk.gov.hmrc.servicedependencies.connector.model.{BobbyRule, BobbyVersion, BobbyVersionRange}
-import uk.gov.hmrc.servicedependencies.model.{BobbyRulesSummary, BobbyRuleViolation, ServiceDependency, SlugDependency, SlugInfo, SlugInfoFlag, Version}
+import uk.gov.hmrc.servicedependencies.model.{BobbyRulesSummary, ServiceDependency, SlugDependency, SlugInfo, SlugInfoFlag, Version}
 import uk.gov.hmrc.servicedependencies.persistence.{BobbyRulesSummaryRepo, SlugInfoRepository}
 import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.duration.Duration
@@ -129,7 +129,14 @@ class DependencyLookupServiceSpec
     val optRes = lookupService.getLatestBobbyRuleViolations.futureValue
     optRes.isDefined shouldBe true
     val Some(res) = optRes
-    res.summary.get(SlugInfoFlag.Production) shouldBe(Some(Seq(BobbyRuleViolation(bobbyRule, 1))))
+    res.summary.get(bobbyRule) shouldBe(Some(Map(
+        SlugInfoFlag.Latest       -> List(0)
+      , SlugInfoFlag.Development  -> List(0)
+      , SlugInfoFlag.ExternalTest -> List(0)
+      , SlugInfoFlag.Production   -> List(1)
+      , SlugInfoFlag.QA           -> List(0)
+      , SlugInfoFlag.Staging      -> List(0)
+      )))
   }
 }
 

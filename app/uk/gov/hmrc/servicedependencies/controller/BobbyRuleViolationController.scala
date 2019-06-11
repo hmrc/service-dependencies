@@ -21,29 +21,28 @@ import play.api.libs.json.Json
 import play.api.mvc._
 import uk.gov.hmrc.servicedependencies.model.BobbyRulesSummary
 import uk.gov.hmrc.play.bootstrap.controller.BackendController
-import uk.gov.hmrc.servicedependencies.model.{BobbyRuleViolation, SlugInfoFlag}
 import uk.gov.hmrc.servicedependencies.service.DependencyLookupService
 
 import scala.concurrent.{ExecutionContext, Future}
 
 class BobbyRuleViolationController @Inject() (
-  configuration: Configuration,
-  slugLookup   : DependencyLookupService,
-  cc           : ControllerComponents
+  configuration   : Configuration,
+  dependencyLookup: DependencyLookupService,
+  cc              : ControllerComponents
   )(implicit ec: ExecutionContext) extends BackendController(cc) {
 
   def findBobbyRuleViolations: Action[AnyContent] = {
     implicit val brsf = BobbyRulesSummary.apiFormat
     Action.async { implicit request =>
-        slugLookup.getLatestBobbyRuleViolations
-          .map(v => Ok(Json.toJson(v)))
+      dependencyLookup.getLatestBobbyRuleViolations
+        .map(v => Ok(Json.toJson(v)))
     }
   }
 
   def findHistoricBobbyRuleViolations: Action[AnyContent] = {
     implicit val brsf = BobbyRulesSummary.apiFormat
     Action.async { implicit request =>
-      slugLookup.getHistoricBobbyRuleViolations
+      dependencyLookup.getHistoricBobbyRuleViolations
         .map(v => Ok(Json.toJson(v)))
     }
   }
