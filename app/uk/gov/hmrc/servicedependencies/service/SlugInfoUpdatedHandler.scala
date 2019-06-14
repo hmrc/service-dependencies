@@ -39,15 +39,23 @@ class SlugInfoUpdatedHandler @Inject()
  implicit val materializer: Materializer,
  implicit val executionContext: ExecutionContext) {
 
-  lazy val awsSqsClient = SqsAsyncClient.builder()
-    .httpClient(AkkaHttpClient.builder().withActorSystem(actorSystem).build())
-    .build()
+  if(!config.isEnabled) {
+    Logger.debug("SlugInfoUpdatedHandler is disabled.")
+  }
 
-  val queueUrl = config.sqsSlugQueue
+  private lazy val awsSqsClient = {
+    val client = SqsAsyncClient.builder()
+      .httpClient(AkkaHttpClient.builder().withActorSystem(actorSystem).build())
+      .build()
 
-  val settings = SqsSourceSettings()
+    actorSystem.registerOnTermination(client.close())
+    client
+  }
 
-  val sqsSource =
+  private lazy val queueUrl = config.sqsSlugQueue
+  private lazy val settings = SqsSourceSettings()
+
+  if(config.isEnabled) {
     SqsSource(
       queueUrl,
       settings)(awsSqsClient)
@@ -56,8 +64,7 @@ class SlugInfoUpdatedHandler @Inject()
       .mapAsync(10)(saveSlugInfo)
       .map(acknowledge)
       .runWith(SqsAckSink(queueUrl)(awsSqsClient))
-
-  actorSystem.registerOnTermination(awsSqsClient.close())
+  }
 
   private def logMessage(message: Message): Message = {
     Logger.debug(s"Starting processing message with ID '${message.messageId()}'")
@@ -98,4 +105,5 @@ class SlugInfoUpdatedHandler @Inject()
         Delete(message)
     }
   }
+
 }

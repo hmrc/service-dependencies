@@ -29,5 +29,5 @@ class ArtefactReceivingConfig @Inject()(configuration: Configuration,
   private lazy val sqsQueueSlugInfo: String = configuration.get[String]("artefact.receiver.aws.sqs.queue-sluginfo")
 
   lazy val sqsSlugQueue = s"$sqsQueueUrlPrefix/$sqsQueueSlugInfo"
-
+  lazy val isEnabled = configuration.get[Boolean]("artefact.receiver.enabled")
 }
