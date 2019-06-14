@@ -21,13 +21,14 @@ import play.api.Configuration
 import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
 
 @Singleton
-class ArtefactReceivingConfig @Inject()(configuration: Configuration,
-    serviceConfig: ServicesConfig)
-  extends ConfigUtils {
+class ArtefactReceivingConfig @Inject()
+                                     (configuration: Configuration,
+                                      serviceConfig: ServicesConfig) {
 
   private lazy val sqsQueueUrlPrefix: String = configuration.get[String]("artefact.receiver.aws.sqs.queue-prefix")
   private lazy val sqsQueueSlugInfo: String = configuration.get[String]("artefact.receiver.aws.sqs.queue-sluginfo")
 
   lazy val sqsSlugQueue = s"$sqsQueueUrlPrefix/$sqsQueueSlugInfo"
   lazy val isEnabled = configuration.get[Boolean]("artefact.receiver.enabled")
+
 }
