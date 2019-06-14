@@ -27,7 +27,7 @@ import reactivemongo.bson.{BSONDocument, BSONDocumentReader, BSONObjectID}
 import reactivemongo.play.json.ImplicitBSONHandlers._
 import uk.gov.hmrc.mongo.ReactiveRepository
 import uk.gov.hmrc.mongo.json.ReactiveMongoFormats
-import uk.gov.hmrc.servicedependencies.model._
+import uk.gov.hmrc.servicedependencies.model.{BobbyRulesSummary, LocalDateFormats}
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -52,7 +52,7 @@ class BobbyRulesSummaryRepoImpl @Inject()(mongo: ReactiveMongoComponent)
   with BobbyRulesSummaryRepo {
 
     private implicit val brsf = BobbyRulesSummary.mongoFormat
-    import ReactiveMongoFormats.localDateFormats
+    implicit val ldf = LocalDateFormats.localDateFormat
     import ExecutionContext.Implicits.global
 
     override def indexes: Seq[Index] =

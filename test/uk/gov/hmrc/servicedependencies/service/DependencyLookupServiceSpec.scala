@@ -129,14 +129,14 @@ class DependencyLookupServiceSpec
     val optRes = lookupService.getLatestBobbyRuleViolations.futureValue
     optRes.isDefined shouldBe true
     val Some(res) = optRes
-    res.summary.get(bobbyRule) shouldBe(Some(Map(
-        SlugInfoFlag.Latest       -> List(0)
-      , SlugInfoFlag.Development  -> List(0)
-      , SlugInfoFlag.ExternalTest -> List(0)
-      , SlugInfoFlag.Production   -> List(1)
-      , SlugInfoFlag.QA           -> List(0)
-      , SlugInfoFlag.Staging      -> List(0)
-      )))
+    res.summary shouldBe Map(
+        (bobbyRule, SlugInfoFlag.Latest      ) -> 0
+      , (bobbyRule, SlugInfoFlag.Development ) -> 0
+      , (bobbyRule, SlugInfoFlag.ExternalTest) -> 0
+      , (bobbyRule, SlugInfoFlag.Production  ) -> 1
+      , (bobbyRule, SlugInfoFlag.QA          ) -> 0
+      , (bobbyRule, SlugInfoFlag.Staging     ) -> 0
+      )
   }
 }
 

@@ -19,7 +19,7 @@ import javax.inject.Inject
 import play.api.Configuration
 import play.api.libs.json.Json
 import play.api.mvc._
-import uk.gov.hmrc.servicedependencies.model.BobbyRulesSummary
+import uk.gov.hmrc.servicedependencies.model.{BobbyRulesSummary, HistoricBobbyRulesSummary}
 import uk.gov.hmrc.play.bootstrap.controller.BackendController
 import uk.gov.hmrc.servicedependencies.service.DependencyLookupService
 
@@ -40,7 +40,7 @@ class BobbyRuleViolationController @Inject() (
   }
 
   def findHistoricBobbyRuleViolations: Action[AnyContent] = {
-    implicit val brsf = BobbyRulesSummary.apiFormat
+    implicit val brsf = HistoricBobbyRulesSummary.apiFormat
     Action.async { implicit request =>
       dependencyLookup.getHistoricBobbyRuleViolations
         .map(v => Ok(Json.toJson(v)))

@@ -23,7 +23,7 @@ import javax.inject.Inject
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.servicedependencies.connector.ServiceConfigsConnector
 import uk.gov.hmrc.servicedependencies.connector.model.{BobbyRule, BobbyVersionRange} // TODO move from connector.model to model?
-import uk.gov.hmrc.servicedependencies.model.{BobbyRulesSummary, ServiceDependency, SlugDependency, SlugInfo, SlugInfoFlag, Version}
+import uk.gov.hmrc.servicedependencies.model.{BobbyRulesSummary, HistoricBobbyRulesSummary, ServiceDependency, SlugDependency, SlugInfo, SlugInfoFlag, Version}
 import uk.gov.hmrc.servicedependencies.persistence.{BobbyRulesSummaryRepo, SlugBlacklist, SlugInfoRepository}
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -42,11 +42,11 @@ class DependencyLookupService @Inject() (
     bobbyRulesSummaryRepo.getLatest
 
   def updateBobbyRulesSummary(implicit hc: HeaderCarrier): Future[Unit] = {
-    def calculateCounts(rules: Seq[BobbyRule])(env: SlugInfoFlag): Future[Seq[(BobbyRule, SlugInfoFlag, Int)]] = {
+    def calculateCounts(rules: Seq[BobbyRule])(env: SlugInfoFlag): Future[Seq[((BobbyRule, SlugInfoFlag), Int)]] = {
       for {
         slugs      <- slugRepo.getSlugsForEnv(env)
         lookup     =  buildLookup(slugs)
-        violations =  rules.map(rule => (rule, env, findSlugsUsing(lookup, rule.organisation, rule.name, rule.range).length))
+        violations =  rules.map(rule => ((rule, env), findSlugsUsing(lookup, rule.organisation, rule.name, rule.range).length))
       } yield violations
     }
 
@@ -55,24 +55,20 @@ class DependencyLookupService @Inject() (
       counts  <- SlugInfoFlag.values.traverse(calculateCounts(rules))
       summary =  counts
                    .flatten
-                   .groupBy { case (rule, _, _) => rule }
-                   .mapValues(_.map { case (_, env, count) => (env, List(count)) }.toMap)
+                   .toMap
       _       <- bobbyRulesSummaryRepo.add(BobbyRulesSummary(LocalDate.now, summary))
     } yield ()
   }
 
-  def getHistoricBobbyRuleViolations: Future[BobbyRulesSummary] =
-    // TODO store in different format to combine easier?
-    //   Historic and Latest may vary (one is List[Int], other is Int)
-    //   client inverts data structure for google charts - should we return inverted (payload would have more duplicates?)
-    bobbyRulesSummaryRepo.getHistoric.map { historics =>
-      historics.foldLeft[Option[BobbyRulesSummary]](None){(acc, summary) =>
-        acc match {
-          case None     => Some(summary)
-          case Some(s1) => Some(s1.copy(summary = summary.summary combine s1.summary))
-        }
-      }.getOrElse(BobbyRulesSummary(LocalDate.now, Map.empty))
-    }
+  def getHistoricBobbyRuleViolations: Future[HistoricBobbyRulesSummary] =
+    bobbyRulesSummaryRepo.getHistoric
+      .map(ss =>
+      if (ss.isEmpty) HistoricBobbyRulesSummary(LocalDate.now, Map.empty)
+      else ss
+            .map(summary => HistoricBobbyRulesSummary.fromBobbyRulesSummary(summary))
+            // assumes Historic data is consecutive (else cannot infer dates from array position)
+            .reduce((s1, s2) => s2.copy(summary = s2.summary combine s1.summary))
+      )
 
   /**
     * A alternative version of SlugInfoService's findServicesWithDependency.

@@ -112,5 +112,5 @@ class BobbyRulesSummaryRepoSpec
     )
 
   def bobbyRulesSummary(date: LocalDate, env: SlugInfoFlag, count: Int) =
-    BobbyRulesSummary(date, Map(playFrontend -> Map(env -> List(count))))
+    BobbyRulesSummary(date, Map((playFrontend, env) -> count))
 }
