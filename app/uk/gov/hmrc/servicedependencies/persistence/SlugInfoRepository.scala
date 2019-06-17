@@ -89,7 +89,7 @@ class SlugInfoRepository @Inject()(mongo: ReactiveMongoComponent)
 
 
   def clearFlag(flag: SlugInfoFlag, name: String): Future[Unit] = {
-    logger.info(s"clear ${flag.s} flag on $name")
+    logger.debug(s"clear ${flag.s} flag on $name")
     collection
       .update(
           selector = Json.obj("name" -> name)
@@ -105,7 +105,7 @@ class SlugInfoRepository @Inject()(mongo: ReactiveMongoComponent)
   def setFlag(flag: SlugInfoFlag, name: String, version: Version): Future[Unit] =
     for {
       _ <- clearFlag(flag, name)
-      _ =  logger.info(s"mark slug $name $version with ${flag.s} flag")
+      _ =  logger.debug(s"mark slug $name $version with ${flag.s} flag")
       _ <- collection
             .update(
                 selector = Json.obj( "name"    -> name
