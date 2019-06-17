@@ -119,14 +119,17 @@ object DependencyLookupService {
         .toSeq
 
   def combineBobbyRulesSummaries(l: List[BobbyRulesSummary]): HistoricBobbyRulesSummary =
-    if (l.isEmpty) HistoricBobbyRulesSummary(LocalDate.now, Map.empty)
-    else l
-        .map(summary => HistoricBobbyRulesSummary.fromBobbyRulesSummary(summary))
-        .reduce { (s1, s2) =>
-          // extrapolate previous value if there are missing data values (array position is relative to date)
-          val daysBetween = ChronoUnit.DAYS.between(s2.date, s1.date).toInt
-          s2.copy(summary = (List.fill(daysBetween)(s1.summary) ++ List(s2.summary)).combineAll)
-        }
+    l match {
+      case Nil          => HistoricBobbyRulesSummary(LocalDate.now, Map.empty)
+      case head :: rest => rest
+                             .foldLeft(HistoricBobbyRulesSummary.fromBobbyRulesSummary(head)){ case (acc, s) =>
+                               val daysBetween = ChronoUnit.DAYS.between(s.date, acc.date).toInt
+                               val res = acc.summary.foldLeft(acc.summary) { case (acc2, (k, v)) =>
+                                  acc2 + (k -> (List.fill(daysBetween)(s.summary.getOrElse(k, v.head)) ++ v))
+                               }
+                               HistoricBobbyRulesSummary(date = s.date, summary = res)
+                             }
+    }
 
   def printTree(
       t  : Map[String, Map[Version, Set[String]]]

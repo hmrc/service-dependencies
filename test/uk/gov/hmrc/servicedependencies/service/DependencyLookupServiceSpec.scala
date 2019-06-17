@@ -142,30 +142,30 @@ class DependencyLookupServiceSpec
     DependencyLookupService.combineBobbyRulesSummaries(List.empty) shouldBe HistoricBobbyRulesSummary(LocalDate.now, Map.empty)
   }
 
-  def bobbyRulesSummary(date: LocalDate, i: Int, j: Int) =
-    BobbyRulesSummary(date, Map(
-        (bobbyRule, SlugInfoFlag.Latest) -> i
-      , (bobbyRule, SlugInfoFlag.Latest) -> j
-      ))
-
-  def historicBobbyRulesSummary(date: LocalDate, i: List[Int], j: List[Int]) =
-    HistoricBobbyRulesSummary(date, Map(
-        (bobbyRule, SlugInfoFlag.Latest) -> i
-      , (bobbyRule, SlugInfoFlag.Latest) -> j
-      ))
-
   it should "combine summaries" in {
     DependencyLookupService.combineBobbyRulesSummaries(List(
         bobbyRulesSummary(LocalDate.now             , 1, 2)
       , bobbyRulesSummary(LocalDate.now.plusDays(-1), 3, 4)
-      )) shouldBe historicBobbyRulesSummary(LocalDate.now.plusDays(-1), List(1, 3), List(2, 4))
+      )) shouldBe historicBobbyRulesSummary(LocalDate.now.plusDays(-1), List(3, 1), List(4, 2))
   }
 
   it should "extrapolate missing values" in {
     DependencyLookupService.combineBobbyRulesSummaries(List(
         bobbyRulesSummary(LocalDate.now             , 1, 2)
       , bobbyRulesSummary(LocalDate.now.plusDays(-2), 3, 4)
-      )) shouldBe historicBobbyRulesSummary(LocalDate.now.plusDays(-2), List(1, 1, 3), List(2, 2, 4))
+      )) shouldBe historicBobbyRulesSummary(LocalDate.now.plusDays(-2), List(3, 3, 1), List(4, 4, 2))
+  }
+
+ it should "drop values not in latest result" in {
+    DependencyLookupService.combineBobbyRulesSummaries(List(
+        bobbyRulesSummary(LocalDate.now             , 1, 2, bobbyRule)
+      , bobbyRulesSummary(LocalDate.now.plusDays(-2), 3, 4, bobbyRule.copy(name = "rule2"))
+      )) shouldBe
+        HistoricBobbyRulesSummary(LocalDate.now.plusDays(-2),
+          Map( (bobbyRule, SlugInfoFlag.Latest    ) -> List(1, 1, 1)
+             , (bobbyRule, SlugInfoFlag.Production) -> List(2, 2, 2)
+             )
+        )
   }
 }
 
@@ -199,4 +199,16 @@ object DependencyLookupServiceTestData {
   val slug12 = slug1.copy(version = Version(1,2,0), uri = "http://slugs.com/test/test-1.2.0.tgz", dependencies = List(dep2))
 
   val bobbyRule = BobbyRule(organisation = dep1.group, name = dep1.artifact, range = BobbyVersionRange.parse("(5.11.0,]").get, "testing", LocalDate.of(2000,1,1))
+
+  def bobbyRulesSummary(date: LocalDate, i: Int, j: Int, bobbyRule: BobbyRule = bobbyRule) =
+    BobbyRulesSummary(date, Map(
+        (bobbyRule, SlugInfoFlag.Latest    ) -> i
+      , (bobbyRule, SlugInfoFlag.Production) -> j
+      ))
+
+  def historicBobbyRulesSummary(date: LocalDate, i: List[Int], j: List[Int], bobbyRule: BobbyRule = bobbyRule) =
+    HistoricBobbyRulesSummary(date, Map(
+        (bobbyRule, SlugInfoFlag.Latest    ) -> i
+      , (bobbyRule, SlugInfoFlag.Production) -> j
+      ))
 }
