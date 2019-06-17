@@ -31,3 +31,5 @@ tmp
 bin
 conf/local.conf
 nohup*
+.bloop
+.metals

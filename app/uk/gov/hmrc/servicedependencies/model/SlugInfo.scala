@@ -19,19 +19,19 @@ package uk.gov.hmrc.servicedependencies.model
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
 
-sealed trait SlugInfoFlag { def s: String }
+sealed trait SlugInfoFlag { def asString: String }
 object SlugInfoFlag {
-  case object Latest          extends SlugInfoFlag { val s = "latest"         }
-  case object Production      extends SlugInfoFlag { val s = "production"     }
-  case object QA              extends SlugInfoFlag { val s = "qa"             }
-  case object Staging         extends SlugInfoFlag { val s = "staging"        }
-  case object Development     extends SlugInfoFlag { val s = "development"    }
-  case object ExternalTest    extends SlugInfoFlag { val s = "external test"  }
+  case object Latest          extends SlugInfoFlag { val asString = "latest"         }
+  case object Production      extends SlugInfoFlag { val asString = "production"     }
+  case object QA              extends SlugInfoFlag { val asString = "qa"             }
+  case object Staging         extends SlugInfoFlag { val asString = "staging"        }
+  case object Development     extends SlugInfoFlag { val asString = "development"    }
+  case object ExternalTest    extends SlugInfoFlag { val asString = "external test"  }
 
   val values: List[SlugInfoFlag] = List(Latest, Production, QA, Staging, Development, ExternalTest)
 
   def parse(s: String): Option[SlugInfoFlag] =
-    values.find(_.s.equalsIgnoreCase(s))
+    values.find(_.asString.equalsIgnoreCase(s))
 }
 
 case class SlugDependency(
@@ -149,23 +149,22 @@ trait ApiSlugInfoFormats {
 
   val slugReads: Reads[SlugInfo] = (
     (__ \ "uri").read[String]
-      ~ (__ \ "name").read[String]
-      ~ (__ \ "version").read[String].map(Version.apply)
-      ~ (__ \ "teams").read[List[String]]
-      ~ (__ \ "runnerVersion").read[String]
-      ~ (__ \ "classpath").read[String]
-      ~ (__ \ "jdkVersion").read[String]
-      ~ (__ \ "dependencies").read[List[SlugDependency]]
-      ~ (__ \ "applicationConfig").read[String]
-      ~ (__ \ "slugConfig").read[String]
-      ~ (__ \ "latest").read[Boolean]
-      ~ Reads.pure(false)
-      ~ Reads.pure(false)
-      ~ Reads.pure(false)
-      ~ Reads.pure(false)
-      ~ Reads.pure(false)
+    ~ (__ \ "name").read[String]
+    ~ (__ \ "version").read[String].map(Version.apply)
+    ~ (__ \ "teams").read[List[String]]
+    ~ (__ \ "runnerVersion").read[String]
+    ~ (__ \ "classpath").read[String]
+    ~ (__ \ "jdkVersion").read[String]
+    ~ (__ \ "dependencies").read[List[SlugDependency]]
+    ~ (__ \ "applicationConfig").read[String]
+    ~ (__ \ "slugConfig").read[String]
+    ~ (__ \ "latest").read[Boolean]
+    ~ Reads.pure(false)
+    ~ Reads.pure(false)
+    ~ Reads.pure(false)
+    ~ Reads.pure(false)
+    ~ Reads.pure(false)
     )(SlugInfo.apply _)
-
 }
 
 object ApiSlugInfoFormats extends ApiSlugInfoFormats

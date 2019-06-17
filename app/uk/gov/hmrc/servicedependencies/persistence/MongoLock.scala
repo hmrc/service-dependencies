@@ -34,8 +34,9 @@ class MongoLock(db: () => DB, lockId_ : String) extends LockKeeper {
 class MongoLocks @Inject()(mongo: ReactiveMongoComponent) {
   private val db = mongo.mongoConnector.db
 
-  val repositoryDependencyMongoLock = new MongoLock(db, "repository-dependencies-data-reload-job")
-  val libraryMongoLock              = new MongoLock(db, "libraries-data-reload-job")
-  val sbtPluginMongoLock            = new MongoLock(db, "sbt-plugin-data-reload-job")
-  val slugMetadataUpdateSchedulerLock          = new MongoLock(db, "slug-job-scheduler")
+  val repositoryDependencyMongoLock   = new MongoLock(db, "repository-dependencies-data-reload-job")
+  val libraryMongoLock                = new MongoLock(db, "libraries-data-reload-job")
+  val sbtPluginMongoLock              = new MongoLock(db, "sbt-plugin-data-reload-job")
+  val slugMetadataUpdateSchedulerLock = new MongoLock(db, "slug-job-scheduler")
+  val bobbyRulesSummarySchedulerLock  = new MongoLock(db, "bobby-rules-summary-scheduler")
 }

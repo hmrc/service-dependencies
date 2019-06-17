@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.servicedependencies.connector.model
+package uk.gov.hmrc.servicedependencies.model
+
 import play.api.libs.json._
-import uk.gov.hmrc.servicedependencies.model.Version
 
 // TODO rename as VersionRange?
 /** Iso to Either[Qualifier, (Option[LowerBound], Option[UpperBound])]*/

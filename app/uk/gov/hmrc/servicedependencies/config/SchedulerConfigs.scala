@@ -68,6 +68,13 @@ class SchedulerConfigs @Inject()(configuration: Configuration) extends ConfigUti
     , initialDelayKey = "repositoryDependencies.slugJob.initialDelay"
     )
 
+  val bobbyRulesSummary = SchedulerConfig(
+      configuration
+    , enabledKey      = "repositoryDependencies.bobbyRulesSummaryScheduler.enabled"
+    , frequencyKey    = "repositoryDependencies.bobbyRulesSummaryScheduler.interval"
+    , initialDelayKey = "repositoryDependencies.bobbyRulesSummaryScheduler.initialDelay"
+    )
+
   val metrics = SchedulerConfig(
       configuration
     , enabledKey      = "repositoryDependencies.metricsGauges.enabled"

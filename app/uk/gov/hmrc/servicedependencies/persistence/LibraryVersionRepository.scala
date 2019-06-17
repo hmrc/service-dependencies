@@ -36,18 +36,12 @@ class LibraryVersionRepository @Inject()(mongo: ReactiveMongoComponent, futureHe
       mongo          = mongo.mongoConnector.db,
       domainFormat   = MongoLibraryVersion.format) {
 
-  override def ensureIndexes(implicit ec: ExecutionContext): Future[Seq[Boolean]] =
-    Future.sequence(
-      Seq(
-        collection
-          .indexesManager
-          .ensure(
-            Index(
-              Seq("libraryName" -> IndexType.Hashed),
-              name       = Some("libraryNameIdx"),
-              background = true))
-      )
-    )
+  override def indexes: Seq[Index] =
+    Seq(
+      Index(
+        Seq("libraryName" -> IndexType.Hashed),
+        name       = Some("libraryNameIdx"),
+        background = true))
 
   def update(libraryVersion: MongoLibraryVersion): Future[MongoLibraryVersion] = {
     logger.debug(s"writing $libraryVersion")

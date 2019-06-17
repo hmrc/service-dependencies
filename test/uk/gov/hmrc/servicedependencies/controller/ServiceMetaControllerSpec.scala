@@ -16,7 +16,8 @@
 
 package uk.gov.hmrc.servicedependencies.controller
 
-import akka.stream.Materializer
+import akka.actor.ActorSystem
+import akka.stream.ActorMaterializer
 import org.mockito.ArgumentMatchers.any
 import org.mockito.Mockito.when
 import org.scalatest.mockito.MockitoSugar
@@ -28,21 +29,20 @@ import play.api.test.Helpers._
 import play.api.test.{FakeRequest, Injecting}
 import uk.gov.hmrc.servicedependencies.model.SlugInfo
 import uk.gov.hmrc.servicedependencies.service.SlugInfoService
-
-import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 
 class ServiceMetaControllerSpec extends PlaySpec
-  with Injecting
-  with GuiceOneAppPerSuite
   with MockitoSugar {
+
+  import ExecutionContext.Implicits.global
 
   "setSlugInfo" should {
     "correctly deserialize the request" in {
-      implicit val materializer: Materializer = app.materializer
-      implicit val components: ControllerComponents = inject[ControllerComponents]
-      val mockedSlugInfoService               = mock[SlugInfoService]
-      val controller = new ServiceMetaController(mockedSlugInfoService, components)
+      implicit val as           = ActorSystem()
+      implicit val materializer = ActorMaterializer()
+      implicit val components   = stubControllerComponents(playBodyParsers = stubPlayBodyParsers(materializer))
+      val mockedSlugInfoService = mock[SlugInfoService]
+      val controller            = new ServiceMetaController(mockedSlugInfoService, components)
 
       when(mockedSlugInfoService.addSlugInfo(any[SlugInfo]())).thenReturn(Future.successful(true))
 

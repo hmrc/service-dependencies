@@ -15,9 +15,11 @@
  */
 
 package uk.gov.hmrc.servicedependencies.controller.model
+
 import play.api.libs.functional.syntax._
 import play.api.libs.json.{OWrites, Writes, __}
 import uk.gov.hmrc.servicedependencies.model.Version
+
 
 case class Dependency(
     name               : String

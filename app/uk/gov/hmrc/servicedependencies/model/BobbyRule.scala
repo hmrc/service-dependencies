@@ -14,15 +14,21 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.servicedependencies.connector.model
+package uk.gov.hmrc.servicedependencies.model
 
 import java.time.LocalDate
-
 import play.api.data.format.Formats
 import play.api.libs.functional.syntax._
-import play.api.libs.json.{Reads, Writes, __}
+import play.api.libs.json.{Reads, OFormat, Writes, __}
 import uk.gov.hmrc.http.controllers.RestFormats
 import uk.gov.hmrc.servicedependencies.controller.model.DependencyBobbyRule
+
+
+final case class BobbyVersion(
+    version  : Version
+  , inclusive: Boolean
+  )
+
 
 final case class BobbyRule(
   organisation: String,
@@ -41,23 +47,14 @@ final case class BobbyRule(
 
 
 object BobbyRule {
-  val reads: Reads[BobbyRule] = {
-    implicit val bvrf = BobbyVersionRange.format
-    ( (__ \ "organisation").read[String]
-    ~ (__ \ "name"        ).read[String]
-    ~ (__ \ "range"       ).read[BobbyVersionRange]
-    ~ (__ \ "reason"      ).read[String]
-    ~ (__ \ "from"        ).read[LocalDate]
-    )(BobbyRule.apply _)
-  }
-  val writes: Writes[BobbyRule] = {
+  val format: OFormat[BobbyRule] = {
     implicit val ldw  = Formats.localDateFormat
     implicit val bvwf = BobbyVersionRange.format
-    (   (__ \ "organisation").write[String]
-      ~ (__ \ "name"        ).write[String]
-      ~ (__ \ "range"       ).write[BobbyVersionRange]
-      ~ (__ \ "reason"      ).write[String]
-      ~ (__ \ "from"        ).write[LocalDate]
-    )(unlift(BobbyRule.unapply))
+    ( (__ \ "organisation").format[String]
+    ~ (__ \ "name"        ).format[String]
+    ~ (__ \ "range"       ).format[BobbyVersionRange]
+    ~ (__ \ "reason"      ).format[String]
+    ~ (__ \ "from"        ).format[LocalDate]
+    )(BobbyRule.apply, unlift(BobbyRule.unapply))
   }
 }

@@ -15,23 +15,35 @@
  */
 
 package uk.gov.hmrc.servicedependencies.service
+
 import java.time.LocalDate
-
-import org.scalatest.mockito.MockitoSugar
-import org.scalatest.{FlatSpec, FunSpec, Matchers}
-import uk.gov.hmrc.servicedependencies.connector.model.{BobbyRule, BobbyVersion, BobbyVersionRange}
-import uk.gov.hmrc.servicedependencies.model._
+import java.util.concurrent.atomic.AtomicReference
 import org.mockito.Mockito._
+import org.mockito.ArgumentMatchers.any
+import org.scalatest.{FlatSpec, FunSpec, Matchers}
+import org.scalatest.mockito.MockitoSugar
+import org.scalatest.concurrent.ScalaFutures
+import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.servicedependencies.connector.ServiceConfigsConnector
-import uk.gov.hmrc.servicedependencies.persistence.SlugInfoRepository
-
+import uk.gov.hmrc.servicedependencies.model._
+import uk.gov.hmrc.servicedependencies.persistence.{BobbyRulesSummaryRepo, SlugInfoRepository}
+import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.duration.Duration
-import scala.concurrent.{Await, Future}
 
-class DependencyLookupServiceTest extends FlatSpec with Matchers with MockitoSugar{
+
+class DependencyLookupServiceSpec
+  extends FlatSpec
+     with Matchers
+     with MockitoSugar
+     with ScalaFutures {
+
+  override implicit val patienceConfig = {
+    import org.scalatest.time.{Millis, Span, Seconds}
+    PatienceConfig(timeout = Span(2, Seconds), interval = Span(15, Millis))
+  }
 
   import DependencyLookupServiceTestData._
-  import scala.concurrent.ExecutionContext.Implicits.global
+  import ExecutionContext.Implicits.global
 
   "slugToServiceDep" should "Convert a slug and dependency to a ServiceDependency" in {
 
@@ -61,8 +73,9 @@ class DependencyLookupServiceTest extends FlatSpec with Matchers with MockitoSug
 
     val slugLookup: Map[String, Map[Version, Set[ServiceDependency]]] = Map(
       "org.libs:mylib" -> Map(
-         Version(1,0,0) -> Set(ServiceDependency("test1", "1.99.3",List.empty, "org.libs","mylib","1.0.0"))
-        ,Version(1,3,0) -> Set(ServiceDependency("test2", "2.0.1",List.empty, "org.libs","mylib","1.3.0"))))
+          Version(1,0,0) -> Set(ServiceDependency("test1", "1.99.3", List.empty, "org.libs", "mylib", "1.0.0"))
+        , Version(1,3,0) -> Set(ServiceDependency("test2", "2.0.1" , List.empty, "org.libs", "mylib", "1.3.0")))
+        )
 
     val res1 = DependencyLookupService.findSlugsUsing(
       lookup   = slugLookup,
@@ -82,20 +95,48 @@ class DependencyLookupServiceTest extends FlatSpec with Matchers with MockitoSug
   }
 
 
-  "countBobbyRuleViolations" should "return the number of slugs violating a bobby rule" in {
-    val configService      = mock[ServiceConfigsConnector]
-    val slugInfoRepository = mock[SlugInfoRepository]
+  "getLatestBobbyRuleViolations" should "return the number of slugs violating a bobby rule" in {
+    val configService         = mock[ServiceConfigsConnector]
+    val slugInfoRepository    = mock[SlugInfoRepository]
+
+    val bobbyRulesSummaryRepo = new BobbyRulesSummaryRepo {
+      import scala.compat.java8.FunctionConverters._
+
+      private val store = new AtomicReference(List[BobbyRulesSummary]())
+
+      override def add(summary: BobbyRulesSummary): Future[Unit] =
+        Future {
+          store.updateAndGet(((l: List[BobbyRulesSummary]) => l ++ List(summary)).asJava)
+        }
+
+      override def getLatest: Future[Option[BobbyRulesSummary]] =
+        Future(store.get.sortBy(_.date.toEpochDay).headOption)
+
+      override def getHistoric: Future[List[BobbyRulesSummary]] =
+        Future(store.get)
+    }
+
+    implicit val hc = HeaderCarrier()
 
     when(configService.getBobbyRules()).thenReturn(Future(Map("libs" -> List(bobbyRule))))
+    when(slugInfoRepository.getSlugsForEnv(any[SlugInfoFlag])).thenReturn(Future(Seq.empty))
     when(slugInfoRepository.getSlugsForEnv(SlugInfoFlag.Production)).thenReturn(Future(Seq(slug1, slug11, slug12)))
 
-    val lookupService = new DependencyLookupService(configService, slugInfoRepository)
-    val count         = Await.result(lookupService.countBobbyRuleViolations(SlugInfoFlag.Production), Duration(20, "seconds"))
+    val lookupService = new DependencyLookupService(configService, slugInfoRepository, bobbyRulesSummaryRepo)
 
-    count.length shouldBe 1
+    lookupService.updateBobbyRulesSummary.futureValue
+    val optRes = lookupService.getLatestBobbyRuleViolations.futureValue
+    optRes.isDefined shouldBe true
+    val Some(res) = optRes
+    res.summary shouldBe Map(
+        (bobbyRule, SlugInfoFlag.Latest      ) -> 0
+      , (bobbyRule, SlugInfoFlag.Development ) -> 0
+      , (bobbyRule, SlugInfoFlag.ExternalTest) -> 0
+      , (bobbyRule, SlugInfoFlag.Production  ) -> 1
+      , (bobbyRule, SlugInfoFlag.QA          ) -> 0
+      , (bobbyRule, SlugInfoFlag.Staging     ) -> 0
+      )
   }
-
-
 }
 
 
@@ -104,22 +145,24 @@ object DependencyLookupServiceTestData {
   val dep1: SlugDependency = SlugDependency("", "5.11.0", "org.libs", "mylib")
   val dep2: SlugDependency = SlugDependency("", "5.12.0", "org.libs", "mylib")
 
-  val slug1 = SlugInfo(uri = "http://slugs.com/test/test-1.0.0.tgz"
-    ,name          = "test"
-    ,version       = Version("1.0.0")
-    ,teams         = List.empty
-    ,runnerVersion = "0.5.2"
-    ,classpath     = "classpath="
-    ,jdkVersion    = "1.8.0"
-    ,dependencies  = List(dep1)
-    ,applicationConfig = "config"
-    ,""
-    ,latest       = true
-    ,production   = false
-    ,qa           = false
-    ,staging      = false
-    ,development  = false
-    ,externalTest = false)
+  val slug1 = SlugInfo(
+      uri = "http://slugs.com/test/test-1.0.0.tgz"
+    , name          = "test"
+    , version       = Version("1.0.0")
+    , teams         = List.empty
+    , runnerVersion = "0.5.2"
+    , classpath     = "classpath="
+    , jdkVersion    = "1.8.0"
+    , dependencies  = List(dep1)
+    , applicationConfig = "config"
+    , ""
+    , latest       = true
+    , production   = false
+    , qa           = false
+    , staging      = false
+    , development  = false
+    , externalTest = false
+    )
 
   val slug11 = slug1.copy(version = Version(1,1,0), uri = "http://slugs.com/test/test-1.1.0.tgz")
 

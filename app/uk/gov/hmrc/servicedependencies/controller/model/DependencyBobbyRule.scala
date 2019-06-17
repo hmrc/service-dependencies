@@ -17,15 +17,14 @@
 package uk.gov.hmrc.servicedependencies.controller.model
 
 import java.time.LocalDate
-
 import play.api.libs.functional.syntax._
 import play.api.libs.json.{OWrites, __}
-import uk.gov.hmrc.servicedependencies.connector.model.{BobbyVersion, BobbyVersionRange}
+import uk.gov.hmrc.servicedependencies.model.BobbyVersionRange
 
 case class DependencyBobbyRule(
   reason: String,
-  from : LocalDate,
-  range: BobbyVersionRange
+  from  : LocalDate,
+  range : BobbyVersionRange
 )
 
 object DependencyBobbyRule {

@@ -20,9 +20,8 @@ import org.mockito.Mockito._
 import org.scalatest.mockito.MockitoSugar
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.play.test.UnitSpec
-import uk.gov.hmrc.servicedependencies.connector.model.BobbyVersionRange
 import uk.gov.hmrc.servicedependencies.connector.{ServiceDeploymentsConnector, TeamsAndRepositoriesConnector, TeamsForServices}
-import uk.gov.hmrc.servicedependencies.model.{ServiceDependency, SlugInfoFlag}
+import uk.gov.hmrc.servicedependencies.model.{BobbyVersionRange, ServiceDependency, SlugInfoFlag}
 import uk.gov.hmrc.servicedependencies.persistence.SlugInfoRepository
 
 import scala.concurrent.ExecutionContext.Implicits.global

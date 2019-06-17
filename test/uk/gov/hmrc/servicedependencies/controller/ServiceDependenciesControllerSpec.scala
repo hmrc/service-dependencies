@@ -39,17 +39,11 @@ import scala.concurrent.Future
 class ServiceDependenciesControllerSpec
     extends FreeSpec
     with BeforeAndAfterEach
-    with GuiceOneAppPerSuite
     with Matchers
     with MockitoSugar
     with ScalaFutures
     with IntegrationPatience
     with OptionValues {
-
-  override def fakeApplication(): Application =
-    GuiceApplicationBuilder()
-      .configure("metrics.jvm" -> false)
-      .build()
 
   "getDependencyVersionsForRepository" - {
     "should get dependency versions for a repository using the service" in {

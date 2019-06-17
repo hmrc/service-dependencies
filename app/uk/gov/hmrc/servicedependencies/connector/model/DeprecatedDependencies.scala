@@ -18,13 +18,15 @@ package uk.gov.hmrc.servicedependencies.connector.model
 
 import play.api.libs.functional.syntax._
 import play.api.libs.json.{Reads, __}
+import uk.gov.hmrc.servicedependencies.model.BobbyRule
 
 final case class DeprecatedDependencies(libraries: Seq[BobbyRule], plugins: Seq[BobbyRule])
 
 object DeprecatedDependencies {
 
   val reads: Reads[DeprecatedDependencies] =
-    ((__ \ "libraries").lazyRead(Reads.seq[BobbyRule](BobbyRule.reads))
-      ~ (__ \ "plugins").lazyRead(Reads.seq[BobbyRule](BobbyRule.reads)))(DeprecatedDependencies.apply _)
+    ( (__ \ "libraries").lazyRead(Reads.seq[BobbyRule](BobbyRule.format))
+    ~ (__ \ "plugins"  ).lazyRead(Reads.seq[BobbyRule](BobbyRule.format))
+    )(DeprecatedDependencies.apply _)
 
 }

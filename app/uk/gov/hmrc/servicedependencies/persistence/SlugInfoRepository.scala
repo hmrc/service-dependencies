@@ -81,19 +81,19 @@ class SlugInfoRepository @Inject()(mongo: ReactiveMongoComponent)
   def getSlugInfo(name: String, flag: SlugInfoFlag): Future[Option[SlugInfo]] =
     find(
       "name" -> name,
-      flag.s -> true)
+      flag.asString -> true)
       .map(_.headOption)
 
   def getSlugsForEnv(flag: SlugInfoFlag): Future[Seq[SlugInfo]] =
-    find(flag.s -> true)
+    find(flag.asString -> true)
 
 
   def clearFlag(flag: SlugInfoFlag, name: String): Future[Unit] = {
-    logger.debug(s"clear ${flag.s} flag on $name")
+    logger.debug(s"clear ${flag.asString} flag on $name")
     collection
       .update(
           selector = Json.obj("name" -> name)
-        , update   = Json.obj("$set" -> Json.obj(flag.s -> false))
+        , update   = Json.obj("$set" -> Json.obj(flag.asString -> false))
         , multi    = true
         )
       .map(_ => ())
@@ -105,13 +105,13 @@ class SlugInfoRepository @Inject()(mongo: ReactiveMongoComponent)
   def setFlag(flag: SlugInfoFlag, name: String, version: Version): Future[Unit] =
     for {
       _ <- clearFlag(flag, name)
-      _ =  logger.debug(s"mark slug $name $version with ${flag.s} flag")
+      _ =  logger.debug(s"mark slug $name $version with ${flag.asString} flag")
       _ <- collection
             .update(
                 selector = Json.obj( "name"    -> name
                                    , "version" -> version.original
                                    )
-              , update   = Json.obj("$set" -> Json.obj(flag.s -> true))
+              , update   = Json.obj("$set" -> Json.obj(flag.asString -> true))
               )
     } yield ()
 
@@ -147,7 +147,7 @@ class SlugInfoRepository @Inject()(mongo: ReactiveMongoComponent)
 
     col.aggregatorContext[ServiceDependency](
         Match(document(
-            flag.s -> true
+            flag.asString -> true
           , "name" -> document("$nin" -> SlugBlacklist.blacklistedSlugs)
           ))
       , List(
@@ -197,7 +197,7 @@ class SlugInfoRepository @Inject()(mongo: ReactiveMongoComponent)
     implicit val rga = readerGroupArtefacts
 
     col.aggregatorContext[GroupArtefacts](
-        Match(document("$or" -> SlugInfoFlag.values.map(f => document(f.s -> true)))) // filter for reachable data
+        Match(document("$or" -> SlugInfoFlag.values.map(f => document(f.asString -> true)))) // filter for reachable data
       , List(
           Project(document("dependencies" -> "$dependencies"))
         , UnwindField("dependencies")
@@ -216,14 +216,14 @@ class SlugInfoRepository @Inject()(mongo: ReactiveMongoComponent)
     implicit val reads: OFormat[JDKVersion] = JDKVersionFormats.jdkFormat
     collection.find(
           selector   = BSONDocument(
-                           flag.s       -> true
-                         , "jdkVersion" -> BSONDocument("$ne" -> "")
-                         , "name"       -> BSONDocument("$nin" -> SlugBlacklist.blacklistedSlugs)
+                           flag.asString -> true
+                         , "jdkVersion"  -> BSONDocument("$ne" -> "")
+                         , "name"        -> BSONDocument("$nin" -> SlugBlacklist.blacklistedSlugs)
                          )
         , projection = Some(BSONDocument(
                            "name"       -> 1
                          , "jdkVersion" -> 1
-                         , "flag"       -> flag.s
+                         , "flag"       -> flag.asString
                          ))
         )
       .cursor[JDKVersion]()
