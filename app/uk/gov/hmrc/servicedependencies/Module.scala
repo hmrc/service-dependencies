@@ -19,7 +19,6 @@ package uk.gov.hmrc.servicedependencies
 import akka.stream.Materializer
 import com.google.inject.AbstractModule
 import play.api.libs.concurrent.MaterializerProvider
-import uk.gov.hmrc.servicedependencies.persistence.{BobbyRulesSummaryRepo, BobbyRulesSummaryRepoImpl}
 
 class Module() extends AbstractModule {
   override def configure(): Unit = {
@@ -27,7 +26,8 @@ class Module() extends AbstractModule {
     bind(classOf[scheduler.MetricsScheduler           ]).asEagerSingleton()
     bind(classOf[scheduler.SlugMetadataUpdateScheduler]).asEagerSingleton()
     bind(classOf[scheduler.BobbyRulesSummaryScheduler ]).asEagerSingleton()
-    bind(classOf[BobbyRulesSummaryRepo]).to(classOf[BobbyRulesSummaryRepoImpl])
+    bind(classOf[service.SlugInfoUpdatedHandler       ]).asEagerSingleton()
+    bind(classOf[persistence.BobbyRulesSummaryRepo]).to(classOf[persistence.BobbyRulesSummaryRepoImpl])
     bind(classOf[Github      ]).toProvider(classOf[GithubProvider])
     bind(classOf[Materializer]).toProvider(classOf[MaterializerProvider])
   }

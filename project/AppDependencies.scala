@@ -9,14 +9,16 @@ private object AppDependencies {
   val compile = Seq(
     ws,
     ehcache,
-    "uk.gov.hmrc"        %% "bootstrap-play-26"    % bootstrapPlayVersion,
-    "uk.gov.hmrc"        %% "github-client"        % "2.5.0",
-    "uk.gov.hmrc"        %% "metrix"               % "3.5.0-play-26",
-    "uk.gov.hmrc"        %% "simple-reactivemongo" % "7.9.0-play-26",
-    "uk.gov.hmrc"        %% "mongo-lock"           % "6.6.0-play-26",
-    "com.typesafe.play"  %% "play-json-joda"       % "2.6.0",
-    "org.typelevel"      %% "cats-core"            % "1.1.0",
-    "org.apache.commons" %  "commons-compress"     % "1.18"
+    "uk.gov.hmrc"        %% "bootstrap-play-26"       % bootstrapPlayVersion,
+    "uk.gov.hmrc"        %% "github-client"           % "2.5.0",
+    "uk.gov.hmrc"        %% "metrix"                  % "3.5.0-play-26",
+    "uk.gov.hmrc"        %% "simple-reactivemongo"    % "7.9.0-play-26",
+    "uk.gov.hmrc"        %% "mongo-lock"              % "6.6.0-play-26",
+    "com.typesafe.play"  %% "play-json-joda"          % "2.6.0",
+    "org.typelevel"      %% "cats-core"               % "1.1.0",
+    "org.apache.commons" %  "commons-compress"        % "1.18",
+    "com.lightbend.akka" %% "akka-stream-alpakka-sns" % "1.0.2",
+    "com.lightbend.akka" %% "akka-stream-alpakka-sqs" % "1.0.2"
   )
 
   val test = Seq(

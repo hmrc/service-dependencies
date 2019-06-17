@@ -60,7 +60,7 @@ private object DataFormat {
 }
 
 object BobbyRulesSummary {
-  implicit val df = DataFormat.dataFormat[Int]
+  private implicit val df = DataFormat.dataFormat[Int]
 
   val apiFormat: OFormat[BobbyRulesSummary] =
     ( (__ \ "date"     ).format[LocalDate]
@@ -76,7 +76,7 @@ object BobbyRulesSummary {
 }
 
 object HistoricBobbyRulesSummary {
-  implicit val df = DataFormat.dataFormat[List[Int]]
+  private implicit val df = DataFormat.dataFormat[List[Int]]
 
   val apiFormat: OFormat[HistoricBobbyRulesSummary] =
     ( (__ \ "date"     ).format[LocalDate]

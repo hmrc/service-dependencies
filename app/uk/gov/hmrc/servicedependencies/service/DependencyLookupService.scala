@@ -65,7 +65,7 @@ class DependencyLookupService @Inject() (
       if (ss.isEmpty) HistoricBobbyRulesSummary(LocalDate.now, Map.empty)
       else ss
             .map(summary => HistoricBobbyRulesSummary.fromBobbyRulesSummary(summary))
-            // assumes Historic data is consecutive (else cannot infer dates from array position)
+            // TODO extrapolate if there are missing data values (array position is relative to date)
             .reduce((s1, s2) => s2.copy(summary = s2.summary combine s1.summary))
       )
 
