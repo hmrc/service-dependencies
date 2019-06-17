@@ -14,15 +14,21 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.servicedependencies.connector.model
+package uk.gov.hmrc.servicedependencies.model
 
 import java.time.LocalDate
-
 import play.api.data.format.Formats
 import play.api.libs.functional.syntax._
 import play.api.libs.json.{Reads, OFormat, Writes, __}
 import uk.gov.hmrc.http.controllers.RestFormats
 import uk.gov.hmrc.servicedependencies.controller.model.DependencyBobbyRule
+
+
+final case class BobbyVersion(
+    version  : Version
+  , inclusive: Boolean
+  )
+
 
 final case class BobbyRule(
   organisation: String,

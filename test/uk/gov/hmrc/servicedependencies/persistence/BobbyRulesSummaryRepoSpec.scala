@@ -24,9 +24,7 @@ import org.scalatest.mockito.MockitoSugar
 import org.scalatest.{BeforeAndAfterEach, Matchers, WordSpecLike}
 import play.modules.reactivemongo.ReactiveMongoComponent
 import uk.gov.hmrc.mongo.{FailOnUnindexedQueries, MongoConnector, MongoSpecSupport, RepositoryPreparation}
-import uk.gov.hmrc.servicedependencies.model.{BobbyRulesSummary, SlugDependency, SlugInfo, SlugInfoFlag, Version}
-import uk.gov.hmrc.servicedependencies.connector.model.BobbyRule
-import uk.gov.hmrc.servicedependencies.connector.model.BobbyVersionRange
+import uk.gov.hmrc.servicedependencies.model.{BobbyRule, BobbyVersionRange, BobbyRulesSummary, SlugDependency, SlugInfo, SlugInfoFlag, Version}
 
 class BobbyRulesSummaryRepoSpec
     extends WordSpecLike

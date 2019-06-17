@@ -26,7 +26,6 @@ import play.api.mvc._
 import uk.gov.hmrc.play.bootstrap.controller.BackendController
 import uk.gov.hmrc.servicedependencies.config.ServiceDependenciesConfig
 import uk.gov.hmrc.servicedependencies.connector.TeamsAndRepositoriesConnector
-import uk.gov.hmrc.servicedependencies.connector.model.BobbyVersionRange
 import uk.gov.hmrc.servicedependencies.controller.model.Dependencies
 import uk.gov.hmrc.servicedependencies.model._
 import uk.gov.hmrc.servicedependencies.service.{DependencyDataUpdatingService, ServiceConfigsService, SlugInfoService}

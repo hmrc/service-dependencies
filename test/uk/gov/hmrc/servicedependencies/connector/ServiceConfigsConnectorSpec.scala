@@ -27,7 +27,8 @@ import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.servicedependencies.WireMockConfig
-import uk.gov.hmrc.servicedependencies.connector.model.{BobbyRule, BobbyVersionRange, DeprecatedDependencies}
+import uk.gov.hmrc.servicedependencies.connector.model.{DeprecatedDependencies}
+import uk.gov.hmrc.servicedependencies.model.{BobbyRule, BobbyVersionRange}
 
 class ServiceConfigsConnectorSpec
     extends FreeSpec

@@ -22,8 +22,8 @@ import play.api.libs.json.Reads
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
 import uk.gov.hmrc.play.bootstrap.http.HttpClient
-import uk.gov.hmrc.servicedependencies.connector.model.{BobbyRule, DeprecatedDependencies}
-
+import uk.gov.hmrc.servicedependencies.connector.model.DeprecatedDependencies
+import uk.gov.hmrc.servicedependencies.model.BobbyRule
 import scala.concurrent.duration.Duration
 import scala.concurrent.{ExecutionContext, Future}
 

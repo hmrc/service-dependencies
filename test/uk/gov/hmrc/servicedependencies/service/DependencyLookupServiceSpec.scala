@@ -25,8 +25,7 @@ import org.scalatest.mockito.MockitoSugar
 import org.scalatest.concurrent.ScalaFutures
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.servicedependencies.connector.ServiceConfigsConnector
-import uk.gov.hmrc.servicedependencies.connector.model.{BobbyRule, BobbyVersion, BobbyVersionRange}
-import uk.gov.hmrc.servicedependencies.model.{BobbyRulesSummary, ServiceDependency, SlugDependency, SlugInfo, SlugInfoFlag, Version}
+import uk.gov.hmrc.servicedependencies.model._
 import uk.gov.hmrc.servicedependencies.persistence.{BobbyRulesSummaryRepo, SlugInfoRepository}
 import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.duration.Duration

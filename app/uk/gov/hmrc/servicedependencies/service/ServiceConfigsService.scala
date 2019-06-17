@@ -34,8 +34,8 @@ package uk.gov.hmrc.servicedependencies.service
 
 import com.google.inject.{Inject, Singleton}
 import uk.gov.hmrc.servicedependencies.connector.ServiceConfigsConnector
-import uk.gov.hmrc.servicedependencies.connector.model.BobbyRule
 import uk.gov.hmrc.servicedependencies.controller.model.{Dependencies, Dependency}
+import uk.gov.hmrc.servicedependencies.model.BobbyRule
 
 import scala.concurrent.{ExecutionContext, Future}
 

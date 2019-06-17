@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.servicedependencies.connector.model
+package uk.gov.hmrc.servicedependencies.model
+
 import org.scalatest.{FlatSpec, Matchers}
-import uk.gov.hmrc.servicedependencies.model.Version
 
 class BobbyVersionRangeSpec extends FlatSpec with Matchers {
 

@@ -22,8 +22,7 @@ import java.time.LocalDate
 import javax.inject.Inject
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.servicedependencies.connector.ServiceConfigsConnector
-import uk.gov.hmrc.servicedependencies.connector.model.{BobbyRule, BobbyVersionRange} // TODO move from connector.model to model?
-import uk.gov.hmrc.servicedependencies.model.{BobbyRulesSummary, HistoricBobbyRulesSummary, ServiceDependency, SlugDependency, SlugInfo, SlugInfoFlag, Version}
+import uk.gov.hmrc.servicedependencies.model._
 import uk.gov.hmrc.servicedependencies.persistence.{BobbyRulesSummaryRepo, SlugBlacklist, SlugInfoRepository}
 
 import scala.concurrent.ExecutionContext.Implicits.global
