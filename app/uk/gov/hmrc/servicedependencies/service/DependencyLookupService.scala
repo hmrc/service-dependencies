@@ -19,6 +19,7 @@ package uk.gov.hmrc.servicedependencies.service
 import cats.implicits._
 import java.io.PrintStream
 import java.time.LocalDate
+import java.time.temporal.ChronoUnit
 import javax.inject.Inject
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.servicedependencies.connector.ServiceConfigsConnector
@@ -61,13 +62,7 @@ class DependencyLookupService @Inject() (
 
   def getHistoricBobbyRuleViolations: Future[HistoricBobbyRulesSummary] =
     bobbyRulesSummaryRepo.getHistoric
-      .map(ss =>
-      if (ss.isEmpty) HistoricBobbyRulesSummary(LocalDate.now, Map.empty)
-      else ss
-            .map(summary => HistoricBobbyRulesSummary.fromBobbyRulesSummary(summary))
-            // TODO extrapolate if there are missing data values (array position is relative to date)
-            .reduce((s1, s2) => s2.copy(summary = s2.summary combine s1.summary))
-      )
+      .map(combineBobbyRulesSummaries)
 
   /**
     * A alternative version of SlugInfoService's findServicesWithDependency.
@@ -123,6 +118,18 @@ object DependencyLookupService {
         .flatten
         .toSeq
 
+  def combineBobbyRulesSummaries(l: List[BobbyRulesSummary]): HistoricBobbyRulesSummary =
+    l match {
+      case Nil          => HistoricBobbyRulesSummary(LocalDate.now, Map.empty)
+      case head :: rest => rest
+                             .foldLeft(HistoricBobbyRulesSummary.fromBobbyRulesSummary(head)){ case (acc, s) =>
+                               val daysBetween = ChronoUnit.DAYS.between(s.date, acc.date).toInt
+                               val res = acc.summary.foldLeft(acc.summary) { case (acc2, (k, v)) =>
+                                  acc2 + (k -> (List.fill(daysBetween)(s.summary.getOrElse(k, v.head)) ++ v))
+                               }
+                               HistoricBobbyRulesSummary(date = s.date, summary = res)
+                             }
+    }
 
   def printTree(
       t  : Map[String, Map[Version, Set[String]]]
