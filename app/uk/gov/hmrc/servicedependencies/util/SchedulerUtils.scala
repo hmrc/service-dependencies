@@ -40,7 +40,7 @@ trait SchedulerUtils {
           actorSystem.scheduler.schedule(initialDelay, frequency) {
             Logger.info(s"Running $label scheduler")
             f.recover {
-                case NonFatal(e) => Logger.error(s"$label interrupted because: ${e.getMessage}", e)
+                case e => Logger.error(s"$label interrupted because: ${e.getMessage}", e)
               }
           }
         applicationLifecycle.addStopHook(() => Future(cancellable.cancel()))
@@ -58,8 +58,6 @@ trait SchedulerUtils {
         lock.tryLock(f).map {
           case Some(_) => Logger.debug(s"$label finished - releasing lock")
           case None    => Logger.debug(s"$label cannot run - lock ${lock.lockId} is taken... skipping update")
-        }.recover {
-          case NonFatal(e) => Logger.error(s"$label interrupted because: ${e.getMessage}", e)
         }
   }
 }
