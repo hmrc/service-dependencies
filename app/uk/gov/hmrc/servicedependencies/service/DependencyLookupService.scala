@@ -47,7 +47,7 @@ class DependencyLookupService @Inject() (
        Logger.info(s"UpdateBobbyRulesSummary - calculateCounts($env)")
       for {
         slugs      <- slugRepo.getSlugsForEnv(env)
-        _          =  Logger.info(s"UpdateBobbyRulesSummary - Found slugs for $env")
+        _          =  Logger.info(s"UpdateBobbyRulesSummary - Found ${slugs.size} slugs for $env")
         lookup     =  buildLookup(slugs)
         _          =  Logger.info(s"UpdateBobbyRulesSummary - Build lookup")
         violations =  rules.map(rule => ((rule, env), findSlugsUsing(lookup, rule.organisation, rule.name, rule.range).length))
@@ -57,11 +57,13 @@ class DependencyLookupService @Inject() (
 
     for {
       rules   <- serviceConfigs.getBobbyRules.map(_.values.flatten.toSeq)
-      _       =  Logger.info(s"UpdateBobbyRulesSummary - Found $rules")
-      counts  <- SlugInfoFlag.values.traverse(calculateCounts(rules))
-      _       =  Logger.info(s"UpdateBobbyRulesSummary - Calculated counts $counts")
+      _       =  Logger.info(s"UpdateBobbyRulesSummary - Found ${rules.size} rules")
+                 // traverse (in parallel) uses more memory and adds contention on data source
+      counts  <- SlugInfoFlag.values.foldLeftM(Seq[((BobbyRule, SlugInfoFlag), Int)]()){ case (acc, env) =>
+                   calculateCounts(rules)(env).map(acc ++ _)
+                 }
+      _       =  Logger.info(s"UpdateBobbyRulesSummary - Calculated ${counts.size} counts")
       summary =  counts
-                   .flatten
                    .toMap
       _       <- bobbyRulesSummaryRepo.add(BobbyRulesSummary(LocalDate.now, summary))
       _       =  Logger.info(s"UpdateBobbyRulesSummary - Added summary")
