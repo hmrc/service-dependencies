@@ -44,26 +44,27 @@ class DependencyLookupService @Inject() (
 
   def updateBobbyRulesSummary(implicit hc: HeaderCarrier): Future[Unit] = {
     def calculateCounts(rules: Seq[BobbyRule])(env: SlugInfoFlag): Future[Seq[((BobbyRule, SlugInfoFlag), Int)]] = {
+       Logger.info(s"UpdateBobbyRulesSummary - calculateCounts($env)")
       for {
         slugs      <- slugRepo.getSlugsForEnv(env)
-        _          =  Logger.info(s"Found slugs for $env")
+        _          =  Logger.info(s"UpdateBobbyRulesSummary - Found slugs for $env")
         lookup     =  buildLookup(slugs)
-        _          =  Logger.info(s"Build lookup")
+        _          =  Logger.info(s"UpdateBobbyRulesSummary - Build lookup")
         violations =  rules.map(rule => ((rule, env), findSlugsUsing(lookup, rule.organisation, rule.name, rule.range).length))
-        _          =  Logger.info(s"Calcuated violations")
+        _          =  Logger.info(s"UpdateBobbyRulesSummary - Calcuated violations")
       } yield violations
     }
 
     for {
       rules   <- serviceConfigs.getBobbyRules.map(_.values.flatten.toSeq)
-      _       =  Logger.info(s"Found $rules")
+      _       =  Logger.info(s"UpdateBobbyRulesSummary - Found $rules")
       counts  <- SlugInfoFlag.values.traverse(calculateCounts(rules))
-      _       =  Logger.info(s"Calculated counts $counts")
+      _       =  Logger.info(s"UpdateBobbyRulesSummary - Calculated counts $counts")
       summary =  counts
                    .flatten
                    .toMap
       _       <- bobbyRulesSummaryRepo.add(BobbyRulesSummary(LocalDate.now, summary))
-      _       =  Logger.info(s"Added summary")
+      _       =  Logger.info(s"UpdateBobbyRulesSummary - Added summary")
     } yield ()
   }
 
