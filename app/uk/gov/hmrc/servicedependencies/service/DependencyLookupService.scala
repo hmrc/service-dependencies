@@ -21,6 +21,7 @@ import java.io.PrintStream
 import java.time.LocalDate
 import java.time.temporal.ChronoUnit
 import javax.inject.Inject
+import play.api.Logger
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.servicedependencies.connector.ServiceConfigsConnector
 import uk.gov.hmrc.servicedependencies.model._
@@ -45,18 +46,24 @@ class DependencyLookupService @Inject() (
     def calculateCounts(rules: Seq[BobbyRule])(env: SlugInfoFlag): Future[Seq[((BobbyRule, SlugInfoFlag), Int)]] = {
       for {
         slugs      <- slugRepo.getSlugsForEnv(env)
+        _          =  Logger.info(s"Found slugs for $env")
         lookup     =  buildLookup(slugs)
+        _          =  Logger.info(s"Build lookup")
         violations =  rules.map(rule => ((rule, env), findSlugsUsing(lookup, rule.organisation, rule.name, rule.range).length))
+        _          =  Logger.info(s"Calcuated violations")
       } yield violations
     }
 
     for {
       rules   <- serviceConfigs.getBobbyRules.map(_.values.flatten.toSeq)
+      _       =  Logger.info(s"Found $rules")
       counts  <- SlugInfoFlag.values.traverse(calculateCounts(rules))
+      _       =  Logger.info(s"Calculated counts $counts")
       summary =  counts
                    .flatten
                    .toMap
       _       <- bobbyRulesSummaryRepo.add(BobbyRulesSummary(LocalDate.now, summary))
+      _       =  Logger.info(s"Added summary")
     } yield ()
   }
 
