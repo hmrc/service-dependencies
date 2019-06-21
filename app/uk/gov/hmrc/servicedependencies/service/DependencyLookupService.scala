@@ -21,6 +21,7 @@ import java.io.PrintStream
 import java.time.LocalDate
 import java.time.temporal.ChronoUnit
 import javax.inject.Inject
+import play.api.Logger
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.servicedependencies.connector.ServiceConfigsConnector
 import uk.gov.hmrc.servicedependencies.model._
@@ -36,6 +37,9 @@ class DependencyLookupService @Inject() (
   , bobbyRulesSummaryRepo: BobbyRulesSummaryRepo
   ) {
 
+
+  val logger = Logger("application.service.DependencyLookupService")
+
   import DependencyLookupService._
 
   def getLatestBobbyRuleViolations: Future[Option[BobbyRulesSummary]] =
@@ -43,8 +47,10 @@ class DependencyLookupService @Inject() (
 
   def updateBobbyRulesSummary(implicit hc: HeaderCarrier): Future[Unit] = {
     def calculateCounts(rules: Seq[BobbyRule])(env: SlugInfoFlag): Future[Seq[((BobbyRule, SlugInfoFlag), Int)]] = {
+      logger.debug(s"calculateCounts($env)")
       for {
         slugs      <- slugRepo.getSlugsForEnv(env)
+        _          =  logger.debug(s"Found ${slugs.size} slugs for $env")
         lookup     =  buildLookup(slugs)
         violations =  rules.map(rule => ((rule, env), findSlugsUsing(lookup, rule.organisation, rule.name, rule.range).length))
       } yield violations
@@ -52,9 +58,12 @@ class DependencyLookupService @Inject() (
 
     for {
       rules   <- serviceConfigs.getBobbyRules.map(_.values.flatten.toSeq)
-      counts  <- SlugInfoFlag.values.traverse(calculateCounts(rules))
+      _       =  logger.debug(s"Found ${rules.size} rules")
+                 // traverse (in parallel) uses more memory and adds contention on data source - fold through it instead
+      counts  <- SlugInfoFlag.values.foldLeftM(Seq[((BobbyRule, SlugInfoFlag), Int)]()){ case (acc, env) =>
+                   calculateCounts(rules)(env).map(acc ++ _)
+                 }
       summary =  counts
-                   .flatten
                    .toMap
       _       <- bobbyRulesSummaryRepo.add(BobbyRulesSummary(LocalDate.now, summary))
     } yield ()
