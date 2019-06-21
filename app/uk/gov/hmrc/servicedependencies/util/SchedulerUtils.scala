@@ -35,7 +35,7 @@ trait SchedulerUtils {
       if (schedulerConfig.enabled) {
         val initialDelay = schedulerConfig.initialDelay()
         val frequency    = schedulerConfig.frequency()
-        Logger.info(s"Enabling $label scheduler, running every $frequency")
+        Logger.info(s"Enabling $label scheduler, running every $frequency (after initial delay $initialDelay)")
         val cancellable =
           actorSystem.scheduler.schedule(initialDelay, frequency) {
             Logger.info(s"Running $label scheduler")
