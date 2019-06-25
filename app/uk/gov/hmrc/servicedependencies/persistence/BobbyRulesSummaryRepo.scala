@@ -40,6 +40,8 @@ trait BobbyRulesSummaryRepo {
 
     // Not time bound yet
     def getHistoric: Future[List[BobbyRulesSummary]]
+
+    def clearAllData: Future[Boolean]
 }
 
 @Singleton
@@ -84,4 +86,8 @@ class BobbyRulesSummaryRepoImpl @Inject()(mongo: ReactiveMongoComponent)
         .sort(Json.obj("date" -> -1))
         .cursor[BobbyRulesSummary]()
         .collect(maxDocs = -1, Cursor.FailOnError[List[BobbyRulesSummary]]())
+
+    def clearAllData: Future[Boolean] =
+      super.removeAll().map(_.ok)
+
 }

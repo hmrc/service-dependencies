@@ -42,8 +42,9 @@ class DependencyLookupService @Inject() (
 
   import DependencyLookupService._
 
-  def getLatestBobbyRuleViolations: Future[Option[BobbyRulesSummary]] =
+  def getLatestBobbyRuleViolations: Future[BobbyRulesSummary] =
     bobbyRulesSummaryRepo.getLatest
+      .map(_.getOrElse(BobbyRulesSummary(LocalDate.now, Map.empty)))
 
   def updateBobbyRulesSummary(implicit hc: HeaderCarrier): Future[Unit] = {
     def calculateCounts(rules: Seq[BobbyRule])(env: SlugInfoFlag): Future[Seq[((BobbyRule, SlugInfoFlag), Int)]] = {
