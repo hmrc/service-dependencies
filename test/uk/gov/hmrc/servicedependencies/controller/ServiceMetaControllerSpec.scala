@@ -22,13 +22,12 @@ import org.mockito.ArgumentMatchers.any
 import org.mockito.Mockito.when
 import org.scalatest.mockito.MockitoSugar
 import org.scalatestplus.play.PlaySpec
-import org.scalatestplus.play.guice.GuiceOneAppPerSuite
 import play.api.libs.json.Json
-import play.api.mvc.ControllerComponents
 import play.api.test.Helpers._
-import play.api.test.{FakeRequest, Injecting}
+import play.api.test.FakeRequest
 import uk.gov.hmrc.servicedependencies.model.SlugInfo
 import uk.gov.hmrc.servicedependencies.service.SlugInfoService
+
 import scala.concurrent.{ExecutionContext, Future}
 
 class ServiceMetaControllerSpec extends PlaySpec
@@ -49,6 +48,7 @@ class ServiceMetaControllerSpec extends PlaySpec
       val json ="""
                   |{
                   |  "uri": "https://store/slugs/my-slug/my-slug_0.27.0_0.5.2.tgz",
+                  |  "created": "2019-06-28T11:51:23",
                   |  "name": "my-slug",
                   |  "version": "0.27.0",
                   |  "teams": [
@@ -85,5 +85,4 @@ class ServiceMetaControllerSpec extends PlaySpec
       status(result) must be (OK)
     }
   }
-
 }
