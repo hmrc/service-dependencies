@@ -27,8 +27,9 @@ class Module() extends AbstractModule {
     bind(classOf[scheduler.SlugMetadataUpdateScheduler]).asEagerSingleton()
     bind(classOf[scheduler.BobbyRulesSummaryScheduler ]).asEagerSingleton()
     bind(classOf[service.SlugInfoUpdatedHandler       ]).asEagerSingleton()
-    bind(classOf[persistence.BobbyRulesSummaryRepo]).to(classOf[persistence.BobbyRulesSummaryRepoImpl])
-    bind(classOf[Github      ]).toProvider(classOf[GithubProvider])
-    bind(classOf[Materializer]).toProvider(classOf[MaterializerProvider])
+    bind(classOf[service.DeadLetterHandler            ]).asEagerSingleton()
+    bind(classOf[persistence.BobbyRulesSummaryRepo    ]).to(classOf[persistence.BobbyRulesSummaryRepoImpl])
+    bind(classOf[Github                               ]).toProvider(classOf[GithubProvider])
+    bind(classOf[Materializer                         ]).toProvider(classOf[MaterializerProvider])
   }
 }
