@@ -22,7 +22,7 @@ import akka.stream.alpakka.sqs.MessageAction.Delete
 import akka.stream.alpakka.sqs.SqsSourceSettings
 import akka.stream.alpakka.sqs.scaladsl.{SqsAckSink, SqsSource}
 import com.github.matsluni.akkahttpspi.AkkaHttpClient
-import com.google.inject.{Inject, Singleton}
+import com.google.inject.Inject
 import play.api.Logger
 import software.amazon.awssdk.services.sqs.SqsAsyncClient
 import software.amazon.awssdk.services.sqs.model.Message
@@ -30,7 +30,6 @@ import uk.gov.hmrc.servicedependencies.config.ArtefactReceivingConfig
 
 import scala.concurrent.ExecutionContext
 
-@Singleton
 class DeadLetterHandler @Inject()
 (config: ArtefactReceivingConfig)
 (implicit val actorSystem: ActorSystem,
@@ -41,6 +40,8 @@ class DeadLetterHandler @Inject()
     Logger.debug("DeadLetterHandler is disabled.")
   }
 
+  private lazy val queueUrl = config.sqsSlugDeadLetterQueue
+  private lazy val settings = SqsSourceSettings()
   private lazy val awsSqsClient = {
     val client = SqsAsyncClient.builder()
       .httpClient(AkkaHttpClient.builder().withActorSystem(actorSystem).build())
@@ -49,9 +50,6 @@ class DeadLetterHandler @Inject()
     actorSystem.registerOnTermination(client.close())
     client
   }
-
-  private lazy val queueUrl = config.sqsSlugDeadLetterQueue
-  private lazy val settings = SqsSourceSettings()
 
   if (config.isEnabled) {
     SqsSource(

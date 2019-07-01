@@ -22,7 +22,7 @@ import akka.stream.alpakka.sqs.MessageAction.{Delete, Ignore}
 import akka.stream.alpakka.sqs.SqsSourceSettings
 import akka.stream.alpakka.sqs.scaladsl.{SqsAckSink, SqsSource}
 import com.github.matsluni.akkahttpspi.AkkaHttpClient
-import com.google.inject.{Inject, Singleton}
+import com.google.inject.Inject
 import play.api.Logger
 import play.api.libs.json.Json
 import software.amazon.awssdk.services.sqs.SqsAsyncClient
@@ -32,7 +32,6 @@ import uk.gov.hmrc.servicedependencies.model.{ApiSlugInfoFormats, SlugInfo}
 
 import scala.concurrent.{ExecutionContext, Future}
 
-@Singleton
 class SlugInfoUpdatedHandler @Inject()
 (config: ArtefactReceivingConfig, slugInfoService: SlugInfoService)
 (implicit val actorSystem: ActorSystem,
@@ -43,6 +42,8 @@ class SlugInfoUpdatedHandler @Inject()
     Logger.debug("SlugInfoUpdatedHandler is disabled.")
   }
 
+  private lazy val queueUrl = config.sqsSlugQueue
+  private lazy val settings = SqsSourceSettings()
   private lazy val awsSqsClient = {
     val client = SqsAsyncClient.builder()
       .httpClient(AkkaHttpClient.builder().withActorSystem(actorSystem).build())
@@ -51,9 +52,6 @@ class SlugInfoUpdatedHandler @Inject()
     actorSystem.registerOnTermination(client.close())
     client
   }
-
-  private lazy val queueUrl = config.sqsSlugQueue
-  private lazy val settings = SqsSourceSettings()
 
   if(config.isEnabled) {
     SqsSource(
@@ -105,5 +103,4 @@ class SlugInfoUpdatedHandler @Inject()
         Delete(message)
     }
   }
-
 }
