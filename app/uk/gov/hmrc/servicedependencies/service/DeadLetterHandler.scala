@@ -62,8 +62,10 @@ class DeadLetterHandler @Inject()
   }
 
   private def logMessage(message: Message) = {
-    Logger.warn(s"Dead letter message with ${sys.props("line.separator")}ID: '${message.messageId()}'${sys.props("line.separator")}Body: '${message.body()}'")
+    Logger.warn(
+      s"""Dead letter message with
+         |ID: '${message.messageId()}'
+         |Body: '${message.body()}'""".stripMargin)
     Delete(message)
   }
-
 }
