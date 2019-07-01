@@ -16,6 +16,8 @@
 
 package uk.gov.hmrc.servicedependencies.persistence
 
+import java.time.LocalDateTime
+
 import org.mockito.Mockito.when
 import org.scalatest.mockito.MockitoSugar
 import org.scalatest.{BeforeAndAfterEach, Matchers, WordSpecLike}
@@ -121,6 +123,7 @@ class SlugInfoRepositorySpec
 
   val slugInfo =
     SlugInfo(
+      created         = LocalDateTime.of(2019, 6, 28, 11, 51,23),
       uri             = "https://store/slugs/my-slug/my-slug_0.27.0_0.5.2.tgz",
       name            = "my-slug",
       version         = Version.apply("0.27.0"),
@@ -159,6 +162,7 @@ class SlugInfoRepositorySpec
 
   val otherSlug =
     SlugInfo(
+      created         = LocalDateTime.of(2019, 6, 28, 11, 51,23),
       uri             = "https://store/slugs/other-slug/other-slug_0.55.0_0.5.2.tgz",
       name            = "other-slug",
       version         = Version.apply("0.55.0"),

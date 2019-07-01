@@ -16,6 +16,8 @@
 
 package uk.gov.hmrc.servicedependencies.model
 
+import java.time.LocalDateTime
+
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
 
@@ -43,6 +45,7 @@ case class SlugDependency(
 
 case class SlugInfo(
   uri              : String,
+  created          : LocalDateTime,
   name             : String,
   version          : Version,
   teams            : List[String],
@@ -81,6 +84,7 @@ trait MongoSlugInfoFormats {
 
   implicit val siFormat: OFormat[SlugInfo] =
     ( (__ \ "uri"              ).format[String]
+    ~ (__ \ "created"          ).format[LocalDateTime]
     ~ (__ \ "name"             ).format[String]
     ~ (__ \ "version"          ).format[String].inmap[Version](Version.apply, _.original)
     ~ OFormat( Reads.pure(List.empty[String])
@@ -114,7 +118,6 @@ trait MongoSlugInfoFormats {
 
 object MongoSlugInfoFormats extends MongoSlugInfoFormats
 
-
 trait ApiSlugInfoFormats {
   implicit val sdFormat: OFormat[SlugDependency] =
     Json.format[SlugDependency]
@@ -122,6 +125,7 @@ trait ApiSlugInfoFormats {
   implicit val siFormat: OFormat[SlugInfo] = {
     implicit val vf = Version.apiFormat
     ( (__ \ "uri"              ).format[String]
+    ~ (__ \ "created"          ).format[LocalDateTime]
     ~ (__ \ "name"             ).format[String]
     ~ (__ \ "version"          ).format[String].inmap[Version](Version.apply, _.original)
     ~ (__ \ "teams"            ).format[List[String]]
@@ -148,7 +152,8 @@ trait ApiSlugInfoFormats {
     )(DependencyConfig.apply, unlift(DependencyConfig.unapply))
 
   val slugReads: Reads[SlugInfo] = (
-    (__ \ "uri").read[String]
+      (__ \ "uri").read[String]
+    ~ (__ \ "created").read[LocalDateTime]
     ~ (__ \ "name").read[String]
     ~ (__ \ "version").read[String].map(Version.apply)
     ~ (__ \ "teams").read[List[String]]

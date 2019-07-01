@@ -16,8 +16,9 @@
 
 package uk.gov.hmrc.servicedependencies.service
 
-import java.time.LocalDate
+import java.time.{LocalDate, LocalDateTime}
 import java.util.concurrent.atomic.AtomicReference
+
 import org.mockito.Mockito._
 import org.mockito.ArgumentMatchers.any
 import org.scalatest.{FlatSpec, FunSpec, Matchers}
@@ -27,6 +28,7 @@ import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.servicedependencies.connector.ServiceConfigsConnector
 import uk.gov.hmrc.servicedependencies.model._
 import uk.gov.hmrc.servicedependencies.persistence.{BobbyRulesSummaryRepo, SlugInfoRepository}
+
 import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.duration.Duration
 
@@ -179,7 +181,8 @@ object DependencyLookupServiceTestData {
   val dep2: SlugDependency = SlugDependency("", "5.12.0", "org.libs", "mylib")
 
   val slug1 = SlugInfo(
-      uri = "http://slugs.com/test/test-1.0.0.tgz"
+    uri           = "http://slugs.com/test/test-1.0.0.tgz"
+    , created       = LocalDateTime.of(2019, 6, 28, 11, 51,23)
     , name          = "test"
     , version       = Version("1.0.0")
     , teams         = List.empty
