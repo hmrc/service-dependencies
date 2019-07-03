@@ -31,6 +31,7 @@ import uk.gov.hmrc.servicedependencies.config.ArtefactReceivingConfig
 import uk.gov.hmrc.servicedependencies.model.{ApiSlugInfoFormats, SlugInfo}
 
 import scala.concurrent.{ExecutionContext, Future}
+import scala.util.Try
 
 class SlugInfoUpdatedHandler @Inject()
 (config: ArtefactReceivingConfig, slugInfoService: SlugInfoService)
@@ -46,14 +47,16 @@ class SlugInfoUpdatedHandler @Inject()
 
   private lazy val queueUrl = config.sqsSlugQueue
   private lazy val settings = SqsSourceSettings()
-  private lazy val awsSqsClient = {
+  private lazy val awsSqsClient = Try({
     val client = SqsAsyncClient.builder()
       .httpClient(AkkaHttpClient.builder().withActorSystem(actorSystem).build())
       .build()
 
     actorSystem.registerOnTermination(client.close())
     client
-  }
+  }).recover {
+    case e: Throwable => logger.error(e.getMessage, e); throw e
+  }.get
 
   if(config.isEnabled) {
     SqsSource(
