@@ -38,8 +38,10 @@ class SlugInfoUpdatedHandler @Inject()
  implicit val materializer: Materializer,
  implicit val executionContext: ExecutionContext) {
 
+  val logger = Logger("application.SlugInfoUpdatedHandler")
+
   if(!config.isEnabled) {
-    Logger.debug("SlugInfoUpdatedHandler is disabled.")
+    logger.debug("SlugInfoUpdatedHandler is disabled.")
   }
 
   private lazy val queueUrl = config.sqsSlugQueue
@@ -65,7 +67,7 @@ class SlugInfoUpdatedHandler @Inject()
   }
 
   private def logMessage(message: Message): Message = {
-    Logger.debug(s"Starting processing message with ID '${message.messageId()}'")
+    logger.debug(s"Starting processing message with ID '${message.messageId()}'")
     message
   }
 
@@ -86,7 +88,7 @@ class SlugInfoUpdatedHandler @Inject()
           .recover {
             case e =>
               val errorMessage = s"Could not store slug info for message with ID '${message.messageId()}'"
-              Logger.error(errorMessage, e)
+              logger.error(errorMessage, e)
               Left(s"$errorMessage ${e.getMessage}")
           }
     }).map((message, _))
@@ -96,10 +98,10 @@ class SlugInfoUpdatedHandler @Inject()
     val (message, eitherResult) = input
     eitherResult match {
       case Left(error) =>
-        Logger.error(error)
+        logger.error(error)
         Ignore(message)
       case Right(_) =>
-        Logger.debug(s"Message with ID '${message.messageId()}' successfully processed.")
+        logger.debug(s"Message with ID '${message.messageId()}' successfully processed.")
         Delete(message)
     }
   }

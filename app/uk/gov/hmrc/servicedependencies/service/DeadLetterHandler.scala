@@ -24,11 +24,13 @@ import akka.stream.alpakka.sqs.scaladsl.{SqsAckSink, SqsSource}
 import com.github.matsluni.akkahttpspi.AkkaHttpClient
 import com.google.inject.Inject
 import play.api.Logger
+import software.amazon.awssdk.auth.credentials.{AwsCredentialsProvider, DefaultCredentialsProvider}
 import software.amazon.awssdk.services.sqs.SqsAsyncClient
 import software.amazon.awssdk.services.sqs.model.Message
 import uk.gov.hmrc.servicedependencies.config.ArtefactReceivingConfig
 
 import scala.concurrent.ExecutionContext
+import scala.util.Try
 
 class DeadLetterHandler @Inject()
 (config: ArtefactReceivingConfig)
@@ -36,31 +38,42 @@ class DeadLetterHandler @Inject()
  implicit val materializer: Materializer,
  implicit val executionContext: ExecutionContext) {
 
+  val logger = Logger("application.DeadLetterHandler")
+
   if (!config.isEnabled) {
-    Logger.debug("DeadLetterHandler is disabled.")
+    logger.debug("DeadLetterHandler is disabled.")
   }
 
   private lazy val queueUrl = config.sqsSlugDeadLetterQueue
   private lazy val settings = SqsSourceSettings()
-  private lazy val awsSqsClient = {
-    val client = SqsAsyncClient.builder()
+
+  private lazy val awsCredentialsProvider: AwsCredentialsProvider =
+    Try(DefaultCredentialsProvider.builder().build()).recover {
+      case e: Throwable => logger.error(e.getMessage, e); throw e
+    }.get
+
+  private lazy val awsSqsClient = Try({
+    val client = SqsAsyncClient.builder().credentialsProvider(awsCredentialsProvider)
       .httpClient(AkkaHttpClient.builder().withActorSystem(actorSystem).build())
       .build()
-
     actorSystem.registerOnTermination(client.close())
     client
-  }
+  }).recover {
+    case e: Throwable => logger.error(e.getMessage, e); throw e
+  }.get
 
   if (config.isEnabled) {
     SqsSource(
       queueUrl,
       settings)(awsSqsClient)
       .map(logMessage)
-      .runWith(SqsAckSink(queueUrl)(awsSqsClient))
+      .runWith(SqsAckSink(queueUrl)(awsSqsClient)).recover {
+      case e: Throwable => logger.error(e.getMessage, e); throw e
+    }
   }
 
   private def logMessage(message: Message) = {
-    Logger.warn(
+    logger.warn(
       s"""Dead letter message with
          |ID: '${message.messageId()}'
          |Body: '${message.body()}'""".stripMargin)
