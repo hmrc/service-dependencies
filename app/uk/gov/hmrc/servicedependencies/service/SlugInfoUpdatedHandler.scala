@@ -25,6 +25,7 @@ import com.github.matsluni.akkahttpspi.AkkaHttpClient
 import com.google.inject.Inject
 import play.api.Logger
 import play.api.libs.json.Json
+import software.amazon.awssdk.auth.credentials.{AwsCredentialsProvider, DefaultCredentialsProvider}
 import software.amazon.awssdk.services.sqs.SqsAsyncClient
 import software.amazon.awssdk.services.sqs.model.Message
 import uk.gov.hmrc.servicedependencies.config.ArtefactReceivingConfig
@@ -32,6 +33,7 @@ import uk.gov.hmrc.servicedependencies.model.{ApiSlugInfoFormats, SlugInfo}
 
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.Try
+import scala.util.control.NonFatal
 
 class SlugInfoUpdatedHandler @Inject()
 (config: ArtefactReceivingConfig, slugInfoService: SlugInfoService)
@@ -47,26 +49,33 @@ class SlugInfoUpdatedHandler @Inject()
 
   private lazy val queueUrl = config.sqsSlugQueue
   private lazy val settings = SqsSourceSettings()
+
+  private lazy val awsCredentialsProvider: AwsCredentialsProvider =
+    Try(DefaultCredentialsProvider.builder().build()).recover {
+      case NonFatal(e) => logger.error(e.getMessage, e); throw e
+    }.get
+
   private lazy val awsSqsClient = Try({
-    val client = SqsAsyncClient.builder()
+    val client = SqsAsyncClient.builder().credentialsProvider(awsCredentialsProvider)
       .httpClient(AkkaHttpClient.builder().withActorSystem(actorSystem).build())
       .build()
 
     actorSystem.registerOnTermination(client.close())
     client
   }).recover {
-    case e: Throwable => logger.error(e.getMessage, e); throw e
+    case NonFatal(e) => logger.error(e.getMessage, e); throw e
   }.get
 
   if(config.isEnabled) {
     SqsSource(
-      queueUrl,
-      settings)(awsSqsClient)
+      queueUrl, settings)(awsSqsClient)
       .map(logMessage)
       .map(messageToSlugInfo)
       .mapAsync(10)(saveSlugInfo)
       .map(acknowledge)
-      .runWith(SqsAckSink(queueUrl)(awsSqsClient))
+      .runWith(SqsAckSink(queueUrl)(awsSqsClient)).recover {
+      case NonFatal(e) => logger.error(e.getMessage, e); throw e
+    }
   }
 
   private def logMessage(message: Message): Message = {
@@ -78,7 +87,7 @@ class SlugInfoUpdatedHandler @Inject()
     (message,
       Json.parse(message.body())
         .validate(ApiSlugInfoFormats.slugReads)
-        .asEither.left.map(error => s"Could not message with ID '${message.messageId()}'.  Reason: " + error.toString()))
+        .asEither.left.map(error => s"Could not parse message with ID '${message.messageId()}'.  Reason: " + error.toString()))
 
   private def saveSlugInfo(input: (Message, Either[String, SlugInfo])): Future[(Message, Either[String, Unit])] = {
     val (message, eitherSlugInfo) = input
