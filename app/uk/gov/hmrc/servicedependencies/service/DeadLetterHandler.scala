@@ -31,6 +31,7 @@ import uk.gov.hmrc.servicedependencies.config.ArtefactReceivingConfig
 
 import scala.concurrent.ExecutionContext
 import scala.util.Try
+import scala.util.control.NonFatal
 
 class DeadLetterHandler @Inject()
 (config: ArtefactReceivingConfig)
@@ -49,7 +50,7 @@ class DeadLetterHandler @Inject()
 
   private lazy val awsCredentialsProvider: AwsCredentialsProvider =
     Try(DefaultCredentialsProvider.builder().build()).recover {
-      case e: Throwable => logger.error(e.getMessage, e); throw e
+      case NonFatal(e) => logger.error(e.getMessage, e); throw e
     }.get
 
   private lazy val awsSqsClient = Try({
@@ -59,16 +60,15 @@ class DeadLetterHandler @Inject()
     actorSystem.registerOnTermination(client.close())
     client
   }).recover {
-    case e: Throwable => logger.error(e.getMessage, e); throw e
+    case NonFatal(e) => logger.error(e.getMessage, e); throw e
   }.get
 
   if (config.isEnabled) {
     SqsSource(
-      queueUrl,
-      settings)(awsSqsClient)
+      queueUrl, settings)(awsSqsClient)
       .map(logMessage)
       .runWith(SqsAckSink(queueUrl)(awsSqsClient)).recover {
-      case e: Throwable => logger.error(e.getMessage, e); throw e
+      case NonFatal(e) => logger.error(e.getMessage, e); throw e
     }
   }
 
