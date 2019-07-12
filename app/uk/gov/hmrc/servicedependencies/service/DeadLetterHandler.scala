@@ -29,7 +29,7 @@ import software.amazon.awssdk.services.sqs.SqsAsyncClient
 import software.amazon.awssdk.services.sqs.model.Message
 import uk.gov.hmrc.servicedependencies.config.ArtefactReceivingConfig
 
-import scala.concurrent.ExecutionContext
+import scala.concurrent.{ExecutionContext, Future}
 import scala.util.Try
 import scala.util.control.NonFatal
 
@@ -39,7 +39,7 @@ class DeadLetterHandler @Inject()
  implicit val materializer: Materializer,
  implicit val executionContext: ExecutionContext) {
 
-  val logger = Logger("application.DeadLetterHandler")
+  val logger = Logger(this.getClass)
 
   if (!config.isEnabled) {
     logger.debug("DeadLetterHandler is disabled.")
@@ -66,17 +66,17 @@ class DeadLetterHandler @Inject()
   if (config.isEnabled) {
     SqsSource(
       queueUrl, settings)(awsSqsClient)
-      .map(logMessage)
+      .mapAsync(10)(processMessage)
       .runWith(SqsAckSink(queueUrl)(awsSqsClient)).recover {
       case NonFatal(e) => logger.error(e.getMessage, e); throw e
     }
   }
 
-  private def logMessage(message: Message) = {
+  private def processMessage(message: Message) = {
     logger.warn(
       s"""Dead letter message with
          |ID: '${message.messageId()}'
          |Body: '${message.body()}'""".stripMargin)
-    Delete(message)
+    Future(Delete(message))
   }
 }
