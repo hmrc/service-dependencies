@@ -43,6 +43,11 @@ case class SlugDependency(
   artifact   : String,
   meta       : String = "")
 
+case class JavaInfo(
+  version : String,
+  vendor  : String,
+  kind    : String)
+
 case class SlugInfo(
   uri              : String,
   created          : LocalDateTime,
@@ -51,7 +56,7 @@ case class SlugInfo(
   teams            : List[String],
   runnerVersion    : String,
   classpath        : String,
-  jdkVersion       : String,
+  java             : JavaInfo,
   dependencies     : List[SlugDependency],
   applicationConfig: String,
   slugConfig       : String,
@@ -80,6 +85,9 @@ trait MongoSlugInfoFormats {
   implicit val sdFormat: OFormat[SlugDependency] =
     Json.format[SlugDependency]
 
+  implicit val javaFormat: OFormat[JavaInfo] =
+    Json.format[JavaInfo]
+
   val ignore = OWrites[Any](_ => Json.obj())
 
   implicit val siFormat: OFormat[SlugInfo] =
@@ -92,7 +100,7 @@ trait MongoSlugInfoFormats {
              )
     ~ (__ \ "runnerVersion"    ).format[String]
     ~ (__ \ "classpath"        ).format[String]
-    ~ (__ \ "jdkVersion"       ).format[String]
+    ~ (__ \ "java"             ).format[JavaInfo]
     ~ (__ \ "dependencies"     ).format[List[SlugDependency]]
     ~ (__ \ "applicationConfig").formatNullable[String].inmap[String](_.getOrElse(""), Option.apply)
     ~ (__ \ "slugConfig"       ).formatNullable[String].inmap[String](_.getOrElse(""), Option.apply)
@@ -114,6 +122,7 @@ trait MongoSlugInfoFormats {
                                                   , _.map { case (k, v) => (k.replaceAll("\\."  , "_DOT_"), v) }
                                                   )
     )(DependencyConfig.apply, unlift(DependencyConfig.unapply))
+
 }
 
 object MongoSlugInfoFormats extends MongoSlugInfoFormats
@@ -121,6 +130,9 @@ object MongoSlugInfoFormats extends MongoSlugInfoFormats
 trait ApiSlugInfoFormats {
   implicit val sdFormat: OFormat[SlugDependency] =
     Json.format[SlugDependency]
+
+  implicit val javaFormat: OFormat[JavaInfo] =
+    Json.format[JavaInfo]
 
   implicit val siFormat: OFormat[SlugInfo] = {
     implicit val vf = Version.apiFormat
@@ -131,7 +143,7 @@ trait ApiSlugInfoFormats {
     ~ (__ \ "teams"            ).format[List[String]]
     ~ (__ \ "runnerVersion"    ).format[String]
     ~ (__ \ "classpath"        ).format[String]
-    ~ (__ \ "jdkVersion"       ).format[String]
+    ~ (__ \ "java"             ).format[JavaInfo]
     ~ (__ \ "dependencies"     ).format[List[SlugDependency]]
     ~ (__ \ "applicationConfig").format[String]
     ~ (__ \ "slugConfig"       ).format[String]
@@ -151,15 +163,15 @@ trait ApiSlugInfoFormats {
     ~ (__ \ "configs" ).format[Map[String, String]]
     )(DependencyConfig.apply, unlift(DependencyConfig.unapply))
 
-  val slugReads: Reads[SlugInfo] = (
-      (__ \ "uri").read[String]
+  val slugReads: Reads[SlugInfo] =
+    ( (__ \ "uri").read[String]
     ~ (__ \ "created").read[LocalDateTime]
     ~ (__ \ "name").read[String]
     ~ (__ \ "version").read[String].map(Version.apply)
     ~ (__ \ "teams").read[List[String]]
     ~ (__ \ "runnerVersion").read[String]
     ~ (__ \ "classpath").read[String]
-    ~ (__ \ "jdkVersion").read[String]
+    ~ (__ \ "java").read[JavaInfo]
     ~ (__ \ "dependencies").read[List[SlugDependency]]
     ~ (__ \ "applicationConfig").read[String]
     ~ (__ \ "slugConfig").read[String]

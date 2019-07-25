@@ -17,7 +17,7 @@
 package uk.gov.hmrc.servicedependencies.persistence
 
 import com.google.inject.{Inject, Singleton}
-import play.api.libs.json.{Json, OFormat}
+import play.api.libs.json.Json
 import play.modules.reactivemongo.ReactiveMongoComponent
 import reactivemongo.api.Cursor
 import reactivemongo.api.collections.bson.BSONCollection
@@ -37,6 +37,7 @@ class SlugInfoRepository @Inject()(mongo: ReactiveMongoComponent)
     domainFormat   = MongoSlugInfoFormats.siFormat){
 
   import MongoSlugInfoFormats._
+
   import ExecutionContext.Implicits.global
 
   override def indexes: Seq[Index] =
@@ -56,10 +57,11 @@ class SlugInfoRepository @Inject()(mongo: ReactiveMongoComponent)
 
   def add(slugInfo: SlugInfo): Future[Boolean] =
     collection
-      .update(
-        selector = Json.obj("uri" -> Json.toJson(slugInfo.uri)),
-        update   = slugInfo,
-        upsert   = true)
+      .update(ordered = false)
+      .one(
+        q      = Json.obj("uri" -> Json.toJson(slugInfo.uri)),
+        u      = slugInfo,
+        upsert = true)
       .map(_.ok)
 
   def getAllEntries: Future[Seq[SlugInfo]] =
@@ -91,10 +93,11 @@ class SlugInfoRepository @Inject()(mongo: ReactiveMongoComponent)
   def clearFlag(flag: SlugInfoFlag, name: String): Future[Unit] = {
     logger.debug(s"clear ${flag.asString} flag on $name")
     collection
-      .update(
-          selector = Json.obj("name" -> name)
-        , update   = Json.obj("$set" -> Json.obj(flag.asString -> false))
-        , multi    = true
+      .update(ordered = false)
+      .one(
+          q     = Json.obj("name" -> name)
+        , u     = Json.obj("$set" -> Json.obj(flag.asString -> false))
+        , multi = true
         )
       .map(_ => ())
   }
@@ -107,11 +110,12 @@ class SlugInfoRepository @Inject()(mongo: ReactiveMongoComponent)
       _ <- clearFlag(flag, name)
       _ =  logger.debug(s"mark slug $name $version with ${flag.asString} flag")
       _ <- collection
-            .update(
-                selector = Json.obj( "name"    -> name
+              .update(ordered = false)
+              .one(
+                q = Json.obj( "name"    -> name
                                    , "version" -> version.original
                                    )
-              , update   = Json.obj("$set" -> Json.obj(flag.asString -> true))
+              , u = Json.obj("$set" -> Json.obj(flag.asString -> true))
               )
     } yield ()
 
@@ -140,10 +144,10 @@ class SlugInfoRepository @Inject()(mongo: ReactiveMongoComponent)
   def findServices(flag: SlugInfoFlag, group: String, artefact: String): Future[Seq[ServiceDependency]] = {
     val col: BSONCollection = mongo.mongoConnector.db().collection(collectionName)
 
-    import col.BatchCommands.AggregationFramework.{Ascending, Descending, FirstField, Group, Match, Project, Sort, UnwindField}
+    import col.BatchCommands.AggregationFramework.{Ascending, Match, Project, Sort, UnwindField}
     import reactivemongo.bson._
 
-    implicit val rsd = readerServiceDependency
+    implicit val rsd: BSONDocumentReader[ServiceDependency] = readerServiceDependency
 
     col.aggregatorContext[ServiceDependency](
         Match(document(
@@ -194,7 +198,7 @@ class SlugInfoRepository @Inject()(mongo: ReactiveMongoComponent)
     val col: BSONCollection = mongo.mongoConnector.db().collection(collectionName)
     import col.BatchCommands.AggregationFramework.{AddFieldToSet, Ascending, Group, Match, Project, Sort, UnwindField}
     import reactivemongo.bson._
-    implicit val rga = readerGroupArtefacts
+    implicit val rga: BSONDocumentReader[GroupArtefacts] = readerGroupArtefacts
 
     col.aggregatorContext[GroupArtefacts](
         Match(document("$or" -> SlugInfoFlag.values.map(f => document(f.asString -> true)))) // filter for reachable data
@@ -213,20 +217,47 @@ class SlugInfoRepository @Inject()(mongo: ReactiveMongoComponent)
   }
 
   def findJDKUsage(flag: SlugInfoFlag) : Future[Seq[JDKVersion]] = {
-    implicit val reads: OFormat[JDKVersion] = JDKVersionFormats.jdkFormat
-    collection.find(
-          selector   = BSONDocument(
-                           flag.asString -> true
-                         , "jdkVersion"  -> BSONDocument("$ne" -> "")
-                         , "name"        -> BSONDocument("$nin" -> SlugBlacklist.blacklistedSlugs)
-                         )
-        , projection = Some(BSONDocument(
-                           "name"       -> 1
-                         , "jdkVersion" -> 1
-                         , "flag"       -> flag.asString
-                         ))
-        )
-      .cursor[JDKVersion]()
-      .collect(-1, Cursor.FailOnError[List[JDKVersion]]())
+
+    import col.BatchCommands.AggregationFramework.{Match, Project}
+    import reactivemongo.bson._
+
+    implicit val reader: BSONDocumentReader[JDKVersion] = readerJDKVersion
+
+    val col: BSONCollection = mongo.mongoConnector.db().collection(collectionName)
+
+    col.aggregatorContext[JDKVersion](
+      Match(document(
+        flag.asString    -> true
+        , "jdkVersion"   -> document("$ne"  -> "")
+        , "name"         -> document("$nin" -> SlugBlacklist.blacklistedSlugs)))
+      , List(
+        Project(document(
+            "name"    -> "$name"
+          , "version" -> "$java.version"
+          , "vendor"  -> "$java.vendor"
+          , "kind"    -> "$java.kind"))))
+      .prepared
+      .cursor
+      .collect[List](-1, Cursor.FailOnError[List[JDKVersion]]())
+
   }
+
+
+  private val readerJDKVersion = new BSONDocumentReader[JDKVersion]{
+    override def read(bson: BSONDocument): JDKVersion = {
+      val opt: Option[JDKVersion] = for {
+        name    <- bson.getAs[String]("name"   )
+        version <- bson.getAs[String]("version")
+        vendor  <- bson.getAs[String]("vendor" ).orElse(Some("Oracle"))
+        kind    <- bson.getAs[String]("kind"   ).orElse(Some("JDK"))
+      } yield JDKVersion(
+          name    = name
+        , version = version
+        , vendor  = vendor
+        , kind    = kind
+      )
+      opt.getOrElse(sys.error(s"Could not extract result from: ${bson.elements.toList.mkString(System.lineSeparator())}"))
+    }
+  }
+
 }
