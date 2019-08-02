@@ -44,7 +44,9 @@ class IntegrationTestController @Inject()(
   implicit val libraryVersionReads   = Json.using[Json.WithDefaultValues].reads[MongoLibraryVersion]
   implicit val sbtVersionReads       = Json.using[Json.WithDefaultValues].reads[MongoSbtPluginVersion]
   implicit val dependenciesReads     = Json.using[Json.WithDefaultValues].reads[MongoRepositoryDependencies]
+
   implicit val sluginfoReads         = { implicit val sdr = Json.using[Json.WithDefaultValues].reads[SlugDependency]
+                                         implicit val javaInfoReads = Json.using[Json.WithDefaultValues].reads[JavaInfo]
                                          Json.using[Json.WithDefaultValues].reads[SlugInfo]
                                        }
   implicit val bobbyRulesSummaryReads = BobbyRulesSummary.apiFormat

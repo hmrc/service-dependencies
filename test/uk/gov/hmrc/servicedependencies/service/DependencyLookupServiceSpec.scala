@@ -188,7 +188,7 @@ object DependencyLookupServiceTestData {
     , teams         = List.empty
     , runnerVersion = "0.5.2"
     , classpath     = "classpath="
-    , jdkVersion    = "1.8.0"
+    , java          = JavaInfo("1.8.0", "Oracle", "JDK")
     , dependencies  = List(dep1)
     , applicationConfig = "config"
     , ""

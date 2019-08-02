@@ -24,7 +24,7 @@ import org.scalatest.{BeforeAndAfterEach, Matchers, WordSpecLike}
 import play.modules.reactivemongo.ReactiveMongoComponent
 import uk.gov.hmrc.mongo.{FailOnUnindexedQueries, MongoConnector, MongoSpecSupport, RepositoryPreparation}
 import uk.gov.hmrc.servicedependencies.model.SlugInfoFlag.Latest
-import uk.gov.hmrc.servicedependencies.model.{SlugDependency, SlugInfo, SlugInfoFlag, Version}
+import uk.gov.hmrc.servicedependencies.model.{JavaInfo, SlugDependency, SlugInfo, SlugInfoFlag, Version}
 
 class SlugInfoRepositorySpec
     extends WordSpecLike
@@ -115,9 +115,10 @@ class SlugInfoRepositorySpec
       val result = await(slugInfoRepository.findJDKUsage(Latest))
 
       result.length       shouldBe 1
-      result.head.version shouldBe slugInfo.jdkVersion
       result.head.name    shouldBe slugInfo.name
-
+      result.head.version shouldBe slugInfo.java.version
+      result.head.vendor  shouldBe slugInfo.java.vendor
+      result.head.kind    shouldBe slugInfo.java.kind
     }
   }
 
@@ -130,7 +131,7 @@ class SlugInfoRepositorySpec
       teams           = List.empty,
       runnerVersion   = "0.5.2",
       classpath       = "",
-      jdkVersion      = "1.181.0",
+      java = JavaInfo("1.181.0", "OpenJDK", "JRE"),
       dependencies    = List(
         SlugDependency(
           path     = "lib1",
@@ -156,7 +157,6 @@ class SlugInfoRepositorySpec
   val oldSlugInfo = slugInfo.copy(
     uri             = "https://store/slugs/my-slug/my-slug_0.26.0_0.5.2.tgz",
     version         = Version.apply("0.26.0"),
-    jdkVersion      = "1.161.0",
     latest          = false
   )
 
@@ -169,7 +169,7 @@ class SlugInfoRepositorySpec
       teams           = List.empty,
       runnerVersion   = "0.5.2",
       classpath       = "",
-      jdkVersion      = "1.191.",
+      java = JavaInfo("1.191.0", "Oracle", "JDK"),
       dependencies    = List(
         SlugDependency(
           path     = "lib3",
