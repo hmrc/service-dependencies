@@ -120,6 +120,16 @@ class SlugInfoRepositorySpec
       result.head.vendor  shouldBe slugInfo.java.vendor
       result.head.kind    shouldBe slugInfo.java.kind
     }
+
+    "ignore non-java slugs" in {
+      await(slugInfoRepository.add(slugInfo))
+      await(slugInfoRepository.add(nonJavaSlugInfo))
+
+      val result = await(slugInfoRepository.findJDKUsage(Latest))
+
+      result.length shouldBe 1
+      result.head.name shouldBe "my-slug"
+    }
   }
 
   val slugInfo =
@@ -185,4 +195,10 @@ class SlugInfoRepositorySpec
       staging           = true,
       development       = true,
       externalTest      = true)
+
+  val nonJavaSlugInfo = slugInfo.copy(
+    uri = "https://store/slugs/nodejs-app/nodejs-app_0.1.0_0.5.2.tgz",
+    name = "nodejs-app",
+    java = JavaInfo("","","")
+  )
 }
