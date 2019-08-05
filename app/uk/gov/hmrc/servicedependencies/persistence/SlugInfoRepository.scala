@@ -228,7 +228,7 @@ class SlugInfoRepository @Inject()(mongo: ReactiveMongoComponent)
     col.aggregatorContext[JDKVersion](
       Match(document(
         flag.asString    -> true
-        , "jdkVersion"   -> document("$ne"  -> "")
+        , "java.version" -> document("$ne"  -> "")
         , "name"         -> document("$nin" -> SlugBlacklist.blacklistedSlugs)))
       , List(
         Project(document(
