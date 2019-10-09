@@ -151,7 +151,8 @@ class DependencyDataUpdatingService @Inject()(
                 other.name,
                 other.currentVersion,
                 curatedDependencyConfig.otherDependencies.find(_.name == "sbt").flatMap(_.latestVersion),
-                List.empty)),
+                List.empty,
+                isExternal = "sbt".equals(other.name))),
           dep.updateDate
         )
       }
