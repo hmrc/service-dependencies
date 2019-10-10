@@ -161,7 +161,8 @@ class SlugInfoRepositorySpec
       qa                = true,
       staging           = true,
       development       = true,
-      externalTest      = true
+      externalTest      = true,
+      integration       = true
     )
 
   val oldSlugInfo = slugInfo.copy(
@@ -194,7 +195,8 @@ class SlugInfoRepositorySpec
       qa                = true,
       staging           = true,
       development       = true,
-      externalTest      = true)
+      externalTest      = true,
+      integration       = true)
 
   val nonJavaSlugInfo = slugInfo.copy(
     uri = "https://store/slugs/nodejs-app/nodejs-app_0.1.0_0.5.2.tgz",
