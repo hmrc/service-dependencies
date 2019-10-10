@@ -25,12 +25,13 @@ sealed trait SlugInfoFlag { def asString: String }
 object SlugInfoFlag {
   case object Latest          extends SlugInfoFlag { val asString = "latest"         }
   case object Production      extends SlugInfoFlag { val asString = "production"     }
-  case object QA              extends SlugInfoFlag { val asString = "qa"             }
-  case object Staging         extends SlugInfoFlag { val asString = "staging"        }
-  case object Development     extends SlugInfoFlag { val asString = "development"    }
   case object ExternalTest    extends SlugInfoFlag { val asString = "external test"  }
+  case object Staging         extends SlugInfoFlag { val asString = "staging"        }
+  case object QA              extends SlugInfoFlag { val asString = "qa"             }
+  case object Integration     extends SlugInfoFlag { val asString = "integration"    }
+  case object Development     extends SlugInfoFlag { val asString = "development"    }
 
-  val values: List[SlugInfoFlag] = List(Latest, Production, QA, Staging, Development, ExternalTest)
+  val values: List[SlugInfoFlag] = List(Latest, Production, ExternalTest, Staging, QA, Integration, Development)
 
   def parse(s: String): Option[SlugInfoFlag] =
     values.find(_.asString.equalsIgnoreCase(s))
@@ -65,7 +66,8 @@ case class SlugInfo(
   qa               : Boolean,
   staging          : Boolean,
   development      : Boolean,
-  externalTest     : Boolean
+  externalTest     : Boolean,
+  integration      : Boolean
   ) {
     lazy val classpathOrderedDependencies: List[SlugDependency] =
       classpath.split(":")
@@ -110,6 +112,7 @@ trait MongoSlugInfoFormats {
     ~ (__ \ "staging"          ).format[Boolean]
     ~ (__ \ "development"      ).format[Boolean]
     ~ (__ \ "external test"    ).format[Boolean]
+    ~ (__ \ "integration"      ).format[Boolean]
     )(SlugInfo.apply, unlift(SlugInfo.unapply))
 
 
@@ -153,6 +156,7 @@ trait ApiSlugInfoFormats {
     ~ (__ \ "staging"          ).format[Boolean]
     ~ (__ \ "development"      ).format[Boolean]
     ~ (__ \ "external test"    ).format[Boolean]
+    ~ (__ \ "integration"      ).format[Boolean]
     )(SlugInfo.apply, unlift(SlugInfo.unapply))
   }
 
@@ -176,6 +180,7 @@ trait ApiSlugInfoFormats {
     ~ (__ \ "applicationConfig").read[String]
     ~ (__ \ "slugConfig").read[String]
     ~ (__ \ "latest").read[Boolean]
+    ~ Reads.pure(false)
     ~ Reads.pure(false)
     ~ Reads.pure(false)
     ~ Reads.pure(false)

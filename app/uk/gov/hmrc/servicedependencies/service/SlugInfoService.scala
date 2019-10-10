@@ -78,6 +78,7 @@ class SlugInfoService @Inject()(
                                                               , (SlugInfoFlag.Staging       , Environment.Staging)
                                                               , (SlugInfoFlag.Development   , Environment.Development)
                                                               , (SlugInfoFlag.ExternalTest  , Environment.ExternalTest)
+                                                              , (SlugInfoFlag.Integration   , Environment.Integration)
                                                               )
                                                            .map { case (flag, env) =>
                                                                     ( flag

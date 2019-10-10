@@ -46,18 +46,20 @@ object ServiceDeploymentsConnector {
   sealed trait Environment
   object Environment {
     case object Production   extends Environment
-    case object QA           extends Environment
-    case object Staging      extends Environment
-    case object Development  extends Environment
     case object ExternalTest extends Environment
+    case object Staging      extends Environment
+    case object QA           extends Environment
+    case object Integration  extends Environment
+    case object Development  extends Environment
 
     val reads: Reads[Option[Environment]] =
       (__ \ "name").read[String].map(_ match {
         case "production"    => Some(Production)
-        case "qa"            => Some(QA)
-        case "staging"       => Some(Staging)
-        case "development"   => Some(Development)
         case "external test" => Some(ExternalTest)
+        case "staging"       => Some(Staging)
+        case "qa"            => Some(QA)
+        case "integration"   => Some(Integration)
+        case "development"   => Some(Development)
         case other           => Logger.debug(s"Unsupported environment '$other'"); None
       })
   }

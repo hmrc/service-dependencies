@@ -140,6 +140,7 @@ class DependencyLookupServiceSpec
       , (bobbyRule, SlugInfoFlag.Production  ) -> 1
       , (bobbyRule, SlugInfoFlag.QA          ) -> 0
       , (bobbyRule, SlugInfoFlag.Staging     ) -> 0
+      , (bobbyRule, SlugInfoFlag.Integration ) -> 0
       )
   }
 
@@ -198,6 +199,7 @@ object DependencyLookupServiceTestData {
     , staging      = false
     , development  = false
     , externalTest = false
+    , integration  = false
     )
 
   val slug11 = slug1.copy(version = Version(1,1,0), uri = "http://slugs.com/test/test-1.1.0.tgz")
