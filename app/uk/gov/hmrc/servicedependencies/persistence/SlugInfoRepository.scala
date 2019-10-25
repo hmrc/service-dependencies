@@ -233,9 +233,9 @@ class SlugInfoRepository @Inject()(mongo: ReactiveMongoComponent)
       , List(
         Project(document(
             "name"    -> "$name"
-          , "version" -> "$java.version"
-          , "vendor"  -> "$java.vendor"
-          , "kind"    -> "$java.kind"))))
+          , "version" -> f"$$java.version"
+          , "vendor"  -> f"$$java.vendor"
+          , "kind"    -> f"$$java.kind"))))
       .prepared
       .cursor
       .collect[List](-1, Cursor.FailOnError[List[JDKVersion]]())
