@@ -17,46 +17,53 @@
 package uk.gov.hmrc.servicedependencies.persistence
 
 import com.google.inject.{Inject, Singleton}
-import scala.concurrent.ExecutionContext.Implicits.global
+import com.mongodb.BasicDBObject
+import org.mongodb.scala.model.Filters.equal
+import org.mongodb.scala.model.Indexes.hashed
+import org.mongodb.scala.model.{IndexModel, IndexOptions, ReplaceOptions}
+import play.api.Logger
 import play.api.libs.json.Json
-import play.modules.reactivemongo.ReactiveMongoComponent
-import reactivemongo.api.indexes.{Index, IndexType}
-import reactivemongo.bson.BSONObjectID
-import reactivemongo.play.json.ImplicitBSONHandlers._
-import uk.gov.hmrc.mongo.ReactiveRepository
+import uk.gov.hmrc.mongo.component.MongoComponent
+import uk.gov.hmrc.mongo.play.PlayMongoCollection
 import uk.gov.hmrc.servicedependencies.model._
 import uk.gov.hmrc.servicedependencies.util.FutureHelpers
 
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.Future
 
 @Singleton
-class SbtPluginVersionRepository @Inject()(mongo: ReactiveMongoComponent, futureHelpers: FutureHelpers)
-    extends ReactiveRepository[MongoSbtPluginVersion, BSONObjectID](
+class SbtPluginVersionRepository @Inject()(mongo: MongoComponent, futureHelpers: FutureHelpers)
+    extends PlayMongoCollection[MongoSbtPluginVersion](
       collectionName = "sbtPluginVersions",
-      mongo          = mongo.mongoConnector.db,
-      domainFormat   = MongoSbtPluginVersion.format) {
+      mongoComponent = mongo,
+      domainFormat   = MongoSbtPluginVersion.format,
+      indexes = Seq(
+        IndexModel(hashed("sbtPluginName"), IndexOptions().name("sbtPluginNameIdx").background(true))
+      )
+    ) {
 
-  override def indexes: Seq[Index] =
-    Seq(
-      Index(
-        Seq("sbtPluginName" -> IndexType.Hashed),
-        name       = Some("sbtPluginNameIdx"),
-        background = true))
+  val logger: Logger = Logger(this.getClass)
 
   def update(sbtPluginVersion: MongoSbtPluginVersion): Future[MongoSbtPluginVersion] = {
     logger.debug(s"writing $sbtPluginVersion")
-    futureHelpers.withTimerAndCounter("mongo.update") {
-      collection.update(
-          selector = Json.obj("sbtPluginName" -> Json.toJson(sbtPluginVersion.sbtPluginName)),
-          update   = sbtPluginVersion,
-          upsert   = true)
-        .map(_ => sbtPluginVersion)
-    }.recover {
-      case lastError => throw new RuntimeException(s"failed to persist SbtPluginVersion: $sbtPluginVersion", lastError)
-    }
+    futureHelpers
+      .withTimerAndCounter("mongo.update") {
+        collection
+          .replaceOne(
+            filter = equal("libraryName", Json.obj("sbtPluginName" -> Json.toJson(sbtPluginVersion.sbtPluginName))),
+            sbtPluginVersion,
+            ReplaceOptions().upsert(true)
+          )
+          .toFuture()
+          .map(_ => sbtPluginVersion)
+      }
+      .recover {
+        case lastError =>
+          throw new RuntimeException(s"failed to persist SbtPluginVersion: $sbtPluginVersion", lastError)
+      }
   }
 
-  def getAllEntries: Future[Seq[MongoSbtPluginVersion]] = findAll()
+  def getAllEntries: Future[Seq[MongoSbtPluginVersion]] = collection.find().toFuture()
 
-  def clearAllData: Future[Boolean] = super.removeAll().map(_.ok)
+  def clearAllData: Future[Boolean] = collection.deleteMany(new BasicDBObject()).toFuture.map(_.wasAcknowledged())
 }

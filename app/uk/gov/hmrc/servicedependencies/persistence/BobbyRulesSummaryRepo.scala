@@ -16,78 +16,74 @@
 
 package uk.gov.hmrc.servicedependencies.persistence
 
-import com.google.inject.{Inject, Singleton}
 import java.time.LocalDate
-import play.api.libs.json.{Json, OFormat}
-import play.modules.reactivemongo.ReactiveMongoComponent
-import reactivemongo.api.Cursor
-import reactivemongo.api.collections.bson.BSONCollection
-import reactivemongo.api.indexes.{Index, IndexType}
-import reactivemongo.bson.{BSONDocument, BSONDocumentReader, BSONObjectID}
-import reactivemongo.play.json.ImplicitBSONHandlers._
-import uk.gov.hmrc.mongo.ReactiveRepository
-import uk.gov.hmrc.mongo.json.ReactiveMongoFormats
+
+import com.google.inject.{Inject, Singleton}
+import com.mongodb.BasicDBObject
+import org.mongodb.scala._
+import org.mongodb.scala.model.Filters.equal
+import org.mongodb.scala.model.Indexes.ascending
+import org.mongodb.scala.model.Sorts.descending
+import org.mongodb.scala.model.{IndexModel, IndexOptions, ReplaceOptions}
+import play.api.libs.json.Json
+import uk.gov.hmrc.mongo.component.MongoComponent
+import uk.gov.hmrc.mongo.play.PlayMongoCollection
 import uk.gov.hmrc.servicedependencies.model.{BobbyRulesSummary, LocalDateFormats}
 
 import scala.concurrent.{ExecutionContext, Future}
 
-
 trait BobbyRulesSummaryRepo {
 
-    def add(summary: BobbyRulesSummary): Future[Unit]
+  def add(summary: BobbyRulesSummary): Future[Unit]
 
-    def getLatest: Future[Option[BobbyRulesSummary]]
+  def getLatest: Future[Option[BobbyRulesSummary]]
 
-    // Not time bound yet
-    def getHistoric: Future[List[BobbyRulesSummary]]
+  // Not time bound yet
+  def getHistoric: Future[List[BobbyRulesSummary]]
 
-    def clearAllData: Future[Boolean]
+  def clearAllData: Future[Boolean]
 }
 
 @Singleton
-class BobbyRulesSummaryRepoImpl @Inject()(mongo: ReactiveMongoComponent)
-  extends ReactiveRepository[BobbyRulesSummary, BSONObjectID](
-      collectionName = "bobbyRulesSummary"
-    , mongo          = mongo.mongoConnector.db
-    , domainFormat   = BobbyRulesSummary.mongoFormat
+class BobbyRulesSummaryRepoImpl @Inject()(mongo: MongoComponent)(implicit ec: ExecutionContext)
+    extends PlayMongoCollection[BobbyRulesSummary](
+      collectionName = "bobbyRulesSummary",
+      mongoComponent = mongo,
+      domainFormat   = BobbyRulesSummary.mongoFormat,
+      indexes = Seq(
+        IndexModel(ascending("date"), IndexOptions().name("dateIdx").unique(true))
+      )
     )
-  with BobbyRulesSummaryRepo {
+    with BobbyRulesSummaryRepo {
 
-    private implicit val brsf = BobbyRulesSummary.mongoFormat
-    implicit val ldf = LocalDateFormats.localDateFormat
-    import ExecutionContext.Implicits.global
+  private implicit val brsf = BobbyRulesSummary.mongoFormat
+  implicit val ldf          = LocalDateFormats.localDateFormat
 
-    override def indexes: Seq[Index] =
-      Seq(Index(
-        Seq("date" -> IndexType.Ascending),
-        name   = Some("dateIdx"),
-        unique = true))
+  def add(summary: BobbyRulesSummary): Future[Unit] =
+    collection
+      .replaceOne(
+        filter = equal("date", Json.toJson(summary.date)),
+        summary,
+        ReplaceOptions().upsert(true)
+      )
+      .toFuture()
+      .map(_ => ())
 
-    def add(summary: BobbyRulesSummary): Future[Unit] =
-      collection
-        .update(
-            selector = Json.obj("date" -> Json.toJson(summary.date))
-          , update   = summary
-          , upsert   = true
-          )
-        .map(_ => ())
+  def getLatest: Future[Option[BobbyRulesSummary]] =
+    collection.find(equal("date", Json.toJson(LocalDate.now))).toFuture()
+      .map(_.headOption)
+      .flatMap {
+        case Some(a) => Future(Some(a))
+        case None    => getHistoric.map(_.headOption)
+      }
 
-    def getLatest: Future[Option[BobbyRulesSummary]] =
-      find("date" -> Json.toJson(LocalDate.now))
-        .map(_.headOption)
-        .flatMap {
-          case Some(a) => Future(Some(a))
-          case None => getHistoric.map(_.headOption)
-        }
+  // Not time bound yet
+  def getHistoric: Future[List[BobbyRulesSummary]] =
+    collection
+      .find()
+      .sort(descending("date")).toFuture().map(_.toList)
 
-    // Not time bound yet
-    def getHistoric: Future[List[BobbyRulesSummary]] =
-      collection.find(Json.obj())
-        .sort(Json.obj("date" -> -1))
-        .cursor[BobbyRulesSummary]()
-        .collect(maxDocs = -1, Cursor.FailOnError[List[BobbyRulesSummary]]())
-
-    def clearAllData: Future[Boolean] =
-      super.removeAll().map(_.ok)
+  def clearAllData: Future[Boolean] =
+    collection.deleteMany(new BasicDBObject()).toFuture.map(_.wasAcknowledged())
 
 }

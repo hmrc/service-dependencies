@@ -16,27 +16,30 @@
 
 package uk.gov.hmrc.servicedependencies.persistence
 
+import java.util.concurrent.TimeUnit
+
 import com.google.inject.{Inject, Singleton}
-import org.joda.time.Duration
-import play.modules.reactivemongo.ReactiveMongoComponent
-import reactivemongo.api.DB
-import uk.gov.hmrc.lock.{LockKeeper, LockMongoRepository, LockRepository}
+import uk.gov.hmrc.mongo.component.PlayMongoComponent
+import uk.gov.hmrc.mongo.lock.{CurrentTimestampSupport, MongoLockRepository, MongoLockService}
 
-class MongoLock(db: () => DB, lockId_ : String) extends LockKeeper {
-  override val forceLockReleaseAfter: Duration = Duration.standardMinutes(60)
 
-  override def repo: LockRepository = LockMongoRepository(db)
+import scala.concurrent.ExecutionContext
+import scala.concurrent.duration.Duration
 
-  override def lockId: String = lockId_
+class MongoLock(db: PlayMongoComponent, lockId_ : String)(implicit ec: ExecutionContext) extends MongoLockService {
+
+  override val ttl: Duration = Duration(60, TimeUnit.MINUTES)
+
+  override val mongoLockRepository: MongoLockRepository = new MongoLockRepository(db, new CurrentTimestampSupport())
+
+  override val lockId: String = lockId_
 }
 
 @Singleton
-class MongoLocks @Inject()(mongo: ReactiveMongoComponent) {
-  private val db = mongo.mongoConnector.db
-
-  val repositoryDependencyMongoLock   = new MongoLock(db, "repository-dependencies-data-reload-job")
-  val libraryMongoLock                = new MongoLock(db, "libraries-data-reload-job")
-  val sbtPluginMongoLock              = new MongoLock(db, "sbt-plugin-data-reload-job")
-  val slugMetadataUpdateSchedulerLock = new MongoLock(db, "slug-job-scheduler")
-  val bobbyRulesSummarySchedulerLock  = new MongoLock(db, "bobby-rules-summary-scheduler")
+class MongoLocks @Inject()(mongo: PlayMongoComponent)(implicit ec: ExecutionContext) {
+  val repositoryDependencyMongoLock   = new MongoLock(mongo, "repository-dependencies-data-reload-job")
+  val libraryMongoLock                = new MongoLock(mongo, "libraries-data-reload-job")
+  val sbtPluginMongoLock              = new MongoLock(mongo, "sbt-plugin-data-reload-job")
+  val slugMetadataUpdateSchedulerLock = new MongoLock(mongo, "slug-job-scheduler")
+  val bobbyRulesSummarySchedulerLock  = new MongoLock(mongo, "bobby-rules-summary-scheduler")
 }

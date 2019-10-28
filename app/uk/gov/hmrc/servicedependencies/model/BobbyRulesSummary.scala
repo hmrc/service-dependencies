@@ -17,10 +17,9 @@
 package uk.gov.hmrc.servicedependencies.model
 
 import java.time.LocalDate
-import play.api.libs.json.{__, Format, Json, JsError, JsValue, OFormat, Reads, Writes}
-import play.api.libs.functional.syntax._
-import uk.gov.hmrc.mongo.json.ReactiveMongoFormats
 
+import play.api.libs.functional.syntax._
+import play.api.libs.json._
 
 case class BobbyRulesSummary(
     date   : LocalDate

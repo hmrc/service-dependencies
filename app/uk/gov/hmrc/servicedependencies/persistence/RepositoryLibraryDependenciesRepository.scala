@@ -17,47 +17,52 @@
 package uk.gov.hmrc.servicedependencies.persistence
 
 import com.google.inject.{Inject, Singleton}
+import com.mongodb.BasicDBObject
 import org.joda.time.{DateTime, DateTimeZone}
-
-import scala.concurrent.ExecutionContext.Implicits.global
+import org.mongodb.scala.model.Filters.{equal, regex}
+import org.mongodb.scala.model.Indexes.hashed
+import org.mongodb.scala.model.{IndexModel, IndexOptions, ReplaceOptions}
+import play.api.Logger
 import play.api.libs.json.Json
-import play.modules.reactivemongo.ReactiveMongoComponent
-import reactivemongo.api.indexes.{Index, IndexType}
-import reactivemongo.bson.{BSONObjectID, BSONRegex}
-import reactivemongo.play.json.ImplicitBSONHandlers._
-import uk.gov.hmrc.mongo.ReactiveRepository
+import uk.gov.hmrc.mongo.component.MongoComponent
+import uk.gov.hmrc.mongo.play.PlayMongoCollection
 import uk.gov.hmrc.servicedependencies.model._
 import uk.gov.hmrc.servicedependencies.util.FutureHelpers
 
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.Future
 @Singleton
-class RepositoryLibraryDependenciesRepository @Inject()(mongo: ReactiveMongoComponent, futureHelper: FutureHelpers)
-    extends ReactiveRepository[MongoRepositoryDependencies, BSONObjectID](
+class RepositoryLibraryDependenciesRepository @Inject()(mongo: MongoComponent, futureHelper: FutureHelpers)
+    extends PlayMongoCollection[MongoRepositoryDependencies](
       collectionName = "repositoryLibraryDependencies",
-      mongo          = mongo.mongoConnector.db,
-      domainFormat   = MongoRepositoryDependencies.format) {
+      mongoComponent = mongo,
+      domainFormat   = MongoRepositoryDependencies.format,
+      indexes = Seq(
+        IndexModel(hashed("repositoryName"), IndexOptions().name("RepositoryNameIdx").background(true))
+      )
+    ) {
 
-  override def indexes: Seq[Index] =
-    Seq(
-      Index(
-        Seq("repositoryName" -> IndexType.Hashed),
-        name       = Some("RepositoryNameIdx"),
-        background = true))
+  val logger: Logger = Logger(this.getClass)
 
   def update(repositoryLibraryDependencies: MongoRepositoryDependencies): Future[MongoRepositoryDependencies] = {
-    logger.info(s"writing to mongo: $repositoryLibraryDependencies")
-    futureHelper.withTimerAndCounter("mongo.update") {
-      collection.update(
-          selector = Json.obj("repositoryName" -> Json.toJson(repositoryLibraryDependencies.repositoryName)),
-          update   = repositoryLibraryDependencies,
-          upsert   = true)
-        .map(_ => repositoryLibraryDependencies)
-    }.recover {
-      case lastError =>
-        throw new RuntimeException(
-          s"failed to persist RepositoryLibraryDependencies: $repositoryLibraryDependencies",
-          lastError)
-    }
+    logger.debug(s"writing to mongo: $repositoryLibraryDependencies")
+    futureHelper
+      .withTimerAndCounter("mongo.update") {
+        collection
+          .replaceOne(
+            filter = equal("repositoryName", Json.toJson(repositoryLibraryDependencies.repositoryName)),
+            repositoryLibraryDependencies,
+            ReplaceOptions().upsert(true)
+          )
+          .toFuture()
+          .map(_ => repositoryLibraryDependencies)
+      }
+      .recover {
+        case lastError =>
+          throw new RuntimeException(
+            s"failed to persist RepositoryLibraryDependencies: $repositoryLibraryDependencies",
+            lastError)
+      }
   }
 
   def getForRepository(repositoryName: String): Future[Option[MongoRepositoryDependencies]] =
@@ -65,7 +70,7 @@ class RepositoryLibraryDependenciesRepository @Inject()(mongo: ReactiveMongoComp
       // Note, the regex will not use the index.
       // Mongdo 3.4 supports collated indices, allowing for case-insensitive searches: https://docs.mongodb.com/manual/core/index-case-insensitive/
       // but this is not currently supported in reactivemongo: https://github.com/ReactiveMongo/ReactiveMongo/issues/630
-      find("repositoryName" -> BSONRegex("^" + repositoryName + "$", "i")).map {
+      collection.find(regex("repositoryName", "^" + repositoryName + "$", "i")).toFuture.map {
         case data if data.size > 1 =>
           throw new RuntimeException(
             s"There should only be '1' record per repository! for $repositoryName there are ${data.size}")
@@ -75,10 +80,10 @@ class RepositoryLibraryDependenciesRepository @Inject()(mongo: ReactiveMongoComp
 
   def getAllEntries: Future[Seq[MongoRepositoryDependencies]] = {
     logger.debug("retrieving getAll current dependencies")
-    findAll()
+    collection.find().toFuture()
   }
 
-  def clearAllData: Future[Boolean] = super.removeAll().map(_.ok)
+  def clearAllData: Future[Boolean] = collection.deleteMany(new BasicDBObject()).toFuture.map(_.wasAcknowledged())
 
   def clearUpdateDates: Future[Seq[MongoRepositoryDependencies]] =
     getAllEntries.flatMap { es =>

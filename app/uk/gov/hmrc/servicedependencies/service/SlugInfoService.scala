@@ -22,15 +22,18 @@ import com.google.inject.{Inject, Singleton}
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.servicedependencies.connector.{ServiceDeploymentsConnector, TeamsAndRepositoriesConnector}
 import uk.gov.hmrc.servicedependencies.model._
-import uk.gov.hmrc.servicedependencies.persistence.SlugInfoRepository
+import uk.gov.hmrc.servicedependencies.persistence.{GroupArtefactRepository, JdkVersionRepository, ServiceDependencyRepository, SlugInfoRepository}
 
 import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
 class SlugInfoService @Inject()(
-  slugInfoRepository            : SlugInfoRepository,
-  teamsAndRepositoriesConnector : TeamsAndRepositoriesConnector,
-  serviceDeploymentsConnector   : ServiceDeploymentsConnector
+ slugInfoRepository            : SlugInfoRepository,
+ serviceDependencyRepository   : ServiceDependencyRepository,
+ jdkVersionRepository          : JdkVersionRepository,
+ groupArtefactRepository       : GroupArtefactRepository,
+ teamsAndRepositoriesConnector : TeamsAndRepositoriesConnector,
+ serviceDeploymentsConnector   : ServiceDeploymentsConnector
 ) {
   import ExecutionContext.Implicits.global
 
@@ -54,7 +57,7 @@ class SlugInfoService @Inject()(
     , versionRange: BobbyVersionRange
     )(implicit hc: HeaderCarrier): Future[Seq[ServiceDependency]] =
       for {
-        services            <- slugInfoRepository.findServices(flag, group, artefact)
+        services            <- serviceDependencyRepository.findServices(flag, group, artefact)
         servicesWithinRange =  services.filter(_.depSemanticVersion.map(versionRange.includes).getOrElse(true)) // include invalid semanticVersion in results
         teamsForServices    <- teamsAndRepositoriesConnector.getTeamsForServices
       } yield servicesWithinRange.map { r =>
@@ -62,7 +65,7 @@ class SlugInfoService @Inject()(
         }
 
   def findGroupsArtefacts: Future[Seq[GroupArtefacts]] =
-    slugInfoRepository
+    groupArtefactRepository
       .findGroupsArtefacts
 
   def updateMetadata()(implicit hc: HeaderCarrier): Future[Unit] = {
@@ -100,5 +103,5 @@ class SlugInfoService @Inject()(
   }
 
   def findJDKVersions(flag: SlugInfoFlag): Future[Seq[JDKVersion]] =
-    slugInfoRepository.findJDKUsage(flag)
+    jdkVersionRepository.findJDKUsage(flag)
 }

@@ -16,54 +16,53 @@
 
 package uk.gov.hmrc.servicedependencies.scheduler
 
+import java.util.concurrent.TimeUnit
+
 import akka.actor.ActorSystem
 import com.kenshoo.play.metrics.Metrics
 import javax.inject.Inject
-import org.joda.time.Duration
 import play.api.inject.ApplicationLifecycle
-import play.modules.reactivemongo.ReactiveMongoComponent
-import reactivemongo.api.DefaultDB
-import uk.gov.hmrc.lock.{ExclusiveTimePeriodLock, LockRepository}
 import uk.gov.hmrc.metrix.MetricOrchestrator
 import uk.gov.hmrc.metrix.persistence.MongoMetricRepository
+import uk.gov.hmrc.mongo.component.MongoComponent
+import uk.gov.hmrc.mongo.lock.{CurrentTimestampSupport, MongoLockRepository, MongoLockService}
 import uk.gov.hmrc.servicedependencies.config.SchedulerConfigs
 import uk.gov.hmrc.servicedependencies.service.RepositoryDependenciesSource
 import uk.gov.hmrc.servicedependencies.util.SchedulerUtils
 
 import scala.concurrent.ExecutionContext
-
+import scala.concurrent.duration.Duration
 
 class MetricsScheduler @Inject()(
-    schedulerConfigs            : SchedulerConfigs,
-    metrics                     : Metrics,
-    reactiveMongoComponent      : ReactiveMongoComponent,
-    repositoryDependenciesSource: RepositoryDependenciesSource)(
-    implicit actorSystem         : ActorSystem,
-             applicationLifecycle: ApplicationLifecycle
-  ) extends SchedulerUtils {
+  schedulerConfigs: SchedulerConfigs,
+  metrics: Metrics,
+  mongoComponent: MongoComponent,
+  repositoryDependenciesSource: RepositoryDependenciesSource)(
+  implicit actorSystem: ActorSystem,
+  applicationLifecycle: ApplicationLifecycle
+) extends SchedulerUtils {
 
   import ExecutionContext.Implicits.global
 
   private val schedulerConfig = schedulerConfigs.metrics
 
-  implicit lazy val mongo: () => DefaultDB = reactiveMongoComponent.mongoConnector.db
-
-  val lock = new ExclusiveTimePeriodLock {
-    override def repo: LockRepository  = new LockRepository()
-    override def lockId: String        = "repositoryDependenciesLock"
-    override def holdLockFor: Duration = new org.joda.time.Duration(schedulerConfig.frequency().toMillis)
+  val lock = new MongoLockService {
+    override val mongoLockRepository: MongoLockRepository =
+      new MongoLockRepository(mongoComponent, new CurrentTimestampSupport())
+    override val lockId: String = "repositoryDependenciesLock"
+    override val ttl: Duration  = Duration(schedulerConfig.frequency().toMillis, TimeUnit.MILLISECONDS)
   }
 
   val metricOrchestrator = new MetricOrchestrator(
     metricSources    = List(repositoryDependenciesSource),
-    lock             = lock,
-    metricRepository = new MongoMetricRepository(),
+    lockService      = lock,
+    metricRepository = new MongoMetricRepository(mongo = mongoComponent),
     metricRegistry   = metrics.defaultRegistry
   )
 
   schedule("Metrics", schedulerConfig) {
     metricOrchestrator
-      .attemptToUpdateRefreshAndResetMetrics(_ => true)
+      .attemptMetricRefresh(resetToZeroFor = Some(_ => true))
       .map(_.andLogTheResult())
   }
 }
