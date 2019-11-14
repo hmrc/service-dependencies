@@ -35,7 +35,6 @@ package uk.gov.hmrc.servicedependencies.persistence
 import org.joda.time.{DateTime, DateTimeZone}
 import org.mockito.MockitoSugar
 import org.mongodb.scala.model.IndexModel
-import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.{Matchers, WordSpecLike}
 import uk.gov.hmrc.mongo.test.CleanMongoCollectionSupport
 import uk.gov.hmrc.servicedependencies.model.{MongoRepositoryDependencies, MongoRepositoryDependency, Version}
@@ -45,7 +44,6 @@ import uk.gov.hmrc.time.DateTimeUtils
 class RepositoryLibraryDependenciesRepositorySpec
     extends WordSpecLike
       with Matchers
-      with ScalaFutures
       with MockitoSugar
       // We don't mixin IndexedMongoQueriesSupport here, as this repo makes use of regex based queries not satisfied by an index
       with CleanMongoCollectionSupport {

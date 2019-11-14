@@ -12,6 +12,4 @@ lazy val microservice = Project(appName, file("."))
   .settings(PlayKeys.playDefaultPort := 8459)
   .settings(libraryDependencies ++= AppDependencies.compile ++ AppDependencies.test)
   .settings(resolvers += Resolver.jcenterRepo)
-  // TODO remove this once hmrc-mongo is distributed to bintray
-  .settings(resolvers += "HMRC Artifactory releases" at "https://artefacts.tax.service.gov.uk/artifactory/hmrc-releases/")
   .settings(scalaVersion := "2.11.12")

@@ -27,7 +27,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
 
 class ServiceDependenciesRepositorySpec
     extends WordSpecLike
-       with Matchers
+      with Matchers
       with MockitoSugar
       with DefaultMongoCollectionSupport {
 

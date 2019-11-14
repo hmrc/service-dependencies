@@ -26,7 +26,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
 
 class SlugInfoRepositorySpec
     extends WordSpecLike
-       with Matchers
+      with Matchers
       with MockitoSugar
       with DefaultMongoCollectionSupport {
 

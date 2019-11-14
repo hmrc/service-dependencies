@@ -19,7 +19,6 @@ package uk.gov.hmrc.servicedependencies.persistence
 import com.codahale.metrics.MetricRegistry
 import org.mockito.MockitoSugar
 import org.mongodb.scala.model.IndexModel
-import org.scalatest.concurrent.{Eventually, ScalaFutures}
 import org.scalatest.{Matchers, WordSpecLike}
 import uk.gov.hmrc.mongo.test.DefaultMongoCollectionSupport
 import uk.gov.hmrc.servicedependencies.model.{MongoLibraryVersion, Version}
@@ -29,9 +28,7 @@ import uk.gov.hmrc.time.DateTimeUtils
 class LibraryVersionRepositorySpec
     extends WordSpecLike
     with Matchers
-    with ScalaFutures
     with MockitoSugar
-    with Eventually
     with DefaultMongoCollectionSupport {
 
   val metricsRegistry             = new MetricRegistry()

@@ -45,7 +45,7 @@ class RepositoryLibraryDependenciesRepository @Inject()(mongo: MongoComponent, f
   val logger: Logger = Logger(this.getClass)
 
   def update(repositoryLibraryDependencies: MongoRepositoryDependencies): Future[MongoRepositoryDependencies] = {
-    logger.debug(s"writing to mongo: $repositoryLibraryDependencies")
+    logger.info(s"writing to mongo: $repositoryLibraryDependencies")
     futureHelper
       .withTimerAndCounter("mongo.update") {
         collection
@@ -68,8 +68,8 @@ class RepositoryLibraryDependenciesRepository @Inject()(mongo: MongoComponent, f
   def getForRepository(repositoryName: String): Future[Option[MongoRepositoryDependencies]] =
     futureHelper.withTimerAndCounter("mongo.read") {
       // Note, the regex will not use the index.
-      // Mongdo 3.4 supports collated indices, allowing for case-insensitive searches: https://docs.mongodb.com/manual/core/index-case-insensitive/
-      // but this is not currently supported in reactivemongo: https://github.com/ReactiveMongo/ReactiveMongo/issues/630
+      // Mongdo 3.4 does support collated indices, allowing for case-insensitive searches: https://docs.mongodb.com/manual/core/index-case-insensitive/
+      //TODO: Explore using index for this query
       collection.find(regex("repositoryName", "^" + repositoryName + "$", "i")).toFuture.map {
         case data if data.size > 1 =>
           throw new RuntimeException(

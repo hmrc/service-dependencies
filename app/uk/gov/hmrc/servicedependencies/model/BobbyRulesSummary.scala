@@ -89,8 +89,6 @@ object HistoricBobbyRulesSummary {
       )
 }
 
-
-// ReactiveMongoFormats only supports joda.time, not java.time (TODO should add to simple reactive-mongo?)
 trait LocalDateFormats {
   val localDateRead: Reads[LocalDate] =
     (__ \ "$date").read[Long].map { date =>
