@@ -20,31 +20,20 @@ import com.google.inject.{Inject, Singleton}
 import org.mongodb.scala.model.Accumulators._
 import org.mongodb.scala.model.Aggregates._
 import org.mongodb.scala.model.Filters._
-import org.mongodb.scala.model.Indexes.{ascending, hashed}
+import org.mongodb.scala.model.Indexes.ascending
 import org.mongodb.scala.model.Projections._
 import org.mongodb.scala.model.Sorts._
-import org.mongodb.scala.model.{IndexModel, IndexOptions}
-import play.api.Logger
 import uk.gov.hmrc.mongo.component.MongoComponent
-import uk.gov.hmrc.mongo.play.PlayMongoCollection
 import uk.gov.hmrc.servicedependencies.model._
 
 import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
 class GroupArtefactRepository @Inject()(mongo: MongoComponent)(implicit ec: ExecutionContext)
-    extends PlayMongoCollection[GroupArtefacts](
-      collectionName = "slugInfos",
-      mongoComponent = mongo,
-      domainFormat   = MongoSlugInfoFormats.groupArtefactsFormat,
-      indexes = Seq(
-        IndexModel(ascending("uri"), IndexOptions().name("slugInfoUniqueIdx").unique(true)),
-        IndexModel(hashed("name"), IndexOptions().name("slugInfoIdx").background(true)),
-        IndexModel(hashed("latest"), IndexOptions().name("slugInfoLatestIdx").background(true))
-      )
+    extends SlugInfoRepositoryBase[GroupArtefacts](
+      mongo,
+      domainFormat   = MongoSlugInfoFormats.groupArtefactsFormat
     ) {
-
-  val logger: Logger = Logger(this.getClass)
 
   def findGroupsArtefacts: Future[Seq[GroupArtefacts]] = {
     val agg = List(

@@ -31,18 +31,10 @@ import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
 class JdkVersionRepository @Inject()(mongo: MongoComponent)(implicit ec: ExecutionContext)
-    extends PlayMongoCollection[JDKVersion](
-      collectionName = "slugInfos",
-      mongoComponent = mongo,
-      domainFormat   = MongoSlugInfoFormats.jdkVersionFormat,
-      indexes = Seq(
-        IndexModel(ascending("uri"), IndexOptions().name("slugInfoUniqueIdx").unique(true)),
-        IndexModel(hashed("name"), IndexOptions().name("slugInfoIdx").background(true)),
-        IndexModel(hashed("latest"), IndexOptions().name("slugInfoLatestIdx").background(true))
-      )
+    extends SlugInfoRepositoryBase[JDKVersion](
+      mongo,
+      domainFormat   = MongoSlugInfoFormats.jdkVersionFormat
     ) {
-
-  val logger: Logger = Logger(this.getClass)
 
   def findJDKUsage(flag: SlugInfoFlag): Future[Seq[JDKVersion]] = {
     val agg = List(

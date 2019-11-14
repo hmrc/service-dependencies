@@ -19,31 +19,20 @@ package uk.gov.hmrc.servicedependencies.persistence
 import com.google.inject.{Inject, Singleton}
 import org.mongodb.scala.model.Aggregates._
 import org.mongodb.scala.model.Filters.{and, _}
-import org.mongodb.scala.model.Indexes.{ascending, hashed}
+import org.mongodb.scala.model.Indexes.ascending
 import org.mongodb.scala.model.Projections._
 import org.mongodb.scala.model.Sorts._
-import org.mongodb.scala.model.{IndexModel, IndexOptions}
-import play.api.Logger
 import uk.gov.hmrc.mongo.component.MongoComponent
-import uk.gov.hmrc.mongo.play.PlayMongoCollection
 import uk.gov.hmrc.servicedependencies.model._
 
 import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
 class ServiceDependenciesRepository @Inject()(mongo: MongoComponent)(implicit ec: ExecutionContext)
-    extends PlayMongoCollection[ServiceDependency](
-      collectionName = "slugInfos",
-      mongoComponent = mongo,
-      domainFormat   = MongoSlugInfoFormats.serviceDependencyFormat,
-      indexes = Seq(
-        IndexModel(ascending("uri"), IndexOptions().name("slugInfoUniqueIdx").unique(true)),
-        IndexModel(hashed("name"), IndexOptions().name("slugInfoIdx").background(true)),
-        IndexModel(hashed("latest"), IndexOptions().name("slugInfoLatestIdx").background(true))
-      )
+    extends SlugInfoRepositoryBase[ServiceDependency](
+      mongo,
+      domainFormat   = MongoSlugInfoFormats.serviceDependencyFormat
     ) {
-
-  val logger: Logger = Logger(this.getClass)
 
   def findServices(flag: SlugInfoFlag, group: String, artefact: String): Future[Seq[ServiceDependency]] = {
 

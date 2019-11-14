@@ -19,31 +19,19 @@ package uk.gov.hmrc.servicedependencies.persistence
 import com.google.inject.{Inject, Singleton}
 import com.mongodb.BasicDBObject
 import org.mongodb.scala.model.Filters.{and, equal}
-import org.mongodb.scala.model.Indexes.{ascending, hashed}
+import org.mongodb.scala.model.ReplaceOptions
 import org.mongodb.scala.model.Updates._
-import org.mongodb.scala.model.{IndexModel, IndexOptions, ReplaceOptions}
-import play.api.Logger
-import play.api.libs.json.Json
 import uk.gov.hmrc.mongo.component.MongoComponent
-import uk.gov.hmrc.mongo.play.PlayMongoCollection
 import uk.gov.hmrc.servicedependencies.model._
 
 import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
 class SlugInfoRepository @Inject()(mongo: MongoComponent)(implicit ec: ExecutionContext)
-    extends PlayMongoCollection[SlugInfo](
-      collectionName = "slugInfos",
-      mongoComponent = mongo,
-      domainFormat   = MongoSlugInfoFormats.slugInfoFormat,
-      indexes = Seq(
-        IndexModel(ascending("uri"), IndexOptions().name("slugInfoUniqueIdx").unique(true)),
-        IndexModel(hashed("name"), IndexOptions().name("slugInfoIdx").background(true)),
-        IndexModel(hashed("latest"), IndexOptions().name("slugInfoLatestIdx").background(true))
-      )
+    extends SlugInfoRepositoryBase[SlugInfo](
+      mongo,
+      domainFormat   = MongoSlugInfoFormats.slugInfoFormat
     ) {
-
-  val logger: Logger = Logger(this.getClass)
 
   def add(slugInfo: SlugInfo): Future[Boolean] =
     collection
