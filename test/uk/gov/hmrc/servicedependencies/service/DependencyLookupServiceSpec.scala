@@ -22,7 +22,7 @@ import java.util.concurrent.atomic.AtomicReference
 import org.mockito.Mockito._
 import org.mockito.ArgumentMatchers.any
 import org.scalatest.{FlatSpec, FunSpec, Matchers}
-import org.scalatest.mockito.MockitoSugar
+import org.mockito.MockitoSugar
 import org.scalatest.concurrent.ScalaFutures
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.servicedependencies.connector.ServiceConfigsConnector

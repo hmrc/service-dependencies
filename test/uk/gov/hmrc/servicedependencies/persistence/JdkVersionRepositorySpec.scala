@@ -20,44 +20,44 @@ import org.mockito.MockitoSugar
 import org.mongodb.scala.model.IndexModel
 import org.scalatest.{Matchers, WordSpecLike}
 import uk.gov.hmrc.mongo.test.DefaultMongoCollectionSupport
+import uk.gov.hmrc.servicedependencies.model.SlugInfoFlag.Latest
 import uk.gov.hmrc.servicedependencies.persistence.TestSlugInfos._
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
-class SlugInfoRepositorySpec
+class JdkVersionRepositorySpec
     extends WordSpecLike
        with Matchers
       with MockitoSugar
       with DefaultMongoCollectionSupport {
 
   val slugInfoRepo = new SlugInfoRepository(mongoComponent)
+  val jdkVersionRepo = new JdkVersionRepository(mongoComponent)
 
-  override protected val collectionName: String   = slugInfoRepo.collectionName
-  override protected val indexes: Seq[IndexModel] = slugInfoRepo.indexes
+  override protected val collectionName: String   = jdkVersionRepo.collectionName
+  override protected val indexes: Seq[IndexModel] = jdkVersionRepo.indexes
 
-  "SlugInfoRepository.add" should {
-    "insert correctly" in {
+  "JdkVersionRepository.findJDKUsage" should {
+    "find all the jdk version for a given environment" in {
       slugInfoRepo.add(slugInfo).futureValue
-      slugInfoRepo.getAllEntries.futureValue shouldBe Seq(slugInfo)
+
+      val result = jdkVersionRepo.findJDKUsage(Latest).futureValue
+
+      result.length       shouldBe 1
+      result.head.name    shouldBe slugInfo.name
+      result.head.version shouldBe slugInfo.java.version
+      result.head.vendor  shouldBe slugInfo.java.vendor
+      result.head.kind    shouldBe slugInfo.java.kind
     }
 
-    "replace existing" in {
-      slugInfoRepo.add(slugInfo).futureValue shouldBe true
-      slugInfoRepo.getAllEntries.futureValue should have size 1
-
-      val duplicate = slugInfo.copy(name = "my-slug-2")
-      slugInfoRepo.add(duplicate).futureValue shouldBe true
-      slugInfoRepo.getAllEntries.futureValue shouldBe Seq(duplicate)
-    }
-  }
-
-  "SlugInfoRepository.clearAllData" should {
-    "delete everything" in {
+    "ignore non-java slugs" in {
       slugInfoRepo.add(slugInfo).futureValue
-      slugInfoRepo.getAllEntries.futureValue should have size 1
+      slugInfoRepo.add(nonJavaSlugInfo).futureValue
 
-      slugInfoRepo.clearAllData.futureValue
-      slugInfoRepo.getAllEntries.futureValue shouldBe Nil
+      val result = jdkVersionRepo.findJDKUsage(Latest).futureValue
+
+      result.length shouldBe 1
+      result.head.name shouldBe "my-slug"
     }
   }
 

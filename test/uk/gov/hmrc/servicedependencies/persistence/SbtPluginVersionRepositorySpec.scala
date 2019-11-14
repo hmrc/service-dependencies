@@ -16,60 +16,44 @@
 
 package uk.gov.hmrc.servicedependencies.persistence
 
-import org.mockito.Mockito.when
-import org.scalatest.{BeforeAndAfterEach, Matchers, WordSpecLike}
-import org.scalatest.concurrent.ScalaFutures
-import org.scalatest.mockito.MockitoSugar
-import play.modules.reactivemongo.ReactiveMongoComponent
-import uk.gov.hmrc.mongo.{FailOnUnindexedQueries, MongoConnector, MongoSpecSupport, RepositoryPreparation}
+import org.mockito.MockitoSugar
+import org.mongodb.scala.model.IndexModel
+import org.scalatest.{Matchers, WordSpecLike}
+import uk.gov.hmrc.mongo.test.DefaultMongoCollectionSupport
 import uk.gov.hmrc.servicedependencies.model.{MongoSbtPluginVersion, Version}
 import uk.gov.hmrc.servicedependencies.util.{FutureHelpers, MockFutureHelpers}
 import uk.gov.hmrc.time.DateTimeUtils
 
-import scala.concurrent.ExecutionContext.Implicits.global
-
 class SbtPluginVersionRepositorySpec
     extends WordSpecLike
-       with Matchers
-       with MongoSpecSupport
-       with ScalaFutures
-       with BeforeAndAfterEach
-       with MockitoSugar
-       with FailOnUnindexedQueries
-       with RepositoryPreparation {
-
-  val reactiveMongoComponent: ReactiveMongoComponent = new ReactiveMongoComponent {
-    val mockedMongoConnector: MongoConnector = mock[MongoConnector]
-    when(mockedMongoConnector.db).thenReturn(mongo)
-
-    override def mongoConnector = mockedMongoConnector
-  }
+    with Matchers
+    with MockitoSugar
+    with DefaultMongoCollectionSupport {
 
   val futureHelper: FutureHelpers = new MockFutureHelpers()
-  val sbtPluginVersionRepository = new SbtPluginVersionRepository(reactiveMongoComponent, futureHelper)
+  val repo                        = new SbtPluginVersionRepository(mongoComponent, futureHelper)
 
-  override def beforeEach() {
-    prepare(sbtPluginVersionRepository)
-  }
+  override protected val collectionName: String   = repo.collectionName
+  override protected val indexes: Seq[IndexModel] = repo.indexes
 
   "update" should {
     "inserts correctly" in {
 
       val sbtPluginVersion = MongoSbtPluginVersion("some-sbtPlugin", Some(Version(1, 0, 2)), DateTimeUtils.now)
-      await(sbtPluginVersionRepository.update(sbtPluginVersion))
+      repo.update(sbtPluginVersion).futureValue
 
-      await(sbtPluginVersionRepository.getAllEntries) shouldBe Seq(sbtPluginVersion)
+      repo.getAllEntries.futureValue shouldBe Seq(sbtPluginVersion)
     }
 
     "updates correctly (based on sbtPlugin name)" in {
 
       val sbtPluginVersion    = MongoSbtPluginVersion("some-sbtPlugin", Some(Version(1, 0, 2)), DateTimeUtils.now)
       val newSbtPluginVersion = sbtPluginVersion.copy(version = Some(Version(1, 0, 5)))
-      await(sbtPluginVersionRepository.update(sbtPluginVersion))
+      repo.update(sbtPluginVersion).futureValue
 
-      await(sbtPluginVersionRepository.update(newSbtPluginVersion))
+      repo.update(newSbtPluginVersion).futureValue
 
-      await(sbtPluginVersionRepository.getAllEntries) shouldBe Seq(newSbtPluginVersion)
+      repo.getAllEntries.futureValue shouldBe Seq(newSbtPluginVersion)
     }
   }
 
@@ -77,13 +61,13 @@ class SbtPluginVersionRepositorySpec
     "deletes everything" in {
 
       val sbtPluginVersion = MongoSbtPluginVersion("some-sbtPlugin", Some(Version(1, 0, 2)), DateTimeUtils.now)
-      await(sbtPluginVersionRepository.update(sbtPluginVersion))
+      repo.update(sbtPluginVersion).futureValue
 
-      await(sbtPluginVersionRepository.getAllEntries) should have size 1
+      repo.getAllEntries.futureValue should have size 1
 
-      await(sbtPluginVersionRepository.clearAllData)
+      repo.clearAllData.futureValue
 
-      await(sbtPluginVersionRepository.getAllEntries) shouldBe Nil
+      repo.getAllEntries.futureValue shouldBe Nil
     }
   }
 }

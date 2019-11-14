@@ -31,7 +31,7 @@ import uk.gov.hmrc.servicedependencies.model._
 import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
-class ServiceDependencyRepository @Inject()(mongo: MongoComponent)(implicit ec: ExecutionContext)
+class ServiceDependenciesRepository @Inject()(mongo: MongoComponent)(implicit ec: ExecutionContext)
     extends PlayMongoCollection[ServiceDependency](
       collectionName = "slugInfos",
       mongoComponent = mongo,
@@ -55,7 +55,7 @@ class ServiceDependencyRepository @Inject()(mongo: MongoComponent)(implicit ec: 
         )
       ),
       sort(orderBy(ascending("name"))),
-      unwind("dependencies"),
+      unwind("$dependencies"),
       `match`(and(equal("dependencies.artifact", artefact), equal("dependencies.group", group))),
       project(
         fields(

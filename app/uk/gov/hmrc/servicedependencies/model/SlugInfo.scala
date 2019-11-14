@@ -118,7 +118,7 @@ trait MongoSlugInfoFormats {
   implicit val serviceDependencyFormat: OFormat[ServiceDependency] =
     ( (__ \ "slugName"              ).format[String]
       ~ (__ \ "slugVersion"          ).format[String]
-      ~ (__ \ "teams"             ).format[List[String]]
+      ~ (__ \ "teams"             ).formatWithDefault[List[String]](List.empty)
       ~ (__ \ "depGroup"          ).format[String]
       ~ (__ \ "depArtifact"          ).format[String]
       ~ (__ \ "depVersion"          ).format[String]

@@ -50,7 +50,7 @@ class SbtPluginVersionRepository @Inject()(mongo: MongoComponent, futureHelpers:
       .withTimerAndCounter("mongo.update") {
         collection
           .replaceOne(
-            filter = equal("libraryName", Json.obj("sbtPluginName" -> Json.toJson(sbtPluginVersion.sbtPluginName))),
+            filter = equal("sbtPluginName", sbtPluginVersion.sbtPluginName),
             sbtPluginVersion,
             ReplaceOptions().upsert(true)
           )

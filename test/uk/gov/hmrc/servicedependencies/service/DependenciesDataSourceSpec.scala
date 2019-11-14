@@ -16,24 +16,20 @@
 
 package uk.gov.hmrc.servicedependencies.service
 
-import com.kenshoo.play.metrics.DisabledMetrics
 import org.eclipse.egit.github.core.RequestError
 import org.eclipse.egit.github.core.client.RequestException
 import org.joda.time.DateTime
 import org.mockito.ArgumentMatchers.any
-import org.mockito.Mockito.when
 import org.mockito.invocation.InvocationOnMock
-import org.mockito.stubbing.Answer
-import org.mockito.{ArgumentCaptor, Mockito}
+import org.mockito.{ArgumentCaptor, Mockito, MockitoSugar}
 import org.scalatest.concurrent.{IntegrationPatience, ScalaFutures}
-import org.scalatest.mockito.MockitoSugar
 import org.scalatest.{FreeSpec, Matchers, OptionValues}
 import uk.gov.hmrc.githubclient.{APIRateLimitExceededException, GitApiConfig}
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.servicedependencies.config._
 import uk.gov.hmrc.servicedependencies.config.model.{CuratedDependencyConfig, OtherDependencyConfig, SbtPluginConfig}
-import uk.gov.hmrc.servicedependencies.connector.{GithubConnector, TeamsAndRepositoriesConnector, TeamsForServices}
 import uk.gov.hmrc.servicedependencies.connector.model.{Repository, RepositoryInfo}
+import uk.gov.hmrc.servicedependencies.connector.{GithubConnector, TeamsAndRepositoriesConnector, TeamsForServices}
 import uk.gov.hmrc.servicedependencies.model._
 import uk.gov.hmrc.servicedependencies.persistence.RepositoryLibraryDependenciesRepository
 import uk.gov.hmrc.servicedependencies.{Github, GithubSearchError}
@@ -144,7 +140,7 @@ class DependenciesDataSourceSpec
 
       override def repositories: Seq[Repository] = Seq(repo1.copy(lastActive = timeInThePast))
 
-      Mockito.verifyZeroInteractions(repositoryLibraryDependenciesRepository)
+      Mockito.verifyNoInteractions(repositoryLibraryDependenciesRepository)
 
       val currentDependencyEntries =
         Seq(MongoRepositoryDependencies("repo1", Nil, Nil, Nil, timeInThePast.plusMinutes(1)))
@@ -363,10 +359,7 @@ class DependenciesDataSourceSpec
     when(teamsAndRepositoriesConnector.getAllRepositories()(any()))
       .thenReturn(Future.successful(repositories.map(r => RepositoryInfo(r.name, r.lastActive, r.lastActive, "Service"))))
 
-    when(teamsAndRepositoriesConnector.getRepository(any())(any())).thenAnswer(new Answer[Future[Option[Repository]]] {
-      override def answer(invocation: InvocationOnMock): Future[Option[Repository]] =
-        Future(repositories.find(_.name == invocation.getArgument[String](0)))
-    })
+    when(teamsAndRepositoriesConnector.getRepository(any())(any())).thenAnswer( (i: InvocationOnMock) => Future(repositories.find(_.name == i.getArgument[String](0))))
 
     def githubStub(): Github = new GithubStub(Map()) {
 

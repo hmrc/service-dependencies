@@ -58,7 +58,7 @@ class JdkVersionRepository @Inject()(mongo: MongoComponent)(implicit ec: Executi
           computed("name", "$name"),
           computed("version", f"$$java.version"),
           computed("vendor", f"$$java.vendor"),
-          computed("kind", "f\"$$java.kind")
+          computed("kind", f"$$java.kind")
         ))
     )
     collection.aggregate(agg).toFuture()

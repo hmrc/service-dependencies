@@ -18,7 +18,7 @@ package uk.gov.hmrc.servicedependencies.connector
 import com.kenshoo.play.metrics.DisabledMetrics
 import org.joda.time.DateTime
 import org.scalatest.{MustMatchers, WordSpec}
-import org.scalatest.mockito.MockitoSugar
+import org.mockito.MockitoSugar
 import uk.gov.hmrc.servicedependencies.{Github, GithubSearchError}
 import uk.gov.hmrc.servicedependencies.config.ServiceDependenciesConfig
 import uk.gov.hmrc.servicedependencies.connector.model.RepositoryInfo

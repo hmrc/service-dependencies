@@ -33,40 +33,28 @@ package uk.gov.hmrc.servicedependencies.persistence
  */
 
 import org.joda.time.{DateTime, DateTimeZone}
-import org.mockito.Mockito.when
-import org.scalatest.{BeforeAndAfterEach, Matchers, WordSpecLike}
+import org.mockito.MockitoSugar
+import org.mongodb.scala.model.IndexModel
 import org.scalatest.concurrent.ScalaFutures
-import org.scalatest.mockito.MockitoSugar
-import play.modules.reactivemongo.ReactiveMongoComponent
-import uk.gov.hmrc.mongo.{FailOnUnindexedQueries, MongoConnector, MongoSpecSupport, RepositoryPreparation}
+import org.scalatest.{Matchers, WordSpecLike}
+import uk.gov.hmrc.mongo.test.CleanMongoCollectionSupport
 import uk.gov.hmrc.servicedependencies.model.{MongoRepositoryDependencies, MongoRepositoryDependency, Version}
 import uk.gov.hmrc.servicedependencies.util.{FutureHelpers, MockFutureHelpers}
 import uk.gov.hmrc.time.DateTimeUtils
 
-import scala.concurrent.ExecutionContext.Implicits.global
-
 class RepositoryLibraryDependenciesRepositorySpec
     extends WordSpecLike
-       with Matchers
-       with MongoSpecSupport
-       with ScalaFutures
-       with BeforeAndAfterEach
-       with MockitoSugar
-       //with FailOnUnindexedQueries // case insensitive search is unindexed
-       with RepositoryPreparation {
-
-  val mockMongoConnector         = mock[MongoConnector]
-  val mockReactiveMongoComponent = mock[ReactiveMongoComponent]
-
-  when(mockMongoConnector.db).thenReturn(mongo)
-  when(mockReactiveMongoComponent.mongoConnector).thenReturn(mockMongoConnector)
+      with Matchers
+      with ScalaFutures
+      with MockitoSugar
+      // We don't mixin IndexedMongoQueriesSupport here, as this repo makes use of regex based queries not satisfied by an index
+      with CleanMongoCollectionSupport {
 
   val futureHelper: FutureHelpers = new MockFutureHelpers()
-  val repositoryLibraryDependenciesRepository = new RepositoryLibraryDependenciesRepository(mockReactiveMongoComponent, futureHelper)
+  val repo = new RepositoryLibraryDependenciesRepository(mongoComponent, futureHelper)
 
-  override def beforeEach() {
-    prepare(repositoryLibraryDependenciesRepository)
-  }
+  override protected val collectionName: String   = repo.collectionName
+  override protected val indexes: Seq[IndexModel] = repo.indexes
 
   "update" should {
     "inserts correctly" in {
@@ -77,9 +65,10 @@ class RepositoryLibraryDependenciesRepositorySpec
         Nil,
         Nil,
         DateTimeUtils.now)
-      await(repositoryLibraryDependenciesRepository.update(repositoryLibraryDependencies))
 
-      await(repositoryLibraryDependenciesRepository.getAllEntries) shouldBe Seq(repositoryLibraryDependencies)
+      repo.update(repositoryLibraryDependencies).futureValue
+
+      repo.getAllEntries.futureValue shouldBe Seq(repositoryLibraryDependencies)
     }
 
     "inserts correctly with suffix" in {
@@ -90,9 +79,9 @@ class RepositoryLibraryDependenciesRepositorySpec
         Nil,
         Nil,
         DateTimeUtils.now)
-      await(repositoryLibraryDependenciesRepository.update(repositoryLibraryDependencies))
+      repo.update(repositoryLibraryDependencies).futureValue
 
-      await(repositoryLibraryDependenciesRepository.getAllEntries) shouldBe Seq(repositoryLibraryDependencies)
+      repo.getAllEntries.futureValue shouldBe Seq(repositoryLibraryDependencies)
     }
 
 
@@ -109,11 +98,11 @@ class RepositoryLibraryDependenciesRepositorySpec
         libraryDependencies = repositoryLibraryDependencies.libraryDependencies :+ MongoRepositoryDependency(
           "some-other-lib",
           Version(8, 4, 2)))
-      await(repositoryLibraryDependenciesRepository.update(repositoryLibraryDependencies))
+      repo.update(repositoryLibraryDependencies).futureValue
 
-      await(repositoryLibraryDependenciesRepository.update(newRepositoryLibraryDependencies))
+      repo.update(newRepositoryLibraryDependencies).futureValue
 
-      await(repositoryLibraryDependenciesRepository.getAllEntries) shouldBe Seq(newRepositoryLibraryDependencies)
+      repo.getAllEntries.futureValue shouldBe Seq(newRepositoryLibraryDependencies)
     }
 
     "updates correctly (based on repository name) with suffix" in {
@@ -130,11 +119,11 @@ class RepositoryLibraryDependenciesRepositorySpec
             "some-other-lib",
             Version("8.4.2-play-26"))
         )
-      await(repositoryLibraryDependenciesRepository.update(repositoryLibraryDependencies))
+      repo.update(repositoryLibraryDependencies).futureValue
 
-      await(repositoryLibraryDependenciesRepository.update(newRepositoryLibraryDependencies))
+      repo.update(newRepositoryLibraryDependencies).futureValue
 
-      await(repositoryLibraryDependenciesRepository.getAllEntries) shouldBe Seq(newRepositoryLibraryDependencies)
+      repo.getAllEntries.futureValue shouldBe Seq(newRepositoryLibraryDependencies)
     }
   }
 
@@ -153,10 +142,10 @@ class RepositoryLibraryDependenciesRepositorySpec
         Nil,
         DateTimeUtils.now)
 
-      await(repositoryLibraryDependenciesRepository.update(repositoryLibraryDependencies1))
-      await(repositoryLibraryDependenciesRepository.update(repositoryLibraryDependencies2))
+      repo.update(repositoryLibraryDependencies1).futureValue
+      repo.update(repositoryLibraryDependencies2).futureValue
 
-      await(repositoryLibraryDependenciesRepository.getForRepository("some-repo1")) shouldBe Some(
+      repo.getForRepository("some-repo1").futureValue shouldBe Some(
         repositoryLibraryDependencies1)
     }
 
@@ -174,10 +163,10 @@ class RepositoryLibraryDependenciesRepositorySpec
         Nil,
         DateTimeUtils.now)
 
-      await(repositoryLibraryDependenciesRepository.update(repositoryLibraryDependencies1))
-      await(repositoryLibraryDependenciesRepository.update(repositoryLibraryDependencies2))
+      repo.update(repositoryLibraryDependencies1).futureValue
+      repo.update(repositoryLibraryDependencies2).futureValue
 
-      await(repositoryLibraryDependenciesRepository.getForRepository("SOME-REPO1")) shouldBe defined
+      repo.getForRepository("SOME-REPO1").futureValue shouldBe defined
     }
 
     "not find a repository with partial name" in {
@@ -194,10 +183,10 @@ class RepositoryLibraryDependenciesRepositorySpec
         Nil,
         DateTimeUtils.now)
 
-      await(repositoryLibraryDependenciesRepository.update(repositoryLibraryDependencies1))
-      await(repositoryLibraryDependenciesRepository.update(repositoryLibraryDependencies2))
+      repo.update(repositoryLibraryDependencies1).futureValue
+      repo.update(repositoryLibraryDependencies2).futureValue
 
-      await(repositoryLibraryDependenciesRepository.getForRepository("some-repo")) shouldBe None
+      repo.getForRepository("some-repo").futureValue shouldBe None
     }
   }
 
@@ -211,13 +200,13 @@ class RepositoryLibraryDependenciesRepositorySpec
         Nil,
         DateTimeUtils.now)
 
-      await(repositoryLibraryDependenciesRepository.update(repositoryLibraryDependencies))
+      repo.update(repositoryLibraryDependencies).futureValue
 
-      await(repositoryLibraryDependenciesRepository.getAllEntries) should have size 1
+      repo.getAllEntries.futureValue should have size 1
 
-      await(repositoryLibraryDependenciesRepository.clearAllData)
+      repo.clearAllData.futureValue
 
-      await(repositoryLibraryDependenciesRepository.getAllEntries) shouldBe Nil
+      repo.getAllEntries.futureValue shouldBe Nil
     }
   }
 
@@ -241,16 +230,16 @@ class RepositoryLibraryDependenciesRepositorySpec
           Nil,
           t2)
 
-      await(repositoryLibraryDependenciesRepository.update(repositoryLibraryDependencies1))
-      await(repositoryLibraryDependenciesRepository.update(repositoryLibraryDependencies2))
+      repo.update(repositoryLibraryDependencies1).futureValue
+      repo.update(repositoryLibraryDependencies2).futureValue
 
-      val mongoRepositoryDependencieses = await(repositoryLibraryDependenciesRepository.getAllEntries)
-      mongoRepositoryDependencieses                   should have size 2
-      mongoRepositoryDependencieses.map(_.updateDate) should contain theSameElementsAs Seq(t1, t2)
+      val mongoRepositoryDependencies = repo.getAllEntries.futureValue
+      mongoRepositoryDependencies                   should have size 2
+      mongoRepositoryDependencies.map(_.updateDate) should contain theSameElementsAs Seq(t1, t2)
 
-      await(repositoryLibraryDependenciesRepository.clearUpdateDates)
+      repo.clearUpdateDates.futureValue
 
-      await(repositoryLibraryDependenciesRepository.getAllEntries)
+      repo.getAllEntries.futureValue
         .map(_.updateDate) should contain theSameElementsAs Seq(
         new DateTime(0, DateTimeZone.UTC),
         new DateTime(0, DateTimeZone.UTC))

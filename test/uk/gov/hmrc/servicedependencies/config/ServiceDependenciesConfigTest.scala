@@ -17,8 +17,7 @@
 package uk.gov.hmrc.servicedependencies.config
 
 import org.mockito.ArgumentMatchers.any
-import org.mockito.Mockito.when
-import org.scalatest.mockito.MockitoSugar
+import org.mockito.MockitoSugar
 import org.scalatest.{FunSpec, Matchers, OptionValues}
 import play.api.Configuration
 import uk.gov.hmrc.play.bootstrap.config.ServicesConfig

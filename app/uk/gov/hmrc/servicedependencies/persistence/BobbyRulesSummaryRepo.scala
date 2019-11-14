@@ -25,7 +25,6 @@ import org.mongodb.scala.model.Filters.equal
 import org.mongodb.scala.model.Indexes.ascending
 import org.mongodb.scala.model.Sorts.descending
 import org.mongodb.scala.model.{IndexModel, IndexOptions, ReplaceOptions}
-import play.api.libs.json.Json
 import uk.gov.hmrc.mongo.component.MongoComponent
 import uk.gov.hmrc.mongo.play.PlayMongoCollection
 import uk.gov.hmrc.servicedependencies.model.{BobbyRulesSummary, LocalDateFormats}
@@ -45,7 +44,7 @@ trait BobbyRulesSummaryRepo {
 }
 
 @Singleton
-class BobbyRulesSummaryRepoImpl @Inject()(mongo: MongoComponent)(implicit ec: ExecutionContext)
+class BobbyRulesSummaryRepository @Inject()(mongo: MongoComponent)(implicit ec: ExecutionContext)
     extends PlayMongoCollection[BobbyRulesSummary](
       collectionName = "bobbyRulesSummary",
       mongoComponent = mongo,
@@ -62,7 +61,7 @@ class BobbyRulesSummaryRepoImpl @Inject()(mongo: MongoComponent)(implicit ec: Ex
   def add(summary: BobbyRulesSummary): Future[Unit] =
     collection
       .replaceOne(
-        filter = equal("date", Json.toJson(summary.date)),
+        filter = equal("date", summary.date),
         summary,
         ReplaceOptions().upsert(true)
       )
@@ -70,7 +69,7 @@ class BobbyRulesSummaryRepoImpl @Inject()(mongo: MongoComponent)(implicit ec: Ex
       .map(_ => ())
 
   def getLatest: Future[Option[BobbyRulesSummary]] =
-    collection.find(equal("date", Json.toJson(LocalDate.now))).toFuture()
+    collection.find(equal("date", LocalDate.now)).toFuture()
       .map(_.headOption)
       .flatMap {
         case Some(a) => Future(Some(a))

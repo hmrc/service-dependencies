@@ -27,7 +27,7 @@ private object AppDependencies {
     "org.scalatest"          %% "scalatest"          % "3.0.8"              % Test,
     "org.scalatestplus.play" %% "scalatestplus-play" % "3.1.2"              % Test,
     "uk.gov.hmrc"            %% "hmrc-mongo-test"    % hmrcMongoVersion     % Test,
-    "org.mockito"            % "mockito-core"        % "2.28.2"             % Test,
+    "org.mockito"            %% "mockito-scala"      % "1.7.1"              % Test,
     "org.pegdown"            % "pegdown"             % "1.6.0"              % Test, //pegdown dependency needed by scalatest, until this PR is released (v 3.1.0): https://github.com/scalatest/scalatest/pull/1229
     "com.typesafe.play"      %% "play-test"          % PlayVersion.current  % Test,
     "com.github.tomakehurst" % "wiremock"            % "1.58"               % Test,

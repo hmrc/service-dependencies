@@ -19,14 +19,13 @@ package uk.gov.hmrc.servicedependencies.persistence
 import java.util.concurrent.TimeUnit
 
 import com.google.inject.{Inject, Singleton}
-import uk.gov.hmrc.mongo.component.PlayMongoComponent
+import uk.gov.hmrc.mongo.component.{MongoComponent, PlayMongoComponent}
 import uk.gov.hmrc.mongo.lock.{CurrentTimestampSupport, MongoLockRepository, MongoLockService}
-
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.Duration
 
-class MongoLock(db: PlayMongoComponent, lockId_ : String)(implicit ec: ExecutionContext) extends MongoLockService {
+class MongoLock(db: MongoComponent, lockId_ : String)(implicit ec: ExecutionContext) extends MongoLockService {
 
   override val ttl: Duration = Duration(60, TimeUnit.MINUTES)
 

@@ -18,34 +18,30 @@ package uk.gov.hmrc.servicedependencies.service
 
 import org.joda.time.DateTime
 import org.mockito.ArgumentMatchers.{any, eq => eqTo}
-import org.mockito.Mockito._
-import org.scalatest.concurrent.{IntegrationPatience, ScalaFutures}
-import org.scalatest.mockito.MockitoSugar
-import org.scalatest.{BeforeAndAfterEach, FunSpec, Matchers, OptionValues}
+import org.mockito.MockitoSugar
+import org.scalatest.{FunSpec, Matchers, OptionValues}
 import org.scalatestplus.play.guice.GuiceOneAppPerTest
 import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
-import reactivemongo.api.DB
 import uk.gov.hmrc.http.HeaderCarrier
-import uk.gov.hmrc.mongo.Awaiting
+import uk.gov.hmrc.mongo.test.MongoSupport
 import uk.gov.hmrc.servicedependencies.config.CuratedDependencyConfigProvider
 import uk.gov.hmrc.servicedependencies.config.model.{CuratedDependencyConfig, OtherDependencyConfig, SbtPluginConfig}
 import uk.gov.hmrc.servicedependencies.controller.model.{Dependencies, Dependency}
 import uk.gov.hmrc.servicedependencies.model._
 import uk.gov.hmrc.servicedependencies.persistence._
 import uk.gov.hmrc.time.DateTimeUtils
+
+import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.{ExecutionContext, Future}
 
 class DependencyDataUpdatingServiceSpec
     extends FunSpec
-    with MockitoSugar
-    with Matchers
-    with GuiceOneAppPerTest
-    with BeforeAndAfterEach
-    with Awaiting
-    with OptionValues
-    with ScalaFutures
-    with IntegrationPatience {
+      with MockitoSugar
+      with Matchers
+      with GuiceOneAppPerTest
+      with OptionValues
+      with MongoSupport {
 
   override def fakeApplication(): Application =
     new GuiceApplicationBuilder()
@@ -201,7 +197,7 @@ class DependencyDataUpdatingServiceSpec
         .thenReturn(Future.successful(Nil))
 
       val maybeDependencies =
-        await(underTest.testDependencyUpdatingService.getDependencyVersionsForRepository(repositoryName))
+        underTest.testDependencyUpdatingService.getDependencyVersionsForRepository(repositoryName).futureValue
 
       verify(underTest.repositoryLibraryDependenciesRepository, times(1)).getForRepository(repositoryName)
 
@@ -243,7 +239,7 @@ class DependencyDataUpdatingServiceSpec
         .thenReturn(Future.successful(Nil))
 
       val maybeDependencies =
-        await(underTest.testDependencyUpdatingService.getDependencyVersionsForRepository(repositoryName))
+        underTest.testDependencyUpdatingService.getDependencyVersionsForRepository(repositoryName).futureValue
 
       verify(underTest.repositoryLibraryDependenciesRepository, times(1)).getForRepository(repositoryName)
 
@@ -293,7 +289,7 @@ class DependencyDataUpdatingServiceSpec
         .thenReturn(Future.successful(Nil))
 
       val maybeDependencies =
-        await(underTest.testDependencyUpdatingService.getDependencyVersionsForRepository(repositoryName))
+        underTest.testDependencyUpdatingService.getDependencyVersionsForRepository(repositoryName).futureValue
 
       verify(underTest.repositoryLibraryDependenciesRepository, times(1)).getForRepository(repositoryName)
 
@@ -325,7 +321,7 @@ class DependencyDataUpdatingServiceSpec
         .thenReturn(Future.successful(Nil))
 
       val maybeDependencies =
-        await(underTest.testDependencyUpdatingService.getDependencyVersionsForRepository(repositoryName))
+        underTest.testDependencyUpdatingService.getDependencyVersionsForRepository(repositoryName).futureValue
 
       verify(underTest.repositoryLibraryDependenciesRepository, times(1)).getForRepository(repositoryName)
 
@@ -353,7 +349,7 @@ class DependencyDataUpdatingServiceSpec
         .thenReturn(Future.successful(Nil))
 
       val maybeDependencies =
-        await(underTest.testDependencyUpdatingService.getDependencyVersionsForRepository(repositoryName))
+        underTest.testDependencyUpdatingService.getDependencyVersionsForRepository(repositoryName).futureValue
 
       verify(underTest.repositoryLibraryDependenciesRepository, times(1)).getForRepository(repositoryName)
 
@@ -440,7 +436,7 @@ class DependencyDataUpdatingServiceSpec
       when(underTest.sbtPluginVersionRepository.getAllEntries)
         .thenReturn(Future.successful(referenceSbtPluginVersions))
 
-      val maybeDependencies = await(underTest.testDependencyUpdatingService.getDependencyVersionsForAllRepositories())
+      val maybeDependencies = underTest.testDependencyUpdatingService.getDependencyVersionsForAllRepositories().futureValue
 
       verify(underTest.repositoryLibraryDependenciesRepository, times(1)).getAllEntries
 
@@ -480,8 +476,8 @@ class DependencyDataUpdatingServiceSpec
     }
   }
 
-  def noLockTestMongoLockBuilder(lockId: String) = new MongoLock(() => mock[DB], lockId) {
-    override def tryLock[T](body: => Future[T])(implicit ec: ExecutionContext): Future[Option[T]] =
+  def noLockTestMongoLockBuilder(lockId: String): MongoLock = new MongoLock(mongoComponent, lockId) {
+    override def attemptLockWithRelease[T](body: => Future[T])(implicit ec: ExecutionContext): Future[Option[T]] =
       body.map(Some(_))
   }
 
@@ -522,8 +518,8 @@ class DependencyDataUpdatingServiceSpec
     }
   }
 
-  def denyingTestMongoLockBuilder(lockId: String) = new MongoLock(() => mock[DB], lockId) {
-    override def tryLock[T](body: => Future[T])(implicit ec: ExecutionContext): Future[Option[T]] =
+  def denyingTestMongoLockBuilder(lockId: String): MongoLock = new MongoLock(mongoComponent, lockId) {
+    override def attemptLockWithRelease[T](body: => Future[T])(implicit ec: ExecutionContext): Future[Option[T]] =
       throw new RuntimeException(s"Mongo is locked for testing")
   }
 

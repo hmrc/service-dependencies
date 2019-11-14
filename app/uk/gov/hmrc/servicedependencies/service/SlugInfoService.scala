@@ -22,14 +22,14 @@ import com.google.inject.{Inject, Singleton}
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.servicedependencies.connector.{ServiceDeploymentsConnector, TeamsAndRepositoriesConnector}
 import uk.gov.hmrc.servicedependencies.model._
-import uk.gov.hmrc.servicedependencies.persistence.{GroupArtefactRepository, JdkVersionRepository, ServiceDependencyRepository, SlugInfoRepository}
+import uk.gov.hmrc.servicedependencies.persistence.{GroupArtefactRepository, JdkVersionRepository, ServiceDependenciesRepository, SlugInfoRepository}
 
 import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
 class SlugInfoService @Inject()(
  slugInfoRepository            : SlugInfoRepository,
- serviceDependencyRepository   : ServiceDependencyRepository,
+ serviceDependencyRepository   : ServiceDependenciesRepository,
  jdkVersionRepository          : JdkVersionRepository,
  groupArtefactRepository       : GroupArtefactRepository,
  teamsAndRepositoriesConnector : TeamsAndRepositoriesConnector,

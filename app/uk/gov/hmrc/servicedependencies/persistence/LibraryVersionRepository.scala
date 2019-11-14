@@ -22,7 +22,6 @@ import org.mongodb.scala.model.Filters.equal
 import org.mongodb.scala.model.Indexes.hashed
 import org.mongodb.scala.model.{IndexModel, IndexOptions, ReplaceOptions}
 import play.api.Logger
-import play.api.libs.json.Json
 import uk.gov.hmrc.mongo.component.MongoComponent
 import uk.gov.hmrc.mongo.play.PlayMongoCollection
 import uk.gov.hmrc.servicedependencies.model._
@@ -49,7 +48,7 @@ class LibraryVersionRepository @Inject()(mongo: MongoComponent, futureHelpers: F
       .withTimerAndCounter("mongo.update") {
         collection
           .replaceOne(
-            filter = equal("libraryName", Json.toJson(libraryVersion.libraryName)),
+            filter = equal("libraryName", libraryVersion.libraryName),
             libraryVersion,
             ReplaceOptions().upsert(true)
           )

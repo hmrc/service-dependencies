@@ -50,7 +50,7 @@ class RepositoryLibraryDependenciesRepository @Inject()(mongo: MongoComponent, f
       .withTimerAndCounter("mongo.update") {
         collection
           .replaceOne(
-            filter = equal("repositoryName", Json.toJson(repositoryLibraryDependencies.repositoryName)),
+            filter = equal("repositoryName", repositoryLibraryDependencies.repositoryName),
             repositoryLibraryDependencies,
             ReplaceOptions().upsert(true)
           )

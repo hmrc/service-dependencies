@@ -48,12 +48,12 @@ class SlugInfoRepository @Inject()(mongo: MongoComponent)(implicit ec: Execution
   def add(slugInfo: SlugInfo): Future[Boolean] =
     collection
       .replaceOne(
-        filter = equal("uri", Json.toJson(slugInfo.uri)),
+        filter = equal("uri", slugInfo.uri),
         slugInfo,
         ReplaceOptions().upsert(true)
       )
       .toFuture()
-      .map(_.getModifiedCount == 1L)
+      .map(_.wasAcknowledged())
 
   def getAllEntries: Future[Seq[SlugInfo]] = collection.find().toFuture()
 
