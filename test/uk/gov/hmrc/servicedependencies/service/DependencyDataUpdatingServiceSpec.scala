@@ -17,6 +17,7 @@
 package uk.gov.hmrc.servicedependencies.service
 
 import java.time.Instant
+import java.util.concurrent.TimeUnit
 
 import org.mockito.ArgumentMatchers.{any, eq => eqTo}
 import org.mockito.MockitoSugar
@@ -25,6 +26,7 @@ import org.scalatestplus.play.guice.GuiceOneAppPerTest
 import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
 import uk.gov.hmrc.http.HeaderCarrier
+import uk.gov.hmrc.mongo.lock.{CurrentTimestampSupport, MongoLockRepository, MongoLockService}
 import uk.gov.hmrc.mongo.test.MongoSupport
 import uk.gov.hmrc.servicedependencies.config.CuratedDependencyConfigProvider
 import uk.gov.hmrc.servicedependencies.config.model.{CuratedDependencyConfig, OtherDependencyConfig, SbtPluginConfig}
@@ -34,6 +36,7 @@ import uk.gov.hmrc.servicedependencies.persistence._
 import uk.gov.hmrc.servicedependencies.util.DateUtil
 
 import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.duration.Duration
 import scala.concurrent.{ExecutionContext, Future}
 
 class DependencyDataUpdatingServiceSpec
@@ -477,13 +480,8 @@ class DependencyDataUpdatingServiceSpec
     }
   }
 
-  def noLockTestMongoLockBuilder(lockId: String): MongoLock = new MongoLock(mongoComponent, lockId) {
-    override def attemptLockWithRelease[T](body: => Future[T])(implicit ec: ExecutionContext): Future[Option[T]] =
-      body.map(Some(_))
-  }
-
   class TestDependencyDataUpdatingService(
-    testMongoLockBuilder: (String) => MongoLock,
+    testMongoLockBuilder: (String) => MongoLockService,
     dependencyConfig: CuratedDependencyConfig) {
 
     val curatedDependencyConfigProvider: CuratedDependencyConfigProvider = mock[CuratedDependencyConfigProvider]
@@ -519,7 +517,18 @@ class DependencyDataUpdatingServiceSpec
     }
   }
 
-  def denyingTestMongoLockBuilder(lockId: String): MongoLock = new MongoLock(mongoComponent, lockId) {
+  def noLockTestMongoLockBuilder(testLockId: String): MongoLockService = new MongoLockService {
+    override val mongoLockRepository: MongoLockRepository = new MongoLockRepository(mongoComponent, new CurrentTimestampSupport())
+    override val lockId: String = testLockId
+    override val ttl: Duration = Duration(60, TimeUnit.MINUTES)
+    override def attemptLockWithRelease[T](body: => Future[T])(implicit ec: ExecutionContext): Future[Option[T]] =
+      body.map(Some(_))
+  }
+
+  def denyingTestMongoLockBuilder(testLockId: String): MongoLockService = new MongoLockService {
+    override val mongoLockRepository: MongoLockRepository = new MongoLockRepository(mongoComponent, new CurrentTimestampSupport())
+    override val lockId: String = testLockId
+    override val ttl: Duration = Duration(60, TimeUnit.MINUTES)
     override def attemptLockWithRelease[T](body: => Future[T])(implicit ec: ExecutionContext): Future[Option[T]] =
       throw new RuntimeException(s"Mongo is locked for testing")
   }

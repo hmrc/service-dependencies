@@ -19,26 +19,19 @@ package uk.gov.hmrc.servicedependencies.persistence
 import java.util.concurrent.TimeUnit
 
 import com.google.inject.{Inject, Singleton}
-import uk.gov.hmrc.mongo.component.{MongoComponent, PlayMongoComponent}
-import uk.gov.hmrc.mongo.lock.{CurrentTimestampSupport, MongoLockRepository, MongoLockService}
+import uk.gov.hmrc.mongo.component.PlayMongoComponent
+import uk.gov.hmrc.mongo.lock.MongoLockRepository
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.Duration
 
-class MongoLock(db: MongoComponent, lockId_ : String)(implicit ec: ExecutionContext) extends MongoLockService {
-
-  override val ttl: Duration = Duration(60, TimeUnit.MINUTES)
-
-  override val mongoLockRepository: MongoLockRepository = new MongoLockRepository(db, new CurrentTimestampSupport())
-
-  override val lockId: String = lockId_
-}
-
 @Singleton
-class MongoLocks @Inject()(mongo: PlayMongoComponent)(implicit ec: ExecutionContext) {
-  val repositoryDependencyMongoLock   = new MongoLock(mongo, "repository-dependencies-data-reload-job")
-  val libraryMongoLock                = new MongoLock(mongo, "libraries-data-reload-job")
-  val sbtPluginMongoLock              = new MongoLock(mongo, "sbt-plugin-data-reload-job")
-  val slugMetadataUpdateSchedulerLock = new MongoLock(mongo, "slug-job-scheduler")
-  val bobbyRulesSummarySchedulerLock  = new MongoLock(mongo, "bobby-rules-summary-scheduler")
+class MongoLocks @Inject()(mongo: PlayMongoComponent, mongoLockRepository: MongoLockRepository)(
+  implicit ec: ExecutionContext) {
+  val oneHour                         = Duration(60, TimeUnit.MINUTES)
+  val repositoryDependencyMongoLock   = mongoLockRepository.toService("repository-dependencies-data-reload-job", oneHour)
+  val libraryMongoLock                = mongoLockRepository.toService("libraries-data-reload-job", oneHour)
+  val sbtPluginMongoLock              = mongoLockRepository.toService("sbt-plugin-data-reload-job", oneHour)
+  val slugMetadataUpdateSchedulerLock = mongoLockRepository.toService("slug-job-scheduler", oneHour)
+  val bobbyRulesSummarySchedulerLock  = mongoLockRepository.toService("bobby-rules-summary-scheduler", oneHour)
 }

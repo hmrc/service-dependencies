@@ -19,11 +19,10 @@ package uk.gov.hmrc.servicedependencies.util
 import akka.actor.ActorSystem
 import play.api.Logger
 import play.api.inject.ApplicationLifecycle
+import uk.gov.hmrc.mongo.lock.MongoLockService
 import uk.gov.hmrc.servicedependencies.config.SchedulerConfig
-import uk.gov.hmrc.servicedependencies.persistence.MongoLock
 
 import scala.concurrent.{ExecutionContext, Future}
-
 
 trait SchedulerUtils {
   def schedule(
@@ -50,7 +49,7 @@ trait SchedulerUtils {
   def scheduleWithLock(
       label          : String
     , schedulerConfig: SchedulerConfig
-    , lock           : MongoLock
+    , lock           : MongoLockService
     )(f: => Future[Unit]
     )(implicit actorSystem: ActorSystem, applicationLifecycle: ApplicationLifecycle, ec: ExecutionContext) =
       schedule(label, schedulerConfig) {

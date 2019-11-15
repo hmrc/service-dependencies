@@ -25,7 +25,7 @@ import play.api.inject.ApplicationLifecycle
 import uk.gov.hmrc.metrix.MetricOrchestrator
 import uk.gov.hmrc.metrix.persistence.MongoMetricRepository
 import uk.gov.hmrc.mongo.component.MongoComponent
-import uk.gov.hmrc.mongo.lock.{CurrentTimestampSupport, MongoLockRepository, MongoLockService}
+import uk.gov.hmrc.mongo.lock.MongoLockRepository
 import uk.gov.hmrc.servicedependencies.config.SchedulerConfigs
 import uk.gov.hmrc.servicedependencies.service.RepositoryDependenciesSource
 import uk.gov.hmrc.servicedependencies.util.SchedulerUtils
@@ -37,7 +37,8 @@ class MetricsScheduler @Inject()(
   schedulerConfigs: SchedulerConfigs,
   metrics: Metrics,
   mongoComponent: MongoComponent,
-  repositoryDependenciesSource: RepositoryDependenciesSource)(
+  repositoryDependenciesSource: RepositoryDependenciesSource,
+  mongoLockRepository: MongoLockRepository)(
   implicit actorSystem: ActorSystem,
   applicationLifecycle: ApplicationLifecycle
 ) extends SchedulerUtils {
@@ -46,12 +47,7 @@ class MetricsScheduler @Inject()(
 
   private val schedulerConfig = schedulerConfigs.metrics
 
-  val lock = new MongoLockService {
-    override val mongoLockRepository: MongoLockRepository =
-      new MongoLockRepository(mongoComponent, new CurrentTimestampSupport())
-    override val lockId: String = "repositoryDependenciesLock"
-    override val ttl: Duration  = Duration(schedulerConfig.frequency().toMillis, TimeUnit.MILLISECONDS)
-  }
+  val lock = mongoLockRepository.toService("repositoryDependenciesLock",  Duration(schedulerConfig.frequency().toMillis, TimeUnit.MILLISECONDS))
 
   val metricOrchestrator = new MetricOrchestrator(
     metricSources    = List(repositoryDependenciesSource),
