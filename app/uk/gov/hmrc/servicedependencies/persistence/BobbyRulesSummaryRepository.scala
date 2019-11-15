@@ -27,21 +27,9 @@ import org.mongodb.scala.model.Sorts.descending
 import org.mongodb.scala.model.{IndexModel, IndexOptions, ReplaceOptions}
 import uk.gov.hmrc.mongo.component.MongoComponent
 import uk.gov.hmrc.mongo.play.PlayMongoCollection
-import uk.gov.hmrc.servicedependencies.model.{BobbyRulesSummary, LocalDateFormats}
+import uk.gov.hmrc.servicedependencies.model.BobbyRulesSummary
 
 import scala.concurrent.{ExecutionContext, Future}
-
-trait BobbyRulesSummaryRepo {
-
-  def add(summary: BobbyRulesSummary): Future[Unit]
-
-  def getLatest: Future[Option[BobbyRulesSummary]]
-
-  // Not time bound yet
-  def getHistoric: Future[List[BobbyRulesSummary]]
-
-  def clearAllData: Future[Boolean]
-}
 
 @Singleton
 class BobbyRulesSummaryRepository @Inject()(mongo: MongoComponent)(implicit ec: ExecutionContext)
@@ -52,11 +40,9 @@ class BobbyRulesSummaryRepository @Inject()(mongo: MongoComponent)(implicit ec: 
       indexes = Seq(
         IndexModel(ascending("date"), IndexOptions().name("dateIdx").unique(true))
       )
-    )
-    with BobbyRulesSummaryRepo {
+    ) {
 
   private implicit val brsf = BobbyRulesSummary.mongoFormat
-  implicit val ldf          = LocalDateFormats.localDateFormat
 
   def add(summary: BobbyRulesSummary): Future[Unit] =
     collection

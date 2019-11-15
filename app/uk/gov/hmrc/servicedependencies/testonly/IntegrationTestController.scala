@@ -31,7 +31,7 @@ class IntegrationTestController @Inject()(
   , sbtPluginVersionRepository: SbtPluginVersionRepository
   , dependenciesRepository    : RepositoryLibraryDependenciesRepository
   , sluginfoRepo              : SlugInfoRepository
-  , bobbyRulesSummaryRepo     : BobbyRulesSummaryRepo
+  , bobbyRulesSummaryRepo     : BobbyRulesSummaryRepository
   , cc                        : ControllerComponents
   ) extends BackendController(cc) {
 

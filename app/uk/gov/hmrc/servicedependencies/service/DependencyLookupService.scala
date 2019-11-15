@@ -16,16 +16,17 @@
 
 package uk.gov.hmrc.servicedependencies.service
 
-import cats.implicits._
 import java.io.PrintStream
 import java.time.LocalDate
 import java.time.temporal.ChronoUnit
+
+import cats.implicits._
 import javax.inject.Inject
 import play.api.Logger
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.servicedependencies.connector.ServiceConfigsConnector
 import uk.gov.hmrc.servicedependencies.model._
-import uk.gov.hmrc.servicedependencies.persistence.{BobbyRulesSummaryRepo, SlugBlacklist, SlugInfoRepository}
+import uk.gov.hmrc.servicedependencies.persistence.{BobbyRulesSummaryRepository, SlugBlacklist, SlugInfoRepository}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
@@ -34,7 +35,7 @@ import scala.concurrent.Future
 class DependencyLookupService @Inject() (
     serviceConfigs       : ServiceConfigsConnector
   , slugRepo             : SlugInfoRepository
-  , bobbyRulesSummaryRepo: BobbyRulesSummaryRepo
+  , bobbyRulesSummaryRepo: BobbyRulesSummaryRepository
   ) {
 
 
