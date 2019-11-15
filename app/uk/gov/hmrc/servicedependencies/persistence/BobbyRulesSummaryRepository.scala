@@ -68,7 +68,4 @@ class BobbyRulesSummaryRepository @Inject()(mongo: MongoComponent)(implicit ec: 
       .find()
       .sort(descending("date")).toFuture().map(_.toList)
 
-  def clearAllData: Future[Boolean] =
-    collection.deleteMany(new BasicDBObject()).toFuture.map(_.wasAcknowledged())
-
 }

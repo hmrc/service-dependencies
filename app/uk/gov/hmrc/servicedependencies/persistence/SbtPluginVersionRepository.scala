@@ -65,5 +65,4 @@ class SbtPluginVersionRepository @Inject()(mongo: MongoComponent, futureHelpers:
 
   def getAllEntries: Future[Seq[MongoSbtPluginVersion]] = collection.find().toFuture()
 
-  def clearAllData: Future[Boolean] = collection.deleteMany(new BasicDBObject()).toFuture.map(_.wasAcknowledged())
 }

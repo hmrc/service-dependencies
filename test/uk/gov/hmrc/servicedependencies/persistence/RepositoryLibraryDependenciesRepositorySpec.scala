@@ -188,26 +188,6 @@ class RepositoryLibraryDependenciesRepositorySpec
     }
   }
 
-  "clearAllDependencyEntries" should {
-    "deletes everything" in {
-
-      val repositoryLibraryDependencies = MongoRepositoryDependencies(
-        "some-repo",
-        Seq(MongoRepositoryDependency("some-lib", Version("1.0.2"))),
-        Nil,
-        Nil,
-        DateUtil.now)
-
-      repo.update(repositoryLibraryDependencies).futureValue
-
-      repo.getAllEntries.futureValue should have size 1
-
-      repo.clearAllData.futureValue
-
-      repo.getAllEntries.futureValue shouldBe Nil
-    }
-  }
-
   "clearUpdateDates" should {
     "resets the last update dates to January 1, 1970" in {
 

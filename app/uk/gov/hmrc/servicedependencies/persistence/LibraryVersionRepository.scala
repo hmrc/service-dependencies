@@ -17,7 +17,6 @@
 package uk.gov.hmrc.servicedependencies.persistence
 
 import com.google.inject.{Inject, Singleton}
-import com.mongodb.BasicDBObject
 import org.mongodb.scala.model.Filters.equal
 import org.mongodb.scala.model.Indexes.hashed
 import org.mongodb.scala.model.{IndexModel, IndexOptions, ReplaceOptions}
@@ -61,5 +60,4 @@ class LibraryVersionRepository @Inject()(mongo: MongoComponent, futureHelpers: F
 
   def getAllEntries: Future[Seq[MongoLibraryVersion]] = collection.find().toFuture()
 
-  def clearAllData: Future[Boolean] = collection.deleteMany(new BasicDBObject()).toFuture.map(_.wasAcknowledged())
 }

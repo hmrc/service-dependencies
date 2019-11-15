@@ -19,6 +19,7 @@ package uk.gov.hmrc.servicedependencies.testonly
 import javax.inject.Inject
 import play.api.libs.json._
 import play.api.mvc.ControllerComponents
+import uk.gov.hmrc.mongo.play.PlayMongoCollection
 import uk.gov.hmrc.mongo.play.json.MongoJavatimeFormats
 import uk.gov.hmrc.play.bootstrap.controller.BackendController
 import uk.gov.hmrc.servicedependencies.model._
@@ -86,42 +87,43 @@ class IntegrationTestController @Inject()(
 
   def deleteLibraryVersions =
     Action.async { implicit request =>
-      libraryRepo.clearAllData
+      dropCollection(libraryRepo)
         .map(_ => NoContent)
     }
 
   def deleteSbtVersions =
     Action.async { implicit request =>
-      sbtPluginVersionRepository.clearAllData
+      dropCollection(sbtPluginVersionRepository)
         .map(_ => NoContent)
     }
 
   def deleteDependencies =
     Action.async { implicit request =>
-      dependenciesRepository.clearAllData
+      dropCollection(dependenciesRepository)
         .map(_ => NoContent)
     }
 
   def deleteSluginfos =
     Action.async { implicit request =>
-      sluginfoRepo.clearAllData
+      dropCollection(sluginfoRepo)
         .map(_ => NoContent)
     }
 
   def deleteBobbyRulesSummaries =
     Action.async { implicit request =>
-      bobbyRulesSummaryRepo.clearAllData
+      dropCollection(bobbyRulesSummaryRepo)
         .map(_ => NoContent)
     }
 
-  def deleteAll =
+  def dropCollection[A](c: PlayMongoCollection[A]) = c.collection.drop().toFuture()
+
+  def deleteAll = {
+    val repos = List(sbtPluginVersionRepository, dependenciesRepository,
+            libraryRepo, sluginfoRepo, bobbyRulesSummaryRepo)
+    
     Action.async { implicit request =>
-      Future.sequence(List(
-          sbtPluginVersionRepository.clearAllData
-        , dependenciesRepository.clearAllData
-        , libraryRepo.clearAllData
-        , sluginfoRepo.clearAllData
-        , bobbyRulesSummaryRepo.clearAllData
-        )).map(_ => NoContent)
+      Future.sequence(repos.map(r => dropCollection(r))).map(_ => NoContent)
     }
+  }
+
 }

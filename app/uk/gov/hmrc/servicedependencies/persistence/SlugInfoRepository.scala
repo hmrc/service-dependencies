@@ -17,7 +17,6 @@
 package uk.gov.hmrc.servicedependencies.persistence
 
 import com.google.inject.{Inject, Singleton}
-import com.mongodb.BasicDBObject
 import org.mongodb.scala.model.Filters.{and, equal}
 import org.mongodb.scala.model.ReplaceOptions
 import org.mongodb.scala.model.Updates._
@@ -44,9 +43,6 @@ class SlugInfoRepository @Inject()(mongo: MongoComponent)(implicit ec: Execution
       .map(_.wasAcknowledged())
 
   def getAllEntries: Future[Seq[SlugInfo]] = collection.find().toFuture()
-
-  def clearAllData: Future[Boolean] =
-    collection.deleteMany(new BasicDBObject()).toFuture.map(_.wasAcknowledged())
 
   def getUniqueSlugNames: Future[Seq[String]] =
     collection.distinct("name").toFuture()

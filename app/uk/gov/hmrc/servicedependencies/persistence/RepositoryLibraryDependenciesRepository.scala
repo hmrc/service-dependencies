@@ -81,8 +81,6 @@ class RepositoryLibraryDependenciesRepository @Inject()(mongo: MongoComponent, f
     collection.find().toFuture()
   }
 
-  def clearAllData: Future[Boolean] = collection.deleteMany(new BasicDBObject()).toFuture.map(_.wasAcknowledged())
-
   def clearUpdateDates: Future[Seq[MongoRepositoryDependencies]] =
     getAllEntries.flatMap { es =>
       Future.sequence(es.map(mrd => update(mrd.copy(updateDate = DateUtil.epoch))))

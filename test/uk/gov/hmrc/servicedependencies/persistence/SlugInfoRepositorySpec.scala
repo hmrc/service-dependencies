@@ -51,14 +51,4 @@ class SlugInfoRepositorySpec
     }
   }
 
-  "SlugInfoRepository.clearAllData" should {
-    "delete everything" in {
-      slugInfoRepo.add(slugInfo).futureValue
-      slugInfoRepo.getAllEntries.futureValue should have size 1
-
-      slugInfoRepo.clearAllData.futureValue
-      slugInfoRepo.getAllEntries.futureValue shouldBe Nil
-    }
-  }
-
 }

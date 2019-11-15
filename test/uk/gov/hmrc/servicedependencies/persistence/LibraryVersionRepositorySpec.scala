@@ -23,7 +23,6 @@ import org.scalatest.{Matchers, WordSpecLike}
 import uk.gov.hmrc.mongo.test.DefaultMongoCollectionSupport
 import uk.gov.hmrc.servicedependencies.model.{MongoLibraryVersion, Version}
 import uk.gov.hmrc.servicedependencies.util.{DateUtil, FutureHelpers, MockFutureHelpers}
-import uk.gov.hmrc.time.DateTimeUtils
 
 class LibraryVersionRepositorySpec
     extends WordSpecLike
@@ -57,14 +56,4 @@ class LibraryVersionRepositorySpec
     }
   }
 
-  "clearAllDependencyEntries" should {
-    "deletes everything" in {
-      val libraryVersion = MongoLibraryVersion("some-library", Some(Version(1, 0, 2)), DateUtil.now)
-
-      repo.update(libraryVersion).futureValue
-      repo.getAllEntries.futureValue should have size 1
-      repo.clearAllData.futureValue
-      repo.getAllEntries.futureValue shouldBe Nil
-    }
-  }
 }

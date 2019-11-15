@@ -57,17 +57,4 @@ class SbtPluginVersionRepositorySpec
     }
   }
 
-  "clearAllDependencyEntries" should {
-    "deletes everything" in {
-
-      val sbtPluginVersion = MongoSbtPluginVersion("some-sbtPlugin", Some(Version(1, 0, 2)), DateUtil.now)
-      repo.update(sbtPluginVersion).futureValue
-
-      repo.getAllEntries.futureValue should have size 1
-
-      repo.clearAllData.futureValue
-
-      repo.getAllEntries.futureValue shouldBe Nil
-    }
-  }
 }

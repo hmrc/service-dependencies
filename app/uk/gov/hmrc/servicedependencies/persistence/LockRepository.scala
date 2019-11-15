@@ -17,7 +17,6 @@
 package uk.gov.hmrc.servicedependencies.persistence
 
 import com.google.inject.{Inject, Singleton}
-import com.mongodb.BasicDBObject
 import uk.gov.hmrc.mongo.component.MongoComponent
 import uk.gov.hmrc.mongo.lock.model.Lock
 import uk.gov.hmrc.mongo.play.PlayMongoCollection
@@ -35,5 +34,4 @@ class LocksRepository @Inject()(mongo: MongoComponent)(implicit ec: ExecutionCon
 
   def getAllEntries: Future[Seq[Lock]] = collection.find().toFuture()
 
-  def clearAllData: Future[Boolean] = collection.deleteMany(new BasicDBObject()).toFuture.map(_.wasAcknowledged())
 }

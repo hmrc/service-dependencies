@@ -193,10 +193,10 @@ class DependencyDataUpdatingService @Inject()(
 
   def dropCollection(collectionName: String) =
     collectionName match {
-      case "repositoryLibraryDependencies" => repositoryLibraryDependenciesRepository.clearAllData
-      case "libraryVersions"               => libraryVersionRepository.clearAllData
-      case "sbtPluginVersions"             => sbtPluginVersionRepository.clearAllData
-      case "locks"                         => locksRepository.clearAllData
+      case "repositoryLibraryDependencies" => repositoryLibraryDependenciesRepository.collection.drop().toFuture()
+      case "libraryVersions"               => libraryVersionRepository.collection.drop().toFuture()
+      case "sbtPluginVersions"             => sbtPluginVersionRepository.collection.drop().toFuture()
+      case "locks"                         => locksRepository.collection.drop().toFuture()
       case other                           => throw new RuntimeException(s"dropping $other collection is not supported")
     }
 

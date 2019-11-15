@@ -116,10 +116,6 @@ class DependencyLookupServiceSpec
       override def getHistoric: Future[List[BobbyRulesSummary]] =
         Future(store.get)
 
-      override def clearAllData: Future[Boolean] = {
-        store.set(List.empty)
-        Future(true)
-      }
     }
 
     implicit val hc = HeaderCarrier()
