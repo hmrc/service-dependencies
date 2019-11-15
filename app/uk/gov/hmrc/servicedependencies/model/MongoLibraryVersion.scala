@@ -16,14 +16,15 @@
 
 package uk.gov.hmrc.servicedependencies.model
 
-import org.joda.time.DateTime
-import play.api.libs.json.Json
-import uk.gov.hmrc.mongo.play.json.MongoJodaFormats
-import uk.gov.hmrc.time.DateTimeUtils
+import java.time.Instant
 
-case class MongoLibraryVersion(libraryName: String, version: Option[Version], updateDate: DateTime = DateTimeUtils.now)
+import play.api.libs.json.Json
+import uk.gov.hmrc.mongo.play.json.MongoJavatimeFormats
+import uk.gov.hmrc.servicedependencies.util.DateUtil
+
+case class MongoLibraryVersion(libraryName: String, version: Option[Version], updateDate: Instant = DateUtil.now)
 object MongoLibraryVersion {
-  implicit val dtf    = MongoJodaFormats.dateTimeFormats
+  implicit val dtf    = MongoJavatimeFormats.localDateFormats
   implicit val format = {
     implicit val vf = Version.mongoFormat
     Json.format[MongoLibraryVersion]

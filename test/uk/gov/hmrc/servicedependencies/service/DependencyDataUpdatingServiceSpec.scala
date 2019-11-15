@@ -16,7 +16,8 @@
 
 package uk.gov.hmrc.servicedependencies.service
 
-import org.joda.time.DateTime
+import java.time.Instant
+
 import org.mockito.ArgumentMatchers.{any, eq => eqTo}
 import org.mockito.MockitoSugar
 import org.scalatest.{FunSpec, Matchers, OptionValues}
@@ -30,7 +31,7 @@ import uk.gov.hmrc.servicedependencies.config.model.{CuratedDependencyConfig, Ot
 import uk.gov.hmrc.servicedependencies.controller.model.{Dependencies, Dependency}
 import uk.gov.hmrc.servicedependencies.model._
 import uk.gov.hmrc.servicedependencies.persistence._
-import uk.gov.hmrc.time.DateTimeUtils
+import uk.gov.hmrc.servicedependencies.util.DateUtil
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.{ExecutionContext, Future}
@@ -48,7 +49,7 @@ class DependencyDataUpdatingServiceSpec
       .configure("metrics.jvm" -> false)
       .build()
 
-  private val timeForTest = DateTimeUtils.now
+  private val timeForTest = DateUtil.now
 
   private val curatedDependencyConfig = CuratedDependencyConfig(
     sbtPlugins        = Nil,
@@ -510,7 +511,7 @@ class DependencyDataUpdatingServiceSpec
       mongoLocks,
       dependenciesDataSource
     ) {
-      override def now: DateTime = timeForTest
+      override def now: Instant = timeForTest
 
       override val libraryMongoLock              = testMongoLockBuilder("libraryMongoLock")
       override val sbtPluginMongoLock            = testMongoLockBuilder("sbtPluginMongoLock")

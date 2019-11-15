@@ -22,7 +22,7 @@ import org.mongodb.scala.model.IndexModel
 import org.scalatest.{Matchers, WordSpecLike}
 import uk.gov.hmrc.mongo.test.DefaultMongoCollectionSupport
 import uk.gov.hmrc.servicedependencies.model.{MongoLibraryVersion, Version}
-import uk.gov.hmrc.servicedependencies.util.{FutureHelpers, MockFutureHelpers}
+import uk.gov.hmrc.servicedependencies.util.{DateUtil, FutureHelpers, MockFutureHelpers}
 import uk.gov.hmrc.time.DateTimeUtils
 
 class LibraryVersionRepositorySpec
@@ -41,14 +41,14 @@ class LibraryVersionRepositorySpec
 
   "update" should {
     "inserts correctly" in {
-      val libraryVersion = MongoLibraryVersion("some-library", Some(Version(1, 0, 2)), DateTimeUtils.now)
+      val libraryVersion = MongoLibraryVersion("some-library", Some(Version(1, 0, 2)), DateUtil.now)
 
       repo.update(libraryVersion).futureValue
       repo.getAllEntries.futureValue shouldBe Seq(libraryVersion)
     }
 
     "updates correctly (based on library name)" in {
-      val libraryVersion    = MongoLibraryVersion("some-library", Some(Version(1, 0, 2)), DateTimeUtils.now)
+      val libraryVersion    = MongoLibraryVersion("some-library", Some(Version(1, 0, 2)), DateUtil.now)
       val newLibraryVersion = libraryVersion.copy(version = Some(Version(1, 0, 5)))
 
       repo.update(libraryVersion).futureValue
@@ -59,7 +59,7 @@ class LibraryVersionRepositorySpec
 
   "clearAllDependencyEntries" should {
     "deletes everything" in {
-      val libraryVersion = MongoLibraryVersion("some-library", Some(Version(1, 0, 2)), DateTimeUtils.now)
+      val libraryVersion = MongoLibraryVersion("some-library", Some(Version(1, 0, 2)), DateUtil.now)
 
       repo.update(libraryVersion).futureValue
       repo.getAllEntries.futureValue should have size 1

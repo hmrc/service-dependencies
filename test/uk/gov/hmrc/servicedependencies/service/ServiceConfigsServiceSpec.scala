@@ -17,14 +17,13 @@
 package uk.gov.hmrc.servicedependencies.service
 import java.time.LocalDate
 
-import org.joda.time.DateTime
-import org.mockito.Mockito._
-import org.scalatest.concurrent.{IntegrationPatience, ScalaFutures}
 import org.mockito.MockitoSugar
+import org.scalatest.concurrent.{IntegrationPatience, ScalaFutures}
 import org.scalatest.{AsyncFlatSpec, Matchers}
 import uk.gov.hmrc.servicedependencies.connector.ServiceConfigsConnector
 import uk.gov.hmrc.servicedependencies.controller.model.{Dependencies, Dependency}
 import uk.gov.hmrc.servicedependencies.model.{BobbyRule, BobbyVersionRange, Version}
+import uk.gov.hmrc.servicedependencies.util.DateUtil
 
 import scala.concurrent.Future
 
@@ -48,7 +47,7 @@ class ServiceConfigsServiceSpec
 
     val dependency = buildDependency("unmatched-name", "2.5.18")
 
-    val dependencies = Dependencies("repo", Seq(dependency), Seq(dependency), Seq(dependency), DateTime.now())
+    val dependencies = Dependencies("repo", Seq(dependency), Seq(dependency), Seq(dependency), DateUtil.now)
     val result       = service.getDependenciesWithBobbyRules(dependencies)
 
     result map { result =>
@@ -64,7 +63,7 @@ class ServiceConfigsServiceSpec
 
     val dependency = buildDependency("name", "2.5.19")
 
-    val dependencies = Dependencies("repo", Seq(dependency), Seq(dependency), Seq(dependency), DateTime.now())
+    val dependencies = Dependencies("repo", Seq(dependency), Seq(dependency), Seq(dependency), DateUtil.now)
     val result       = service.getDependenciesWithBobbyRules(dependencies)
 
     result map { result =>
@@ -78,7 +77,7 @@ class ServiceConfigsServiceSpec
     val bobbyRules = Map("name" -> List(bobbyRule1, bobbyRule2))
 
     val dependency   = buildDependency("name", "2.5.18")
-    val dependencies = Dependencies("repo", Seq(dependency), Seq(dependency), Seq(dependency), DateTime.now())
+    val dependencies = Dependencies("repo", Seq(dependency), Seq(dependency), Seq(dependency), DateUtil.now)
 
     when(serviceConfigsConnector.getBobbyRules()).thenReturn(Future.successful(bobbyRules))
 
@@ -101,7 +100,7 @@ class ServiceConfigsServiceSpec
     val bobbyRules = Map("name" -> List(bobbyRule1, bobbyRule2))
 
     val dependency   = buildDependency("name", "2.5.16")
-    val dependencies = Dependencies("repo", Seq(dependency), Seq(dependency), Seq(dependency), DateTime.now())
+    val dependencies = Dependencies("repo", Seq(dependency), Seq(dependency), Seq(dependency), DateUtil.now)
 
     when(serviceConfigsConnector.getBobbyRules()).thenReturn(Future.successful(bobbyRules))
 
@@ -137,7 +136,7 @@ class ServiceConfigsServiceSpec
 
     val libraryDependency = buildDependency("name", "2.5.18")
     val pluginDependency  = buildDependency("another-name", "2.3")
-    val dependencies      = Dependencies("repo", Seq(libraryDependency), Seq(pluginDependency), Seq(), DateTime.now())
+    val dependencies      = Dependencies("repo", Seq(libraryDependency), Seq(pluginDependency), Seq(), DateUtil.now)
 
     when(serviceConfigsConnector.getBobbyRules()).thenReturn(Future.successful(bobbyRules))
 

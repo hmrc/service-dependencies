@@ -15,20 +15,22 @@
  */
 
 package uk.gov.hmrc.servicedependencies.connector
+import java.time.Instant
+
 import javax.inject.{Inject, Singleton}
 import org.slf4j.LoggerFactory
 import uk.gov.hmrc.servicedependencies.Github
 import uk.gov.hmrc.servicedependencies.config.model.{CuratedDependencyConfig, SbtPluginConfig}
 import uk.gov.hmrc.servicedependencies.connector.model.RepositoryInfo
 import uk.gov.hmrc.servicedependencies.model._
-import uk.gov.hmrc.time.DateTimeUtils
+import uk.gov.hmrc.servicedependencies.util.DateUtil
 
 @Singleton
 class GithubConnector @Inject() (github: Github) {
 
   lazy val logger = LoggerFactory.getLogger(this.getClass)
 
-  def now = DateTimeUtils.now
+  def now: Instant = DateUtil.now
 
 
   def findOtherDependencies(githubSearchResults: GithubSearchResults): Seq[MongoRepositoryDependency] = {

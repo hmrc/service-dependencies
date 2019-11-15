@@ -18,16 +18,14 @@ package uk.gov.hmrc.servicedependencies.persistence
 
 import com.google.inject.{Inject, Singleton}
 import com.mongodb.BasicDBObject
-import org.joda.time.{DateTime, DateTimeZone}
 import org.mongodb.scala.model.Filters.{equal, regex}
 import org.mongodb.scala.model.Indexes.hashed
 import org.mongodb.scala.model.{IndexModel, IndexOptions, ReplaceOptions}
 import play.api.Logger
-import play.api.libs.json.Json
 import uk.gov.hmrc.mongo.component.MongoComponent
 import uk.gov.hmrc.mongo.play.PlayMongoCollection
 import uk.gov.hmrc.servicedependencies.model._
-import uk.gov.hmrc.servicedependencies.util.FutureHelpers
+import uk.gov.hmrc.servicedependencies.util.{DateUtil, FutureHelpers}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
@@ -87,6 +85,6 @@ class RepositoryLibraryDependenciesRepository @Inject()(mongo: MongoComponent, f
 
   def clearUpdateDates: Future[Seq[MongoRepositoryDependencies]] =
     getAllEntries.flatMap { es =>
-      Future.sequence(es.map(mrd => update(mrd.copy(updateDate = new DateTime(0, DateTimeZone.UTC)))))
+      Future.sequence(es.map(mrd => update(mrd.copy(updateDate = DateUtil.epoch))))
     }
 }

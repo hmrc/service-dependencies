@@ -14,15 +14,13 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.servicedependencies.connector.model
+package uk.gov.hmrc.servicedependencies.util
 
 import java.time.Instant
 
-import play.api.libs.json._
+object DateUtil {
 
-case class Repository(name: String, lastActive: Instant, teamNames: Seq[String])
+  val now = Instant.now()
+  val epoch = Instant.EPOCH
 
-object Repository extends EnvReads with EnvWrites {
-
-  implicit val format: OFormat[Repository] = Json.format[Repository]
 }

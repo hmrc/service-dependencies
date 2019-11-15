@@ -16,17 +16,17 @@
 
 package uk.gov.hmrc.servicedependencies.controller.model
 
-import org.joda.time.DateTime
+import java.time.Instant
+
 import play.api.libs.functional.syntax._
-import play.api.libs.json.{OWrites, Writes, __}
-import uk.gov.hmrc.http.controllers.RestFormats
+import play.api.libs.json._
 
 case class Dependencies(
     repositoryName        : String
   , libraryDependencies   : Seq[Dependency]
   , sbtPluginsDependencies: Seq[Dependency]
   , otherDependencies     : Seq[Dependency]
-  , lastUpdated           : DateTime
+  , lastUpdated           : Instant
   )
 
 object Dependencies {
@@ -36,7 +36,7 @@ object Dependencies {
     ~ (__ \ "libraryDependencies"   ).lazyWrite(Writes.seq[Dependency](Dependency.writes))
     ~ (__ \ "sbtPluginsDependencies").lazyWrite(Writes.seq[Dependency](Dependency.writes))
     ~ (__ \ "otherDependencies"     ).lazyWrite(Writes.seq[Dependency](Dependency.writes))
-    ~ (__ \ "lastUpdated"           ).write[DateTime](RestFormats.dateTimeFormats)
+    ~ (__ \ "lastUpdated"           ).write[Instant]
     )(unlift(Dependencies.unapply))
 
 }

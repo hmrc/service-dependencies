@@ -16,19 +16,18 @@
 
 package uk.gov.hmrc.servicedependencies.connector
 
+import java.time.Instant
+
 import com.github.tomakehurst.wiremock.client.WireMock._
-import org.joda.time.DateTime
-import org.scalatest.{BeforeAndAfterAll, FreeSpec, MustMatchers}
-import org.scalatest.concurrent.{IntegrationPatience, ScalaFutures}
 import org.mockito.MockitoSugar
+import org.scalatest.concurrent.{IntegrationPatience, ScalaFutures}
+import org.scalatest.{BeforeAndAfterAll, FreeSpec, MustMatchers}
 import org.scalatestplus.play.guice.GuiceOneAppPerSuite
 import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
 import uk.gov.hmrc.http._
 import uk.gov.hmrc.servicedependencies.WireMockConfig
 import uk.gov.hmrc.servicedependencies.connector.model.RepositoryInfo
-
-import scala.concurrent.ExecutionContext.Implicits.global
 
 class TeamsAndRepositoriesConnectorSpec
     extends FreeSpec
@@ -94,8 +93,8 @@ class TeamsAndRepositoriesConnectorSpec
     "correctly parse json response" in {
       val repositories = services.getAllRepositories().futureValue
       repositories mustBe List(
-        RepositoryInfo("test-repo", new DateTime("2015-09-15T17:27:38.000+01:00"), new DateTime("2017-05-19T12:00:51.000+01:00"),"Prototype",None),
-        RepositoryInfo("another-repo",new DateTime("2016-05-12T11:18:53.000+01:00"), new DateTime("2016-05-12T16:43:32.000+01:00"),"Prototype",None))
+        RepositoryInfo("test-repo", Instant.parse("2015-09-15T16:27:38.000Z"), Instant.parse("2017-05-19T11:00:51.000Z"),"Prototype",None),
+        RepositoryInfo("another-repo", Instant.parse("2016-05-12T10:18:53.000Z"), Instant.parse("2016-05-12T15:43:32.000Z"),"Prototype",None))
     }
   }
 

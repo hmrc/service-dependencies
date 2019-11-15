@@ -16,16 +16,15 @@
 
 package uk.gov.hmrc.servicedependencies.connector
 import com.kenshoo.play.metrics.DisabledMetrics
-import org.joda.time.DateTime
-import org.scalatest.{MustMatchers, WordSpec}
+import org.mockito.ArgumentMatchers.any
 import org.mockito.MockitoSugar
-import uk.gov.hmrc.servicedependencies.{Github, GithubSearchError}
+import org.scalatest.{MustMatchers, WordSpec}
 import uk.gov.hmrc.servicedependencies.config.ServiceDependenciesConfig
+import uk.gov.hmrc.servicedependencies.config.model.CuratedDependencyConfig
 import uk.gov.hmrc.servicedependencies.connector.model.RepositoryInfo
 import uk.gov.hmrc.servicedependencies.model.{GithubSearchResults, MongoRepositoryDependency, Version}
-import org.mockito.Mockito.when
-import org.mockito.ArgumentMatchers.{any, eq => is}
-import uk.gov.hmrc.servicedependencies.config.model.CuratedDependencyConfig
+import uk.gov.hmrc.servicedependencies.util.DateUtil
+import uk.gov.hmrc.servicedependencies.{Github, GithubSearchError}
 
 class GithubConnectorSpec extends WordSpec with MustMatchers with MockitoSugar {
 
@@ -103,7 +102,7 @@ class GithubConnectorSpec extends WordSpec with MustMatchers with MockitoSugar {
 
   "buildDependencies" should {
 
-    val repoInfo = RepositoryInfo("test-repo", DateTime.now(), DateTime.now(),"Java")
+    val repoInfo = RepositoryInfo("test-repo", DateUtil.now, DateUtil.now, "Java")
     val depConfig = new CuratedDependencyConfig(Seq(), Seq(), Seq())
 
     "return None when repo is not found in github" in {

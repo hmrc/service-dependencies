@@ -16,9 +16,11 @@
 
 package uk.gov.hmrc.servicedependencies.service
 
+import java.time.Instant
+import java.time.temporal.ChronoUnit
+
 import org.eclipse.egit.github.core.RequestError
 import org.eclipse.egit.github.core.client.RequestException
-import org.joda.time.DateTime
 import org.mockito.ArgumentMatchers.any
 import org.mockito.invocation.InvocationOnMock
 import org.mockito.{ArgumentCaptor, Mockito, MockitoSugar}
@@ -32,8 +34,8 @@ import uk.gov.hmrc.servicedependencies.connector.model.{Repository, RepositoryIn
 import uk.gov.hmrc.servicedependencies.connector.{GithubConnector, TeamsAndRepositoriesConnector, TeamsForServices}
 import uk.gov.hmrc.servicedependencies.model._
 import uk.gov.hmrc.servicedependencies.persistence.RepositoryLibraryDependenciesRepository
+import uk.gov.hmrc.servicedependencies.util.DateUtil
 import uk.gov.hmrc.servicedependencies.{Github, GithubSearchError}
-import uk.gov.hmrc.time.DateTimeUtils
 
 import scala.collection.JavaConversions._
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -49,8 +51,8 @@ class DependenciesDataSourceSpec
 
   implicit val hc = HeaderCarrier()
 
-  val timeNow       = DateTimeUtils.now
-  val timeInThePast = DateTimeUtils.now.minusDays(1)
+  val timeNow       = DateUtil.now
+  val timeInThePast = DateUtil.now.minus(1, ChronoUnit.DAYS)
 
   class GithubStub(
     val lookupMap: Map[String, Option[String]],
@@ -143,7 +145,7 @@ class DependenciesDataSourceSpec
       Mockito.verifyNoInteractions(repositoryLibraryDependenciesRepository)
 
       val currentDependencyEntries =
-        Seq(MongoRepositoryDependencies("repo1", Nil, Nil, Nil, timeInThePast.plusMinutes(1)))
+        Seq(MongoRepositoryDependencies("repo1", Nil, Nil, Nil, timeInThePast.plus(1, ChronoUnit.MINUTES)))
       dependenciesDataSource
         .persistDependenciesForAllRepositories(curatedDependencyConfig, currentDependencyEntries)
         .futureValue
@@ -159,7 +161,7 @@ class DependenciesDataSourceSpec
         .thenReturn(Future.successful(mock[MongoRepositoryDependencies]))
 
       val currentDependencyEntries =
-        Seq(MongoRepositoryDependencies("repo1", Nil, Nil, Nil, timeInThePast.plusMinutes(1)))
+        Seq(MongoRepositoryDependencies("repo1", Nil, Nil, Nil, timeInThePast.plus(1, ChronoUnit.MINUTES)))
 
       dependenciesDataSource
         .persistDependenciesForAllRepositories(curatedDependencyConfig, currentDependencyEntries, force = true)
@@ -379,7 +381,7 @@ class DependenciesDataSourceSpec
       githubConnector,
       repositoryLibraryDependenciesRepository
       ) {
-      override def now: DateTime       = timeNow
+      override def now: Instant       = timeNow
     }
   }
 

@@ -19,7 +19,7 @@ package uk.gov.hmrc.servicedependencies.testonly
 import javax.inject.Inject
 import play.api.libs.json._
 import play.api.mvc.ControllerComponents
-import uk.gov.hmrc.mongo.play.json.MongoJodaFormats
+import uk.gov.hmrc.mongo.play.json.MongoJavatimeFormats
 import uk.gov.hmrc.play.bootstrap.controller.BackendController
 import uk.gov.hmrc.servicedependencies.model._
 import uk.gov.hmrc.servicedependencies.persistence._
@@ -37,7 +37,7 @@ class IntegrationTestController @Inject()(
 
   import ExecutionContext.Implicits.global
 
-  implicit val dtf                   = MongoJodaFormats.dateTimeFormats
+  implicit val dtf                   = MongoJavatimeFormats.localDateFormats
   implicit val vf                    = Version.apiFormat
   implicit val libraryVersionReads   = Json.using[Json.WithDefaultValues].reads[MongoLibraryVersion]
   implicit val sbtVersionReads       = Json.using[Json.WithDefaultValues].reads[MongoSbtPluginVersion]

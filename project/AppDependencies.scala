@@ -14,7 +14,6 @@ private object AppDependencies {
     "uk.gov.hmrc"        %% "github-client"             % "2.10.0",
     "uk.gov.hmrc"        %% "hmrc-mongo-metrix-play-26" % hmrcMongoVersion,
     "uk.gov.hmrc"        %% "hmrc-mongo-play-26"        % hmrcMongoVersion,
-    "com.typesafe.play"  %% "play-json-joda"            % "2.6.0",
     "org.typelevel"      %% "cats-core"                 % "1.1.0",
     "org.apache.commons" % "commons-compress"           % "1.19",
     "com.lightbend.akka" %% "akka-stream-alpakka-sns"   % "1.1.2",

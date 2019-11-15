@@ -16,18 +16,19 @@
 
 package uk.gov.hmrc.servicedependencies.service
 
+import java.time.Instant
+
 import com.google.inject.{Inject, Singleton}
 import org.slf4j.LoggerFactory
-
-import scala.concurrent.ExecutionContext.Implicits.global
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.mongo.lock.model.Lock
 import uk.gov.hmrc.servicedependencies.config.CuratedDependencyConfigProvider
 import uk.gov.hmrc.servicedependencies.controller.model.{Dependencies, Dependency}
 import uk.gov.hmrc.servicedependencies.model._
 import uk.gov.hmrc.servicedependencies.persistence._
-import uk.gov.hmrc.time.DateTimeUtils
+import uk.gov.hmrc.servicedependencies.util.DateUtil
 
+import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
 @Singleton
@@ -43,7 +44,7 @@ class DependencyDataUpdatingService @Inject()(
 
   lazy val logger = LoggerFactory.getLogger(this.getClass)
 
-  def now = DateTimeUtils.now
+  def now: Instant = DateUtil.now
 
   def repositoryDependencyMongoLock: MongoLock = mongoLocks.repositoryDependencyMongoLock
 
