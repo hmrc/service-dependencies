@@ -32,6 +32,7 @@ package uk.gov.hmrc.servicedependencies.persistence
  * limitations under the License.
  */
 
+import java.time.Instant
 import java.time.temporal.ChronoUnit
 
 import org.mockito.MockitoSugar
@@ -39,7 +40,7 @@ import org.mongodb.scala.model.IndexModel
 import org.scalatest.{Matchers, WordSpecLike}
 import uk.gov.hmrc.mongo.test.CleanMongoCollectionSupport
 import uk.gov.hmrc.servicedependencies.model.{MongoRepositoryDependencies, MongoRepositoryDependency, Version}
-import uk.gov.hmrc.servicedependencies.util.{DateUtil, FutureHelpers, MockFutureHelpers}
+import uk.gov.hmrc.servicedependencies.util.{FutureHelpers, MockFutureHelpers}
 
 class RepositoryLibraryDependenciesRepositorySpec
     extends WordSpecLike
@@ -62,7 +63,7 @@ class RepositoryLibraryDependenciesRepositorySpec
         Seq(MongoRepositoryDependency("some-lib", Version("1.0.2"))),
         Nil,
         Nil,
-        DateUtil.now)
+        Instant.now())
 
       repo.update(repositoryLibraryDependencies).futureValue
 
@@ -76,7 +77,7 @@ class RepositoryLibraryDependenciesRepositorySpec
         Seq(MongoRepositoryDependency("some-lib", Version("1.0.2-play-26"))),
         Nil,
         Nil,
-        DateUtil.now)
+        Instant.now())
       repo.update(repositoryLibraryDependencies).futureValue
 
       repo.getAllEntries.futureValue shouldBe Seq(repositoryLibraryDependencies)
@@ -91,7 +92,7 @@ class RepositoryLibraryDependenciesRepositorySpec
         Seq(MongoRepositoryDependency("some-lib", Version("1.0.2"))),
         Nil,
         Nil,
-        DateUtil.now)
+        Instant.now())
       val newRepositoryLibraryDependencies = repositoryLibraryDependencies.copy(
         libraryDependencies = repositoryLibraryDependencies.libraryDependencies :+ MongoRepositoryDependency(
           "some-other-lib",
@@ -110,7 +111,7 @@ class RepositoryLibraryDependenciesRepositorySpec
         Seq(MongoRepositoryDependency("some-lib", Version("1.0.2"))),
         Nil,
         Nil,
-        DateUtil.now)
+        Instant.now())
       val newRepositoryLibraryDependencies = repositoryLibraryDependencies.copy(
         libraryDependencies =
           repositoryLibraryDependencies.libraryDependencies :+ MongoRepositoryDependency(
@@ -132,13 +133,13 @@ class RepositoryLibraryDependenciesRepositorySpec
         Seq(MongoRepositoryDependency("some-lib1", Version("1.0.2"))),
         Nil,
         Nil,
-        DateUtil.now)
+        Instant.now())
       val repositoryLibraryDependencies2 = MongoRepositoryDependencies(
         "some-repo2",
         Seq(MongoRepositoryDependency("some-lib2", Version("11.0.22"))),
         Nil,
         Nil,
-        DateUtil.now)
+        Instant.now())
 
       repo.update(repositoryLibraryDependencies1).futureValue
       repo.update(repositoryLibraryDependencies2).futureValue
@@ -153,13 +154,13 @@ class RepositoryLibraryDependenciesRepositorySpec
         Seq(MongoRepositoryDependency("some-lib1", Version("1.0.2"))),
         Nil,
         Nil,
-        DateUtil.now)
+        Instant.now())
       val repositoryLibraryDependencies2 = MongoRepositoryDependencies(
         "some-repo2",
         Seq(MongoRepositoryDependency("some-lib2", Version("11.0.22"))),
         Nil,
         Nil,
-        DateUtil.now)
+        Instant.now())
 
       repo.update(repositoryLibraryDependencies1).futureValue
       repo.update(repositoryLibraryDependencies2).futureValue
@@ -173,13 +174,13 @@ class RepositoryLibraryDependenciesRepositorySpec
         Seq(MongoRepositoryDependency("some-lib1", Version("1.0.2"))),
         Nil,
         Nil,
-        DateUtil.now)
+        Instant.now())
       val repositoryLibraryDependencies2 = MongoRepositoryDependencies(
         "some-repo2",
         Seq(MongoRepositoryDependency("some-lib2", Version("11.0.22"))),
         Nil,
         Nil,
-        DateUtil.now)
+        Instant.now())
 
       repo.update(repositoryLibraryDependencies1).futureValue
       repo.update(repositoryLibraryDependencies2).futureValue
@@ -196,7 +197,7 @@ class RepositoryLibraryDependenciesRepositorySpec
         Seq(MongoRepositoryDependency("some-lib", Version("1.0.2"))),
         Nil,
         Nil,
-        DateUtil.now)
+        Instant.now())
 
       repo.update(repositoryLibraryDependencies).futureValue
 
@@ -211,8 +212,8 @@ class RepositoryLibraryDependenciesRepositorySpec
   "clearUpdateDates" should {
     "resets the last update dates to January 1, 1970" in {
 
-      val t1 = DateUtil.now
-      val t2 = DateUtil.now.plus(1, ChronoUnit.DAYS)
+      val t1 = Instant.now()
+      val t2 = Instant.now().plus(1, ChronoUnit.DAYS)
       val repositoryLibraryDependencies1 =
         MongoRepositoryDependencies(
           "some-repo",
@@ -239,8 +240,8 @@ class RepositoryLibraryDependenciesRepositorySpec
 
       repo.getAllEntries.futureValue
         .map(_.updateDate) should contain theSameElementsAs Seq(
-        DateUtil.epoch,
-        DateUtil.epoch)
+        Instant.EPOCH,
+        Instant.EPOCH)
     }
   }
 }

@@ -16,22 +16,19 @@
 
 package uk.gov.hmrc.servicedependencies.persistence
 
-import java.util.concurrent.TimeUnit
-
 import com.google.inject.{Inject, Singleton}
 import uk.gov.hmrc.mongo.component.PlayMongoComponent
 import uk.gov.hmrc.mongo.lock.MongoLockRepository
 
 import scala.concurrent.ExecutionContext
-import scala.concurrent.duration.Duration
+import scala.concurrent.duration._
 
 @Singleton
 class MongoLocks @Inject()(mongo: PlayMongoComponent, mongoLockRepository: MongoLockRepository)(
   implicit ec: ExecutionContext) {
-  val oneHour                         = Duration(60, TimeUnit.MINUTES)
-  val repositoryDependencyMongoLock   = mongoLockRepository.toService("repository-dependencies-data-reload-job", oneHour)
-  val libraryMongoLock                = mongoLockRepository.toService("libraries-data-reload-job", oneHour)
-  val sbtPluginMongoLock              = mongoLockRepository.toService("sbt-plugin-data-reload-job", oneHour)
-  val slugMetadataUpdateSchedulerLock = mongoLockRepository.toService("slug-job-scheduler", oneHour)
-  val bobbyRulesSummarySchedulerLock  = mongoLockRepository.toService("bobby-rules-summary-scheduler", oneHour)
+  val repositoryDependencyMongoLock   = mongoLockRepository.toService("repository-dependencies-data-reload-job", 1.hour)
+  val libraryMongoLock                = mongoLockRepository.toService("libraries-data-reload-job", 1.hour)
+  val sbtPluginMongoLock              = mongoLockRepository.toService("sbt-plugin-data-reload-job", 1.hour)
+  val slugMetadataUpdateSchedulerLock = mongoLockRepository.toService("slug-job-scheduler", 1.hour)
+  val bobbyRulesSummarySchedulerLock  = mongoLockRepository.toService("bobby-rules-summary-scheduler", 1.hour)
 }

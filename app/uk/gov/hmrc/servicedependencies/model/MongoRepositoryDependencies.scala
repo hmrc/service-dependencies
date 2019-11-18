@@ -20,7 +20,6 @@ import java.time.Instant
 
 import play.api.libs.json.{Format, Json}
 import uk.gov.hmrc.mongo.play.json.MongoJavatimeFormats
-import uk.gov.hmrc.servicedependencies.util.DateUtil
 
 case class MongoRepositoryDependency(name: String, currentVersion: Version)
 
@@ -36,7 +35,7 @@ case class MongoRepositoryDependencies(
   libraryDependencies: Seq[MongoRepositoryDependency],
   sbtPluginDependencies: Seq[MongoRepositoryDependency] = Nil,
   otherDependencies: Seq[MongoRepositoryDependency],
-  updateDate: Instant = DateUtil.now)
+  updateDate: Instant = Instant.now())
 
 object MongoRepositoryDependencies {
   implicit val dtf    = MongoJavatimeFormats.localDateFormats

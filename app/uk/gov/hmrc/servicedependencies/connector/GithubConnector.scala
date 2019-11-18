@@ -23,15 +23,11 @@ import uk.gov.hmrc.servicedependencies.Github
 import uk.gov.hmrc.servicedependencies.config.model.{CuratedDependencyConfig, SbtPluginConfig}
 import uk.gov.hmrc.servicedependencies.connector.model.RepositoryInfo
 import uk.gov.hmrc.servicedependencies.model._
-import uk.gov.hmrc.servicedependencies.util.DateUtil
 
 @Singleton
 class GithubConnector @Inject() (github: Github) {
 
   lazy val logger = LoggerFactory.getLogger(this.getClass)
-
-  def now: Instant = DateUtil.now
-
 
   def findOtherDependencies(githubSearchResults: GithubSearchResults): Seq[MongoRepositoryDependency] = {
     githubSearchResults.others.foldLeft(Seq.empty[MongoRepositoryDependency]) {
@@ -77,7 +73,7 @@ class GithubConnector @Inject() (github: Github) {
         libraryDependencies   = findLatestLibrariesVersions(searchResults),
         sbtPluginDependencies = findPluginDependencies(searchResults),
         otherDependencies     = findOtherDependencies(searchResults),
-        updateDate            = now)})
+        updateDate            = Instant.now())})
     match {
       case Left(errorMessage) => {
         logger.error(s"Skipping dependencies update for ${repo.name}, reason: $errorMessage")

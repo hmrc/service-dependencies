@@ -27,7 +27,6 @@ import uk.gov.hmrc.servicedependencies.config.CuratedDependencyConfigProvider
 import uk.gov.hmrc.servicedependencies.controller.model.{Dependencies, Dependency}
 import uk.gov.hmrc.servicedependencies.model._
 import uk.gov.hmrc.servicedependencies.persistence._
-import uk.gov.hmrc.servicedependencies.util.DateUtil
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
@@ -45,7 +44,7 @@ class DependencyDataUpdatingService @Inject()(
 
   lazy val logger = LoggerFactory.getLogger(this.getClass)
 
-  def now: Instant = DateUtil.now
+  def now: Instant = Instant.now()
 
   def repositoryDependencyMongoLock: MongoLockService = mongoLocks.repositoryDependencyMongoLock
 

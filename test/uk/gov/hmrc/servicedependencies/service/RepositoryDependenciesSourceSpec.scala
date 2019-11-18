@@ -15,6 +15,8 @@
  */
 
 package uk.gov.hmrc.servicedependencies.service
+import java.time.Instant
+
 import org.mockito.ArgumentMatchers.any
 import org.mockito.MockitoSugar
 import org.scalatest.concurrent.{IntegrationPatience, ScalaFutures}
@@ -23,7 +25,6 @@ import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.servicedependencies.connector.{Team, TeamsAndRepositoriesConnector}
 import uk.gov.hmrc.servicedependencies.model.{MongoRepositoryDependency, _}
 import uk.gov.hmrc.servicedependencies.persistence.RepositoryLibraryDependenciesRepository
-import uk.gov.hmrc.servicedependencies.util.DateUtil
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
@@ -166,7 +167,7 @@ class RepositoryDependenciesSourceSpec
     lazy val libraryDependenciesSource =
       new RepositoryDependenciesSource(teamsAndRepositoriesConnector, repositoryLibraryDependenciesRepository)
 
-    val timeForTest = DateUtil.now
+    val timeForTest = Instant.now()
   }
 
 }

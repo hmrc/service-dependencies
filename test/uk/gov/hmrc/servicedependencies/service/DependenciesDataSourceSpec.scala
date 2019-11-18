@@ -34,7 +34,6 @@ import uk.gov.hmrc.servicedependencies.connector.model.{Repository, RepositoryIn
 import uk.gov.hmrc.servicedependencies.connector.{GithubConnector, TeamsAndRepositoriesConnector, TeamsForServices}
 import uk.gov.hmrc.servicedependencies.model._
 import uk.gov.hmrc.servicedependencies.persistence.RepositoryLibraryDependenciesRepository
-import uk.gov.hmrc.servicedependencies.util.DateUtil
 import uk.gov.hmrc.servicedependencies.{Github, GithubSearchError}
 
 import scala.collection.JavaConversions._
@@ -51,8 +50,8 @@ class DependenciesDataSourceSpec
 
   implicit val hc = HeaderCarrier()
 
-  val timeNow       = DateUtil.now
-  val timeInThePast = DateUtil.now.minus(1, ChronoUnit.DAYS)
+  val timeNow       = Instant.now()
+  val timeInThePast = Instant.now().minus(1, ChronoUnit.DAYS)
 
   class GithubStub(
     val lookupMap: Map[String, Option[String]],

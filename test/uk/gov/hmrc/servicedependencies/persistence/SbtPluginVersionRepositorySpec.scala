@@ -16,12 +16,14 @@
 
 package uk.gov.hmrc.servicedependencies.persistence
 
+import java.time.Instant
+
 import org.mockito.MockitoSugar
 import org.mongodb.scala.model.IndexModel
 import org.scalatest.{Matchers, WordSpecLike}
 import uk.gov.hmrc.mongo.test.DefaultMongoCollectionSupport
 import uk.gov.hmrc.servicedependencies.model.{MongoSbtPluginVersion, Version}
-import uk.gov.hmrc.servicedependencies.util.{DateUtil, FutureHelpers, MockFutureHelpers}
+import uk.gov.hmrc.servicedependencies.util.{FutureHelpers, MockFutureHelpers}
 import uk.gov.hmrc.time.DateTimeUtils
 
 class SbtPluginVersionRepositorySpec
@@ -39,7 +41,7 @@ class SbtPluginVersionRepositorySpec
   "update" should {
     "inserts correctly" in {
 
-      val sbtPluginVersion = MongoSbtPluginVersion("some-sbtPlugin", Some(Version(1, 0, 2)), DateUtil.now)
+      val sbtPluginVersion = MongoSbtPluginVersion("some-sbtPlugin", Some(Version(1, 0, 2)), Instant.now())
       repo.update(sbtPluginVersion).futureValue
 
       repo.getAllEntries.futureValue shouldBe Seq(sbtPluginVersion)
@@ -47,7 +49,7 @@ class SbtPluginVersionRepositorySpec
 
     "updates correctly (based on sbtPlugin name)" in {
 
-      val sbtPluginVersion    = MongoSbtPluginVersion("some-sbtPlugin", Some(Version(1, 0, 2)), DateUtil.now)
+      val sbtPluginVersion    = MongoSbtPluginVersion("some-sbtPlugin", Some(Version(1, 0, 2)), Instant.now())
       val newSbtPluginVersion = sbtPluginVersion.copy(version = Some(Version(1, 0, 5)))
       repo.update(sbtPluginVersion).futureValue
 
@@ -60,7 +62,7 @@ class SbtPluginVersionRepositorySpec
   "clearAllDependencyEntries" should {
     "deletes everything" in {
 
-      val sbtPluginVersion = MongoSbtPluginVersion("some-sbtPlugin", Some(Version(1, 0, 2)), DateUtil.now)
+      val sbtPluginVersion = MongoSbtPluginVersion("some-sbtPlugin", Some(Version(1, 0, 2)), Instant.now())
       repo.update(sbtPluginVersion).futureValue
 
       repo.getAllEntries.futureValue should have size 1

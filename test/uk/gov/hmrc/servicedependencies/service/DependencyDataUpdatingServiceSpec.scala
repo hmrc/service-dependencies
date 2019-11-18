@@ -17,7 +17,6 @@
 package uk.gov.hmrc.servicedependencies.service
 
 import java.time.Instant
-import java.util.concurrent.TimeUnit
 
 import org.mockito.ArgumentMatchers.{any, eq => eqTo}
 import org.mockito.MockitoSugar
@@ -33,10 +32,9 @@ import uk.gov.hmrc.servicedependencies.config.model.{CuratedDependencyConfig, Ot
 import uk.gov.hmrc.servicedependencies.controller.model.{Dependencies, Dependency}
 import uk.gov.hmrc.servicedependencies.model._
 import uk.gov.hmrc.servicedependencies.persistence._
-import uk.gov.hmrc.servicedependencies.util.DateUtil
 
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.duration.Duration
+import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}
 
 class DependencyDataUpdatingServiceSpec
@@ -52,7 +50,7 @@ class DependencyDataUpdatingServiceSpec
       .configure("metrics.jvm" -> false)
       .build()
 
-  private val timeForTest = DateUtil.now
+  private val timeForTest = Instant.now()
 
   private val curatedDependencyConfig = CuratedDependencyConfig(
     sbtPlugins        = Nil,
@@ -520,7 +518,7 @@ class DependencyDataUpdatingServiceSpec
   def noLockTestMongoLockBuilder(testLockId: String): MongoLockService = new MongoLockService {
     override val mongoLockRepository: MongoLockRepository = new MongoLockRepository(mongoComponent, new CurrentTimestampSupport())
     override val lockId: String = testLockId
-    override val ttl: Duration = Duration(60, TimeUnit.MINUTES)
+    override val ttl: Duration = 1.hour
     override def attemptLockWithRelease[T](body: => Future[T])(implicit ec: ExecutionContext): Future[Option[T]] =
       body.map(Some(_))
   }
@@ -528,7 +526,7 @@ class DependencyDataUpdatingServiceSpec
   def denyingTestMongoLockBuilder(testLockId: String): MongoLockService = new MongoLockService {
     override val mongoLockRepository: MongoLockRepository = new MongoLockRepository(mongoComponent, new CurrentTimestampSupport())
     override val lockId: String = testLockId
-    override val ttl: Duration = Duration(60, TimeUnit.MINUTES)
+    override val ttl: Duration = 1.hour
     override def attemptLockWithRelease[T](body: => Future[T])(implicit ec: ExecutionContext): Future[Option[T]] =
       throw new RuntimeException(s"Mongo is locked for testing")
   }

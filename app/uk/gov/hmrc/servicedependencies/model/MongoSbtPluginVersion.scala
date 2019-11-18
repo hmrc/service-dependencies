@@ -20,12 +20,11 @@ import java.time.Instant
 
 import play.api.libs.json.Json
 import uk.gov.hmrc.mongo.play.json.MongoJavatimeFormats
-import uk.gov.hmrc.servicedependencies.util.DateUtil
 
 case class MongoSbtPluginVersion(
   sbtPluginName: String,
   version: Option[Version],
-  updateDate: Instant = DateUtil.now)
+  updateDate: Instant = Instant.now())
 
 object MongoSbtPluginVersion {
   implicit val dtf    = MongoJavatimeFormats.localDateFormats

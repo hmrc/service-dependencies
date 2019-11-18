@@ -27,7 +27,6 @@ import uk.gov.hmrc.servicedependencies.connector.model.RepositoryInfo
 import uk.gov.hmrc.servicedependencies.connector.{GithubConnector, TeamsAndRepositoriesConnector}
 import uk.gov.hmrc.servicedependencies.model._
 import uk.gov.hmrc.servicedependencies.persistence.RepositoryLibraryDependenciesRepository
-import uk.gov.hmrc.servicedependencies.util.DateUtil
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
@@ -42,8 +41,7 @@ class DependenciesDataSource @Inject()(
 
   lazy val logger = LoggerFactory.getLogger(this.getClass)
 
-  def now : Instant = DateUtil.now
-
+  def now : Instant = Instant.now()
 
   def buildDependency(repo: RepositoryInfo,
                      curatedDependencyConfig: CuratedDependencyConfig,
@@ -63,7 +61,7 @@ class DependenciesDataSource @Inject()(
   private def lastUpdated(repoName: String, currentDeps: Seq[MongoRepositoryDependencies]): Instant =
     currentDeps.find(_.repositoryName == repoName)
       .map(_.updateDate)
-      .getOrElse(DateUtil.epoch)
+      .getOrElse(Instant.EPOCH)
 
 
   private def serialiseFutures[A, B](l: Iterable[A])(fn: A => Future[B]): Future[Seq[B]] =
