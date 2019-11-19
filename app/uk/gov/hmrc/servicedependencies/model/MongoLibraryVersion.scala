@@ -23,7 +23,7 @@ import uk.gov.hmrc.mongo.play.json.MongoJavatimeFormats
 
 case class MongoLibraryVersion(libraryName: String, version: Option[Version], updateDate: Instant = Instant.now())
 object MongoLibraryVersion {
-  implicit val dtf    = MongoJavatimeFormats.localDateFormats
+  implicit val instantF    = MongoJavatimeFormats.instantFormats
   implicit val format = {
     implicit val vf = Version.mongoFormat
     Json.format[MongoLibraryVersion]

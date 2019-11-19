@@ -38,6 +38,6 @@ case class MongoRepositoryDependencies(
   updateDate: Instant = Instant.now())
 
 object MongoRepositoryDependencies {
-  implicit val dtf    = MongoJavatimeFormats.localDateFormats
+  implicit val instantF    = MongoJavatimeFormats.instantFormats
   implicit val format = Json.format[MongoRepositoryDependencies]
 }
