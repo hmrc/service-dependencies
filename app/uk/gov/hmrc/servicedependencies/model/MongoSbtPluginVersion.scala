@@ -27,7 +27,7 @@ case class MongoSbtPluginVersion(
   updateDate: Instant = Instant.now())
 
 object MongoSbtPluginVersion {
-  implicit val dtf    = MongoJavatimeFormats.localDateFormats
+  implicit val instantF    = MongoJavatimeFormats.instantFormats
   implicit val format = {
     implicit val vf = Version.mongoFormat
     Json.format[MongoSbtPluginVersion]
