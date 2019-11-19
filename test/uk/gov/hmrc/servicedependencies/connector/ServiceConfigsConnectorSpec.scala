@@ -19,15 +19,14 @@ package uk.gov.hmrc.servicedependencies.connector
 import java.time.LocalDate
 
 import com.github.tomakehurst.wiremock.client.WireMock._
+import org.mockito.MockitoSugar
 import org.scalatest.concurrent.{IntegrationPatience, ScalaFutures}
-import org.scalatest.mockito.MockitoSugar
 import org.scalatest.{BeforeAndAfterAll, FreeSpec, MustMatchers}
 import org.scalatestplus.play.guice.GuiceOneAppPerSuite
 import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.servicedependencies.WireMockConfig
-import uk.gov.hmrc.servicedependencies.connector.model.{DeprecatedDependencies}
 import uk.gov.hmrc.servicedependencies.model.{BobbyRule, BobbyVersionRange}
 
 class ServiceConfigsConnectorSpec

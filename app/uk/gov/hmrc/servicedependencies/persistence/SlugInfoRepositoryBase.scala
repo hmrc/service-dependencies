@@ -17,23 +17,29 @@
 package uk.gov.hmrc.servicedependencies.persistence
 
 import com.google.inject.{Inject, Singleton}
-import com.mongodb.BasicDBObject
+import org.mongodb.scala.model.Indexes.{ascending, hashed}
+import org.mongodb.scala.model.{IndexModel, IndexOptions}
+import play.api.Logger
+import play.api.libs.json.Format
 import uk.gov.hmrc.mongo.component.MongoComponent
-import uk.gov.hmrc.mongo.lock.model.Lock
 import uk.gov.hmrc.mongo.play.PlayMongoCollection
 
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.ExecutionContext
+import scala.reflect.ClassTag
 
 @Singleton
-class LocksRepository @Inject()(mongo: MongoComponent)(implicit ec: ExecutionContext)
-    extends PlayMongoCollection[Lock](
-      collectionName = "locks",
+abstract class SlugInfoRepositoryBase[A: ClassTag] @Inject()(mongo: MongoComponent, domainFormat: Format[A])(implicit ec: ExecutionContext)
+    extends PlayMongoCollection[A](
+      collectionName = "slugInfos",
       mongoComponent = mongo,
-      domainFormat   = Lock.format,
-      indexes = Seq.empty
+      domainFormat   = domainFormat,
+      indexes = Seq(
+        IndexModel(ascending("uri"), IndexOptions().name("slugInfoUniqueIdx").unique(true)),
+        IndexModel(hashed("name"), IndexOptions().name("slugInfoIdx").background(true)),
+        IndexModel(hashed("latest"), IndexOptions().name("slugInfoLatestIdx").background(true))
+      )
     ) {
 
-  def getAllEntries: Future[Seq[Lock]] = collection.find().toFuture()
+  val logger: Logger = Logger(this.getClass)
 
-  def clearAllData: Future[Boolean] = collection.deleteMany(new BasicDBObject()).toFuture.map(_.wasAcknowledged())
 }

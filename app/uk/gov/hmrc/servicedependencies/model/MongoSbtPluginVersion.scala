@@ -16,18 +16,18 @@
 
 package uk.gov.hmrc.servicedependencies.model
 
-import org.joda.time.DateTime
+import java.time.Instant
+
 import play.api.libs.json.Json
-import uk.gov.hmrc.mongo.json.ReactiveMongoFormats
-import uk.gov.hmrc.time.DateTimeUtils
+import uk.gov.hmrc.mongo.play.json.MongoJavatimeFormats
 
 case class MongoSbtPluginVersion(
   sbtPluginName: String,
   version: Option[Version],
-  updateDate: DateTime = DateTimeUtils.now)
+  updateDate: Instant = Instant.now())
 
 object MongoSbtPluginVersion {
-  implicit val dtf    = ReactiveMongoFormats.dateTimeFormats
+  implicit val dtf    = MongoJavatimeFormats.localDateFormats
   implicit val format = {
     implicit val vf = Version.mongoFormat
     Json.format[MongoSbtPluginVersion]

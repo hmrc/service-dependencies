@@ -16,13 +16,12 @@
 
 package uk.gov.hmrc.servicedependencies.service
 
-import org.mockito.Mockito._
-import org.scalatest.mockito.MockitoSugar
+import org.mockito.MockitoSugar
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.play.test.UnitSpec
 import uk.gov.hmrc.servicedependencies.connector.{ServiceDeploymentsConnector, TeamsAndRepositoriesConnector, TeamsForServices}
 import uk.gov.hmrc.servicedependencies.model.{BobbyVersionRange, ServiceDependency, SlugInfoFlag}
-import uk.gov.hmrc.servicedependencies.persistence.SlugInfoRepository
+import uk.gov.hmrc.servicedependencies.persistence.{GroupArtefactRepository, JdkVersionRepository, ServiceDependenciesRepository, SlugInfoRepository}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
@@ -71,7 +70,7 @@ class SlugInfoServiceSpec
 
       val boot = Boot.init
 
-      when(boot.mockedSlugInfoRepository.findServices(SlugInfoFlag.Latest, group, artefact))
+      when(boot.mockedServiceDependenciesRepository.findServices(SlugInfoFlag.Latest, group, artefact))
         .thenReturn(Future(Seq(v100, v200, v205)))
 
       when(boot.mockedTeamsAndRepositoriesConnector.getTeamsForServices)
@@ -88,7 +87,7 @@ class SlugInfoServiceSpec
 
       val bad = v100.copy(depVersion  = "r938")
 
-      when(boot.mockedSlugInfoRepository.findServices(SlugInfoFlag.Latest, group, artefact))
+      when(boot.mockedServiceDependenciesRepository.findServices(SlugInfoFlag.Latest, group, artefact))
         .thenReturn(Future(Seq(v100, v200, v205, bad)))
 
       when(boot.mockedTeamsAndRepositoriesConnector.getTeamsForServices)
@@ -100,27 +99,39 @@ class SlugInfoServiceSpec
   }
 
   case class Boot(
-      mockedSlugInfoRepository           : SlugInfoRepository
-    , mockedTeamsAndRepositoriesConnector: TeamsAndRepositoriesConnector
-    , mockedServiceDeploymentsConnector  : ServiceDeploymentsConnector
-    , service                            : SlugInfoService
+      mockedSlugInfoRepository            : SlugInfoRepository
+    , mockedServiceDependenciesRepository : ServiceDependenciesRepository
+    , mockedJdkVersionRespository         : JdkVersionRepository
+    , mockedTeamsAndRepositoriesConnector : TeamsAndRepositoriesConnector
+    , mockedServiceDeploymentsConnector   : ServiceDeploymentsConnector
+    , mockedGroupArtefactRepository       : GroupArtefactRepository
+    , service                             : SlugInfoService
     )
 
   object Boot {
     def init: Boot = {
-      val mockedSlugInfoRepository            = mock[SlugInfoRepository]
-      val mockedTeamsAndRepositoriesConnector = mock[TeamsAndRepositoriesConnector]
-      val mockedServiceDeploymentsConnector   = mock[ServiceDeploymentsConnector]
+      val mockedSlugInfoRepository              = mock[SlugInfoRepository]
+      val mockedServiceDependenciesRepository   = mock[ServiceDependenciesRepository]
+      val mockedJdkVersionRepository            = mock[JdkVersionRepository]
+      val mockedGroupArtefactRepository         = mock[GroupArtefactRepository]
+      val mockedTeamsAndRepositoriesConnector   = mock[TeamsAndRepositoriesConnector]
+      val mockedServiceDeploymentsConnector     = mock[ServiceDeploymentsConnector]
 
       val service = new SlugInfoService(
             mockedSlugInfoRepository
+          , mockedServiceDependenciesRepository
+          , mockedJdkVersionRepository
+          , mockedGroupArtefactRepository
           , mockedTeamsAndRepositoriesConnector
           , mockedServiceDeploymentsConnector
           )
       Boot(
           mockedSlugInfoRepository
+        , mockedServiceDependenciesRepository
+        , mockedJdkVersionRepository
         , mockedTeamsAndRepositoriesConnector
         , mockedServiceDeploymentsConnector
+        , mockedGroupArtefactRepository
         , service
         )
     }

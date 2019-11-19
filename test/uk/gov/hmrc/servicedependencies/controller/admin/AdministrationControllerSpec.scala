@@ -17,16 +17,14 @@
 package uk.gov.hmrc.servicedependencies.controller.admin
 
 import org.mockito.ArgumentMatchers.{any, eq => eqTo}
-import org.mockito.Mockito.{verify, when}
+import org.mockito.MockitoSugar
 import org.scalatest.concurrent.{IntegrationPatience, ScalaFutures}
-import org.scalatest.mockito.MockitoSugar
 import org.scalatest.{BeforeAndAfterEach, FreeSpec, Matchers, OptionValues}
-import org.scalatestplus.play.guice.GuiceOneServerPerSuite
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
-import uk.gov.hmrc.servicedependencies.connector.TeamsAndRepositoriesConnector
 import uk.gov.hmrc.servicedependencies.model.MongoRepositoryDependencies
-import uk.gov.hmrc.servicedependencies.service.{DependencyDataUpdatingService, SlugInfoService}
+import uk.gov.hmrc.servicedependencies.service.DependencyDataUpdatingService
+
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 

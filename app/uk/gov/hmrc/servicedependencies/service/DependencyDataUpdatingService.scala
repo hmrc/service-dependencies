@@ -16,16 +16,19 @@
 
 package uk.gov.hmrc.servicedependencies.service
 
+import java.time.Instant
+
 import com.google.inject.{Inject, Singleton}
 import org.slf4j.LoggerFactory
-import scala.concurrent.ExecutionContext.Implicits.global
 import uk.gov.hmrc.http.HeaderCarrier
-import uk.gov.hmrc.lock.LockFormats.Lock
+import uk.gov.hmrc.mongo.lock.MongoLockService
+import uk.gov.hmrc.mongo.lock.model.Lock
 import uk.gov.hmrc.servicedependencies.config.CuratedDependencyConfigProvider
 import uk.gov.hmrc.servicedependencies.controller.model.{Dependencies, Dependency}
 import uk.gov.hmrc.servicedependencies.model._
 import uk.gov.hmrc.servicedependencies.persistence._
-import uk.gov.hmrc.time.DateTimeUtils
+
+import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
 @Singleton
@@ -41,13 +44,13 @@ class DependencyDataUpdatingService @Inject()(
 
   lazy val logger = LoggerFactory.getLogger(this.getClass)
 
-  def now = DateTimeUtils.now
+  def now: Instant = Instant.now()
 
-  def repositoryDependencyMongoLock: MongoLock = mongoLocks.repositoryDependencyMongoLock
+  def repositoryDependencyMongoLock: MongoLockService = mongoLocks.repositoryDependencyMongoLock
 
-  def libraryMongoLock: MongoLock = mongoLocks.libraryMongoLock
+  def libraryMongoLock: MongoLockService = mongoLocks.libraryMongoLock
 
-  def sbtPluginMongoLock: MongoLock = mongoLocks.sbtPluginMongoLock
+  def sbtPluginMongoLock: MongoLockService = mongoLocks.sbtPluginMongoLock
 
   lazy val curatedDependencyConfig = curatedDependencyConfigProvider.curatedDependencyConfig
 
@@ -84,9 +87,9 @@ class DependencyDataUpdatingService @Inject()(
     }
   }
 
-  private def runMongoUpdate[T](mongoLock: MongoLock)(f: => Future[Seq[T]]) =
+  private def runMongoUpdate[T](mongoLock: MongoLockService)(f: => Future[Seq[T]]) =
     mongoLock
-      .tryLock {
+      .attemptLockWithRelease {
         logger.debug(s"Starting mongo update for ${mongoLock.lockId}")
         f
       }

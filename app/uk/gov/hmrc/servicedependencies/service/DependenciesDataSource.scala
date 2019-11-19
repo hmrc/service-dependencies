@@ -16,18 +16,19 @@
 
 package uk.gov.hmrc.servicedependencies.service
 
+import java.time.Instant
+
 import com.google.inject.{Inject, Singleton}
-import org.joda.time.DateTime
 import org.slf4j.LoggerFactory
-import scala.concurrent.ExecutionContext.Implicits.global
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.servicedependencies.config.ServiceDependenciesConfig
 import uk.gov.hmrc.servicedependencies.config.model.{CuratedDependencyConfig, SbtPluginConfig}
-import uk.gov.hmrc.servicedependencies.connector.{GithubConnector, TeamsAndRepositoriesConnector}
 import uk.gov.hmrc.servicedependencies.connector.model.RepositoryInfo
+import uk.gov.hmrc.servicedependencies.connector.{GithubConnector, TeamsAndRepositoriesConnector}
 import uk.gov.hmrc.servicedependencies.model._
 import uk.gov.hmrc.servicedependencies.persistence.RepositoryLibraryDependenciesRepository
-import uk.gov.hmrc.time.DateTimeUtils
+
+import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
 @Singleton
@@ -40,8 +41,7 @@ class DependenciesDataSource @Inject()(
 
   lazy val logger = LoggerFactory.getLogger(this.getClass)
 
-  def now : DateTime = DateTimeUtils.now
-
+  def now : Instant = Instant.now()
 
   def buildDependency(repo: RepositoryInfo,
                      curatedDependencyConfig: CuratedDependencyConfig,
@@ -58,10 +58,10 @@ class DependenciesDataSource @Inject()(
   }
 
 
-  private def lastUpdated(repoName: String, currentDeps: Seq[MongoRepositoryDependencies]): DateTime =
+  private def lastUpdated(repoName: String, currentDeps: Seq[MongoRepositoryDependencies]): Instant =
     currentDeps.find(_.repositoryName == repoName)
       .map(_.updateDate)
-      .getOrElse(new DateTime(0))
+      .getOrElse(Instant.EPOCH)
 
 
   private def serialiseFutures[A, B](l: Iterable[A])(fn: A => Future[B]): Future[Seq[B]] =

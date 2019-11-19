@@ -16,24 +16,21 @@
 
 package uk.gov.hmrc.servicedependencies.controller
 
+import java.time.Instant
+
 import org.mockito.ArgumentMatchers.any
-import org.mockito.Mockito
-import org.mockito.Mockito.when
+import org.mockito.{Mockito, MockitoSugar}
 import org.scalatest._
 import org.scalatest.concurrent.{IntegrationPatience, ScalaFutures}
-import org.scalatest.mockito.MockitoSugar
-import org.scalatestplus.play.guice.GuiceOneAppPerSuite
-import play.api.inject.guice.GuiceApplicationBuilder
-import play.api.{Application, Configuration}
+import play.api.Configuration
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
 import uk.gov.hmrc.servicedependencies.config.ServiceDependenciesConfig
 import uk.gov.hmrc.servicedependencies.connector.TeamsAndRepositoriesConnector
 import uk.gov.hmrc.servicedependencies.controller.model.Dependencies
 import uk.gov.hmrc.servicedependencies.service._
-import uk.gov.hmrc.time.DateTimeUtils
-import scala.concurrent.ExecutionContext.Implicits.global
 
+import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
 class ServiceDependenciesControllerSpec
@@ -49,7 +46,7 @@ class ServiceDependenciesControllerSpec
     "should get dependency versions for a repository using the service" in {
       val boot                   = Boot.init
       val repoName               = "repo1"
-      val now                    = DateTimeUtils.now
+      val now                    = Instant.now()
       val repositoryDependencies = Dependencies(repoName, Seq(), Seq(), Seq(), now)
 
       when(boot.mockedDependencyDataUpdatingService.getDependencyVersionsForRepository(any()))
@@ -71,7 +68,7 @@ class ServiceDependenciesControllerSpec
   "get dependencies" - {
     "should get all dependencies using the service" in {
       val boot                = Boot.init
-      val now                 = DateTimeUtils.now
+      val now                 = Instant.now()
       val repo1               = Dependencies("repo1", Seq(), Seq(), Seq(), now)
       val repo2               = Dependencies("repo2", Seq(), Seq(), Seq(), now)
       val repo3               = Dependencies("repo3", Seq(), Seq(), Seq(), now)

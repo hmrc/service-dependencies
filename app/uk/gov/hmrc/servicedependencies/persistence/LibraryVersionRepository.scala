@@ -17,47 +17,49 @@
 package uk.gov.hmrc.servicedependencies.persistence
 
 import com.google.inject.{Inject, Singleton}
-import play.api.libs.json.Json
-import reactivemongo.api.indexes.{Index, IndexType}
-import reactivemongo.bson.BSONObjectID
-import reactivemongo.play.json.ImplicitBSONHandlers._
-import uk.gov.hmrc.mongo.ReactiveRepository
-import uk.gov.hmrc.servicedependencies.util.FutureHelpers
+import com.mongodb.BasicDBObject
+import org.mongodb.scala.model.Filters.equal
+import org.mongodb.scala.model.Indexes.hashed
+import org.mongodb.scala.model.{IndexModel, IndexOptions, ReplaceOptions}
+import play.api.Logger
+import uk.gov.hmrc.mongo.component.MongoComponent
+import uk.gov.hmrc.mongo.play.PlayMongoCollection
 import uk.gov.hmrc.servicedependencies.model._
-import scala.concurrent.ExecutionContext.Implicits.global
-import play.modules.reactivemongo.ReactiveMongoComponent
+import uk.gov.hmrc.servicedependencies.util.FutureHelpers
 
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.Future
 
 @Singleton
-class LibraryVersionRepository @Inject()(mongo: ReactiveMongoComponent, futureHelpers: FutureHelpers)
-    extends ReactiveRepository[MongoLibraryVersion, BSONObjectID](
+class LibraryVersionRepository @Inject()(mongo: MongoComponent, futureHelpers: FutureHelpers)
+    extends PlayMongoCollection[MongoLibraryVersion](
       collectionName = "libraryVersions",
-      mongo          = mongo.mongoConnector.db,
-      domainFormat   = MongoLibraryVersion.format) {
+      mongoComponent          = mongo,
+      domainFormat   = MongoLibraryVersion.format,
+      indexes = Seq(
+        IndexModel(hashed("libraryName"), IndexOptions().name("libraryNameIdx").background(true))
+      )) {
 
-  override def indexes: Seq[Index] =
-    Seq(
-      Index(
-        Seq("libraryName" -> IndexType.Hashed),
-        name       = Some("libraryNameIdx"),
-        background = true))
+  val logger: Logger = Logger(this.getClass)
 
   def update(libraryVersion: MongoLibraryVersion): Future[MongoLibraryVersion] = {
     logger.debug(s"writing $libraryVersion")
     futureHelpers
       .withTimerAndCounter("mongo.update") {
-        collection.update(
-            selector = Json.obj("libraryName" -> Json.toJson(libraryVersion.libraryName)),
-            update   = libraryVersion,
-            upsert   = true)
+        collection
+          .replaceOne(
+            filter = equal("libraryName", libraryVersion.libraryName),
+            libraryVersion,
+            ReplaceOptions().upsert(true)
+          )
+          .toFuture()
           .map(_ => libraryVersion)
     } recover {
       case lastError => throw new RuntimeException(s"failed to persist LibraryVersion: $libraryVersion", lastError)
     }
   }
 
-  def getAllEntries: Future[Seq[MongoLibraryVersion]] = findAll()
+  def getAllEntries: Future[Seq[MongoLibraryVersion]] = collection.find().toFuture()
 
-  def clearAllData: Future[Boolean] = super.removeAll().map(_.ok)
+  def clearAllData: Future[Boolean] = collection.deleteMany(new BasicDBObject()).toFuture.map(_.wasAcknowledged())
 }

@@ -16,77 +16,56 @@
 
 package uk.gov.hmrc.servicedependencies.persistence
 
+import java.time.Instant
+
 import com.codahale.metrics.MetricRegistry
-import org.mockito.Mockito.when
-import org.scalatest.{BeforeAndAfterEach, Matchers, WordSpecLike}
-import org.scalatest.concurrent.ScalaFutures
-import org.scalatest.mockito.MockitoSugar
-import play.modules.reactivemongo.ReactiveMongoComponent
-import uk.gov.hmrc.mongo.{FailOnUnindexedQueries, MongoConnector, MongoSpecSupport, RepositoryPreparation}
+import org.mockito.MockitoSugar
+import org.mongodb.scala.model.IndexModel
+import org.scalatest.{Matchers, WordSpecLike}
+import uk.gov.hmrc.mongo.test.DefaultMongoCollectionSupport
 import uk.gov.hmrc.servicedependencies.model.{MongoLibraryVersion, Version}
 import uk.gov.hmrc.servicedependencies.util.{FutureHelpers, MockFutureHelpers}
-import uk.gov.hmrc.time.DateTimeUtils
-
-import scala.concurrent.ExecutionContext.Implicits.global
 
 class LibraryVersionRepositorySpec
     extends WordSpecLike
-       with Matchers
-       with MongoSpecSupport
-       with ScalaFutures
-       with BeforeAndAfterEach
-       with MockitoSugar
-       with FailOnUnindexedQueries
-       with RepositoryPreparation {
+    with Matchers
+    with MockitoSugar
+    with DefaultMongoCollectionSupport {
 
-  val reactiveMongoComponent = new ReactiveMongoComponent {
-    val mockedMongoConnector = mock[MongoConnector]
-    when(mockedMongoConnector.db).thenReturn(mongo)
-
-    override def mongoConnector = mockedMongoConnector
-  }
-
-  val metricsRegistry = new MetricRegistry()
+  val metricsRegistry             = new MetricRegistry()
   val futureHelper: FutureHelpers = new MockFutureHelpers()
 
-  val libraryVersionRepository = new LibraryVersionRepository(reactiveMongoComponent, futureHelper)
+  val repo = new LibraryVersionRepository(mongoComponent, futureHelper)
 
-  override def beforeEach() {
-    prepare(libraryVersionRepository)
-  }
+  override protected val collectionName: String   = repo.collectionName
+  override protected val indexes: Seq[IndexModel] = repo.indexes
 
   "update" should {
     "inserts correctly" in {
+      val libraryVersion = MongoLibraryVersion("some-library", Some(Version(1, 0, 2)), Instant.now())
 
-      val libraryVersion = MongoLibraryVersion("some-library", Some(Version(1, 0, 2)), DateTimeUtils.now)
-      await(libraryVersionRepository.update(libraryVersion))
-
-      await(libraryVersionRepository.getAllEntries) shouldBe Seq(libraryVersion)
+      repo.update(libraryVersion).futureValue
+      repo.getAllEntries.futureValue shouldBe Seq(libraryVersion)
     }
 
     "updates correctly (based on library name)" in {
-
-      val libraryVersion    = MongoLibraryVersion("some-library", Some(Version(1, 0, 2)), DateTimeUtils.now)
+      val libraryVersion    = MongoLibraryVersion("some-library", Some(Version(1, 0, 2)), Instant.now())
       val newLibraryVersion = libraryVersion.copy(version = Some(Version(1, 0, 5)))
-      await(libraryVersionRepository.update(libraryVersion))
 
-      await(libraryVersionRepository.update(newLibraryVersion))
-
-      await(libraryVersionRepository.getAllEntries) shouldBe Seq(newLibraryVersion)
+      repo.update(libraryVersion).futureValue
+      repo.update(newLibraryVersion).futureValue
+      repo.getAllEntries.futureValue shouldBe Seq(newLibraryVersion)
     }
   }
 
   "clearAllDependencyEntries" should {
     "deletes everything" in {
+      val libraryVersion = MongoLibraryVersion("some-library", Some(Version(1, 0, 2)), Instant.now())
 
-      val libraryVersion = MongoLibraryVersion("some-library", Some(Version(1, 0, 2)), DateTimeUtils.now)
-      await(libraryVersionRepository.update(libraryVersion))
-
-      await(libraryVersionRepository.getAllEntries) should have size 1
-
-      await(libraryVersionRepository.clearAllData)
-
-      await(libraryVersionRepository.getAllEntries) shouldBe Nil
+      repo.update(libraryVersion).futureValue
+      repo.getAllEntries.futureValue should have size 1
+      repo.clearAllData.futureValue
+      repo.getAllEntries.futureValue shouldBe Nil
     }
   }
 }

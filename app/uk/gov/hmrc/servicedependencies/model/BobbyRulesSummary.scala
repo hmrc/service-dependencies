@@ -17,10 +17,10 @@
 package uk.gov.hmrc.servicedependencies.model
 
 import java.time.LocalDate
-import play.api.libs.json.{__, Format, Json, JsError, JsValue, OFormat, Reads, Writes}
-import play.api.libs.functional.syntax._
-import uk.gov.hmrc.mongo.json.ReactiveMongoFormats
 
+import play.api.libs.functional.syntax._
+import play.api.libs.json._
+import uk.gov.hmrc.mongo.play.json.MongoJavatimeFormats
 
 case class BobbyRulesSummary(
     date   : LocalDate
@@ -68,7 +68,7 @@ object BobbyRulesSummary {
     )(BobbyRulesSummary.apply _, unlift(BobbyRulesSummary.unapply _))
 
   val mongoFormat: OFormat[BobbyRulesSummary] = {
-    implicit val ldf = LocalDateFormats.localDateFormat
+    implicit val ldf = MongoJavatimeFormats.localDateFormats
     ( (__ \ "date"     ).format[LocalDate]
     ~ (__ \ "summary"  ).format[Map[(BobbyRule, SlugInfoFlag), Int]]
     )(BobbyRulesSummary.apply _, unlift(BobbyRulesSummary.unapply _))
@@ -88,30 +88,4 @@ object HistoricBobbyRulesSummary {
         date    = bobbyRulesSummary.date
       , summary = bobbyRulesSummary.summary.mapValues(i => List(i))
       )
-}
-
-
-// ReactiveMongoFormats only supports joda.time, not java.time (TODO should add to simple reactive-mongo?)
-trait LocalDateFormats {
-  val localDateRead: Reads[LocalDate] =
-    (__ \ "$date").read[Long].map { date =>
-      LocalDate.ofEpochDay(date / (24 * 60 * 60 * 1000))
-    }
-
-  val localDateWrite: Writes[LocalDate] = new Writes[LocalDate] {
-    def writes(localDate: LocalDate): JsValue = Json.obj(
-      "$date" -> localDate.toEpochDay * 24 * 60 * 60 * 1000
-    )
-  }
-
-  val localDateFormat = Format(localDateRead, localDateWrite)
-}
-
-object LocalDateFormats extends LocalDateFormats {
-  trait Implicits {
-    implicit val ldr = localDateRead
-    implicit val ldw = localDateWrite
-    implicit val ldf = localDateFormat
-  }
-  object Implicits extends Implicits
 }

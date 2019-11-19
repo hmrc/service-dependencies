@@ -19,32 +19,31 @@ package uk.gov.hmrc.servicedependencies.service
 import java.time.{LocalDate, LocalDateTime}
 import java.util.concurrent.atomic.AtomicReference
 
-import org.mockito.Mockito._
 import org.mockito.ArgumentMatchers.any
-import org.scalatest.{FlatSpec, FunSpec, Matchers}
-import org.scalatest.mockito.MockitoSugar
-import org.scalatest.concurrent.ScalaFutures
+import org.mockito.MockitoSugar
+import org.scalatest.{FlatSpec, Matchers}
 import uk.gov.hmrc.http.HeaderCarrier
+import uk.gov.hmrc.mongo.test.MongoSupport
 import uk.gov.hmrc.servicedependencies.connector.ServiceConfigsConnector
 import uk.gov.hmrc.servicedependencies.model._
-import uk.gov.hmrc.servicedependencies.persistence.{BobbyRulesSummaryRepo, SlugInfoRepository}
+import uk.gov.hmrc.servicedependencies.persistence.{BobbyRulesSummaryRepository, SlugInfoRepository}
 
 import scala.concurrent.{ExecutionContext, Future}
-import scala.concurrent.duration.Duration
 
 
 class DependencyLookupServiceSpec
   extends FlatSpec
      with Matchers
      with MockitoSugar
-     with ScalaFutures {
+     with MongoSupport {
 
   override implicit val patienceConfig = {
-    import org.scalatest.time.{Millis, Span, Seconds}
+    import org.scalatest.time.{Millis, Seconds, Span}
     PatienceConfig(timeout = Span(2, Seconds), interval = Span(15, Millis))
   }
 
   import DependencyLookupServiceTestData._
+
   import ExecutionContext.Implicits.global
 
   "slugToServiceDep" should "Convert a slug and dependency to a ServiceDependency" in {
@@ -101,7 +100,7 @@ class DependencyLookupServiceSpec
     val configService         = mock[ServiceConfigsConnector]
     val slugInfoRepository    = mock[SlugInfoRepository]
 
-    val bobbyRulesSummaryRepo = new BobbyRulesSummaryRepo {
+    val bobbyRulesSummaryRepo = new BobbyRulesSummaryRepository(mongoComponent) {
       import scala.compat.java8.FunctionConverters._
 
       private val store = new AtomicReference(List[BobbyRulesSummary]())

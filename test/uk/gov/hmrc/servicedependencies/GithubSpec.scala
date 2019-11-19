@@ -21,8 +21,7 @@ import java.util.Base64
 import org.eclipse.egit.github.core.client.{GitHubClient, RequestException}
 import org.eclipse.egit.github.core.{RepositoryContents, RequestError}
 import org.mockito.ArgumentMatchers.{any, eq => is}
-import org.mockito.Mockito.when
-import org.scalatest.mockito.MockitoSugar
+import org.mockito.MockitoSugar
 import org.scalatest.{Matchers, OptionValues, WordSpec}
 import uk.gov.hmrc.githubclient._
 import uk.gov.hmrc.servicedependencies.config.model.{CuratedDependencyConfig, OtherDependencyConfig, SbtPluginConfig}

@@ -16,28 +16,25 @@
 
 package uk.gov.hmrc.servicedependencies.service
 
-import com.kenshoo.play.metrics.DisabledMetrics
+import java.time.Instant
+import java.time.temporal.ChronoUnit
+
 import org.eclipse.egit.github.core.RequestError
 import org.eclipse.egit.github.core.client.RequestException
-import org.joda.time.DateTime
 import org.mockito.ArgumentMatchers.any
-import org.mockito.Mockito.when
 import org.mockito.invocation.InvocationOnMock
-import org.mockito.stubbing.Answer
-import org.mockito.{ArgumentCaptor, Mockito}
+import org.mockito.{ArgumentCaptor, Mockito, MockitoSugar}
 import org.scalatest.concurrent.{IntegrationPatience, ScalaFutures}
-import org.scalatest.mockito.MockitoSugar
 import org.scalatest.{FreeSpec, Matchers, OptionValues}
 import uk.gov.hmrc.githubclient.{APIRateLimitExceededException, GitApiConfig}
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.servicedependencies.config._
 import uk.gov.hmrc.servicedependencies.config.model.{CuratedDependencyConfig, OtherDependencyConfig, SbtPluginConfig}
-import uk.gov.hmrc.servicedependencies.connector.{GithubConnector, TeamsAndRepositoriesConnector, TeamsForServices}
 import uk.gov.hmrc.servicedependencies.connector.model.{Repository, RepositoryInfo}
+import uk.gov.hmrc.servicedependencies.connector.{GithubConnector, TeamsAndRepositoriesConnector, TeamsForServices}
 import uk.gov.hmrc.servicedependencies.model._
 import uk.gov.hmrc.servicedependencies.persistence.RepositoryLibraryDependenciesRepository
 import uk.gov.hmrc.servicedependencies.{Github, GithubSearchError}
-import uk.gov.hmrc.time.DateTimeUtils
 
 import scala.collection.JavaConversions._
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -53,8 +50,8 @@ class DependenciesDataSourceSpec
 
   implicit val hc = HeaderCarrier()
 
-  val timeNow       = DateTimeUtils.now
-  val timeInThePast = DateTimeUtils.now.minusDays(1)
+  val timeNow       = Instant.now()
+  val timeInThePast = Instant.now().minus(1, ChronoUnit.DAYS)
 
   class GithubStub(
     val lookupMap: Map[String, Option[String]],
@@ -144,10 +141,10 @@ class DependenciesDataSourceSpec
 
       override def repositories: Seq[Repository] = Seq(repo1.copy(lastActive = timeInThePast))
 
-      Mockito.verifyZeroInteractions(repositoryLibraryDependenciesRepository)
+      Mockito.verifyNoInteractions(repositoryLibraryDependenciesRepository)
 
       val currentDependencyEntries =
-        Seq(MongoRepositoryDependencies("repo1", Nil, Nil, Nil, timeInThePast.plusMinutes(1)))
+        Seq(MongoRepositoryDependencies("repo1", Nil, Nil, Nil, timeInThePast.plus(1, ChronoUnit.MINUTES)))
       dependenciesDataSource
         .persistDependenciesForAllRepositories(curatedDependencyConfig, currentDependencyEntries)
         .futureValue
@@ -163,7 +160,7 @@ class DependenciesDataSourceSpec
         .thenReturn(Future.successful(mock[MongoRepositoryDependencies]))
 
       val currentDependencyEntries =
-        Seq(MongoRepositoryDependencies("repo1", Nil, Nil, Nil, timeInThePast.plusMinutes(1)))
+        Seq(MongoRepositoryDependencies("repo1", Nil, Nil, Nil, timeInThePast.plus(1, ChronoUnit.MINUTES)))
 
       dependenciesDataSource
         .persistDependenciesForAllRepositories(curatedDependencyConfig, currentDependencyEntries, force = true)
@@ -363,10 +360,7 @@ class DependenciesDataSourceSpec
     when(teamsAndRepositoriesConnector.getAllRepositories()(any()))
       .thenReturn(Future.successful(repositories.map(r => RepositoryInfo(r.name, r.lastActive, r.lastActive, "Service"))))
 
-    when(teamsAndRepositoriesConnector.getRepository(any())(any())).thenAnswer(new Answer[Future[Option[Repository]]] {
-      override def answer(invocation: InvocationOnMock): Future[Option[Repository]] =
-        Future(repositories.find(_.name == invocation.getArgument[String](0)))
-    })
+    when(teamsAndRepositoriesConnector.getRepository(any())(any())).thenAnswer( (i: InvocationOnMock) => Future(repositories.find(_.name == i.getArgument[String](0))))
 
     def githubStub(): Github = new GithubStub(Map()) {
 
@@ -386,7 +380,7 @@ class DependenciesDataSourceSpec
       githubConnector,
       repositoryLibraryDependenciesRepository
       ) {
-      override def now: DateTime       = timeNow
+      override def now: Instant       = timeNow
     }
   }
 

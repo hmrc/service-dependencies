@@ -92,7 +92,7 @@ trait MongoSlugInfoFormats {
 
   val ignore = OWrites[Any](_ => Json.obj())
 
-  implicit val siFormat: OFormat[SlugInfo] =
+  implicit val slugInfoFormat: OFormat[SlugInfo] =
     ( (__ \ "uri"              ).format[String]
     ~ (__ \ "created"          ).format[LocalDateTime]
     ~ (__ \ "name"             ).format[String]
@@ -115,6 +115,28 @@ trait MongoSlugInfoFormats {
     ~ (__ \ "integration"      ).format[Boolean]
     )(SlugInfo.apply, unlift(SlugInfo.unapply))
 
+  implicit val serviceDependencyFormat: OFormat[ServiceDependency] =
+    ( (__ \ "slugName"              ).format[String]
+      ~ (__ \ "slugVersion"          ).format[String]
+      ~ (__ \ "teams"             ).formatWithDefault[List[String]](List.empty)
+      ~ (__ \ "depGroup"          ).format[String]
+      ~ (__ \ "depArtifact"          ).format[String]
+      ~ (__ \ "depVersion"          ).format[String]
+      )(ServiceDependency.apply, unlift(ServiceDependency.unapply))
+
+  implicit val jdkVersionFormat: OFormat[JDKVersion] = {
+    ( (__ \ "name"              ).format[String]
+      ~ (__ \ "version"          ).format[String]
+      ~ (__ \ "vendor"           ).formatWithDefault[String]("Oracle")
+      ~ (__ \ "kind"             ).formatWithDefault[String]("JDK")
+      )(JDKVersion.apply, unlift(JDKVersion.unapply))
+  }
+
+  implicit val groupArtefactsFormat: OFormat[GroupArtefacts] = {
+    ( (__ \ "_id"              ).format[String]
+      ~ (__ \ "artifacts"          ).format[List[String]]
+      )(GroupArtefacts.apply, unlift(GroupArtefacts.unapply))
+  }
 
   val dcFormat: OFormat[DependencyConfig] =
     ( (__ \ "group"   ).format[String]
