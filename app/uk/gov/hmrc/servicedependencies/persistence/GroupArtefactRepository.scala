@@ -35,21 +35,28 @@ class GroupArtefactRepository @Inject()(mongo: MongoComponent)(implicit ec: Exec
       domainFormat   = MongoSlugInfoFormats.groupArtefactsFormat
     ) {
 
+  // Essentially builds a mapping of an artefact group to a list of all the artifacts that are under it
+  // e.g. "uk.gov.hmrc" -> ["hmrc-mongo-metrix-play-26", ...] etc
   def findGroupsArtefacts: Future[Seq[GroupArtefacts]] = {
     val agg = List(
+      // Pull out any slug infos that are present in any environment (or latest)
       `match`(
         or(
           SlugInfoFlag.values.map(f => equal(f.asString, true)): _* // filter for reachable data
         )
       ),
+      // Pull out just the dependencies array
       project(
         fields(
           computed("dependencies", "$dependencies")
         )
       ),
-      unwind("dependencies"),
-      `match`(regex("dependencies.version", "^(?!.*-assets$)(?!.*-sans-externalized$).*$")),  // exclude slug internals
-      group("$dependencies.group", addToSet("artifacts",  "dependencies.artifact")),
+      // Create a new document for each dependency
+      unwind("$dependencies"),
+      // Exclude slug internals
+      `match`(regex("dependencies.version", "^(?!.*-assets$)(?!.*-sans-externalized$).*$")),
+      // Group by artefact group id
+      group("$dependencies.group", addToSet("artifacts",  "$dependencies.artifact")),
       sort(orderBy(ascending("_id")))
     )
 
