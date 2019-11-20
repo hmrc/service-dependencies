@@ -61,4 +61,13 @@ class SlugInfoRepositorySpec
     }
   }
 
+  "SlugInfoRepository.getUniqueSlugNames" should {
+    "filter out duplicate names" in {
+      slugInfoRepo.add(slugInfo).futureValue
+      slugInfoRepo.add(otherSlug).futureValue
+      slugInfoRepo.add(otherSlug).futureValue
+      slugInfoRepo.getUniqueSlugNames.futureValue shouldBe Seq("my-slug", "other-slug")
+    }
+  }
+
 }
