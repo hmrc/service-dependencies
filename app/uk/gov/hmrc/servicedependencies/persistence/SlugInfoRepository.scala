@@ -49,7 +49,7 @@ class SlugInfoRepository @Inject()(mongo: MongoComponent)(implicit ec: Execution
     collection.deleteMany(new BasicDBObject()).toFuture.map(_.wasAcknowledged())
 
   def getUniqueSlugNames: Future[Seq[String]] =
-    collection.distinct("name").toFuture()
+    collection.distinct[String]("name").toFuture()
 
   def getSlugInfos(name: String, optVersion: Option[String]): Future[Seq[SlugInfo]] =
     optVersion match {
