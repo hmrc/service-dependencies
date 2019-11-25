@@ -21,8 +21,8 @@ import org.mongodb.scala.model.Indexes.{ascending, hashed}
 import org.mongodb.scala.model.{IndexModel, IndexOptions}
 import play.api.Logger
 import play.api.libs.json.Format
-import uk.gov.hmrc.mongo.component.MongoComponent
-import uk.gov.hmrc.mongo.play.PlayMongoCollection
+import uk.gov.hmrc.mongo.MongoComponent
+import uk.gov.hmrc.mongo.play.json.PlayMongoCollection
 
 import scala.concurrent.ExecutionContext
 import scala.reflect.ClassTag

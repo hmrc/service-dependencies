@@ -23,7 +23,7 @@ import org.mongodb.scala.model.Filters._
 import org.mongodb.scala.model.Indexes.ascending
 import org.mongodb.scala.model.Projections._
 import org.mongodb.scala.model.Sorts._
-import uk.gov.hmrc.mongo.component.MongoComponent
+import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.servicedependencies.model._
 
 import scala.concurrent.{ExecutionContext, Future}

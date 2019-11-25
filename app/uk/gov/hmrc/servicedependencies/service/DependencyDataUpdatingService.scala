@@ -21,8 +21,7 @@ import java.time.Instant
 import com.google.inject.{Inject, Singleton}
 import org.slf4j.LoggerFactory
 import uk.gov.hmrc.http.HeaderCarrier
-import uk.gov.hmrc.mongo.lock.MongoLockService
-import uk.gov.hmrc.mongo.lock.model.Lock
+import uk.gov.hmrc.mongo.lock.{Lock, MongoLockService}
 import uk.gov.hmrc.servicedependencies.config.CuratedDependencyConfigProvider
 import uk.gov.hmrc.servicedependencies.controller.model.{Dependencies, Dependency}
 import uk.gov.hmrc.servicedependencies.model._
@@ -46,13 +45,17 @@ class DependencyDataUpdatingService @Inject()(
 
   def now: Instant = Instant.now()
 
-  def repositoryDependencyMongoLock: MongoLockService = mongoLocks.repositoryDependencyMongoLock
+  def repositoryDependencyMongoLock: MongoLockService =
+    mongoLocks.repositoryDependencyMongoLock
 
-  def libraryMongoLock: MongoLockService = mongoLocks.libraryMongoLock
+  def libraryMongoLock: MongoLockService =
+    mongoLocks.libraryMongoLock
 
-  def sbtPluginMongoLock: MongoLockService = mongoLocks.sbtPluginMongoLock
+  def sbtPluginMongoLock: MongoLockService =
+    mongoLocks.sbtPluginMongoLock
 
-  lazy val curatedDependencyConfig = curatedDependencyConfigProvider.curatedDependencyConfig
+  lazy val curatedDependencyConfig =
+    curatedDependencyConfigProvider.curatedDependencyConfig
 
   def reloadLatestSbtPluginVersions(): Future[Seq[MongoSbtPluginVersion]] =
     runMongoUpdate(sbtPluginMongoLock) {

@@ -19,7 +19,7 @@ package uk.gov.hmrc.servicedependencies.model
 import java.time.Instant
 
 import play.api.libs.json.{Format, Json}
-import uk.gov.hmrc.mongo.play.json.MongoJavatimeFormats
+import uk.gov.hmrc.mongo.play.json.formats.MongoJavatimeFormats
 
 case class MongoRepositoryDependency(name: String, currentVersion: Version)
 

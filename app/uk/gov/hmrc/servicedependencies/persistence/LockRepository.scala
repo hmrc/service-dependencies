@@ -18,9 +18,9 @@ package uk.gov.hmrc.servicedependencies.persistence
 
 import com.google.inject.{Inject, Singleton}
 import com.mongodb.BasicDBObject
-import uk.gov.hmrc.mongo.component.MongoComponent
-import uk.gov.hmrc.mongo.lock.model.Lock
-import uk.gov.hmrc.mongo.play.PlayMongoCollection
+import uk.gov.hmrc.mongo.MongoComponent
+import uk.gov.hmrc.mongo.lock.Lock
+import uk.gov.hmrc.mongo.play.json.PlayMongoCollection
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -30,10 +30,12 @@ class LocksRepository @Inject()(mongo: MongoComponent)(implicit ec: ExecutionCon
       collectionName = "locks",
       mongoComponent = mongo,
       domainFormat   = Lock.format,
-      indexes = Seq.empty
+      indexes        = Seq.empty
     ) {
 
-  def getAllEntries: Future[Seq[Lock]] = collection.find().toFuture()
+  def getAllEntries: Future[Seq[Lock]] =
+    collection.find().toFuture()
 
-  def clearAllData: Future[Boolean] = collection.deleteMany(new BasicDBObject()).toFuture.map(_.wasAcknowledged())
+  def clearAllData: Future[Boolean] =
+    collection.deleteMany(new BasicDBObject()).toFuture.map(_.wasAcknowledged())
 }

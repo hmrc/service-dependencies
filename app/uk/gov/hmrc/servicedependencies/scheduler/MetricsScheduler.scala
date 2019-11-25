@@ -22,10 +22,10 @@ import akka.actor.ActorSystem
 import com.kenshoo.play.metrics.Metrics
 import javax.inject.Inject
 import play.api.inject.ApplicationLifecycle
-import uk.gov.hmrc.metrix.MetricOrchestrator
-import uk.gov.hmrc.metrix.persistence.MongoMetricRepository
-import uk.gov.hmrc.mongo.component.MongoComponent
+import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.lock.MongoLockRepository
+import uk.gov.hmrc.mongo.metrix.MetricOrchestrator
+import uk.gov.hmrc.mongo.metrix.impl.MongoMetricRepository
 import uk.gov.hmrc.servicedependencies.config.SchedulerConfigs
 import uk.gov.hmrc.servicedependencies.service.RepositoryDependenciesSource
 import uk.gov.hmrc.servicedependencies.util.SchedulerUtils
@@ -47,7 +47,8 @@ class MetricsScheduler @Inject()(
 
   private val schedulerConfig = schedulerConfigs.metrics
 
-  val lock = mongoLockRepository.toService("repositoryDependenciesLock",  Duration(schedulerConfig.frequency().toMillis, TimeUnit.MILLISECONDS))
+  val lock =
+    mongoLockRepository.toService("repositoryDependenciesLock", schedulerConfig.frequency())
 
   val metricOrchestrator = new MetricOrchestrator(
     metricSources    = List(repositoryDependenciesSource),

@@ -25,8 +25,8 @@ import org.mongodb.scala.model.Filters.equal
 import org.mongodb.scala.model.Indexes.ascending
 import org.mongodb.scala.model.Sorts.descending
 import org.mongodb.scala.model.{IndexModel, IndexOptions, ReplaceOptions}
-import uk.gov.hmrc.mongo.component.MongoComponent
-import uk.gov.hmrc.mongo.play.PlayMongoCollection
+import uk.gov.hmrc.mongo.MongoComponent
+import uk.gov.hmrc.mongo.play.json.PlayMongoCollection
 import uk.gov.hmrc.servicedependencies.model.BobbyRulesSummary
 
 import scala.concurrent.{ExecutionContext, Future}

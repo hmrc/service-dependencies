@@ -15,16 +15,19 @@
  */
 
 package uk.gov.hmrc.servicedependencies.service
+
 import com.google.inject.{Inject, Singleton}
 import uk.gov.hmrc.http.HeaderCarrier
-import uk.gov.hmrc.metrix.domain.MetricSource
+import uk.gov.hmrc.mongo.metrix.MetricSource
 import uk.gov.hmrc.servicedependencies.connector.{Team, TeamsAndRepositoriesConnector}
 import uk.gov.hmrc.servicedependencies.model.{MongoRepositoryDependency, Version}
 import uk.gov.hmrc.servicedependencies.persistence.RepositoryLibraryDependenciesRepository
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.{ExecutionContext, Future}
 
-case class TeamRepos(teamName: String, repos: Map[String, Seq[MongoRepositoryDependency]])
+case class TeamRepos(
+  teamName: String,
+  repos   : Map[String, Seq[MongoRepositoryDependency]])
 
 @Singleton
 class RepositoryDependenciesSource @Inject()(

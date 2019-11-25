@@ -21,7 +21,7 @@ import com.mongodb.BasicDBObject
 import org.mongodb.scala.model.Filters.{and, equal}
 import org.mongodb.scala.model.ReplaceOptions
 import org.mongodb.scala.model.Updates._
-import uk.gov.hmrc.mongo.component.MongoComponent
+import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.servicedependencies.model._
 
 import scala.concurrent.{ExecutionContext, Future}
