@@ -17,14 +17,13 @@
 package uk.gov.hmrc.servicedependencies.persistence
 
 import com.google.inject.{Inject, Singleton}
-import uk.gov.hmrc.mongo.component.PlayMongoComponent
 import uk.gov.hmrc.mongo.lock.MongoLockRepository
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 
 @Singleton
-class MongoLocks @Inject()(mongo: PlayMongoComponent, mongoLockRepository: MongoLockRepository)(
+class MongoLocks @Inject()(mongoLockRepository: MongoLockRepository)(
   implicit ec: ExecutionContext) {
   val repositoryDependencyMongoLock   = mongoLockRepository.toService("repository-dependencies-data-reload-job", 1.hour)
   val libraryMongoLock                = mongoLockRepository.toService("libraries-data-reload-job", 1.hour)

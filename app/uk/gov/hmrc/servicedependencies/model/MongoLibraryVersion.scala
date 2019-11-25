@@ -19,9 +19,14 @@ package uk.gov.hmrc.servicedependencies.model
 import java.time.Instant
 
 import play.api.libs.json.Json
-import uk.gov.hmrc.mongo.play.json.MongoJavatimeFormats
+import uk.gov.hmrc.mongo.play.json.formats.MongoJavatimeFormats
 
-case class MongoLibraryVersion(libraryName: String, version: Option[Version], updateDate: Instant = Instant.now())
+case class MongoLibraryVersion(
+    libraryName: String
+  , version    : Option[Version]
+  , updateDate : Instant         = Instant.now()
+  )
+
 object MongoLibraryVersion {
   implicit val instantF    = MongoJavatimeFormats.instantFormats
   implicit val format = {

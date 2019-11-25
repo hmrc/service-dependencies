@@ -20,7 +20,7 @@ import com.google.inject.{Inject, Singleton}
 import org.mongodb.scala.model.Aggregates.{`match`, project}
 import org.mongodb.scala.model.Filters.{and, equal, nin, notEqual}
 import org.mongodb.scala.model.Projections.{computed, fields}
-import uk.gov.hmrc.mongo.component.MongoComponent
+import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.servicedependencies.model._
 
 import scala.concurrent.{ExecutionContext, Future}
