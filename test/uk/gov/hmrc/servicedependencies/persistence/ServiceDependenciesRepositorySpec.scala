@@ -19,7 +19,9 @@ package uk.gov.hmrc.servicedependencies.persistence
 import org.mockito.MockitoSugar
 import org.mongodb.scala.model.IndexModel
 import org.scalatest.{Matchers, WordSpecLike}
+import play.api.Configuration
 import uk.gov.hmrc.mongo.test.DefaultMongoCollectionSupport
+import uk.gov.hmrc.mongo.throttle.ThrottleConfig
 import uk.gov.hmrc.servicedependencies.model._
 import uk.gov.hmrc.servicedependencies.persistence.TestSlugInfos._
 
@@ -31,7 +33,8 @@ class ServiceDependenciesRepositorySpec
       with MockitoSugar
       with DefaultMongoCollectionSupport {
 
-  val slugInfoRepo = new SlugInfoRepository(mongoComponent)
+  val throttleConfig = new ThrottleConfig(Configuration())
+  val slugInfoRepo   = new SlugInfoRepository(mongoComponent, throttleConfig)
   val serviceDependenciesRepo = new ServiceDependenciesRepository(mongoComponent)
 
   override protected val collectionName: String   = serviceDependenciesRepo.collectionName

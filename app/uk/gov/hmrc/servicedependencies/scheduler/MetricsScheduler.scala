@@ -21,8 +21,10 @@ import java.util.concurrent.TimeUnit
 import akka.actor.ActorSystem
 import com.kenshoo.play.metrics.Metrics
 import javax.inject.Inject
+import play.api.Configuration
 import play.api.inject.ApplicationLifecycle
 import uk.gov.hmrc.mongo.MongoComponent
+import uk.gov.hmrc.mongo.throttle.ThrottleConfig
 import uk.gov.hmrc.mongo.lock.MongoLockRepository
 import uk.gov.hmrc.mongo.metrix.MetricOrchestrator
 import uk.gov.hmrc.mongo.metrix.impl.MongoMetricRepository
@@ -38,7 +40,8 @@ class MetricsScheduler @Inject()(
   metrics: Metrics,
   mongoComponent: MongoComponent,
   repositoryDependenciesSource: RepositoryDependenciesSource,
-  mongoLockRepository: MongoLockRepository)(
+  mongoLockRepository: MongoLockRepository,
+  throttleConfig   : ThrottleConfig)(
   implicit actorSystem: ActorSystem,
   applicationLifecycle: ApplicationLifecycle
 ) extends SchedulerUtils {
@@ -53,7 +56,10 @@ class MetricsScheduler @Inject()(
   val metricOrchestrator = new MetricOrchestrator(
     metricSources    = List(repositoryDependenciesSource),
     lockService      = lock,
-    metricRepository = new MongoMetricRepository(mongo = mongoComponent),
+    metricRepository = // if not specifying name, all params are passthrough - make it possible to inject MongoMetricRepository?
+                       new MongoMetricRepository(
+                         mongo          = mongoComponent,
+                         throttleConfig = throttleConfig),
     metricRegistry   = metrics.defaultRegistry
   )
 

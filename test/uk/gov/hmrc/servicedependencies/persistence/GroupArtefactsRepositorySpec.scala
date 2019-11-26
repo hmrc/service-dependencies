@@ -19,7 +19,9 @@ package uk.gov.hmrc.servicedependencies.persistence
 import org.mockito.MockitoSugar
 import org.mongodb.scala.model.IndexModel
 import org.scalatest.{Matchers, WordSpecLike}
+import play.api.Configuration
 import uk.gov.hmrc.mongo.test.CleanMongoCollectionSupport
+import uk.gov.hmrc.mongo.throttle.ThrottleConfig
 import uk.gov.hmrc.servicedependencies.model.GroupArtefacts
 import uk.gov.hmrc.servicedependencies.persistence.TestSlugInfos._
 import scala.concurrent.duration._
@@ -34,7 +36,8 @@ class GroupArtefactsRepositorySpec
       with CleanMongoCollectionSupport {
 
   val groupArtefactsRepo = new GroupArtefactRepository(mongoComponent)
-  val slugInfoRepo = new SlugInfoRepository(mongoComponent)
+  val throttleConfig     = new ThrottleConfig(Configuration())
+  val slugInfoRepo       = new SlugInfoRepository(mongoComponent, throttleConfig)
 
   override implicit val patienceConfig = PatienceConfig(timeout = 30.seconds, interval = 100.millis)
 

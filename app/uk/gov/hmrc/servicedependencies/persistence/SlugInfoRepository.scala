@@ -21,21 +21,21 @@ import com.mongodb.BasicDBObject
 import org.mongodb.scala.model.Filters.{and, equal}
 import org.mongodb.scala.model.ReplaceOptions
 import org.mongodb.scala.model.Updates._
-import play.api.Configuration
 import uk.gov.hmrc.mongo.MongoComponent
+import uk.gov.hmrc.mongo.throttle.{ThrottleConfig, WithThrottling}
 import uk.gov.hmrc.servicedependencies.model._
 
 import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
-class SlugInfoRepository @Inject()(configuration: Configuration, mongo: MongoComponent)(implicit ec: ExecutionContext)
+class SlugInfoRepository @Inject()(
+      mongo             : MongoComponent,
+      val throttleConfig: ThrottleConfig
+      )(implicit ec: ExecutionContext)
     extends SlugInfoRepositoryBase[SlugInfo](
       mongo,
       domainFormat   = MongoSlugInfoFormats.slugInfoFormat
-    ) {
-
-  val tCollection = new ThrottledCollection[SlugInfo](configuration, collection)
-
+    ) with WithThrottling {
 
   def add(slugInfo: SlugInfo): Future[Boolean] =
     collection
@@ -75,8 +75,10 @@ class SlugInfoRepository @Inject()(configuration: Configuration, mongo: MongoCom
 
   def clearFlag(flag: SlugInfoFlag, name: String): Future[Unit] = {
     logger.debug(s"clear ${flag.asString} flag on $name")
-    tCollection
-      .updateMany(filter = equal("name", name), update = set(flag.asString, false))
+      throttled {
+        collection
+          .updateMany(filter = equal("name", name), update = set(flag.asString, false))
+      }
       .toFuture()
       .map(_ => ())
   }
@@ -88,8 +90,10 @@ class SlugInfoRepository @Inject()(configuration: Configuration, mongo: MongoCom
     for {
       _ <- clearFlag(flag, name)
       _ =  logger.debug(s"mark slug $name $version with ${flag.asString} flag")
-      _ <- tCollection
-             .updateOne(filter = and(equal("name", name), equal("version", version.original)), update = set(flag.asString, true))
-             .toFuture()
+      _ <- throttled {
+             collection
+               .updateOne(filter = and(equal("name", name), equal("version", version.original)), update = set(flag.asString, true))
+           }
+           .toFuture()
     } yield ()
 }
