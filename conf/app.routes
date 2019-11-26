@@ -8,3 +8,4 @@ GET     /api/groupArtefacts                    @uk.gov.hmrc.servicedependencies.
 GET     /api/jdkVersions                       @uk.gov.hmrc.servicedependencies.controller.ServiceDependenciesController.findJDKForEnvironment(flag: String ?= "latest")
 GET     /api/bobbyViolations                   @uk.gov.hmrc.servicedependencies.controller.BobbyRuleViolationController.findBobbyRuleViolations
 GET     /api/historicBobbyViolations           @uk.gov.hmrc.servicedependencies.controller.BobbyRuleViolationController.findHistoricBobbyRuleViolations
+GET     /api/slug-dependencies/:name/:version  @uk.gov.hmrc.servicedependencies.controller.ServiceDependenciesController.dependenciesOfSlug(name, version)
