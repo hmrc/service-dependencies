@@ -24,16 +24,20 @@ import org.mongodb.scala.model.Indexes.ascending
 import org.mongodb.scala.model.Projections._
 import org.mongodb.scala.model.Sorts._
 import uk.gov.hmrc.mongo.MongoComponent
+import uk.gov.hmrc.mongo.throttle.{ThrottleConfig, WithThrottling}
 import uk.gov.hmrc.servicedependencies.model._
 
 import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
-class GroupArtefactRepository @Inject()(mongo: MongoComponent)(implicit ec: ExecutionContext)
+class GroupArtefactRepository @Inject()(
+  mongo             : MongoComponent,
+  val throttleConfig: ThrottleConfig
+  )(implicit ec: ExecutionContext)
     extends SlugInfoRepositoryBase[GroupArtefacts](
       mongo,
       domainFormat   = MongoSlugInfoFormats.groupArtefactsFormat
-    ) {
+    ) with WithThrottling {
 
   // Essentially builds a mapping of an artefact group to a list of all the artifacts that are under it
   // e.g. "uk.gov.hmrc" -> ["hmrc-mongo-metrix-play-26", ...] etc
@@ -60,8 +64,8 @@ class GroupArtefactRepository @Inject()(mongo: MongoComponent)(implicit ec: Exec
       sort(orderBy(ascending("_id")))
     )
 
-    collection.aggregate(agg).allowDiskUse(true).toFuture()
-
+    throttled {
+      collection.aggregate(agg).allowDiskUse(true)
+    }.toFuture
   }
-
 }

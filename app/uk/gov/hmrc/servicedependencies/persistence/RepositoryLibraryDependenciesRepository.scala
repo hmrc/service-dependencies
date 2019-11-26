@@ -26,21 +26,25 @@ import org.mongodb.scala.model.{IndexModel, IndexOptions, ReplaceOptions}
 import play.api.Logger
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.play.json.PlayMongoCollection
+import uk.gov.hmrc.mongo.throttle.{ThrottleConfig, WithThrottling}
 import uk.gov.hmrc.servicedependencies.model._
 import uk.gov.hmrc.servicedependencies.util.FutureHelpers
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 @Singleton
-class RepositoryLibraryDependenciesRepository @Inject()(mongo: MongoComponent, futureHelper: FutureHelpers)
+class RepositoryLibraryDependenciesRepository @Inject()(
+  mongo             : MongoComponent,
+  futureHelper      : FutureHelpers,
+  val throttleConfig: ThrottleConfig)
     extends PlayMongoCollection[MongoRepositoryDependencies](
       collectionName = "repositoryLibraryDependencies",
       mongoComponent = mongo,
       domainFormat   = MongoRepositoryDependencies.format,
-      indexes = Seq(
-        IndexModel(hashed("repositoryName"), IndexOptions().name("RepositoryNameIdx").background(true))
-      )
-    ) {
+      indexes        = Seq(
+                         IndexModel(hashed("repositoryName"), IndexOptions().name("RepositoryNameIdx").background(true))
+                       )
+    ) with WithThrottling {
 
   val logger: Logger = Logger(this.getClass)
 
@@ -48,13 +52,15 @@ class RepositoryLibraryDependenciesRepository @Inject()(mongo: MongoComponent, f
     logger.info(s"writing to mongo: $repositoryLibraryDependencies")
     futureHelper
       .withTimerAndCounter("mongo.update") {
-        collection
-          .replaceOne(
-            filter = equal("repositoryName", repositoryLibraryDependencies.repositoryName),
-            repositoryLibraryDependencies,
-            ReplaceOptions().upsert(true)
-          )
-          .toFuture()
+        throttled {
+            collection
+              .replaceOne(
+                filter      = equal("repositoryName", repositoryLibraryDependencies.repositoryName),
+                replacement = repositoryLibraryDependencies,
+                options     = ReplaceOptions().upsert(true)
+              )
+          }
+          .toFuture
           .map(_ => repositoryLibraryDependencies)
       }
       .recover {
@@ -70,20 +76,30 @@ class RepositoryLibraryDependenciesRepository @Inject()(mongo: MongoComponent, f
       // Note, the regex will not use the index.
       // Mongdo 3.4 does support collated indices, allowing for case-insensitive searches: https://docs.mongodb.com/manual/core/index-case-insensitive/
       //TODO: Explore using index for this query
-      collection.find(regex("repositoryName", "^" + repositoryName + "$", "i")).toFuture.map {
-        case data if data.size > 1 =>
-          throw new RuntimeException(
-            s"There should only be '1' record per repository! for $repositoryName there are ${data.size}")
-        case data => data.headOption
-      }
+      throttled {
+          collection.find(regex("repositoryName", "^" + repositoryName + "$", "i"))
+        }
+        .toFuture
+        .map {
+          case data if data.size > 1 =>
+            sys.error(s"There should only be '1' record per repository! for $repositoryName there are ${data.size}")
+          case data => data.headOption
+        }
     }
 
   def getAllEntries: Future[Seq[MongoRepositoryDependencies]] = {
     logger.debug("retrieving getAll current dependencies")
-    collection.find().toFuture()
+    throttled {
+      collection.find()
+    }.toFuture
   }
 
-  def clearAllData: Future[Boolean] = collection.deleteMany(new BasicDBObject()).toFuture.map(_.wasAcknowledged())
+  def clearAllData: Future[Boolean] =
+    throttled {
+        collection.deleteMany(new BasicDBObject())
+      }
+      .toFuture
+      .map(_.wasAcknowledged())
 
   def clearUpdateDates: Future[Seq[MongoRepositoryDependencies]] =
     getAllEntries.flatMap { es =>

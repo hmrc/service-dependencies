@@ -24,6 +24,7 @@ import org.mongodb.scala.model.{IndexModel, IndexOptions, ReplaceOptions}
 import play.api.Logger
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.play.json.PlayMongoCollection
+import uk.gov.hmrc.mongo.throttle.{ThrottleConfig, WithThrottling}
 import uk.gov.hmrc.servicedependencies.model._
 import uk.gov.hmrc.servicedependencies.util.FutureHelpers
 
@@ -31,14 +32,18 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
 @Singleton
-class LibraryVersionRepository @Inject()(mongo: MongoComponent, futureHelpers: FutureHelpers)
+class LibraryVersionRepository @Inject()(
+  mongo             : MongoComponent,
+  futureHelpers     : FutureHelpers,
+  val throttleConfig: ThrottleConfig
+  )
     extends PlayMongoCollection[MongoLibraryVersion](
       collectionName = "libraryVersions",
       mongoComponent          = mongo,
       domainFormat   = MongoLibraryVersion.format,
       indexes = Seq(
         IndexModel(hashed("libraryName"), IndexOptions().name("libraryNameIdx").background(true))
-      )) {
+      )) with WithThrottling {
 
   val logger: Logger = Logger(this.getClass)
 
@@ -46,20 +51,29 @@ class LibraryVersionRepository @Inject()(mongo: MongoComponent, futureHelpers: F
     logger.debug(s"writing $libraryVersion")
     futureHelpers
       .withTimerAndCounter("mongo.update") {
-        collection
-          .replaceOne(
-            filter = equal("libraryName", libraryVersion.libraryName),
-            libraryVersion,
-            ReplaceOptions().upsert(true)
-          )
-          .toFuture()
+        throttled {
+          collection
+            .replaceOne(
+              filter      = equal("libraryName", libraryVersion.libraryName),
+              replacement = libraryVersion,
+              options     = ReplaceOptions().upsert(true)
+            )
+          }
+          .toFuture
           .map(_ => libraryVersion)
     } recover {
       case lastError => throw new RuntimeException(s"failed to persist LibraryVersion: $libraryVersion", lastError)
     }
   }
 
-  def getAllEntries: Future[Seq[MongoLibraryVersion]] = collection.find().toFuture()
+  def getAllEntries: Future[Seq[MongoLibraryVersion]] =
+    throttled {
+     collection.find()
+    }.toFuture
 
-  def clearAllData: Future[Boolean] = collection.deleteMany(new BasicDBObject()).toFuture.map(_.wasAcknowledged())
+  def clearAllData: Future[Boolean] =
+    throttled {
+      collection.deleteMany(new BasicDBObject())
+    }.toFuture
+     .map(_.wasAcknowledged())
 }
