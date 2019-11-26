@@ -22,8 +22,10 @@ import java.util.concurrent.atomic.AtomicReference
 import org.mockito.ArgumentMatchers.any
 import org.mockito.MockitoSugar
 import org.scalatest.{FlatSpec, Matchers}
+import play.api.Configuration
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.mongo.test.MongoSupport
+import uk.gov.hmrc.mongo.throttle.ThrottleConfig
 import uk.gov.hmrc.servicedependencies.connector.ServiceConfigsConnector
 import uk.gov.hmrc.servicedependencies.model._
 import uk.gov.hmrc.servicedependencies.persistence.{BobbyRulesSummaryRepository, SlugInfoRepository}
@@ -100,7 +102,8 @@ class DependencyLookupServiceSpec
     val configService         = mock[ServiceConfigsConnector]
     val slugInfoRepository    = mock[SlugInfoRepository]
 
-    val bobbyRulesSummaryRepo = new BobbyRulesSummaryRepository(mongoComponent) {
+    val throttleConfig = new ThrottleConfig(Configuration())
+    val bobbyRulesSummaryRepo = new BobbyRulesSummaryRepository(mongoComponent, throttleConfig) {
       import scala.compat.java8.FunctionConverters._
 
       private val store = new AtomicReference(List[BobbyRulesSummary]())

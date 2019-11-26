@@ -22,7 +22,6 @@ import org.mongodb.scala.model.Filters.equal
 import org.mongodb.scala.model.Indexes.hashed
 import org.mongodb.scala.model.{IndexModel, IndexOptions, ReplaceOptions}
 import play.api.Logger
-import play.api.libs.json.Json
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.play.json.PlayMongoCollection
 import uk.gov.hmrc.mongo.throttle.{ThrottleConfig, WithThrottling}
@@ -34,10 +33,10 @@ import scala.concurrent.Future
 
 @Singleton
 class SbtPluginVersionRepository @Inject()(
-  mongo             : MongoComponent,
-  futureHelpers     : FutureHelpers,
-  val throttleConfig: ThrottleConfig
-  ) extends PlayMongoCollection[MongoSbtPluginVersion](
+      mongo             : MongoComponent,
+      futureHelpers     : FutureHelpers,
+      val throttleConfig: ThrottleConfig
+    ) extends PlayMongoCollection[MongoSbtPluginVersion](
       collectionName = "sbtPluginVersions",
       mongoComponent = mongo,
       domainFormat   = MongoSbtPluginVersion.format,
@@ -52,15 +51,13 @@ class SbtPluginVersionRepository @Inject()(
     logger.debug(s"writing $sbtPluginVersion")
     futureHelpers
       .withTimerAndCounter("mongo.update") {
-        throttled {
-            collection
-              .replaceOne(
-                filter      = equal("sbtPluginName", sbtPluginVersion.sbtPluginName),
-                replacement = sbtPluginVersion,
-                options     = ReplaceOptions().upsert(true)
-              )
-          }
-          .toFuture
+        collection
+          .replaceOne(
+            filter      = equal("sbtPluginName", sbtPluginVersion.sbtPluginName),
+            replacement = sbtPluginVersion,
+            options     = ReplaceOptions().upsert(true)
+          )
+          .toThrottledFuture
           .map(_ => sbtPluginVersion)
       }
       .recover {
@@ -70,14 +67,11 @@ class SbtPluginVersionRepository @Inject()(
   }
 
   def getAllEntries: Future[Seq[MongoSbtPluginVersion]] =
-    throttled {
-      collection.find()
-    }.toFuture
+    collection.find()
+      .toThrottledFuture
 
   def clearAllData: Future[Boolean] =
-    throttled {
-        collection.deleteMany(new BasicDBObject())
-      }
-      .toFuture
+    collection.deleteMany(new BasicDBObject())
+      .toThrottledFuture
       .map(_.wasAcknowledged())
 }

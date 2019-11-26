@@ -33,17 +33,17 @@ import scala.concurrent.Future
 
 @Singleton
 class LibraryVersionRepository @Inject()(
-  mongo             : MongoComponent,
-  futureHelpers     : FutureHelpers,
-  val throttleConfig: ThrottleConfig
-  )
-    extends PlayMongoCollection[MongoLibraryVersion](
+      mongo             : MongoComponent,
+      futureHelpers     : FutureHelpers,
+      val throttleConfig: ThrottleConfig
+    ) extends PlayMongoCollection[MongoLibraryVersion](
       collectionName = "libraryVersions",
-      mongoComponent          = mongo,
+      mongoComponent = mongo,
       domainFormat   = MongoLibraryVersion.format,
-      indexes = Seq(
-        IndexModel(hashed("libraryName"), IndexOptions().name("libraryNameIdx").background(true))
-      )) with WithThrottling {
+      indexes        = Seq(
+                         IndexModel(hashed("libraryName"), IndexOptions().name("libraryNameIdx").background(true))
+                       )
+    ) with WithThrottling {
 
   val logger: Logger = Logger(this.getClass)
 
@@ -51,15 +51,13 @@ class LibraryVersionRepository @Inject()(
     logger.debug(s"writing $libraryVersion")
     futureHelpers
       .withTimerAndCounter("mongo.update") {
-        throttled {
-          collection
-            .replaceOne(
-              filter      = equal("libraryName", libraryVersion.libraryName),
-              replacement = libraryVersion,
-              options     = ReplaceOptions().upsert(true)
-            )
-          }
-          .toFuture
+        collection
+          .replaceOne(
+            filter      = equal("libraryName", libraryVersion.libraryName),
+            replacement = libraryVersion,
+            options     = ReplaceOptions().upsert(true)
+          )
+          .toThrottledFuture
           .map(_ => libraryVersion)
     } recover {
       case lastError => throw new RuntimeException(s"failed to persist LibraryVersion: $libraryVersion", lastError)
@@ -67,13 +65,11 @@ class LibraryVersionRepository @Inject()(
   }
 
   def getAllEntries: Future[Seq[MongoLibraryVersion]] =
-    throttled {
-     collection.find()
-    }.toFuture
+   collection.find()
+     .toThrottledFuture
 
   def clearAllData: Future[Boolean] =
-    throttled {
-      collection.deleteMany(new BasicDBObject())
-    }.toFuture
+    collection.deleteMany(new BasicDBObject())
+     .toThrottledFuture
      .map(_.wasAcknowledged())
 }

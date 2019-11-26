@@ -31,40 +31,34 @@ import scala.concurrent.{ExecutionContext, Future}
 class SlugInfoRepository @Inject()(
       mongo             : MongoComponent,
       val throttleConfig: ThrottleConfig
-      )(implicit ec: ExecutionContext)
-    extends SlugInfoRepositoryBase[SlugInfo](
+      )(implicit ec: ExecutionContext
+    ) extends SlugInfoRepositoryBase[SlugInfo](
       mongo,
       domainFormat   = MongoSlugInfoFormats.slugInfoFormat
     ) with WithThrottling {
 
   def add(slugInfo: SlugInfo): Future[Boolean] =
-    throttled {
-      collection
-        .replaceOne(
-          filter      = equal("uri", slugInfo.uri),
-          replacement = slugInfo,
-          options     = ReplaceOptions().upsert(true)
-        )
-      }
-      .toFuture
+    collection
+      .replaceOne(
+        filter      = equal("uri", slugInfo.uri),
+        replacement = slugInfo,
+        options     = ReplaceOptions().upsert(true)
+      )
+      .toThrottledFuture
       .map(_.wasAcknowledged())
 
   def getAllEntries: Future[Seq[SlugInfo]] =
-    throttled {
-        collection.find()
-      }.toFuture
+    collection.find()
+      .toThrottledFuture
 
   def clearAllData: Future[Boolean] =
-    throttled {
-        collection.deleteMany(new BasicDBObject())
-      }
-      .toFuture
+    collection.deleteMany(new BasicDBObject())
+      .toThrottledFuture
       .map(_.wasAcknowledged())
 
   def getUniqueSlugNames: Future[Seq[String]] =
-    throttled {
-        collection.distinct[String]("name")
-      }.toFuture
+    collection.distinct[String]("name")
+      .toThrottledFuture
 
   def getSlugInfos(name: String, optVersion: Option[String]): Future[Seq[SlugInfo]] = {
     val filter =
@@ -74,36 +68,30 @@ class SlugInfoRepository @Inject()(
                                 equal("name"   , name),
                                 equal("version", version))
       }
-    throttled {
-        collection.find(filter)
-      }.toFuture
+    collection.find(filter)
+      .toThrottledFuture
   }
 
   def getSlugInfo(name: String, flag: SlugInfoFlag): Future[Option[SlugInfo]] =
-    throttled {
-        collection.find(
-          and(
-            equal("name", name),
-            equal(flag.asString, true)))
-      }
-      .toFuture
+    collection
+      .find(
+        and(
+          equal("name", name),
+          equal(flag.asString, true)))
+      .toThrottledFuture
       .map(_.headOption)
 
   def getSlugsForEnv(flag: SlugInfoFlag): Future[Seq[SlugInfo]] =
-    throttled {
-        collection.find(equal(flag.asString, true))
-      }
-      .toFuture
+    collection.find(equal(flag.asString, true))
+      .toThrottledFuture
 
   def clearFlag(flag: SlugInfoFlag, name: String): Future[Unit] = {
     logger.debug(s"clear ${flag.asString} flag on $name")
-      throttled {
-        collection
-          .updateMany(
-            filter = equal("name", name),
-            update = set(flag.asString, false))
-      }
-      .toFuture()
+    collection
+      .updateMany(
+        filter = equal("name", name),
+        update = set(flag.asString, false))
+      .toThrottledFuture
       .map(_ => ())
   }
 
@@ -114,14 +102,12 @@ class SlugInfoRepository @Inject()(
     for {
       _ <- clearFlag(flag, name)
       _ =  logger.debug(s"mark slug $name $version with ${flag.asString} flag")
-      _ <- throttled {
-             collection
-               .updateOne(
-                 filter = and(
-                            equal("name"   , name),
-                            equal("version", version.original)),
-                 update = set(flag.asString, true))
-           }
-           .toFuture()
+      _ <- collection
+             .updateOne(
+               filter = and(
+                          equal("name"   , name),
+                          equal("version", version.original)),
+               update = set(flag.asString, true))
+             .toThrottledFuture
     } yield ()
 }

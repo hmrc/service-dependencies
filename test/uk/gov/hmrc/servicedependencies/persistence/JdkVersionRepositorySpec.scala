@@ -35,7 +35,7 @@ class JdkVersionRepositorySpec
 
   val throttleConfig = new ThrottleConfig(Configuration())
   val slugInfoRepo   = new SlugInfoRepository(mongoComponent, throttleConfig)
-  val jdkVersionRepo = new JdkVersionRepository(mongoComponent)
+  val jdkVersionRepo = new JdkVersionRepository(mongoComponent, throttleConfig)
 
   override protected val collectionName: String   = jdkVersionRepo.collectionName
   override protected val indexes: Seq[IndexModel] = jdkVersionRepo.indexes

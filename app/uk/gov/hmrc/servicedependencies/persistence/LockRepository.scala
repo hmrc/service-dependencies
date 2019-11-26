@@ -27,10 +27,10 @@ import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
 class LocksRepository @Inject()(
-  mongo             : MongoComponent,
-  val throttleConfig: ThrottleConfig
-  )(implicit ec: ExecutionContext)
-    extends PlayMongoCollection[Lock](
+      mongo             : MongoComponent,
+      val throttleConfig: ThrottleConfig
+    )(implicit ec: ExecutionContext
+    ) extends PlayMongoCollection[Lock](
       collectionName = "locks",
       mongoComponent = mongo,
       domainFormat   = Lock.format,
@@ -38,14 +38,11 @@ class LocksRepository @Inject()(
     ) with WithThrottling {
 
   def getAllEntries: Future[Seq[Lock]] =
-    throttled {
-      collection.find()
-    }.toFuture
+    collection.find()
+      .toThrottledFuture
 
   def clearAllData: Future[Boolean] =
-    throttled {
-        collection.deleteMany(new BasicDBObject())
-      }
-      .toFuture
+    collection.deleteMany(new BasicDBObject())
+      .toThrottledFuture
       .map(_.wasAcknowledged())
 }

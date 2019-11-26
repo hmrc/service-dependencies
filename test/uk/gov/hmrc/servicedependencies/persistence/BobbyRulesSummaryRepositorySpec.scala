@@ -24,7 +24,9 @@ import org.mockito.MockitoSugar
 import org.mongodb.scala.ReadPreference
 import org.mongodb.scala.model.IndexModel
 import org.scalatest.{Matchers, WordSpecLike}
+import play.api.Configuration
 import uk.gov.hmrc.mongo.test.DefaultMongoCollectionSupport
+import uk.gov.hmrc.mongo.throttle.ThrottleConfig
 import uk.gov.hmrc.servicedependencies.model.{BobbyRule, BobbyRulesSummary, BobbyVersionRange, SlugInfoFlag}
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
@@ -35,9 +37,11 @@ class BobbyRulesSummaryRepositorySpec
     with MockitoSugar
     with DefaultMongoCollectionSupport {
 
-  private val repo = new BobbyRulesSummaryRepository(mongo = mongoComponent) {
+  val throttleConfig = new ThrottleConfig(Configuration())
+
+  private val repo = new BobbyRulesSummaryRepository(mongoComponent, throttleConfig) {
     def findAll(): Future[Seq[BobbyRulesSummary]] =
-      collection.withReadPreference(ReadPreference.secondaryPreferred).find().toFuture().map(_.toList)
+      collection.withReadPreference(ReadPreference.secondaryPreferred).find().toThrottledFuture.map(_.toList)
   }
 
   override protected val collectionName: String   = repo.collectionName

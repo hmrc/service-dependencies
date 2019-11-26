@@ -35,7 +35,7 @@ class ServiceDependenciesRepositorySpec
 
   val throttleConfig = new ThrottleConfig(Configuration())
   val slugInfoRepo   = new SlugInfoRepository(mongoComponent, throttleConfig)
-  val serviceDependenciesRepo = new ServiceDependenciesRepository(mongoComponent)
+  val serviceDependenciesRepo = new ServiceDependenciesRepository(mongoComponent, throttleConfig)
 
   override protected val collectionName: String   = serviceDependenciesRepo.collectionName
   override protected val indexes: Seq[IndexModel] = serviceDependenciesRepo.indexes

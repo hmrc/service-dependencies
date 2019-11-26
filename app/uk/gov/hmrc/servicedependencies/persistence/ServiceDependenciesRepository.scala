@@ -30,10 +30,10 @@ import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
 class ServiceDependenciesRepository @Inject()(
-  mongo             : MongoComponent,
-  val throttleConfig: ThrottleConfig
-  )(implicit ec: ExecutionContext)
-    extends SlugInfoRepositoryBase[ServiceDependency](
+      mongo             : MongoComponent,
+      val throttleConfig: ThrottleConfig
+      )(implicit ec: ExecutionContext
+    ) extends SlugInfoRepositoryBase[ServiceDependency](
       mongo,
       domainFormat   = MongoSlugInfoFormats.serviceDependencyFormat
     ) with WithThrottling {
@@ -63,8 +63,7 @@ class ServiceDependenciesRepository @Inject()(
         ))
     )
 
-    throttled {
-      collection.aggregate(agg).allowDiskUse(true)
-    }.toFuture
+    collection.aggregate(agg).allowDiskUse(true)
+      .toThrottledFuture
   }
 }

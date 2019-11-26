@@ -32,12 +32,13 @@ import uk.gov.hmrc.servicedependencies.util.FutureHelpers
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
+
 @Singleton
 class RepositoryLibraryDependenciesRepository @Inject()(
-  mongo             : MongoComponent,
-  futureHelper      : FutureHelpers,
-  val throttleConfig: ThrottleConfig)
-    extends PlayMongoCollection[MongoRepositoryDependencies](
+      mongo             : MongoComponent,
+      futureHelper      : FutureHelpers,
+      val throttleConfig: ThrottleConfig
+    ) extends PlayMongoCollection[MongoRepositoryDependencies](
       collectionName = "repositoryLibraryDependencies",
       mongoComponent = mongo,
       domainFormat   = MongoRepositoryDependencies.format,
@@ -52,15 +53,13 @@ class RepositoryLibraryDependenciesRepository @Inject()(
     logger.info(s"writing to mongo: $repositoryLibraryDependencies")
     futureHelper
       .withTimerAndCounter("mongo.update") {
-        throttled {
-            collection
-              .replaceOne(
-                filter      = equal("repositoryName", repositoryLibraryDependencies.repositoryName),
-                replacement = repositoryLibraryDependencies,
-                options     = ReplaceOptions().upsert(true)
-              )
-          }
-          .toFuture
+        collection
+          .replaceOne(
+            filter      = equal("repositoryName", repositoryLibraryDependencies.repositoryName),
+            replacement = repositoryLibraryDependencies,
+            options     = ReplaceOptions().upsert(true)
+          )
+          .toThrottledFuture
           .map(_ => repositoryLibraryDependencies)
       }
       .recover {
@@ -76,10 +75,8 @@ class RepositoryLibraryDependenciesRepository @Inject()(
       // Note, the regex will not use the index.
       // Mongdo 3.4 does support collated indices, allowing for case-insensitive searches: https://docs.mongodb.com/manual/core/index-case-insensitive/
       //TODO: Explore using index for this query
-      throttled {
-          collection.find(regex("repositoryName", "^" + repositoryName + "$", "i"))
-        }
-        .toFuture
+      collection.find(regex("repositoryName", "^" + repositoryName + "$", "i"))
+        .toThrottledFuture
         .map {
           case data if data.size > 1 =>
             sys.error(s"There should only be '1' record per repository! for $repositoryName there are ${data.size}")
@@ -89,16 +86,13 @@ class RepositoryLibraryDependenciesRepository @Inject()(
 
   def getAllEntries: Future[Seq[MongoRepositoryDependencies]] = {
     logger.debug("retrieving getAll current dependencies")
-    throttled {
-      collection.find()
-    }.toFuture
+    collection.find()
+      .toThrottledFuture
   }
 
   def clearAllData: Future[Boolean] =
-    throttled {
-        collection.deleteMany(new BasicDBObject())
-      }
-      .toFuture
+    collection.deleteMany(new BasicDBObject())
+      .toThrottledFuture
       .map(_.wasAcknowledged())
 
   def clearUpdateDates: Future[Seq[MongoRepositoryDependencies]] =

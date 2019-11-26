@@ -38,7 +38,9 @@ import java.time.temporal.ChronoUnit
 import org.mockito.MockitoSugar
 import org.mongodb.scala.model.IndexModel
 import org.scalatest.{Matchers, WordSpecLike}
+import play.api.Configuration
 import uk.gov.hmrc.mongo.test.CleanMongoCollectionSupport
+import uk.gov.hmrc.mongo.throttle.ThrottleConfig
 import uk.gov.hmrc.servicedependencies.model.{MongoRepositoryDependencies, MongoRepositoryDependency, Version}
 import uk.gov.hmrc.servicedependencies.util.{FutureHelpers, MockFutureHelpers}
 
@@ -49,8 +51,9 @@ class RepositoryLibraryDependenciesRepositorySpec
       // We don't mixin IndexedMongoQueriesSupport here, as this repo makes use of regex based queries not satisfied by an index
       with CleanMongoCollectionSupport {
 
-  val futureHelper: FutureHelpers = new MockFutureHelpers()
-  val repo = new RepositoryLibraryDependenciesRepository(mongoComponent, futureHelper)
+  val futureHelper   = new MockFutureHelpers()
+  val throttleConfig = new ThrottleConfig(Configuration())
+  val repo           = new RepositoryLibraryDependenciesRepository(mongoComponent, futureHelper, throttleConfig)
 
   override protected val collectionName: String   = repo.collectionName
   override protected val indexes: Seq[IndexModel] = repo.indexes

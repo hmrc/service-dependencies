@@ -5,7 +5,7 @@ private object AppDependencies {
   import play.sbt.PlayImport._
 
   val bootstrapPlayVersion = "1.1.0"
-  val hmrcMongoVersion     = "0.13.1"
+  val hmrcMongoVersion     = "0.13.2"
 
   val compile = Seq(
     ws,
@@ -15,7 +15,7 @@ private object AppDependencies {
     "uk.gov.hmrc.mongo"  %% "hmrc-mongo-metrix-play-26" % hmrcMongoVersion,
     "uk.gov.hmrc.mongo"  %% "hmrc-mongo-play-26"        % hmrcMongoVersion,
     "org.typelevel"      %% "cats-core"                 % "1.1.0",
-    "org.apache.commons" %  "commons-compress"           % "1.19",
+    "org.apache.commons" %  "commons-compress"          % "1.19",
     "com.lightbend.akka" %% "akka-stream-alpakka-sns"   % "1.1.2",
     "com.lightbend.akka" %% "akka-stream-alpakka-sqs"   % "1.1.2"
   )

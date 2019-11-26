@@ -31,10 +31,10 @@ import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
 class GroupArtefactRepository @Inject()(
-  mongo             : MongoComponent,
-  val throttleConfig: ThrottleConfig
-  )(implicit ec: ExecutionContext)
-    extends SlugInfoRepositoryBase[GroupArtefacts](
+      mongo             : MongoComponent,
+      val throttleConfig: ThrottleConfig
+    )(implicit ec: ExecutionContext
+    ) extends SlugInfoRepositoryBase[GroupArtefacts](
       mongo,
       domainFormat   = MongoSlugInfoFormats.groupArtefactsFormat
     ) with WithThrottling {
@@ -64,8 +64,7 @@ class GroupArtefactRepository @Inject()(
       sort(orderBy(ascending("_id")))
     )
 
-    throttled {
-      collection.aggregate(agg).allowDiskUse(true)
-    }.toFuture
+    collection.aggregate(agg).allowDiskUse(true)
+      .toThrottledFuture
   }
 }

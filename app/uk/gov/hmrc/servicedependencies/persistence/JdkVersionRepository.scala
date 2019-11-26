@@ -28,10 +28,10 @@ import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
 class JdkVersionRepository @Inject()(
-  mongo             : MongoComponent,
-  val throttleConfig: ThrottleConfig
-  )(implicit ec: ExecutionContext)
-    extends SlugInfoRepositoryBase[JDKVersion](
+      mongo             : MongoComponent,
+      val throttleConfig: ThrottleConfig
+    )(implicit ec: ExecutionContext
+    ) extends SlugInfoRepositoryBase[JDKVersion](
       mongo,
       domainFormat   = MongoSlugInfoFormats.jdkVersionFormat
     ) with WithThrottling {
@@ -57,8 +57,7 @@ class JdkVersionRepository @Inject()(
           computed("kind", f"$$java.kind")
         ))
     )
-    throttled {
-      collection.aggregate(agg)
-    }.toFuture
+    collection.aggregate(agg)
+      .toThrottledFuture
   }
 }

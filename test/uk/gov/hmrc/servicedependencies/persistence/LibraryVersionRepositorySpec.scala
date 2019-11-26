@@ -22,7 +22,9 @@ import com.codahale.metrics.MetricRegistry
 import org.mockito.MockitoSugar
 import org.mongodb.scala.model.IndexModel
 import org.scalatest.{Matchers, WordSpecLike}
+import play.api.Configuration
 import uk.gov.hmrc.mongo.test.DefaultMongoCollectionSupport
+import uk.gov.hmrc.mongo.throttle.ThrottleConfig
 import uk.gov.hmrc.servicedependencies.model.{MongoLibraryVersion, Version}
 import uk.gov.hmrc.servicedependencies.util.{FutureHelpers, MockFutureHelpers}
 
@@ -32,10 +34,10 @@ class LibraryVersionRepositorySpec
     with MockitoSugar
     with DefaultMongoCollectionSupport {
 
-  val metricsRegistry             = new MetricRegistry()
-  val futureHelper: FutureHelpers = new MockFutureHelpers()
-
-  val repo = new LibraryVersionRepository(mongoComponent, futureHelper)
+  val metricsRegistry = new MetricRegistry()
+  val futureHelper    = new MockFutureHelpers()
+  val throttleConfig  = new ThrottleConfig(Configuration())
+  val repo            = new LibraryVersionRepository(mongoComponent, futureHelper, throttleConfig)
 
   override protected val collectionName: String   = repo.collectionName
   override protected val indexes: Seq[IndexModel] = repo.indexes

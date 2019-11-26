@@ -35,8 +35,8 @@ class GroupArtefactsRepositorySpec
       // We don't mixin IndexedMongoQueriesSupport here, as this repo makes use of queries not satisfied by an index
       with CleanMongoCollectionSupport {
 
-  val groupArtefactsRepo = new GroupArtefactRepository(mongoComponent)
   val throttleConfig     = new ThrottleConfig(Configuration())
+  val groupArtefactsRepo = new GroupArtefactRepository(mongoComponent, throttleConfig)
   val slugInfoRepo       = new SlugInfoRepository(mongoComponent, throttleConfig)
 
   override implicit val patienceConfig = PatienceConfig(timeout = 30.seconds, interval = 100.millis)

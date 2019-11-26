@@ -20,7 +20,6 @@ import java.time.LocalDate
 
 import com.google.inject.{Inject, Singleton}
 import com.mongodb.BasicDBObject
-import org.mongodb.scala._
 import org.mongodb.scala.model.Filters.equal
 import org.mongodb.scala.model.Indexes.ascending
 import org.mongodb.scala.model.Sorts.descending
@@ -34,10 +33,10 @@ import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
 class BobbyRulesSummaryRepository @Inject()(
-  mongo             : MongoComponent,
-  val throttleConfig: ThrottleConfig
-  )(implicit ec: ExecutionContext)
-    extends PlayMongoCollection[BobbyRulesSummary](
+      mongo             : MongoComponent,
+      val throttleConfig: ThrottleConfig
+    )(implicit ec: ExecutionContext
+    ) extends PlayMongoCollection[BobbyRulesSummary](
       collectionName = "bobbyRulesSummary",
       mongoComponent = mongo,
       domainFormat   = BobbyRulesSummary.mongoFormat,
@@ -46,26 +45,20 @@ class BobbyRulesSummaryRepository @Inject()(
                        )
     ) with WithThrottling {
 
-  private implicit val brsf = BobbyRulesSummary.mongoFormat
-
 
   def add(summary: BobbyRulesSummary): Future[Unit] =
-    throttled {
-        collection
-          .replaceOne(
-            filter      = equal("date", summary.date),
-            replacement = summary,
-            options     = ReplaceOptions().upsert(true)
-          )
-      }
-      .toFuture
+    collection
+      .replaceOne(
+        filter      = equal("date", summary.date),
+        replacement = summary,
+        options     = ReplaceOptions().upsert(true)
+      )
+      .toThrottledFuture
       .map(_ => ())
 
   def getLatest: Future[Option[BobbyRulesSummary]] =
-    throttled {
-        collection.find(equal("date", LocalDate.now))
-      }
-      .toFuture
+    collection.find(equal("date", LocalDate.now))
+      .toThrottledFuture
       .map(_.headOption)
       .flatMap {
         case Some(a) => Future(Some(a))
@@ -74,18 +67,14 @@ class BobbyRulesSummaryRepository @Inject()(
 
   // Not time bound yet
   def getHistoric: Future[List[BobbyRulesSummary]] =
-    throttled {
-        collection
-          .find()
-          .sort(descending("date"))
-      }
-      .toFuture
+    collection
+      .find()
+      .sort(descending("date"))
+      .toThrottledFuture
       .map(_.toList)
 
   def clearAllData: Future[Boolean] =
-    throttled {
-        collection.deleteMany(new BasicDBObject())
-      }
-      .toFuture
+    collection.deleteMany(new BasicDBObject())
+      .toThrottledFuture
       .map(_.wasAcknowledged())
 }
