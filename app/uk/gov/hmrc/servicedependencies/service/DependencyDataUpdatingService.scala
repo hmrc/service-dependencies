@@ -27,18 +27,18 @@ import uk.gov.hmrc.servicedependencies.controller.model.{Dependencies, Dependenc
 import uk.gov.hmrc.servicedependencies.model._
 import uk.gov.hmrc.servicedependencies.persistence._
 
-import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
 class DependencyDataUpdatingService @Inject()(
-  curatedDependencyConfigProvider: CuratedDependencyConfigProvider,
+  curatedDependencyConfigProvider        : CuratedDependencyConfigProvider,
   repositoryLibraryDependenciesRepository: RepositoryLibraryDependenciesRepository,
-  libraryVersionRepository: LibraryVersionRepository,
-  sbtPluginVersionRepository: SbtPluginVersionRepository,
-  locksRepository: LocksRepository,
-  mongoLocks: MongoLocks,
-  dependenciesDataSource: DependenciesDataSource
+  libraryVersionRepository               : LibraryVersionRepository,
+  sbtPluginVersionRepository             : SbtPluginVersionRepository,
+  locksRepository                        : LocksRepository,
+  mongoLocks                             : MongoLocks,
+  dependenciesDataSource                 : DependenciesDataSource
+)(implicit ec: ExecutionContext
 ) {
 
   lazy val logger = LoggerFactory.getLogger(this.getClass)

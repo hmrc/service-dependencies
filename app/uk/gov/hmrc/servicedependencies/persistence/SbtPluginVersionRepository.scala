@@ -28,11 +28,10 @@ import uk.gov.hmrc.mongo.play.json.PlayMongoCollection
 import uk.gov.hmrc.servicedependencies.model._
 import uk.gov.hmrc.servicedependencies.util.FutureHelpers
 
-import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
-class SbtPluginVersionRepository @Inject()(mongo: MongoComponent, futureHelpers: FutureHelpers)
+class SbtPluginVersionRepository @Inject()(mongo: MongoComponent, futureHelpers: FutureHelpers)(implicit ec: ExecutionContext)
     extends PlayMongoCollection[MongoSbtPluginVersion](
       collectionName = "sbtPluginVersions",
       mongoComponent = mongo,

@@ -32,22 +32,20 @@ import scala.concurrent.ExecutionContext
 class SlugMetadataUpdateScheduler @Inject()(
     schedulerConfigs    : SchedulerConfigs,
     slugInfoService     : SlugInfoService,
-    mongoLocks          : MongoLocks)(
-    implicit actorSystem         : ActorSystem,
-             applicationLifecycle: ApplicationLifecycle)
-  extends SchedulerUtils {
+    mongoLocks          : MongoLocks
+  )(implicit
+    actorSystem         : ActorSystem,
+    applicationLifecycle: ApplicationLifecycle,
+    ec                  : ExecutionContext
+  ) extends SchedulerUtils {
 
   implicit val hc: HeaderCarrier = HeaderCarrier()
 
-  import ExecutionContext.Implicits.global
-
   scheduleWithLock("Slug Metadata Updater", schedulerConfigs.slugMetadataUpdate, mongoLocks.slugMetadataUpdateSchedulerLock) {
-
     Logger.info("Updating slug metadata")
     for {
       _ <- slugInfoService.updateMetadata()
       _ = Logger.info("Finished updating slug metadata")
     } yield ()
-
   }
 }

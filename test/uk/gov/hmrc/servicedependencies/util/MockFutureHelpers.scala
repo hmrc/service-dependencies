@@ -25,6 +25,5 @@ class MockFutureHelpers extends FutureHelpers(null) {
 
   override lazy val defaultMetricsRegistry: MetricRegistry = null
 
-  override def withTimerAndCounter[T](name: String)(f: Future[T]) = f
-
+  override def withTimerAndCounter[T](name: String)(f: Future[T])(implicit ec: ExecutionContext) = f
 }

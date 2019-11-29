@@ -28,17 +28,15 @@ import uk.gov.hmrc.servicedependencies.connector.ServiceConfigsConnector
 import uk.gov.hmrc.servicedependencies.model._
 import uk.gov.hmrc.servicedependencies.persistence.{BobbyRulesSummaryRepository, SlugBlacklist, SlugInfoRepository}
 
-import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 
 
 class DependencyLookupService @Inject() (
     serviceConfigs       : ServiceConfigsConnector
   , slugRepo             : SlugInfoRepository
   , bobbyRulesSummaryRepo: BobbyRulesSummaryRepository
+  )(implicit ec: ExecutionContext
   ) {
-
-
   val logger = Logger("application.service.DependencyLookupService")
 
   import DependencyLookupService._

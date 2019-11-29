@@ -33,9 +33,8 @@ class IntegrationTestController @Inject()(
   , sluginfoRepo              : SlugInfoRepository
   , bobbyRulesSummaryRepo     : BobbyRulesSummaryRepository
   , cc                        : ControllerComponents
+  )(implicit ec: ExecutionContext
   ) extends BackendController(cc) {
-
-  import ExecutionContext.Implicits.global
 
   implicit val dtf                   = MongoJavatimeFormats.localDateFormats
   implicit val vf                    = Version.apiFormat

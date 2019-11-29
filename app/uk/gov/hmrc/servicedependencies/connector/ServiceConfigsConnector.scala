@@ -27,9 +27,12 @@ import uk.gov.hmrc.servicedependencies.model.BobbyRule
 import scala.concurrent.duration.Duration
 import scala.concurrent.{ExecutionContext, Future}
 
-class ServiceConfigsConnector @Inject()(httpClient: HttpClient, servicesConfig: ServicesConfig, cache: AsyncCacheApi) {
-
-  import ExecutionContext.Implicits.global
+class ServiceConfigsConnector @Inject()(
+    httpClient    : HttpClient,
+    servicesConfig: ServicesConfig,
+    cache         : AsyncCacheApi
+  )(implicit ec: ExecutionContext
+  ) {
   private implicit val hc: HeaderCarrier                    = HeaderCarrier()
   private implicit val reads: Reads[DeprecatedDependencies] = DeprecatedDependencies.reads
 

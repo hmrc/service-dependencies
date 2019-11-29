@@ -33,22 +33,21 @@ import scala.concurrent.ExecutionContext
 class BobbyRulesSummaryScheduler @Inject()(
     schedulerConfigs       : SchedulerConfigs,
     dependencyLookupService: DependencyLookupService,
-    mongoLocks             : MongoLocks)(
-    implicit actorSystem         : ActorSystem,
-             applicationLifecycle: ApplicationLifecycle)
-  extends SchedulerUtils {
+    mongoLocks             : MongoLocks
+  )(implicit
+    actorSystem         : ActorSystem,
+    applicationLifecycle: ApplicationLifecycle,
+    ec                  : ExecutionContext
+  ) extends SchedulerUtils {
 
   implicit val hc: HeaderCarrier = HeaderCarrier()
-
-  import ExecutionContext.Implicits.global
 
   scheduleWithLock("Bobby Rules Summary", schedulerConfigs.bobbyRulesSummary, mongoLocks.bobbyRulesSummarySchedulerLock) {
 
     Logger.info("Updating bobby rules summary")
     for {
       _ <- dependencyLookupService.updateBobbyRulesSummary
-      _ = Logger.info("Finished updating bobby rules summary")
+      _ =  Logger.info("Finished updating bobby rules summary")
     } yield ()
-
   }
 }

@@ -26,6 +26,8 @@ import uk.gov.hmrc.servicedependencies.model.{MongoSbtPluginVersion, Version}
 import uk.gov.hmrc.servicedependencies.util.{FutureHelpers, MockFutureHelpers}
 import uk.gov.hmrc.time.DateTimeUtils
 
+import scala.concurrent.ExecutionContext.Implicits.global
+
 class SbtPluginVersionRepositorySpec
     extends WordSpecLike
     with Matchers

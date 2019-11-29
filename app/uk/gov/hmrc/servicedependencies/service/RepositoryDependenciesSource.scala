@@ -22,7 +22,6 @@ import uk.gov.hmrc.mongo.metrix.MetricSource
 import uk.gov.hmrc.servicedependencies.connector.{Team, TeamsAndRepositoriesConnector}
 import uk.gov.hmrc.servicedependencies.model.{MongoRepositoryDependency, Version}
 import uk.gov.hmrc.servicedependencies.persistence.RepositoryLibraryDependenciesRepository
-import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.{ExecutionContext, Future}
 
 case class TeamRepos(
@@ -31,8 +30,9 @@ case class TeamRepos(
 
 @Singleton
 class RepositoryDependenciesSource @Inject()(
-  teamsAndRepositoriesConnector: TeamsAndRepositoriesConnector,
+  teamsAndRepositoriesConnector          : TeamsAndRepositoriesConnector,
   repositoryLibraryDependenciesRepository: RepositoryLibraryDependenciesRepository
+)(implicit ec: ExecutionContext
 ) extends MetricSource {
 
   implicit val hc: HeaderCarrier = HeaderCarrier()

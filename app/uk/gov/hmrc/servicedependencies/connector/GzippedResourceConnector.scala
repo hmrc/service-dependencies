@@ -30,17 +30,18 @@ import scala.concurrent.duration.{Duration, DurationInt}
 
 
 class GzippedResourceConnector @Inject()(
-             ws          : WSClient)(
-    implicit actorSystem : ActorSystem,
-             materializer: Materializer){
+    ws          : WSClient)(
+    implicit
+    actorSystem : ActorSystem,
+    materializer: Materializer,
+    ec          : ExecutionContext
+  ){
 
   /** @param resourceUrl the url pointing to gzipped resource
     * @return an uncompressed InputStream, which will close when it reaches the end
     */
   def openGzippedResource(resourceUrl: String): Future[InputStream] = {
     Logger.debug(s"downloading $resourceUrl")
-
-    import ExecutionContext.Implicits.global
 
     ws.url(resourceUrl).withMethod("GET").withRequestTimeout(Duration.Inf).stream.map { resp =>
       resp.bodyAsSource.async.via(Compression.gunzip()).runWith(StreamConverters.asInputStream(readTimeout = 20.hour))
