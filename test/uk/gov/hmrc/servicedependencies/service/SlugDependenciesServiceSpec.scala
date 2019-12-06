@@ -51,10 +51,10 @@ class SlugDependenciesServiceSpec extends FreeSpec with MockitoSugar with Matche
         aCuratedDependencyConfig(libraryNames)
       )
 
-    def stubLatestLibraryVersionsOf(nameToVersionMapping: (String, Version)*): Unit =
+    def stubLatestLibraryVersionLookupSuccessfullyReturns(versionsByName: Seq[(String, Version)]): Unit =
       when(libraryVersionRepository.getAllEntries).thenReturn(
         Future.successful(
-          nameToVersionMapping.map { case (n, v) =>
+          versionsByName.map { case (n, v) =>
             MongoLibraryVersion(libraryName = n, version = Some(v))
           }
         )
@@ -96,7 +96,7 @@ class SlugDependenciesServiceSpec extends FreeSpec with MockitoSugar with Matche
           dependencies = List(dependency1PreViolationEnrichment, dependency3PreViolationEnrichment),
           violations = List(List(dependency1RuleViolation), Nil)
         )
-        stubLatestLibraryVersionsOf()
+        stubLatestLibraryVersionLookupSuccessfullyReturns(Seq.empty)
         stubCuratedLibrariesOf(Dependency1.artifact, Dependency3.artifact)
         when(slugInfoRepository.getSlugInfos(SlugName, Some(SlugVersion))).thenReturn(
           Future.successful(Seq(slugInfo(withName = SlugName, withVersion = SlugVersion,
@@ -112,7 +112,9 @@ class SlugDependenciesServiceSpec extends FreeSpec with MockitoSugar with Matche
 
       "enriched with latest versions when known" in new Fixture {
         stubNoBobbyRulesViolations()
-        stubLatestLibraryVersionsOf(Dependency1.artifact -> LatestVersionOfDependency1, Dependency3.artifact -> LatestVersionOfDependency3)
+        stubLatestLibraryVersionLookupSuccessfullyReturns(Seq(
+          Dependency1.artifact -> LatestVersionOfDependency1, Dependency3.artifact -> LatestVersionOfDependency3
+        ))
         stubCuratedLibrariesOf(Dependency1.artifact, Dependency3.artifact)
         when(slugInfoRepository.getSlugInfos(SlugName, Some(SlugVersion))).thenReturn(
           Future.successful(Seq(slugInfo(withName = SlugName, withVersion = SlugVersion,
@@ -128,7 +130,7 @@ class SlugDependenciesServiceSpec extends FreeSpec with MockitoSugar with Matche
 
       "without latest versions when not known" in new Fixture {
         stubNoBobbyRulesViolations()
-        stubLatestLibraryVersionsOf()
+        stubLatestLibraryVersionLookupSuccessfullyReturns(Seq.empty)
         stubCuratedLibrariesOf(Dependency1.artifact, Dependency3.artifact)
         when(slugInfoRepository.getSlugInfos(SlugName, Some(SlugVersion))).thenReturn(
           Future.successful(Seq(slugInfo(withName = SlugName, withVersion = SlugVersion,
@@ -144,7 +146,7 @@ class SlugDependenciesServiceSpec extends FreeSpec with MockitoSugar with Matche
     }
 
     "indicates that the requested slug could not be found by returning None" in new Fixture {
-      stubLatestLibraryVersionsOf()
+      stubLatestLibraryVersionLookupSuccessfullyReturns(Seq.empty)
       when(slugInfoRepository.getSlugInfos(SlugName, Some(SlugVersion))).thenReturn(
         Future.successful(Seq.empty)
       )
@@ -166,7 +168,7 @@ class SlugDependenciesServiceSpec extends FreeSpec with MockitoSugar with Matche
 
     "propagates any failure to retrieve slug infos" in new Fixture {
       val failure = new RuntimeException("failed to retrieve slug infos")
-      stubLatestLibraryVersionsOf()
+      stubLatestLibraryVersionLookupSuccessfullyReturns(Seq.empty)
       when(slugInfoRepository.getSlugInfos(SlugName, Some(SlugVersion))).thenReturn(
         Future.failed(failure)
       )
@@ -175,7 +177,7 @@ class SlugDependenciesServiceSpec extends FreeSpec with MockitoSugar with Matche
     }
 
     "propagates any failure to determine bobby rule violations" in new Fixture {
-      stubLatestLibraryVersionsOf()
+      stubLatestLibraryVersionLookupSuccessfullyReturns(Seq.empty)
       when(slugInfoRepository.getSlugInfos(SlugName, Some(SlugVersion))).thenReturn(
         Future.successful(Seq(slugInfo(withName = SlugName, withVersion = SlugVersion,
           withDependencies = List(Dependency1, Dependency2, Dependency3))

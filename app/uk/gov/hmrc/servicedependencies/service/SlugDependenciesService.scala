@@ -39,24 +39,21 @@ class SlugDependenciesService @Inject() (slugInfoRepository: SlugInfoRepository,
   def curatedLibrariesOfSlug(name: String, version: String): Future[Option[List[Dependency]]] = {
     val futLatestVersionByName = libraryVersionRepository.getAllEntries.map(toLatestVersionByName)
     val futOptCuratedDependencies = slugInfoRepository.getSlugInfos(name, Some(version)).map(toCuratedDependencies)
-
-    futLatestVersionByName.flatMap { latestVersionByName =>
-      val asDependency = toDependency(latestVersionByName.get) _
-      futOptCuratedDependencies.flatMap {
-        case None => Future.successful(None)
-        case Some(slugDependencies) =>
-          val dependencies = slugDependencies.map(asDependency)
-          serviceConfigsService.getDependenciesWithBobbyRules(dependencies).map(Some(_))
-      }
-    }
+    for {
+      latestVersionByName <- futLatestVersionByName
+      optCuratedDependencies <- futOptCuratedDependencies
+      enrichedDependencies <- enrichSlugDependencies(latestVersionByName.get, optCuratedDependencies)
+    } yield enrichedDependencies
   }
 
-  private def toLatestVersionByName(latestVersions: Seq[MongoLibraryVersion]): Map[String, Version] =
-    latestVersions.flatMap { library =>
-      library.version.map {
-        library.libraryName -> _
-      }
-    }.toMap
+  private def toLatestVersionByName(latestVersions: Seq[MongoLibraryVersion]): Map[String, Version] = {
+    val nameVersionPairs = for {
+      library <- latestVersions
+      libraryVersion <- library.version
+    } yield library.libraryName -> libraryVersion
+
+    nameVersionPairs.toMap
+  }
 
   private def toCuratedDependencies(slugInfos: Seq[SlugInfo]): Option[List[SlugDependency]] =
     slugInfos.headOption.map {
@@ -64,6 +61,15 @@ class SlugDependenciesService @Inject() (slugInfoRepository: SlugInfoRepository,
     }
 
   private type VersionLookup = String => Option[Version]
+
+  private def enrichSlugDependencies(versionLookup: VersionLookup,
+                                     slugDependencies: Option[List[SlugDependency]]): Future[Option[List[Dependency]]] = {
+    val asDependencyWithLatestVersion = toDependency(versionLookup) _
+    slugDependencies.fold[Future[Option[List[Dependency]]]](ifEmpty = Future.successful(None)) { slugDependencies =>
+      val dependencies = slugDependencies.map(asDependencyWithLatestVersion)
+      serviceConfigsService.getDependenciesWithBobbyRules(dependencies).map(Some(_))
+    }
+  }
 
   private def toDependency(latestVersionLookup: VersionLookup)(slugDependency: SlugDependency): Dependency =
     Dependency(
