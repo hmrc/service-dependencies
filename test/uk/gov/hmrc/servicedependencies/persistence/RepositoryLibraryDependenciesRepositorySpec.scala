@@ -42,6 +42,8 @@ import uk.gov.hmrc.mongo.test.CleanMongoCollectionSupport
 import uk.gov.hmrc.servicedependencies.model.{MongoRepositoryDependencies, MongoRepositoryDependency, Version}
 import uk.gov.hmrc.servicedependencies.util.{FutureHelpers, MockFutureHelpers}
 
+import scala.concurrent.duration._
+
 class RepositoryLibraryDependenciesRepositorySpec
     extends WordSpecLike
       with Matchers
@@ -52,6 +54,7 @@ class RepositoryLibraryDependenciesRepositorySpec
   val futureHelper: FutureHelpers = new MockFutureHelpers()
   val repo = new RepositoryLibraryDependenciesRepository(mongoComponent, futureHelper)
 
+  override implicit val patienceConfig: PatienceConfig = PatienceConfig(timeout = 30.seconds, interval = 100.millis)
   override protected val collectionName: String   = repo.collectionName
   override protected val indexes: Seq[IndexModel] = repo.indexes
 

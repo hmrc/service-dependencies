@@ -21,14 +21,14 @@ import cats.instances.all._
 import cats.syntax.all._
 import com.google.inject.{Inject, Singleton}
 import play.api.Configuration
-import play.api.libs.json.{Json, OWrites}
+import play.api.libs.json.{Json, OWrites, Writes}
 import play.api.mvc._
 import uk.gov.hmrc.play.bootstrap.controller.BackendController
 import uk.gov.hmrc.servicedependencies.config.ServiceDependenciesConfig
 import uk.gov.hmrc.servicedependencies.connector.TeamsAndRepositoriesConnector
-import uk.gov.hmrc.servicedependencies.controller.model.Dependencies
+import uk.gov.hmrc.servicedependencies.controller.model.{Dependencies, Dependency}
 import uk.gov.hmrc.servicedependencies.model._
-import uk.gov.hmrc.servicedependencies.service.{DependencyDataUpdatingService, ServiceConfigsService, SlugInfoService}
+import uk.gov.hmrc.servicedependencies.service.{DependencyDataUpdatingService, ServiceConfigsService, SlugDependenciesService, SlugInfoService}
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -38,6 +38,7 @@ class ServiceDependenciesController @Inject()(
   dependencyDataUpdatingService: DependencyDataUpdatingService,
   teamsAndRepositoriesConnector: TeamsAndRepositoriesConnector,
   slugInfoService              : SlugInfoService,
+  slugDependenciesService      : SlugDependenciesService,
   config                       : ServiceDependenciesConfig,
   serviceConfigsService        : ServiceConfigsService,
   cc                           : ControllerComponents
@@ -67,14 +68,6 @@ class ServiceDependenciesController @Inject()(
         depsWithRules <- dependencies.toList
                           .traverse(serviceConfigsService.getDependenciesWithBobbyRules)
       } yield Ok(Json.toJson(depsWithRules))
-    }
-
-  def slugInfos(name: String, version: Option[String]): Action[AnyContent] =
-    Action.async { implicit request =>
-      implicit val format = ApiSlugInfoFormats.siFormat
-      slugInfoService
-        .getSlugInfos(name, version)
-        .map(res => Ok(Json.toJson(res)))
     }
 
   def dependenciesForTeam(team: String): Action[AnyContent] =
@@ -112,6 +105,14 @@ class ServiceDependenciesController @Inject()(
         .map(res => Ok(Json.toJson(res)))
     }
 
+  def slugInfos(name: String, version: Option[String]): Action[AnyContent] =
+    Action.async { implicit request =>
+      implicit val format = ApiSlugInfoFormats.siFormat
+      slugInfoService
+        .getSlugInfos(name, version)
+        .map(res => Ok(Json.toJson(res)))
+    }
+
   def slugInfo(name: String, flag: String): Action[AnyContent] =
     Action.async { implicit request =>
       SlugInfoFlag.parse(flag) match {
@@ -121,6 +122,14 @@ class ServiceDependenciesController @Inject()(
                           case None      => NotFound("")
                           case Some(res) => Ok(Json.toJson(res))
                         }
+      }
+    }
+
+  def dependenciesOfSlug(name: String, version: String): Action[AnyContent] =
+    Action.async { implicit request =>
+      implicit val writes = Dependency.writes
+      slugDependenciesService.curatedLibrariesOfSlug(name, version).map {
+        _.fold(ifEmpty = NotFound(""))(deps => Ok(Json.toJson(deps)))
       }
     }
 

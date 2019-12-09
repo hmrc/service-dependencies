@@ -156,6 +156,32 @@ class ServiceConfigsServiceSpec
 
   }
 
+  it should "handle a list containing multiple dependencies" in {
+    val bobbyRule1 = buildRule("(,2.5.19)")
+    val bobbyRule2 = buildRule("(,2.5.17)")
+    val bobbyRule3 = buildRule("(,2.4.0)")
+    val bobbyRules = Map(
+      "name"         -> List(bobbyRule1, bobbyRule2),
+      "another-name" -> List(bobbyRule3)
+    )
+    val dependencyViolatingRule1 = buildDependency(name = "name", version = "2.5.18")
+    val dependencyWithNoViolations  = buildDependency(name = "another-name", version = "2.5")
+    val dependencyWithNoRules = buildDependency(name = "unmatched", version = "4.5.6")
+
+    when(serviceConfigsConnector.getBobbyRules()).thenReturn(Future.successful(bobbyRules))
+
+    val result = service.getDependenciesWithBobbyRules(List(dependencyViolatingRule1, dependencyWithNoViolations, dependencyWithNoRules))
+
+    result.map { enrichedDependencies =>
+      enrichedDependencies should contain theSameElementsAs Seq(
+        dependencyViolatingRule1.copy(bobbyRuleViolations = List(bobbyRule1.asDependencyBobbyRule)),
+        dependencyWithNoViolations,
+        dependencyWithNoRules
+      )
+    }
+  }
+
+
   private def buildRule(range: String) = BobbyRule(
     organisation = "hmrc",
     name         = "name",

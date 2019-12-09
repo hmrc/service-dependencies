@@ -16,18 +16,20 @@
 
 package uk.gov.hmrc.servicedependencies.controller
 
-import java.time.Instant
+import java.time.{Instant, LocalDate}
 
 import org.mockito.ArgumentMatchers.any
 import org.mockito.{Mockito, MockitoSugar}
 import org.scalatest._
 import org.scalatest.concurrent.{IntegrationPatience, ScalaFutures}
 import play.api.Configuration
+import play.api.libs.json.Json
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
 import uk.gov.hmrc.servicedependencies.config.ServiceDependenciesConfig
 import uk.gov.hmrc.servicedependencies.connector.TeamsAndRepositoriesConnector
-import uk.gov.hmrc.servicedependencies.controller.model.Dependencies
+import uk.gov.hmrc.servicedependencies.controller.model.{Dependencies, Dependency, DependencyBobbyRule}
+import uk.gov.hmrc.servicedependencies.model.{BobbyVersionRange, Version}
 import uk.gov.hmrc.servicedependencies.service._
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -95,10 +97,45 @@ class ServiceDependenciesControllerSpec
     }
   }
 
+  "getDependenciesOfSlug" - {
+    "should get dependencies using the service" in {
+      val SlugName = "a-slug-name"
+      val SlugVersion = "a-slug-version"
+      val boot = Boot.init
+      val today = LocalDate.of(2019, 11, 27)
+      when(boot.mockedSlugDependenciesService.curatedLibrariesOfSlug(SlugName, SlugVersion)).thenReturn(
+        Future.successful(Some(List(
+          Dependency(name = "library1", currentVersion = Version("1.1.1"), latestVersion = Some(Version("1.2.1")), bobbyRuleViolations = Nil),
+          Dependency(name = "library2", currentVersion = Version("2.2.2"), latestVersion = None, bobbyRuleViolations = List(
+            DependencyBobbyRule(reason = "security vulnerability", from = today, range = BobbyVersionRange("(,3.0.0)"))
+          ))
+        )))
+      )
+
+      val result = boot.controller.dependenciesOfSlug(SlugName, SlugVersion).apply(FakeRequest())
+
+      contentAsJson(result) shouldBe Json.parse(
+        s"""|[{
+            |  "name": "library1",
+            |  "currentVersion": {"major": 1, "minor": 1, "patch": 1, "original": "1.1.1"},
+            |  "latestVersion": {"major": 1, "minor": 2, "patch": 1, "original": "1.2.1"},
+            |  "bobbyRuleViolations": [],
+            |  "isExternal": false
+            |  },
+            | {
+            |  "name": "library2",
+            |  "currentVersion": {"major": 2, "minor": 2, "patch": 2, "original": "2.2.2"},
+            |  "bobbyRuleViolations": [{"reason": "security vulnerability", "from": "2019-11-27", "range": "(,3.0.0)"}],
+            |  "isExternal": false
+            | }]""".stripMargin)
+    }
+  }
+
   case class Boot(
     mockedDependencyDataUpdatingService: DependencyDataUpdatingService,
     mockedTeamsAndRepositoriesConnector: TeamsAndRepositoriesConnector,
     mockedSlugInfoService: SlugInfoService,
+    mockedSlugDependenciesService: SlugDependenciesService,
     mockServiceConfigsService: ServiceConfigsService,
     controller: ServiceDependenciesController)
 
@@ -107,12 +144,14 @@ class ServiceDependenciesControllerSpec
       val mockedDependencyDataUpdatingService = mock[DependencyDataUpdatingService]
       val mockedTeamsAndRepositoriesConnector = mock[TeamsAndRepositoriesConnector]
       val mockedSlugInfoService               = mock[SlugInfoService]
+      val mockedSlugDependenciesService       = mock[SlugDependenciesService]
       val mockServiceConfigsService           = mock[ServiceConfigsService]
       val controller = new ServiceDependenciesController(
         Configuration(),
         mockedDependencyDataUpdatingService,
         mockedTeamsAndRepositoriesConnector,
         mockedSlugInfoService,
+        mockedSlugDependenciesService,
         mock[ServiceDependenciesConfig],
         mockServiceConfigsService,
         stubControllerComponents()
@@ -121,6 +160,7 @@ class ServiceDependenciesControllerSpec
         mockedDependencyDataUpdatingService,
         mockedTeamsAndRepositoriesConnector,
         mockedSlugInfoService,
+        mockedSlugDependenciesService,
         mockServiceConfigsService,
         controller)
     }
