@@ -28,6 +28,8 @@ import uk.gov.hmrc.servicedependencies.config.ServiceDependenciesConfig
 import uk.gov.hmrc.servicedependencies.connector.TeamsAndRepositoriesConnector
 import uk.gov.hmrc.servicedependencies.controller.model.{Dependencies, Dependency}
 import uk.gov.hmrc.servicedependencies.model._
+import uk.gov.hmrc.servicedependencies.service.SlugDependenciesService.TargetVersion
+import uk.gov.hmrc.servicedependencies.service.SlugDependenciesService.TargetVersion.{Labelled, Latest}
 import uk.gov.hmrc.servicedependencies.service.{DependencyDataUpdatingService, ServiceConfigsService, SlugDependenciesService, SlugInfoService}
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -125,12 +127,19 @@ class ServiceDependenciesController @Inject()(
       }
     }
 
-  def dependenciesOfSlug(name: String, version: String): Action[AnyContent] =
-    Action.async { implicit request =>
-      implicit val writes = Dependency.writes
-      slugDependenciesService.curatedLibrariesOfSlug(name, version).map {
-        _.fold(ifEmpty = NotFound(""))(deps => Ok(Json.toJson(deps)))
-      }
+  def dependenciesOfSlug(name: String, version: Option[String]): Action[AnyContent] =
+    Action.async {
+      implicit val writes: Writes[Dependency] = Dependency.writes
+      val errorMessageOrTargetVersion = version.map { str =>
+        Version.parse(str).toRight(left = "invalid version")
+      }.fold[Either[String, TargetVersion]](ifEmpty = Right(Latest))(_.map(Labelled))
+
+      errorMessageOrTargetVersion.fold(
+        _         => Future.successful(BadRequest("invalid version")),
+        atVersion => slugDependenciesService.curatedLibrariesOfSlug(name, atVersion).map {
+          _.fold(ifEmpty = NotFound(""))(deps => Ok(Json.toJson(deps)))
+        }
+      )
     }
 
   def findJDKForEnvironment(flag: String): Action[AnyContent] =

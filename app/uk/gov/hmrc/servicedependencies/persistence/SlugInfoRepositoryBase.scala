@@ -17,7 +17,7 @@
 package uk.gov.hmrc.servicedependencies.persistence
 
 import com.google.inject.{Inject, Singleton}
-import org.mongodb.scala.model.Indexes.{ascending, hashed}
+import org.mongodb.scala.model.Indexes.{ascending, compoundIndex, descending, hashed}
 import org.mongodb.scala.model.{IndexModel, IndexOptions}
 import play.api.Logger
 import play.api.libs.json.Format
@@ -36,7 +36,11 @@ abstract class SlugInfoRepositoryBase[A: ClassTag] @Inject()(mongo: MongoCompone
       indexes = Seq(
         IndexModel(ascending("uri"), IndexOptions().name("slugInfoUniqueIdx").unique(true)),
         IndexModel(hashed("name"), IndexOptions().name("slugInfoIdx").background(true)),
-        IndexModel(hashed("latest"), IndexOptions().name("slugInfoLatestIdx").background(true))
+        IndexModel(hashed("latest"), IndexOptions().name("slugInfoLatestIdx").background(true)),
+        IndexModel(compoundIndex(ascending("name"), descending("version")),
+          IndexOptions().name("slugInfoNameVersionIdx").background(true)),
+        IndexModel(compoundIndex(ascending("name"), descending("latest")),
+          IndexOptions().name("slugInfoNameLatestIdx").background(true))
       )
     ) {
 

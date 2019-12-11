@@ -49,6 +49,9 @@ class SlugInfoService @Inject()(
   def getSlugInfo(name: String, flag: SlugInfoFlag): Future[Option[SlugInfo]] =
     slugInfoRepository.getSlugInfo(name, flag)
 
+  def getSlugInfo(name: String, version: String): Future[Option[SlugInfo]] =
+    slugInfoRepository.getSlugInfos(name, Some(version)).map(_.headOption)
+
   def findServicesWithDependency(
       flag        : SlugInfoFlag
     , group       : String
