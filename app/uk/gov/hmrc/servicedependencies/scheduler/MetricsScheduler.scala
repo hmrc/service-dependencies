@@ -34,16 +34,16 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.Duration
 
 class MetricsScheduler @Inject()(
-  schedulerConfigs: SchedulerConfigs,
-  metrics: Metrics,
-  mongoComponent: MongoComponent,
-  repositoryDependenciesSource: RepositoryDependenciesSource,
-  mongoLockRepository: MongoLockRepository)(
-  implicit actorSystem: ActorSystem,
-  applicationLifecycle: ApplicationLifecycle
-) extends SchedulerUtils {
-
-  import ExecutionContext.Implicits.global
+    schedulerConfigs            : SchedulerConfigs,
+    metrics                     : Metrics,
+    mongoComponent              : MongoComponent,
+    repositoryDependenciesSource: RepositoryDependenciesSource,
+    mongoLockRepository         : MongoLockRepository
+  )(implicit
+    actorSystem         : ActorSystem,
+    applicationLifecycle: ApplicationLifecycle,
+    ec                  : ExecutionContext
+  ) extends SchedulerUtils {
 
   private val schedulerConfig = schedulerConfigs.metrics
 

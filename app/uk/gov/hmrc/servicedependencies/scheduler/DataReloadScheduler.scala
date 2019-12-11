@@ -32,12 +32,13 @@ import scala.concurrent.ExecutionContext
 class DataReloadScheduler @Inject()(
       schedulerConfigs             : SchedulerConfigs
     , dependencyDataUpdatingService: DependencyDataUpdatingService
-    )(implicit actorSystem         : ActorSystem
-             , applicationLifecycle: ApplicationLifecycle
+    )(implicit
+      actorSystem         : ActorSystem
+    , applicationLifecycle: ApplicationLifecycle
+    , ec                  : ExecutionContext
     ) extends SchedulerUtils {
 
   implicit val hc: HeaderCarrier = HeaderCarrier()
-  import ExecutionContext.Implicits.global
 
   // note, locks in service layer
   schedule("libraryDependencyDataReloader", schedulerConfigs.dependenciesReload){

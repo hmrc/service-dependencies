@@ -30,9 +30,12 @@ import scala.util.{Success, Try}
 
 
 @Singleton
-class ServiceDeploymentsConnector @Inject()(httpClient: HttpClient, servicesConfig: ServicesConfig) {
+class ServiceDeploymentsConnector @Inject()(
+    httpClient    : HttpClient,
+    servicesConfig: ServicesConfig
+  )(implicit ec: ExecutionContext
+  ) {
   import ServiceDeploymentsConnector._
-  import ExecutionContext.Implicits.global
 
   private val serviceUrl: String = servicesConfig.baseUrl("service-deployments")
 

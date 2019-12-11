@@ -26,6 +26,8 @@ import uk.gov.hmrc.mongo.test.DefaultMongoCollectionSupport
 import uk.gov.hmrc.servicedependencies.model.{MongoLibraryVersion, Version}
 import uk.gov.hmrc.servicedependencies.util.{FutureHelpers, MockFutureHelpers}
 
+import scala.concurrent.ExecutionContext.Implicits.global
+
 class LibraryVersionRepositorySpec
     extends WordSpecLike
     with Matchers

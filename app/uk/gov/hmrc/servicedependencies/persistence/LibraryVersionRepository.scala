@@ -27,14 +27,16 @@ import uk.gov.hmrc.mongo.play.json.PlayMongoCollection
 import uk.gov.hmrc.servicedependencies.model._
 import uk.gov.hmrc.servicedependencies.util.FutureHelpers
 
-import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
-class LibraryVersionRepository @Inject()(mongo: MongoComponent, futureHelpers: FutureHelpers)
-    extends PlayMongoCollection[MongoLibraryVersion](
+class LibraryVersionRepository @Inject()(
+    mongo        : MongoComponent,
+    futureHelpers: FutureHelpers
+  )(implicit ec: ExecutionContext
+  ) extends PlayMongoCollection[MongoLibraryVersion](
       collectionName = "libraryVersions",
-      mongoComponent          = mongo,
+      mongoComponent = mongo,
       domainFormat   = MongoLibraryVersion.format,
       indexes = Seq(
         IndexModel(hashed("libraryName"), IndexOptions().name("libraryNameIdx").background(true))

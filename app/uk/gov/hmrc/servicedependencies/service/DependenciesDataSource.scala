@@ -28,20 +28,19 @@ import uk.gov.hmrc.servicedependencies.connector.{GithubConnector, TeamsAndRepos
 import uk.gov.hmrc.servicedependencies.model._
 import uk.gov.hmrc.servicedependencies.persistence.RepositoryLibraryDependenciesRepository
 
-import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
 class DependenciesDataSource @Inject()(
   teamsAndRepositoriesConnector: TeamsAndRepositoriesConnector,
-  config: ServiceDependenciesConfig,
-  github: GithubConnector,
-  repoLibDepRepository: RepositoryLibraryDependenciesRepository) {
-
-
+  config                       : ServiceDependenciesConfig,
+  github                       : GithubConnector,
+  repoLibDepRepository         : RepositoryLibraryDependenciesRepository
+  )(implicit ec: ExecutionContext
+  ) {
   lazy val logger = LoggerFactory.getLogger(this.getClass)
 
-  def now : Instant = Instant.now()
+  def now: Instant = Instant.now()
 
   def buildDependency(repo: RepositoryInfo,
                      curatedDependencyConfig: CuratedDependencyConfig,

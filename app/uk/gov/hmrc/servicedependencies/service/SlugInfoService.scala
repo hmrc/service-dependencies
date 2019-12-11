@@ -34,9 +34,8 @@ class SlugInfoService @Inject()(
  groupArtefactRepository       : GroupArtefactRepository,
  teamsAndRepositoriesConnector : TeamsAndRepositoriesConnector,
  serviceDeploymentsConnector   : ServiceDeploymentsConnector
+)(implicit ec: ExecutionContext
 ) {
-  import ExecutionContext.Implicits.global
-
   def addSlugInfo(slug: SlugInfo): Future[Boolean] = {
     for {
       added <- slugInfoRepository.add(slug)

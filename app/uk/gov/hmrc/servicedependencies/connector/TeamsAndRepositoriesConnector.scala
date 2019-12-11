@@ -45,13 +45,17 @@ case class TeamsForServices(toMap: Map[String, Seq[String]]) {
 }
 
 @Singleton
-class TeamsAndRepositoriesConnector @Inject()(httpClient: HttpClient, serviceConfiguration: ServiceDependenciesConfig, cache: AsyncCacheApi) {
+class TeamsAndRepositoriesConnector @Inject()(
+    httpClient          : HttpClient,
+    serviceConfiguration: ServiceDependenciesConfig,
+    cache               : AsyncCacheApi
+  )(implicit ec: ExecutionContext
+  ) {
 
   val teamsAndRepositoriesApiBase = serviceConfiguration.teamsAndRepositoriesServiceUrl
 
   implicit val formats = Repository.format
   implicit val repositoryInfoFormats = RepositoryInfo.format
-  import ExecutionContext.Implicits.global
 
   def getRepository(repositoryName: String)(implicit hc: HeaderCarrier): Future[Option[Repository]] =
     httpClient.GET[Option[Repository]](s"$teamsAndRepositoriesApiBase/api/repositories/$repositoryName")
