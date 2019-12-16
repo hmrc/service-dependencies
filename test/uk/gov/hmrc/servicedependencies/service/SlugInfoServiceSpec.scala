@@ -16,11 +16,15 @@
 
 package uk.gov.hmrc.servicedependencies.service
 
+import java.time.Month.DECEMBER
+import java.time.{LocalDateTime, Month}
+
 import org.mockito.MockitoSugar
+import org.scalatest.concurrent.ScalaFutures
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.play.test.UnitSpec
 import uk.gov.hmrc.servicedependencies.connector.{ServiceDeploymentsConnector, TeamsAndRepositoriesConnector, TeamsForServices}
-import uk.gov.hmrc.servicedependencies.model.{BobbyVersionRange, ServiceDependency, SlugInfoFlag}
+import uk.gov.hmrc.servicedependencies.model.{BobbyVersionRange, JavaInfo, ServiceDependency, SlugInfo, SlugInfoFlag, Version}
 import uk.gov.hmrc.servicedependencies.persistence.{GroupArtefactRepository, JdkVersionRepository, ServiceDependenciesRepository, SlugInfoRepository}
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -28,7 +32,7 @@ import scala.concurrent.Future
 
 class SlugInfoServiceSpec
   extends UnitSpec
-     with MockitoSugar {
+     with MockitoSugar with ScalaFutures {
 
   implicit val hc = HeaderCarrier()
 
@@ -98,6 +102,44 @@ class SlugInfoServiceSpec
     }
   }
 
+  "SlugInfoService.getSlugInfo" should {
+    "support retrieval of a SlugInfo by flag" in new GetSlugInfoFixture {
+      when(boot.mockedSlugInfoRepository.getSlugInfo(SlugName, SlugInfoFlag.Latest)).thenReturn(
+        Future.successful(Some(SampleSlugInfo))
+      )
+
+      boot.service.getSlugInfo(SlugName, SlugInfoFlag.Latest).futureValue shouldBe Some(SampleSlugInfo)
+    }
+
+    "return None when no SlugInfos are found matching the target name and flag" in new GetSlugInfoFixture {
+      when(boot.mockedSlugInfoRepository.getSlugInfo(SlugName, SlugInfoFlag.Latest)).thenReturn(
+        Future.successful(None)
+      )
+
+      boot.service.getSlugInfo(SlugName, SlugInfoFlag.Latest).futureValue shouldBe None
+    }
+
+    "support retrieval of a SlugInfo by version" in new GetSlugInfoFixture {
+      val targetVersion = "1.2.3"
+      when(boot.mockedSlugInfoRepository.getSlugInfos(SlugName, Some(targetVersion))).thenReturn(
+        Future.successful(
+          Seq(SampleSlugInfo)
+        )
+      )
+
+      boot.service.getSlugInfo(SlugName, targetVersion).futureValue shouldBe Some(SampleSlugInfo)
+    }
+
+    "return None when no SlugInfos are found matching the target name and version" in new GetSlugInfoFixture {
+      val targetVersion = "1.2.3"
+      when(boot.mockedSlugInfoRepository.getSlugInfos(SlugName, Some(targetVersion))).thenReturn(
+        Future.successful(Nil)
+      )
+
+      boot.service.getSlugInfo(SlugName, targetVersion).futureValue shouldBe None
+    }
+  }
+
   case class Boot(
       mockedSlugInfoRepository            : SlugInfoRepository
     , mockedServiceDependenciesRepository : ServiceDependenciesRepository
@@ -135,5 +177,30 @@ class SlugInfoServiceSpec
         , service
         )
     }
+  }
+
+  private trait GetSlugInfoFixture {
+    val SlugName = "a-slug-name"
+    val SampleSlugInfo = SlugInfo(
+      uri = "sample-uri",
+      created = LocalDateTime.of(2019, DECEMBER, 12, 13, 14),
+      name = SlugName,
+      version = Version(major = 1, minor = 2, patch = 3),
+      teams = Nil,
+      runnerVersion = "sample-runner-version",
+      classpath = "sample-classpath",
+      java = JavaInfo(version = "sample-java-version", vendor = "sample-java-vendor", kind = "sample-java-kind"),
+      dependencies = Nil,
+      applicationConfig = "sample-applcation-config",
+      slugConfig = "sample-slug-config",
+      latest = true,
+      production = false,
+      qa = true,
+      staging = false,
+      development = true,
+      externalTest = false,
+      integration = false)
+
+    val boot = Boot.init
   }
  }

@@ -30,6 +30,7 @@ import uk.gov.hmrc.servicedependencies.config.ServiceDependenciesConfig
 import uk.gov.hmrc.servicedependencies.connector.TeamsAndRepositoriesConnector
 import uk.gov.hmrc.servicedependencies.controller.model.{Dependencies, Dependency, DependencyBobbyRule}
 import uk.gov.hmrc.servicedependencies.model.{BobbyVersionRange, Version}
+import uk.gov.hmrc.servicedependencies.service.SlugDependenciesService.TargetVersion.{Labelled, Latest}
 import uk.gov.hmrc.servicedependencies.service._
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -98,36 +99,52 @@ class ServiceDependenciesControllerSpec
   }
 
   "getDependenciesOfSlug" - {
-    "should get dependencies using the service" in {
-      val SlugName = "a-slug-name"
-      val SlugVersion = "a-slug-version"
-      val boot = Boot.init
-      val today = LocalDate.of(2019, 11, 27)
-      when(boot.mockedSlugDependenciesService.curatedLibrariesOfSlug(SlugName, SlugVersion)).thenReturn(
-        Future.successful(Some(List(
-          Dependency(name = "library1", currentVersion = Version("1.1.1"), latestVersion = Some(Version("1.2.1")), bobbyRuleViolations = Nil),
-          Dependency(name = "library2", currentVersion = Version("2.2.2"), latestVersion = None, bobbyRuleViolations = List(
-            DependencyBobbyRule(reason = "security vulnerability", from = today, range = BobbyVersionRange("(,3.0.0)"))
-          ))
-        )))
+
+    "should get dependencies of a known slug version using the service when a valid version is supplied" in new GetDependenciesOfSlugFixture {
+      val SlugVersion = Version(major = 1, minor = 2, patch = 3)
+      when(boot.mockedSlugDependenciesService.curatedLibrariesOfSlug(SlugName, Labelled(SlugVersion))).thenReturn(
+        Future.successful(
+          Some(List(DependencyWithLatestVersionNoRuleViolations, DependencyWithRuleViolationsNoLatestVersion))
+        )
       )
 
-      val result = boot.controller.dependenciesOfSlug(SlugName, SlugVersion).apply(FakeRequest())
+      val result = boot.controller.dependenciesOfSlug(SlugName, Some(SlugVersion.toString)).apply(FakeRequest())
 
       contentAsJson(result) shouldBe Json.parse(
-        s"""|[{
-            |  "name": "library1",
-            |  "currentVersion": {"major": 1, "minor": 1, "patch": 1, "original": "1.1.1"},
-            |  "latestVersion": {"major": 1, "minor": 2, "patch": 1, "original": "1.2.1"},
-            |  "bobbyRuleViolations": [],
-            |  "isExternal": false
-            |  },
-            | {
-            |  "name": "library2",
-            |  "currentVersion": {"major": 2, "minor": 2, "patch": 2, "original": "2.2.2"},
-            |  "bobbyRuleViolations": [{"reason": "security vulnerability", "from": "2019-11-27", "range": "(,3.0.0)"}],
-            |  "isExternal": false
-            | }]""".stripMargin)
+        s"""[$JsonForDependencyWithLatestVersionNoRuleViolations, $JsonForDependencyWithRuleViolationsNoLatestVersion]"""
+      )
+    }
+
+    "should get dependencies of the latest slug version using the service when a version is not supplied" in new GetDependenciesOfSlugFixture {
+      when(boot.mockedSlugDependenciesService.curatedLibrariesOfSlug(SlugName, Latest)).thenReturn(
+        Future.successful(
+          Some(List(DependencyWithLatestVersionNoRuleViolations, DependencyWithRuleViolationsNoLatestVersion))
+        )
+      )
+
+      val result = boot.controller.dependenciesOfSlug(SlugName, version = None).apply(FakeRequest())
+
+      contentAsJson(result) shouldBe Json.parse(
+        s"""[$JsonForDependencyWithLatestVersionNoRuleViolations, $JsonForDependencyWithRuleViolationsNoLatestVersion]"""
+      )
+    }
+
+    "should return Not Found when the requested slug is not recognised" in new GetDependenciesOfSlugFixture {
+      when(boot.mockedSlugDependenciesService.curatedLibrariesOfSlug(SlugName, Latest)).thenReturn(
+        Future.successful(None)
+      )
+
+      val result = boot.controller.dependenciesOfSlug(SlugName, version = None).apply(FakeRequest())
+
+      status(result) shouldBe NOT_FOUND
+    }
+
+    "should reject an invalid version descriptor" in new GetDependenciesOfSlugFixture {
+      val InvalidVersion = "an-invalid-version"
+
+      val result = boot.controller.dependenciesOfSlug(SlugName, Some(InvalidVersion)).apply(FakeRequest())
+
+      status(result) shouldBe BAD_REQUEST
     }
   }
 
@@ -164,5 +181,36 @@ class ServiceDependenciesControllerSpec
         mockServiceConfigsService,
         controller)
     }
+  }
+
+  private trait GetDependenciesOfSlugFixture {
+    val SlugName = "a-slug-name"
+    val boot = Boot.init
+
+    private val today = LocalDate.of(2019, 11, 27)
+    val DependencyWithLatestVersionNoRuleViolations = Dependency(name = "library1", currentVersion = Version("1.1.1"),
+      latestVersion = Some(Version("1.2.1")), bobbyRuleViolations = Nil)
+    val DependencyWithRuleViolationsNoLatestVersion = Dependency(name = "library2", currentVersion = Version("2.2.2"),
+      latestVersion = None, bobbyRuleViolations = List(
+        DependencyBobbyRule(reason = "security vulnerability", from = today, range = BobbyVersionRange("(,3.0.0)"))
+      )
+    )
+
+    val JsonForDependencyWithLatestVersionNoRuleViolations: String =
+      s"""|{
+          |  "name": "library1",
+          |  "currentVersion": {"major": 1, "minor": 1, "patch": 1, "original": "1.1.1"},
+          |  "latestVersion": {"major": 1, "minor": 2, "patch": 1, "original": "1.2.1"},
+          |  "bobbyRuleViolations": [],
+          |  "isExternal": false
+          |}""".stripMargin
+
+    val JsonForDependencyWithRuleViolationsNoLatestVersion: String =
+      s"""|{
+          |  "name": "library2",
+          |  "currentVersion": {"major": 2, "minor": 2, "patch": 2, "original": "2.2.2"},
+          |  "bobbyRuleViolations": [{"reason": "security vulnerability", "from": "2019-11-27", "range": "(,3.0.0)"}],
+          |  "isExternal": false
+          |}""".stripMargin
   }
 }

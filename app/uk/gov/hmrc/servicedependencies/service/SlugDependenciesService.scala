@@ -19,14 +19,15 @@ package uk.gov.hmrc.servicedependencies.service
 import javax.inject.{Inject, Singleton}
 import uk.gov.hmrc.servicedependencies.config.CuratedDependencyConfigProvider
 import uk.gov.hmrc.servicedependencies.controller.model.Dependency
-import uk.gov.hmrc.servicedependencies.model.{MongoLibraryVersion, SlugDependency, SlugInfo, Version}
-import uk.gov.hmrc.servicedependencies.persistence.{LibraryVersionRepository, SlugInfoRepository}
+import uk.gov.hmrc.servicedependencies.model.{MongoLibraryVersion, SlugDependency, SlugInfo, SlugInfoFlag, Version}
+import uk.gov.hmrc.servicedependencies.persistence.LibraryVersionRepository
+import uk.gov.hmrc.servicedependencies.service.SlugDependenciesService.TargetVersion
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
 @Singleton
-class SlugDependenciesService @Inject() (slugInfoRepository: SlugInfoRepository,
+class SlugDependenciesService @Inject() (slugInfoService: SlugInfoService,
                                          curatedDependencyConfigProvider: CuratedDependencyConfigProvider,
                                          libraryVersionRepository: LibraryVersionRepository,
                                          serviceConfigsService: ServiceConfigsService) {
@@ -36,9 +37,9 @@ class SlugDependenciesService @Inject() (slugInfoRepository: SlugInfoRepository,
   /*
    * We may want to evolve the model - but for this initial version we reuse the existing Dependency definition.
    */
-  def curatedLibrariesOfSlug(name: String, version: String): Future[Option[List[Dependency]]] = {
+  def curatedLibrariesOfSlug(name: String, atVersion: TargetVersion): Future[Option[List[Dependency]]] = {
     val futLatestVersionByName = libraryVersionRepository.getAllEntries.map(toLatestVersionByName)
-    val futOptCuratedDependencies = slugInfoRepository.getSlugInfos(name, Some(version)).map(toCuratedDependencies)
+    val futOptCuratedDependencies = retrieveSlugInfo(name, atVersion).map(toCuratedDependencies)
     for {
       latestVersionByName <- futLatestVersionByName
       optCuratedDependencies <- futOptCuratedDependencies
@@ -55,10 +56,19 @@ class SlugDependenciesService @Inject() (slugInfoRepository: SlugInfoRepository,
     nameVersionPairs.toMap
   }
 
-  private def toCuratedDependencies(slugInfos: Seq[SlugInfo]): Option[List[SlugDependency]] =
-    slugInfos.headOption.map {
-      _.dependencies.filter(slugDependency => curatedLibraries.contains(slugDependency.artifact))
+  private def retrieveSlugInfo(name: String, atVersion: TargetVersion): Future[Option[SlugInfo]] = {
+    import SlugDependenciesService.TargetVersion._
+    atVersion match {
+      case Latest => slugInfoService.getSlugInfo(name, SlugInfoFlag.Latest)
+      case Labelled(version) => slugInfoService.getSlugInfo(name, version.toString)
     }
+  }
+
+  private def toCuratedDependencies(optSlugInfo: Option[SlugInfo]): Option[List[SlugDependency]] =
+    optSlugInfo.map(curatedDependenciesOf)
+
+  private def curatedDependenciesOf(slugInfo: SlugInfo): List[SlugDependency] =
+    slugInfo.dependencies.filter(slugDependency => curatedLibraries.contains(slugDependency.artifact))
 
   private type VersionLookup = String => Option[Version]
 
@@ -78,4 +88,13 @@ class SlugDependenciesService @Inject() (slugInfoRepository: SlugInfoRepository,
       latestVersion = latestVersionLookup(slugDependency.artifact),
       bobbyRuleViolations = Nil
     )
+}
+
+object SlugDependenciesService {
+  sealed trait TargetVersion
+
+  object TargetVersion {
+    case object Latest extends TargetVersion
+    case class Labelled(version: Version) extends TargetVersion
+  }
 }
