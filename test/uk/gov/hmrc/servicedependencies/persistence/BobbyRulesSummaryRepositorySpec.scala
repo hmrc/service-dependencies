@@ -28,6 +28,7 @@ import uk.gov.hmrc.mongo.test.DefaultMongoCollectionSupport
 import uk.gov.hmrc.servicedependencies.model.{BobbyRule, BobbyRulesSummary, BobbyVersionRange, SlugInfoFlag}
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
+import scala.concurrent.duration.DurationInt
 
 class BobbyRulesSummaryRepositorySpec
     extends WordSpecLike
@@ -35,18 +36,15 @@ class BobbyRulesSummaryRepositorySpec
     with MockitoSugar
     with DefaultMongoCollectionSupport {
 
-  private val repo = new BobbyRulesSummaryRepository(mongo = mongoComponent) {
+  private lazy val repo = new BobbyRulesSummaryRepository(mongoComponent, throttleConfig) {
     def findAll(): Future[Seq[BobbyRulesSummary]] =
       collection.withReadPreference(ReadPreference.secondaryPreferred).find().toFuture().map(_.toList)
   }
 
-  override protected val collectionName: String   = repo.collectionName
-  override protected val indexes: Seq[IndexModel] = repo.indexes
+  override protected lazy val collectionName: String   = repo.collectionName
+  override protected lazy val indexes: Seq[IndexModel] = repo.indexes
 
-  override implicit val patienceConfig: PatienceConfig = {
-    import org.scalatest.time.{Millis, Seconds, Span}
-    PatienceConfig(timeout = Span(2, Seconds), interval = Span(15, Millis))
-  }
+  override implicit val patienceConfig = PatienceConfig(timeout = 2.seconds, interval = 15.millis)
 
   "BobbyRulesSummaryRepository.add" should {
     val summary = bobbyRulesSummary(LocalDate.now, SlugInfoFlag.Development, 1)

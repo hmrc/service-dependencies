@@ -35,10 +35,10 @@ class SbtPluginVersionRepositorySpec
     with DefaultMongoCollectionSupport {
 
   val futureHelper: FutureHelpers = new MockFutureHelpers()
-  val repo                        = new SbtPluginVersionRepository(mongoComponent, futureHelper)
+  lazy val repo                   = new SbtPluginVersionRepository(mongoComponent, futureHelper, throttleConfig)
 
-  override protected val collectionName: String   = repo.collectionName
-  override protected val indexes: Seq[IndexModel] = repo.indexes
+  override protected lazy val collectionName: String   = repo.collectionName
+  override protected lazy val indexes: Seq[IndexModel] = repo.indexes
 
   "update" should {
     "inserts correctly" in {

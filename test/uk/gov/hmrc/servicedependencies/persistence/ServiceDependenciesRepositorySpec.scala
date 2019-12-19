@@ -31,11 +31,11 @@ class ServiceDependenciesRepositorySpec
       with MockitoSugar
       with DefaultMongoCollectionSupport {
 
-  val slugInfoRepo = new SlugInfoRepository(mongoComponent)
-  val serviceDependenciesRepo = new ServiceDependenciesRepository(mongoComponent)
+  lazy val slugInfoRepo            = new SlugInfoRepository(mongoComponent, throttleConfig)
+  lazy val serviceDependenciesRepo = new ServiceDependenciesRepository(mongoComponent, throttleConfig)
 
-  override protected val collectionName: String   = serviceDependenciesRepo.collectionName
-  override protected val indexes: Seq[IndexModel] = serviceDependenciesRepo.indexes
+  override protected lazy val collectionName: String   = serviceDependenciesRepo.collectionName
+  override protected lazy val indexes: Seq[IndexModel] = serviceDependenciesRepo.indexes
 
   "ServiceDependenciesRepository.findServices" should {
 

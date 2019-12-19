@@ -28,22 +28,24 @@ import scala.concurrent.ExecutionContext
 import scala.reflect.ClassTag
 
 @Singleton
-abstract class SlugInfoRepositoryBase[A: ClassTag] @Inject()(mongo: MongoComponent, domainFormat: Format[A])(implicit ec: ExecutionContext)
-    extends PlayMongoCollection[A](
-      collectionName = "slugInfos",
-      mongoComponent = mongo,
-      domainFormat   = domainFormat,
-      indexes = Seq(
-        IndexModel(ascending("uri"), IndexOptions().name("slugInfoUniqueIdx").unique(true)),
-        IndexModel(hashed("name"), IndexOptions().name("slugInfoIdx").background(true)),
-        IndexModel(hashed("latest"), IndexOptions().name("slugInfoLatestIdx").background(true)),
-        IndexModel(compoundIndex(ascending("name"), descending("version")),
-          IndexOptions().name("slugInfoNameVersionIdx").background(true)),
-        IndexModel(compoundIndex(ascending("name"), descending("latest")),
-          IndexOptions().name("slugInfoNameLatestIdx").background(true))
-      )
-    ) {
+abstract class SlugInfoRepositoryBase[A: ClassTag] @Inject()(
+    mongoComponent: MongoComponent
+  , domainFormat  : Format[A]
+  )(implicit ec: ExecutionContext
+  ) extends PlayMongoCollection[A](
+    collectionName = "slugInfos"
+  , mongoComponent = mongoComponent
+  , domainFormat   = domainFormat
+  , indexes        = Seq(
+                       IndexModel(ascending("uri"), IndexOptions().name("slugInfoUniqueIdx").unique(true)),
+                       IndexModel(hashed("name"), IndexOptions().name("slugInfoIdx").background(true)),
+                       IndexModel(hashed("latest"), IndexOptions().name("slugInfoLatestIdx").background(true)),
+                       IndexModel(compoundIndex(ascending("name"), descending("version")),
+                         IndexOptions().name("slugInfoNameVersionIdx").background(true)),
+                       IndexModel(compoundIndex(ascending("name"), descending("latest")),
+                         IndexOptions().name("slugInfoNameLatestIdx").background(true))
+                      )
+  ) {
 
   val logger: Logger = Logger(this.getClass)
-
 }

@@ -30,10 +30,10 @@ class SlugInfoRepositorySpec
       with MockitoSugar
       with DefaultMongoCollectionSupport {
 
-  val slugInfoRepo = new SlugInfoRepository(mongoComponent)
+  lazy val slugInfoRepo = new SlugInfoRepository(mongoComponent, throttleConfig)
 
-  override protected val collectionName: String   = slugInfoRepo.collectionName
-  override protected val indexes: Seq[IndexModel] = slugInfoRepo.indexes
+  override protected lazy val collectionName: String   = slugInfoRepo.collectionName
+  override protected lazy val indexes: Seq[IndexModel] = slugInfoRepo.indexes
 
   "SlugInfoRepository.add" should {
     "insert correctly" in {

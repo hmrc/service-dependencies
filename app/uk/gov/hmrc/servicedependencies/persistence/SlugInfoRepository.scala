@@ -22,58 +22,76 @@ import org.mongodb.scala.model.Filters.{and, equal}
 import org.mongodb.scala.model.ReplaceOptions
 import org.mongodb.scala.model.Updates._
 import uk.gov.hmrc.mongo.MongoComponent
+import uk.gov.hmrc.mongo.throttle.{ThrottleConfig, WithThrottling}
 import uk.gov.hmrc.servicedependencies.model._
 
 import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
-class SlugInfoRepository @Inject()(mongo: MongoComponent)(implicit ec: ExecutionContext)
-    extends SlugInfoRepositoryBase[SlugInfo](
-      mongo,
-      domainFormat   = MongoSlugInfoFormats.slugInfoFormat
-    ) {
+class SlugInfoRepository @Inject()(
+    mongoComponent    : MongoComponent
+  , val throttleConfig: ThrottleConfig
+  )(implicit ec: ExecutionContext
+  ) extends SlugInfoRepositoryBase[SlugInfo](
+    mongoComponent
+  , domainFormat   = MongoSlugInfoFormats.slugInfoFormat
+  ) with WithThrottling {
 
   def add(slugInfo: SlugInfo): Future[Boolean] =
     collection
       .replaceOne(
-        filter = equal("uri", slugInfo.uri),
-        slugInfo,
-        ReplaceOptions().upsert(true)
-      )
-      .toFuture()
+          filter      = equal("uri", slugInfo.uri)
+        , replacement = slugInfo
+        , options   = ReplaceOptions().upsert(true)
+        )
+      .toThrottledFuture
       .map(_.wasAcknowledged())
 
-  def getAllEntries: Future[Seq[SlugInfo]] = collection.find().toFuture()
+  def getAllEntries: Future[Seq[SlugInfo]] =
+    collection.find()
+      .toThrottledFuture
 
   def clearAllData: Future[Boolean] =
-    collection.deleteMany(new BasicDBObject()).toFuture.map(_.wasAcknowledged())
+    collection.deleteMany(new BasicDBObject())
+      .toThrottledFuture
+      .map(_.wasAcknowledged())
 
   def getUniqueSlugNames: Future[Seq[String]] =
-    collection.distinct[String]("name").toFuture()
+    collection.distinct[String]("name")
+      .toThrottledFuture
 
-  def getSlugInfos(name: String, optVersion: Option[String]): Future[Seq[SlugInfo]] =
-    optVersion match {
-      case None          => collection.find(equal("name", name)).toFuture()
-      case Some(version) => collection.find(and(equal("name", name), equal("version", version))).toFuture()
-    }
+ def getSlugInfos(name: String, optVersion: Option[String]): Future[Seq[SlugInfo]] = {
+    val filter =
+      optVersion match {
+        case None          => equal("name", name)
+        case Some(version) => and( equal("name"   , name)
+                                 , equal("version", version)
+                                 )
+      }
+    collection.find(filter)
+      .toThrottledFuture
+  }
 
   def getSlugInfo(name: String, flag: SlugInfoFlag): Future[Option[SlugInfo]] =
     collection
       .find(and(equal("name", name), equal(flag.asString, true)))
-      .toFuture()
+      .toThrottledFuture
       .map(_.headOption)
 
   def getSlugsForEnv(flag: SlugInfoFlag): Future[Seq[SlugInfo]] =
     collection
       .find(equal(flag.asString, true))
-      .toFuture()
+      .toThrottledFuture
 
   def clearFlag(flag: SlugInfoFlag, name: String): Future[Unit] = {
     logger.debug(s"clear ${flag.asString} flag on $name")
 
     collection
-      .updateMany(filter = equal("name", name), update = set(flag.asString, false))
-      .toFuture()
+      .updateMany(
+          filter = equal("name", name)
+        , update = set(flag.asString, false)
+        )
+      .toThrottledFuture
       .map(_ => ())
   }
 
@@ -83,10 +101,13 @@ class SlugInfoRepository @Inject()(mongo: MongoComponent)(implicit ec: Execution
   def setFlag(flag: SlugInfoFlag, name: String, version: Version): Future[Unit] =
     for {
       _ <- clearFlag(flag, name)
-      _ = logger.debug(s"mark slug $name $version with ${flag.asString} flag")
+      _ =  logger.debug(s"mark slug $name $version with ${flag.asString} flag")
       _ <- collection
-        .updateOne(filter = and(equal("name", name), equal("version", version.original)), update = set(flag.asString, true))
-        .toFuture()
+             .updateOne(
+                 filter = and( equal("name", name)
+                             , equal("version", version.original)
+                             )
+               , update = set(flag.asString, true))
+             .toThrottledFuture
     } yield ()
-
 }
