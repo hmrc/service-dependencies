@@ -25,7 +25,8 @@ import org.scalatestplus.play.guice.GuiceOneAppPerTest
 import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
 import uk.gov.hmrc.http.HeaderCarrier
-import uk.gov.hmrc.mongo.lock.{CurrentTimestampSupport, MongoLockRepository, MongoLockService}
+import uk.gov.hmrc.mongo.CurrentTimestampSupport
+import uk.gov.hmrc.mongo.lock.{MongoLockRepository, MongoLockService}
 import uk.gov.hmrc.mongo.test.MongoSupport
 import uk.gov.hmrc.servicedependencies.config.CuratedDependencyConfigProvider
 import uk.gov.hmrc.servicedependencies.config.model.{CuratedDependencyConfig, OtherDependencyConfig, SbtPluginConfig}
@@ -38,12 +39,12 @@ import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}
 
 class DependencyDataUpdatingServiceSpec
-    extends FunSpec
-      with MockitoSugar
-      with Matchers
-      with GuiceOneAppPerTest
-      with OptionValues
-      with MongoSupport {
+  extends FunSpec
+     with MockitoSugar
+     with Matchers
+     with GuiceOneAppPerTest
+     with OptionValues
+     with MongoSupport {
 
   override def fakeApplication(): Application =
     new GuiceApplicationBuilder()
@@ -516,7 +517,7 @@ class DependencyDataUpdatingServiceSpec
   }
 
   def noLockTestMongoLockBuilder(testLockId: String): MongoLockService = new MongoLockService {
-    override val mongoLockRepository: MongoLockRepository = new MongoLockRepository(mongoComponent, new CurrentTimestampSupport())
+    override val lockRepository: MongoLockRepository = new MongoLockRepository(mongoComponent, new CurrentTimestampSupport())
     override val lockId: String = testLockId
     override val ttl: Duration = 1.hour
     override def attemptLockWithRelease[T](body: => Future[T])(implicit ec: ExecutionContext): Future[Option[T]] =
@@ -524,11 +525,10 @@ class DependencyDataUpdatingServiceSpec
   }
 
   def denyingTestMongoLockBuilder(testLockId: String): MongoLockService = new MongoLockService {
-    override val mongoLockRepository: MongoLockRepository = new MongoLockRepository(mongoComponent, new CurrentTimestampSupport())
+    override val lockRepository: MongoLockRepository = new MongoLockRepository(mongoComponent, new CurrentTimestampSupport())
     override val lockId: String = testLockId
     override val ttl: Duration = 1.hour
     override def attemptLockWithRelease[T](body: => Future[T])(implicit ec: ExecutionContext): Future[Option[T]] =
       throw new RuntimeException(s"Mongo is locked for testing")
   }
-
 }

@@ -37,10 +37,10 @@ class LibraryVersionRepositorySpec
   val metricsRegistry             = new MetricRegistry()
   val futureHelper: FutureHelpers = new MockFutureHelpers()
 
-  val repo = new LibraryVersionRepository(mongoComponent, futureHelper)
+  lazy val repo = new LibraryVersionRepository(mongoComponent, futureHelper, throttleConfig)
 
-  override protected val collectionName: String   = repo.collectionName
-  override protected val indexes: Seq[IndexModel] = repo.indexes
+  override protected lazy val collectionName: String   = repo.collectionName
+  override protected lazy val indexes: Seq[IndexModel] = repo.indexes
 
   "update" should {
     "inserts correctly" in {

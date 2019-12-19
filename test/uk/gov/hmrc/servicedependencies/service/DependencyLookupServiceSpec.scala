@@ -29,6 +29,7 @@ import uk.gov.hmrc.servicedependencies.model._
 import uk.gov.hmrc.servicedependencies.persistence.{BobbyRulesSummaryRepository, SlugInfoRepository}
 
 import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.duration.DurationInt
 
 
 class DependencyLookupServiceSpec
@@ -37,18 +38,13 @@ class DependencyLookupServiceSpec
      with MockitoSugar
      with MongoSupport {
 
-  override implicit val patienceConfig = {
-    import org.scalatest.time.{Millis, Seconds, Span}
-    PatienceConfig(timeout = Span(2, Seconds), interval = Span(15, Millis))
-  }
+  override implicit val patienceConfig = PatienceConfig(timeout = 2.seconds, interval = 15.millis)
 
   import DependencyLookupServiceTestData._
 
   import ExecutionContext.Implicits.global
 
   "slugToServiceDep" should "Convert a slug and dependency to a ServiceDependency" in {
-
-
     val res = DependencyLookupService.slugToServiceDep(slug1, dep1)
 
     res.depSemanticVersion shouldBe Some(Version(5,11,0))
@@ -100,7 +96,7 @@ class DependencyLookupServiceSpec
     val configService         = mock[ServiceConfigsConnector]
     val slugInfoRepository    = mock[SlugInfoRepository]
 
-    val bobbyRulesSummaryRepo = new BobbyRulesSummaryRepository(mongoComponent) {
+    val bobbyRulesSummaryRepo = new BobbyRulesSummaryRepository(mongoComponent, throttleConfig) {
       import scala.compat.java8.FunctionConverters._
 
       private val store = new AtomicReference(List[BobbyRulesSummary]())

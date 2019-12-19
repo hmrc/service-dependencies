@@ -25,21 +25,26 @@ import play.api.Logger
 import play.api.libs.json.Json
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.play.json.PlayMongoCollection
+import uk.gov.hmrc.mongo.throttle.{ThrottleConfig, WithThrottling}
 import uk.gov.hmrc.servicedependencies.model._
 import uk.gov.hmrc.servicedependencies.util.FutureHelpers
 
 import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
-class SbtPluginVersionRepository @Inject()(mongo: MongoComponent, futureHelpers: FutureHelpers)(implicit ec: ExecutionContext)
-    extends PlayMongoCollection[MongoSbtPluginVersion](
-      collectionName = "sbtPluginVersions",
-      mongoComponent = mongo,
-      domainFormat   = MongoSbtPluginVersion.format,
-      indexes = Seq(
-        IndexModel(hashed("sbtPluginName"), IndexOptions().name("sbtPluginNameIdx").background(true))
-      )
-    ) {
+class SbtPluginVersionRepository @Inject()(
+    mongoComponent    : MongoComponent
+  , futureHelpers     : FutureHelpers
+  , val throttleConfig: ThrottleConfig
+  )(implicit ec: ExecutionContext
+  ) extends PlayMongoCollection[MongoSbtPluginVersion](
+    collectionName = "sbtPluginVersions"
+  , mongoComponent = mongoComponent
+  , domainFormat   = MongoSbtPluginVersion.format
+  , indexes        = Seq(
+                       IndexModel(hashed("sbtPluginName"), IndexOptions().name("sbtPluginNameIdx").background(true))
+                     )
+  ) with WithThrottling {
 
   val logger: Logger = Logger(this.getClass)
 
@@ -49,11 +54,11 @@ class SbtPluginVersionRepository @Inject()(mongo: MongoComponent, futureHelpers:
       .withTimerAndCounter("mongo.update") {
         collection
           .replaceOne(
-            filter = equal("sbtPluginName", sbtPluginVersion.sbtPluginName),
-            sbtPluginVersion,
-            ReplaceOptions().upsert(true)
-          )
-          .toFuture()
+              filter      = equal("sbtPluginName", sbtPluginVersion.sbtPluginName)
+            , replacement = sbtPluginVersion
+            , options     = ReplaceOptions().upsert(true)
+            )
+          .toThrottledFuture
           .map(_ => sbtPluginVersion)
       }
       .recover {
@@ -62,7 +67,12 @@ class SbtPluginVersionRepository @Inject()(mongo: MongoComponent, futureHelpers:
       }
   }
 
-  def getAllEntries: Future[Seq[MongoSbtPluginVersion]] = collection.find().toFuture()
+  def getAllEntries: Future[Seq[MongoSbtPluginVersion]] =
+    collection.find()
+      .toThrottledFuture
 
-  def clearAllData: Future[Boolean] = collection.deleteMany(new BasicDBObject()).toFuture.map(_.wasAcknowledged())
+  def clearAllData: Future[Boolean] =
+    collection.deleteMany(new BasicDBObject())
+      .toThrottledFuture
+      .map(_.wasAcknowledged())
 }

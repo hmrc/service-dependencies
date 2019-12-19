@@ -27,35 +27,40 @@ import org.mongodb.scala.model.Sorts.descending
 import org.mongodb.scala.model.{IndexModel, IndexOptions, ReplaceOptions}
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.play.json.PlayMongoCollection
+import uk.gov.hmrc.mongo.throttle.{ThrottleConfig, WithThrottling}
 import uk.gov.hmrc.servicedependencies.model.BobbyRulesSummary
 
 import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
-class BobbyRulesSummaryRepository @Inject()(mongo: MongoComponent)(implicit ec: ExecutionContext)
-    extends PlayMongoCollection[BobbyRulesSummary](
-      collectionName = "bobbyRulesSummary",
-      mongoComponent = mongo,
-      domainFormat   = BobbyRulesSummary.mongoFormat,
-      indexes = Seq(
-        IndexModel(ascending("date"), IndexOptions().name("dateIdx").unique(true))
-      )
-    ) {
+class BobbyRulesSummaryRepository @Inject()(
+    mongoComponent    : MongoComponent
+  , val throttleConfig: ThrottleConfig
+  )(implicit ec: ExecutionContext
+  ) extends PlayMongoCollection[BobbyRulesSummary](
+    collectionName = "bobbyRulesSummary"
+  , mongoComponent = mongoComponent
+  , domainFormat   = BobbyRulesSummary.mongoFormat
+  , indexes        = Seq(
+                       IndexModel(ascending("date"), IndexOptions().name("dateIdx").unique(true))
+                     )
+  ) with WithThrottling {
 
   private implicit val brsf = BobbyRulesSummary.mongoFormat
 
   def add(summary: BobbyRulesSummary): Future[Unit] =
     collection
       .replaceOne(
-        filter = equal("date", summary.date),
-        summary,
-        ReplaceOptions().upsert(true)
-      )
-      .toFuture()
+          filter      = equal("date", summary.date)
+        , replacement = summary
+        , options     = ReplaceOptions().upsert(true)
+        )
+      .toThrottledFuture
       .map(_ => ())
 
   def getLatest: Future[Option[BobbyRulesSummary]] =
-    collection.find(equal("date", LocalDate.now)).toFuture()
+    collection.find(equal("date", LocalDate.now))
+      .toThrottledFuture
       .map(_.headOption)
       .flatMap {
         case Some(a) => Future(Some(a))
@@ -66,9 +71,12 @@ class BobbyRulesSummaryRepository @Inject()(mongo: MongoComponent)(implicit ec: 
   def getHistoric: Future[List[BobbyRulesSummary]] =
     collection
       .find()
-      .sort(descending("date")).toFuture().map(_.toList)
+      .sort(descending("date"))
+      .toThrottledFuture
+      .map(_.toList)
 
   def clearAllData: Future[Boolean] =
-    collection.deleteMany(new BasicDBObject()).toFuture.map(_.wasAcknowledged())
-
+    collection.deleteMany(new BasicDBObject())
+      .toThrottledFuture
+      .map(_.wasAcknowledged())
 }

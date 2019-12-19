@@ -21,21 +21,28 @@ import com.mongodb.BasicDBObject
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.lock.Lock
 import uk.gov.hmrc.mongo.play.json.PlayMongoCollection
+import uk.gov.hmrc.mongo.throttle.{ThrottleConfig, WithThrottling}
 
 import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
-class LocksRepository @Inject()(mongo: MongoComponent)(implicit ec: ExecutionContext)
-    extends PlayMongoCollection[Lock](
-      collectionName = "locks",
-      mongoComponent = mongo,
-      domainFormat   = Lock.format,
-      indexes        = Seq.empty
-    ) {
+class LocksRepository @Inject()(
+    mongoComponent    : MongoComponent
+  , val throttleConfig: ThrottleConfig
+  )(implicit ec: ExecutionContext
+  ) extends PlayMongoCollection[Lock](
+    collectionName = "locks"
+  , mongoComponent = mongoComponent
+  , domainFormat   = Lock.format
+  , indexes        = Seq.empty
+  ) with WithThrottling {
 
   def getAllEntries: Future[Seq[Lock]] =
-    collection.find().toFuture()
+    collection.find()
+      .toThrottledFuture
 
   def clearAllData: Future[Boolean] =
-    collection.deleteMany(new BasicDBObject()).toFuture.map(_.wasAcknowledged())
+    collection.deleteMany(new BasicDBObject())
+      .toThrottledFuture
+      .map(_.wasAcknowledged())
 }

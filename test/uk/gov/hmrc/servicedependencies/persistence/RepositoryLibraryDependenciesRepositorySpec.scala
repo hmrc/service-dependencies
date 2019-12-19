@@ -26,7 +26,7 @@ import uk.gov.hmrc.mongo.test.CleanMongoCollectionSupport
 import uk.gov.hmrc.servicedependencies.model.{MongoRepositoryDependencies, MongoRepositoryDependency, Version}
 import uk.gov.hmrc.servicedependencies.util.{FutureHelpers, MockFutureHelpers}
 
-import scala.concurrent.duration._
+import scala.concurrent.duration.DurationInt
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
@@ -38,11 +38,12 @@ class RepositoryLibraryDependenciesRepositorySpec
       with CleanMongoCollectionSupport {
 
   val futureHelper: FutureHelpers = new MockFutureHelpers()
-  val repo = new RepositoryLibraryDependenciesRepository(mongoComponent, futureHelper)
+  lazy val repo = new RepositoryLibraryDependenciesRepository(mongoComponent, futureHelper, throttleConfig)
 
-  override implicit val patienceConfig: PatienceConfig = PatienceConfig(timeout = 30.seconds, interval = 100.millis)
-  override protected val collectionName: String   = repo.collectionName
-  override protected val indexes: Seq[IndexModel] = repo.indexes
+  override implicit val patienceConfig = PatienceConfig(timeout = 30.seconds, interval = 100.millis)
+
+  override protected lazy val collectionName: String   = repo.collectionName
+  override protected lazy val indexes: Seq[IndexModel] = repo.indexes
 
   "update" should {
     "inserts correctly" in {

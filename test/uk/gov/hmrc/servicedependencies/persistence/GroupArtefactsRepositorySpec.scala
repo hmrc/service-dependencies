@@ -25,7 +25,7 @@ import uk.gov.hmrc.servicedependencies.model.GroupArtefacts
 import uk.gov.hmrc.servicedependencies.persistence.TestSlugInfos._
 
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.duration._
+import scala.concurrent.duration.DurationInt
 
 class GroupArtefactsRepositorySpec
     extends WordSpecLike
@@ -35,13 +35,13 @@ class GroupArtefactsRepositorySpec
       // We don't mixin IndexedMongoQueriesSupport here, as this repo makes use of queries not satisfied by an index
       with CleanMongoCollectionSupport {
 
-  val groupArtefactsRepo = new GroupArtefactRepository(mongoComponent)
-  val slugInfoRepo = new SlugInfoRepository(mongoComponent)
+  lazy val groupArtefactsRepo = new GroupArtefactRepository(mongoComponent, throttleConfig)
+  lazy val slugInfoRepo = new SlugInfoRepository(mongoComponent, throttleConfig)
 
-  override implicit val patienceConfig: PatienceConfig = PatienceConfig(timeout = 30.seconds, interval = 100.millis)
+  override implicit val patienceConfig = PatienceConfig(timeout = 30.seconds, interval = 100.millis)
 
-  override protected val collectionName: String   = groupArtefactsRepo.collectionName
-  override protected val indexes: Seq[IndexModel] = groupArtefactsRepo.indexes
+  override protected lazy val collectionName: String   = groupArtefactsRepo.collectionName
+  override protected lazy val indexes: Seq[IndexModel] = groupArtefactsRepo.indexes
 
   import GroupArtefactsRepositorySpec._
 

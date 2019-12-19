@@ -31,11 +31,11 @@ class JdkVersionRepositorySpec
       with MockitoSugar
       with DefaultMongoCollectionSupport {
 
-  val slugInfoRepo = new SlugInfoRepository(mongoComponent)
-  val jdkVersionRepo = new JdkVersionRepository(mongoComponent)
+  lazy val slugInfoRepo  = new SlugInfoRepository(mongoComponent, throttleConfig)
+  lazy val jdkVersionRepo = new JdkVersionRepository(mongoComponent, throttleConfig)
 
-  override protected val collectionName: String   = jdkVersionRepo.collectionName
-  override protected val indexes: Seq[IndexModel] = jdkVersionRepo.indexes
+  override protected lazy val collectionName: String   = jdkVersionRepo.collectionName
+  override protected lazy val indexes: Seq[IndexModel] = jdkVersionRepo.indexes
 
   "JdkVersionRepository.findJDKUsage" should {
     "find all the jdk version for a given environment" in {
