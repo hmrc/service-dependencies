@@ -58,19 +58,23 @@ class GithubSpec extends WordSpec with Matchers with MockitoSugar with OptionVal
     }
 
     "queries build.properties file(s) for sbt version" in new TestSetup {
+      val curatedDependencyConfig = CuratedDependencyConfig(Nil, Nil, Seq(OtherDependencyConfig("sbt", Some(Version(1, 2, 3)))))
+      when(mockContentsService.getContents(any(), is(buildPropertiesFile))).thenReturn(
+        List(new RepositoryContents().setContent(loadFileAsBase64String("/github/build.properties"))).asJava
+      )
 
-      when(mockContentsService.getContents(any(), is(buildPropertiesFile)))
-        .thenReturn(
-          List(new RepositoryContents().setContent(loadFileAsBase64String("/github/build.properties"))).asJava)
-
-      github
-        .findVersionsForMultipleArtifacts(
-          repoName,
-          CuratedDependencyConfig(Nil, Nil, Seq(OtherDependencyConfig("sbt", Some(Version(1, 2, 3))))))
-        .right
-        .get
-        .others shouldBe
+      github.findVersionsForMultipleArtifacts(repoName, curatedDependencyConfig).right.get.others shouldBe
         Map("sbt" -> Some(Version("0.13.15")))
+    }
+
+    "parses build.properties file(s) containing other keys in addition to the sbt version" in new TestSetup {
+      val curatedDependencyConfig = CuratedDependencyConfig(Nil, Nil, Seq(OtherDependencyConfig("sbt", Some(Version(1, 2, 3)))))
+      when(mockContentsService.getContents(any(), is(buildPropertiesFile))).thenReturn(
+        List(new RepositoryContents().setContent(loadFileAsBase64String("/github/multiplekey_build.properties"))).asJava
+      )
+
+      github.findVersionsForMultipleArtifacts(repoName, curatedDependencyConfig).right.get.others shouldBe
+        Map("sbt" -> Some(Version("0.13.17")))
     }
 
     "queries github's repository for plugins and libraries" in new TestSetup {

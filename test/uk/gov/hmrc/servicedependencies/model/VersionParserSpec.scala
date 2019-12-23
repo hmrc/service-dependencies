@@ -187,9 +187,27 @@ class VersionParserSpec extends FreeSpec with MustMatchers {
     VersionParser.parse(buildFile, "library") mustBe None
   }
 
-  "Parsing a build.properties file returns the sbt version" in {
+  "Parsing a build.properties file containing only the sbt version returns the sbt version" in {
     VersionParser.parsePropertyFile("sbt.version=1.2.3", "sbt.version") mustBe Some(Version(1, 2, 3, "1.2.3"))
     VersionParser.parsePropertyFile(" sbt.version = 1.2.3 ", "sbt.version") mustBe Some(Version(1, 2, 3, "1.2.3"))
+  }
+
+  "Parsing a build.properties file containing additional keys returns the sbt version" - {
+    "when the sbt version is the first entry" in {
+      val buildProperties = s"""|sbt.version=0.13.17
+                                |hmrc-frontend-scaffold.version=0.4.1
+                                |""".stripMargin
+
+      VersionParser.parsePropertyFile(buildProperties, "sbt.version") mustBe Some(Version(0, 13, 17, "0.13.17"))
+    }
+
+    "when the sbt version is the last entry" in {
+      val buildProperties = s"""|hmrc-frontend-scaffold.version=0.4.1
+                                |sbt.version=0.13.17
+                                |""".stripMargin
+
+      VersionParser.parsePropertyFile(buildProperties, "sbt.version") mustBe Some(Version(0, 13, 17, "0.13.17"))
+    }
   }
 
   "Parsing build.properties file returns None for sbt version if the 'sbt.version' is not defined" in {
