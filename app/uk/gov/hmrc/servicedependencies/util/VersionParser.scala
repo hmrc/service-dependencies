@@ -20,7 +20,7 @@ import uk.gov.hmrc.servicedependencies.model.Version
 
 object VersionParser {
   def parsePropertyFile(contents: String, key: String): Option[Version] = {
-    val propertyRegex = ("^\\s*" + key.replaceAll("\\.", "\\\\.") + """\s*=\s*(\d+\.\d+\.\d+)\s*$""").r.unanchored
+    val propertyRegex = ("""\s*""" + key.replaceAll("\\.", "\\\\.") + """\s*=\s*(\d+\.\d+\.\d+)\s*""").r.unanchored
     contents match {
       case propertyRegex(version) => Version.parse(version.replaceAll("\"", ""))
       case _                      => None
