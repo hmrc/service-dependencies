@@ -19,7 +19,7 @@ package uk.gov.hmrc.servicedependencies.controller.admin
 import org.mockito.ArgumentMatchers.{any, eq => eqTo}
 import org.mockito.MockitoSugar
 import org.scalatest.concurrent.{IntegrationPatience, ScalaFutures}
-import org.scalatest.{BeforeAndAfterEach, FreeSpec, Matchers, OptionValues}
+import org.scalatest.{BeforeAndAfterEach, OptionValues}
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
 import uk.gov.hmrc.servicedependencies.model.MongoRepositoryDependencies
@@ -27,9 +27,11 @@ import uk.gov.hmrc.servicedependencies.service.DependencyDataUpdatingService
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
+import org.scalatest.freespec.AnyFreeSpec
+import org.scalatest.matchers.should.Matchers
 
 class AdministrationControllerSpec
-    extends FreeSpec
+    extends AnyFreeSpec
     with BeforeAndAfterEach
     with Matchers
     with MockitoSugar

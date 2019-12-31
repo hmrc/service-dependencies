@@ -16,12 +16,14 @@
 
 package uk.gov.hmrc.servicedependencies.config
 
-import org.scalatest.{FunSpec, Matchers, OptionValues}
+import org.scalatest.OptionValues
 import play.api.Configuration
 import uk.gov.hmrc.servicedependencies.config.model.{CuratedDependencyConfig, OtherDependencyConfig, SbtPluginConfig}
 import uk.gov.hmrc.servicedependencies.model.Version
+import org.scalatest.funspec.AnyFunSpec
+import org.scalatest.matchers.should.Matchers
 
-class CuratedDependencyConfigProviderSpec extends FunSpec with Matchers with OptionValues {
+class CuratedDependencyConfigProviderSpec extends AnyFunSpec with Matchers with OptionValues {
 
   describe("config loader") {
     it("should load the config") {

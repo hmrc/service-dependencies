@@ -25,7 +25,7 @@ import org.mockito.ArgumentMatchers.any
 import org.mockito.invocation.InvocationOnMock
 import org.mockito.{ArgumentCaptor, Mockito, MockitoSugar}
 import org.scalatest.concurrent.{IntegrationPatience, ScalaFutures}
-import org.scalatest.{FreeSpec, Matchers, OptionValues}
+import org.scalatest.OptionValues
 import uk.gov.hmrc.githubclient.{APIRateLimitExceededException, GitApiConfig}
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.servicedependencies.config._
@@ -39,9 +39,11 @@ import uk.gov.hmrc.servicedependencies.{Github, GithubSearchError}
 import scala.collection.JavaConversions._
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
+import org.scalatest.freespec.AnyFreeSpec
+import org.scalatest.matchers.should.Matchers
 
 class DependenciesDataSourceSpec
-    extends FreeSpec
+    extends AnyFreeSpec
     with Matchers
     with ScalaFutures
     with MockitoSugar

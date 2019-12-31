@@ -20,7 +20,7 @@ import java.time.Instant
 
 import org.mockito.ArgumentMatchers.{any, eq => eqTo}
 import org.mockito.MockitoSugar
-import org.scalatest.{FunSpec, Matchers, OptionValues}
+import org.scalatest.OptionValues
 import org.scalatestplus.play.guice.GuiceOneAppPerTest
 import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
@@ -37,9 +37,11 @@ import uk.gov.hmrc.servicedependencies.persistence._
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}
+import org.scalatest.funspec.AnyFunSpec
+import org.scalatest.matchers.should.Matchers
 
 class DependencyDataUpdatingServiceSpec
-  extends FunSpec
+  extends AnyFunSpec
      with MockitoSugar
      with Matchers
      with GuiceOneAppPerTest

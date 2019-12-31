@@ -18,14 +18,15 @@ package uk.gov.hmrc.servicedependencies.persistence
 
 import org.mockito.MockitoSugar
 import org.mongodb.scala.model.IndexModel
-import org.scalatest.{Matchers, WordSpecLike}
 import uk.gov.hmrc.mongo.test.DefaultMongoCollectionSupport
 import uk.gov.hmrc.servicedependencies.persistence.TestSlugInfos._
 
 import scala.concurrent.ExecutionContext.Implicits.global
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpecLike
 
 class SlugInfoRepositorySpec
-    extends WordSpecLike
+    extends AnyWordSpecLike
       with Matchers
       with MockitoSugar
       with DefaultMongoCollectionSupport {

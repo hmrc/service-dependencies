@@ -20,14 +20,15 @@ import java.time.Instant
 import com.kenshoo.play.metrics.DisabledMetrics
 import org.mockito.ArgumentMatchers.any
 import org.mockito.MockitoSugar
-import org.scalatest.{MustMatchers, WordSpec}
 import uk.gov.hmrc.servicedependencies.config.ServiceDependenciesConfig
 import uk.gov.hmrc.servicedependencies.config.model.CuratedDependencyConfig
 import uk.gov.hmrc.servicedependencies.connector.model.RepositoryInfo
 import uk.gov.hmrc.servicedependencies.model.{GithubSearchResults, MongoRepositoryDependency, Version}
 import uk.gov.hmrc.servicedependencies.{Github, GithubSearchError}
+import org.scalatest.matchers.must.Matchers
+import org.scalatest.wordspec.AnyWordSpec
 
-class GithubConnectorSpec extends WordSpec with MustMatchers with MockitoSugar {
+class GithubConnectorSpec extends AnyWordSpec with Matchers with MockitoSugar {
 
   val config = mock[ServiceDependenciesConfig]
   val metrics = new DisabledMetrics()

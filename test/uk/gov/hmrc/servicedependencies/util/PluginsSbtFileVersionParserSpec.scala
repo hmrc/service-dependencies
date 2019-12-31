@@ -16,10 +16,11 @@
 
 package uk.gov.hmrc.servicedependencies.util
 
-import org.scalatest.{FreeSpec, MustMatchers}
 import uk.gov.hmrc.servicedependencies.model.Version
+import org.scalatest.freespec.AnyFreeSpec
+import org.scalatest.matchers.must.Matchers
 
-class PluginsSbtFileVersionParserSpec extends FreeSpec with MustMatchers {
+class PluginsSbtFileVersionParserSpec extends AnyFreeSpec with Matchers {
 
   val targetArtifact = "sbt-plugin"
 

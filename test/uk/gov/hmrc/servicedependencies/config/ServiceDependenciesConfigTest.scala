@@ -18,11 +18,13 @@ package uk.gov.hmrc.servicedependencies.config
 
 import org.mockito.ArgumentMatchers.any
 import org.mockito.MockitoSugar
-import org.scalatest.{FunSpec, Matchers, OptionValues}
+import org.scalatest.OptionValues
 import play.api.Configuration
 import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
+import org.scalatest.funspec.AnyFunSpec
+import org.scalatest.matchers.should.Matchers
 
-class ServiceDependenciesConfigTest extends FunSpec with Matchers with MockitoSugar with OptionValues {
+class ServiceDependenciesConfigTest extends AnyFunSpec with Matchers with MockitoSugar with OptionValues {
 
 
   describe("ServiceDependenciesConfig") {

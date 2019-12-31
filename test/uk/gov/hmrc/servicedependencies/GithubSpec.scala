@@ -22,14 +22,16 @@ import org.eclipse.egit.github.core.client.{GitHubClient, RequestException}
 import org.eclipse.egit.github.core.{RepositoryContents, RequestError}
 import org.mockito.ArgumentMatchers.{any, eq => is}
 import org.mockito.MockitoSugar
-import org.scalatest.{Matchers, OptionValues, WordSpec}
+import org.scalatest.OptionValues
 import uk.gov.hmrc.githubclient._
 import uk.gov.hmrc.servicedependencies.config.model.{CuratedDependencyConfig, OtherDependencyConfig, SbtPluginConfig}
 import uk.gov.hmrc.servicedependencies.model.Version
 
 import scala.collection.JavaConverters._
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpec
 
-class GithubSpec extends WordSpec with Matchers with MockitoSugar with OptionValues {
+class GithubSpec extends AnyWordSpec with Matchers with MockitoSugar with OptionValues {
 
   "Finding multiple artifacts versions for a repository" should {
 

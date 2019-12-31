@@ -21,15 +21,16 @@ import java.time.Instant
 import com.codahale.metrics.MetricRegistry
 import org.mockito.MockitoSugar
 import org.mongodb.scala.model.IndexModel
-import org.scalatest.{Matchers, WordSpecLike}
 import uk.gov.hmrc.mongo.test.DefaultMongoCollectionSupport
 import uk.gov.hmrc.servicedependencies.model.{MongoLibraryVersion, Version}
 import uk.gov.hmrc.servicedependencies.util.{FutureHelpers, MockFutureHelpers}
 
 import scala.concurrent.ExecutionContext.Implicits.global
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpecLike
 
 class LibraryVersionRepositorySpec
-    extends WordSpecLike
+    extends AnyWordSpecLike
     with Matchers
     with MockitoSugar
     with DefaultMongoCollectionSupport {

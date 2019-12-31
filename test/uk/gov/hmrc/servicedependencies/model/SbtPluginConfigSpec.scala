@@ -16,10 +16,11 @@
 
 package uk.gov.hmrc.servicedependencies.model
 
-import org.scalatest.{FreeSpec, Matchers}
 import uk.gov.hmrc.servicedependencies.config.model.SbtPluginConfig
+import org.scalatest.freespec.AnyFreeSpec
+import org.scalatest.matchers.should.Matchers
 
-class SbtPluginConfigSpec extends FreeSpec with Matchers {
+class SbtPluginConfigSpec extends AnyFreeSpec with Matchers {
 
   "SbtPlugins" - {
     "should correctly identify internal repositories" in {

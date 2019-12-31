@@ -16,23 +16,22 @@
 
 package uk.gov.hmrc.servicedependencies.service
 
+import java.time.LocalDateTime
 import java.time.Month.DECEMBER
-import java.time.{LocalDateTime, Month}
 
 import org.mockito.MockitoSugar
 import org.scalatest.concurrent.ScalaFutures
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpec
 import uk.gov.hmrc.http.HeaderCarrier
-import uk.gov.hmrc.play.test.UnitSpec
 import uk.gov.hmrc.servicedependencies.connector.{ServiceDeploymentsConnector, TeamsAndRepositoriesConnector, TeamsForServices}
-import uk.gov.hmrc.servicedependencies.model.{BobbyVersionRange, JavaInfo, ServiceDependency, SlugInfo, SlugInfoFlag, Version}
+import uk.gov.hmrc.servicedependencies.model._
 import uk.gov.hmrc.servicedependencies.persistence.{GroupArtefactRepository, JdkVersionRepository, ServiceDependenciesRepository, SlugInfoRepository}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
-class SlugInfoServiceSpec
-  extends UnitSpec
-     with MockitoSugar with ScalaFutures {
+class SlugInfoServiceSpec extends AnyWordSpec with Matchers with MockitoSugar with ScalaFutures {
 
   implicit val hc = HeaderCarrier()
 
@@ -80,9 +79,15 @@ class SlugInfoServiceSpec
       when(boot.mockedTeamsAndRepositoriesConnector.getTeamsForServices)
         .thenReturn(Future(TeamsForServices(Map.empty)))
 
-      await(boot.service.findServicesWithDependency(SlugInfoFlag.Latest, group, artefact, BobbyVersionRange("[1.0.1,)"))) shouldBe Seq(v200, v205)
-      await(boot.service.findServicesWithDependency(SlugInfoFlag.Latest, group, artefact, BobbyVersionRange("(,1.0.1]"))) shouldBe Seq(v100)
-      await(boot.service.findServicesWithDependency(SlugInfoFlag.Latest, group, artefact, BobbyVersionRange("[2.0.0]"))) shouldBe Seq(v200)
+      whenReady(boot.service.findServicesWithDependency(SlugInfoFlag.Latest, group, artefact, BobbyVersionRange("[1.0.1,)"))){ f =>
+        f shouldBe Seq(v200, v205)
+      }
+      whenReady(boot.service.findServicesWithDependency(SlugInfoFlag.Latest, group, artefact, BobbyVersionRange("(,1.0.1]"))){ f =>
+        f shouldBe Seq(v100)
+      }
+      whenReady(boot.service.findServicesWithDependency(SlugInfoFlag.Latest, group, artefact, BobbyVersionRange("[2.0.0]"))){ f =>
+        f shouldBe Seq(v200)
+      }
     }
 
     "include non-parseable versions" in {
@@ -97,8 +102,12 @@ class SlugInfoServiceSpec
       when(boot.mockedTeamsAndRepositoriesConnector.getTeamsForServices)
         .thenReturn(Future(TeamsForServices(Map.empty)))
 
-      await(boot.service.findServicesWithDependency(SlugInfoFlag.Latest, group, artefact, BobbyVersionRange("[1.0.1,)"))) shouldBe Seq(v200, v205, bad)
-      await(boot.service.findServicesWithDependency(SlugInfoFlag.Latest, group, artefact, BobbyVersionRange("(,1.0.1]"))) shouldBe Seq(v100, bad)
+      whenReady(boot.service.findServicesWithDependency(SlugInfoFlag.Latest, group, artefact, BobbyVersionRange("[1.0.1,)"))){ f =>
+        f shouldBe Seq(v200, v205, bad)
+      }
+      whenReady(boot.service.findServicesWithDependency(SlugInfoFlag.Latest, group, artefact, BobbyVersionRange("(,1.0.1]"))){ f =>
+        f shouldBe Seq(v100, bad)
+      }
     }
   }
 

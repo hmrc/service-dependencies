@@ -16,10 +16,11 @@
 
 package uk.gov.hmrc.servicedependencies.model
 
-import org.scalatest.{FreeSpec, MustMatchers}
 import uk.gov.hmrc.servicedependencies.util.VersionParser
+import org.scalatest.freespec.AnyFreeSpec
+import org.scalatest.matchers.must.Matchers
 
-class VersionParserSpec extends FreeSpec with MustMatchers {
+class VersionParserSpec extends AnyFreeSpec with Matchers {
 
   val targetArtifact = "play-frontend"
 

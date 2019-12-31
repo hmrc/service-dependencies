@@ -35,9 +35,11 @@ import uk.gov.hmrc.servicedependencies.service._
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
+import org.scalatest.freespec.AnyFreeSpec
+import org.scalatest.matchers.should.Matchers
 
 class ServiceDependenciesControllerSpec
-    extends FreeSpec
+    extends AnyFreeSpec
     with BeforeAndAfterEach
     with Matchers
     with MockitoSugar
