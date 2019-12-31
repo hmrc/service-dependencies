@@ -21,7 +21,6 @@ import java.util.concurrent.atomic.AtomicReference
 
 import org.mockito.ArgumentMatchers.any
 import org.mockito.MockitoSugar
-import org.scalatest.{FlatSpec, Matchers}
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.mongo.test.MongoSupport
 import uk.gov.hmrc.servicedependencies.connector.ServiceConfigsConnector
@@ -30,10 +29,12 @@ import uk.gov.hmrc.servicedependencies.persistence.{BobbyRulesSummaryRepository,
 
 import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.duration.DurationInt
+import org.scalatest.flatspec.AnyFlatSpec
+import org.scalatest.matchers.should.Matchers
 
 
 class DependencyLookupServiceSpec
-  extends FlatSpec
+  extends AnyFlatSpec
      with Matchers
      with MockitoSugar
      with MongoSupport {

@@ -21,7 +21,6 @@ import java.time.temporal.ChronoUnit
 
 import org.mockito.MockitoSugar
 import org.mongodb.scala.model.IndexModel
-import org.scalatest.{Matchers, WordSpecLike}
 import uk.gov.hmrc.mongo.test.CleanMongoCollectionSupport
 import uk.gov.hmrc.servicedependencies.model.{MongoRepositoryDependencies, MongoRepositoryDependency, Version}
 import uk.gov.hmrc.servicedependencies.util.{FutureHelpers, MockFutureHelpers}
@@ -29,9 +28,11 @@ import uk.gov.hmrc.servicedependencies.util.{FutureHelpers, MockFutureHelpers}
 import scala.concurrent.duration.DurationInt
 
 import scala.concurrent.ExecutionContext.Implicits.global
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpecLike
 
 class RepositoryLibraryDependenciesRepositorySpec
-    extends WordSpecLike
+    extends AnyWordSpecLike
       with Matchers
       with MockitoSugar
       // We don't mixin IndexedMongoQueriesSupport here, as this repo makes use of regex based queries not satisfied by an index

@@ -6,6 +6,7 @@ val appName = "service-dependencies"
 lazy val microservice = Project(appName, file("."))
   .enablePlugins(
     Seq(play.sbt.PlayScala, SbtAutoBuildPlugin, SbtGitVersioning, SbtDistributablesPlugin, SbtArtifactory): _*)
+  .disablePlugins(JUnitXmlReportPlugin) //Required to prevent https://github.com/scalatest/scalatest/issues/1427
   .settings(majorVersion := 1)
   .settings(SbtDistributablesPlugin.publishingSettings: _*)
   .settings(PlayKeys.devSettings += "play.server.netty.maxInitialLineLength" -> "65536")

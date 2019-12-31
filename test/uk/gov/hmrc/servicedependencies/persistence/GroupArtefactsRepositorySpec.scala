@@ -19,16 +19,18 @@ package uk.gov.hmrc.servicedependencies.persistence
 import org.mockito.MockitoSugar
 import org.mongodb.scala.model.IndexModel
 import org.scalatest.matchers.{HavePropertyMatchResult, HavePropertyMatcher}
-import org.scalatest.{Matchers, OptionValues, WordSpecLike}
+import org.scalatest.OptionValues
 import uk.gov.hmrc.mongo.test.CleanMongoCollectionSupport
 import uk.gov.hmrc.servicedependencies.model.GroupArtefacts
 import uk.gov.hmrc.servicedependencies.persistence.TestSlugInfos._
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration.DurationInt
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpecLike
 
 class GroupArtefactsRepositorySpec
-    extends WordSpecLike
+    extends AnyWordSpecLike
       with Matchers
       with OptionValues
       with MockitoSugar

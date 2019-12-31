@@ -19,12 +19,12 @@ package uk.gov.hmrc.servicedependencies.service
 import java.time.{LocalDate, LocalDateTime}
 
 import org.mockito.ArgumentMatchers.any
-import org.mockito.Mockito.when
+import org.mockito.MockitoSugar
 import org.mockito.invocation.InvocationOnMock
-import org.mockito.stubbing.Answer
+import org.scalatest.OptionValues
 import org.scalatest.concurrent.ScalaFutures
-import org.scalatest.{FreeSpec, Matchers, OptionValues}
-import org.scalatestplus.mockito.MockitoSugar
+import org.scalatest.freespec.AnyFreeSpec
+import org.scalatest.matchers.should.Matchers
 import uk.gov.hmrc.servicedependencies.config.CuratedDependencyConfigProvider
 import uk.gov.hmrc.servicedependencies.config.model.CuratedDependencyConfig
 import uk.gov.hmrc.servicedependencies.controller.model.{Dependency, DependencyBobbyRule}
@@ -34,7 +34,7 @@ import uk.gov.hmrc.servicedependencies.service.SlugDependenciesService.TargetVer
 
 import scala.concurrent.Future
 
-class SlugDependenciesServiceSpec extends FreeSpec with MockitoSugar with Matchers with ScalaFutures with OptionValues {
+class SlugDependenciesServiceSpec extends AnyFreeSpec with MockitoSugar with Matchers with ScalaFutures with OptionValues {
 
   import SlugDependenciesServiceSpec._
 
@@ -72,15 +72,10 @@ class SlugDependenciesServiceSpec extends FreeSpec with MockitoSugar with Matche
     }
 
     def stubNoBobbyRulesViolations(): Unit = {
-      val withArgumentAsFutureSuccess = new Answer[Future[List[Dependency]]] {
-        private val ArgIndex = 0
-        override def answer(invocation: InvocationOnMock): Future[List[Dependency]] = {
-          val dependencies = invocation.getArgument[List[Dependency]](ArgIndex)
-          Future.successful(dependencies)
-        }
+      when(serviceConfigsService.getDependenciesWithBobbyRules(any[List[Dependency]])).thenAnswer { i: InvocationOnMock =>
+        val dependencies = i.getArgument[List[Dependency]](0)
+        Future.successful(dependencies)
       }
-
-      when(serviceConfigsService.getDependenciesWithBobbyRules(any[List[Dependency]]())).thenAnswer(withArgumentAsFutureSuccess)
     }
 
     def stubNoEnrichmentsForDependencies(): Unit = {

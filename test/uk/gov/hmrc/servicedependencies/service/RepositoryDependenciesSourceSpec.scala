@@ -20,7 +20,6 @@ import java.time.Instant
 import org.mockito.ArgumentMatchers.any
 import org.mockito.MockitoSugar
 import org.scalatest.concurrent.{IntegrationPatience, ScalaFutures}
-import org.scalatest.{Matchers, WordSpec}
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.servicedependencies.connector.{Team, TeamsAndRepositoriesConnector}
 import uk.gov.hmrc.servicedependencies.model.{MongoRepositoryDependency, _}
@@ -28,9 +27,11 @@ import uk.gov.hmrc.servicedependencies.persistence.RepositoryLibraryDependencies
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpec
 
 class RepositoryDependenciesSourceSpec
-    extends WordSpec
+    extends AnyWordSpec
     with Matchers
     with ScalaFutures
     with MockitoSugar

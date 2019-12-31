@@ -16,10 +16,11 @@
 
 package uk.gov.hmrc.servicedependencies.util
 
-import org.scalatest.{FunSpec, Matchers}
 import uk.gov.hmrc.servicedependencies.model.Version
+import org.scalatest.funspec.AnyFunSpec
+import org.scalatest.matchers.should.Matchers
 
-class MaxSpec extends FunSpec with Matchers {
+class MaxSpec extends AnyFunSpec with Matchers {
 
   describe("maxOf") {
 

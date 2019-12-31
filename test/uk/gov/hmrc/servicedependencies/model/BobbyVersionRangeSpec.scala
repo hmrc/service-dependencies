@@ -16,9 +16,10 @@
 
 package uk.gov.hmrc.servicedependencies.model
 
-import org.scalatest.{FlatSpec, Matchers}
+import org.scalatest.flatspec.AnyFlatSpec
+import org.scalatest.matchers.should.Matchers
 
-class BobbyVersionRangeSpec extends FlatSpec with Matchers {
+class BobbyVersionRangeSpec extends AnyFlatSpec with Matchers {
 
   "A BobbyVersionRange" should "read (,1.0] as 'x <= 1.0'" in {
 

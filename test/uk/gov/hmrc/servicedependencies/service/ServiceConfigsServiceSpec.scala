@@ -19,12 +19,13 @@ import java.time.{Instant, LocalDate}
 
 import org.mockito.MockitoSugar
 import org.scalatest.concurrent.{IntegrationPatience, ScalaFutures}
-import org.scalatest.{AsyncFlatSpec, Matchers}
 import uk.gov.hmrc.servicedependencies.connector.ServiceConfigsConnector
 import uk.gov.hmrc.servicedependencies.controller.model.{Dependencies, Dependency}
 import uk.gov.hmrc.servicedependencies.model.{BobbyRule, BobbyVersionRange, Version}
 
 import scala.concurrent.Future
+import org.scalatest.flatspec.AsyncFlatSpec
+import org.scalatest.matchers.should.Matchers
 
 class ServiceConfigsServiceSpec
     extends AsyncFlatSpec

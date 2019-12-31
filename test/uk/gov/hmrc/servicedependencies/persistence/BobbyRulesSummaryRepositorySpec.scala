@@ -23,15 +23,16 @@ import cats.syntax.all._
 import org.mockito.MockitoSugar
 import org.mongodb.scala.ReadPreference
 import org.mongodb.scala.model.IndexModel
-import org.scalatest.{Matchers, WordSpecLike}
 import uk.gov.hmrc.mongo.test.DefaultMongoCollectionSupport
 import uk.gov.hmrc.servicedependencies.model.{BobbyRule, BobbyRulesSummary, BobbyVersionRange, SlugInfoFlag}
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.concurrent.duration.DurationInt
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpecLike
 
 class BobbyRulesSummaryRepositorySpec
-    extends WordSpecLike
+    extends AnyWordSpecLike
     with Matchers
     with MockitoSugar
     with DefaultMongoCollectionSupport {
