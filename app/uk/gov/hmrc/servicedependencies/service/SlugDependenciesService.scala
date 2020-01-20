@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 HM Revenue & Customs
+ * Copyright 2020 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -33,7 +33,7 @@ class SlugDependenciesService @Inject() (slugInfoService: SlugInfoService,
                                          serviceConfigsService: ServiceConfigsService) {
 
   private lazy val curatedLibraries = curatedDependencyConfigProvider.curatedDependencyConfig.libraries.toSet
-
+  
   /*
    * We may want to evolve the model - but for this initial version we reuse the existing Dependency definition.
    */
@@ -85,7 +85,7 @@ class SlugDependenciesService @Inject() (slugInfoService: SlugInfoService,
     Dependency(
       name = slugDependency.artifact,
       currentVersion = Version(slugDependency.version),  // TODO this is unsafe
-      latestVersion = latestVersionLookup(slugDependency.artifact),
+      latestVersion = if(slugDependency.group == "uk.gov.hmrc") latestVersionLookup(slugDependency.artifact) else None, // TODO: also a bit of a hack until we do latest version no correctly
       bobbyRuleViolations = Nil
     )
 }

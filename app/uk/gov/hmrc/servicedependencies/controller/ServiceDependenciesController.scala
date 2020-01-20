@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 HM Revenue & Customs
+ * Copyright 2020 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -30,7 +30,7 @@ import uk.gov.hmrc.servicedependencies.controller.model.{Dependencies, Dependenc
 import uk.gov.hmrc.servicedependencies.model._
 import uk.gov.hmrc.servicedependencies.service.SlugDependenciesService.TargetVersion
 import uk.gov.hmrc.servicedependencies.service.SlugDependenciesService.TargetVersion.{Labelled, Latest}
-import uk.gov.hmrc.servicedependencies.service.{DependencyDataUpdatingService, ServiceConfigsService, SlugDependenciesService, SlugInfoService}
+import uk.gov.hmrc.servicedependencies.service.{DependencyDataUpdatingService, ServiceConfigsService, SlugDependenciesService, SlugInfoService, TeamDependencyService}
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -43,6 +43,7 @@ class ServiceDependenciesController @Inject()(
   slugDependenciesService      : SlugDependenciesService,
   config                       : ServiceDependenciesConfig,
   serviceConfigsService        : ServiceConfigsService,
+  teamDependencyService        : TeamDependencyService,
   cc                           : ControllerComponents
 )(implicit ec: ExecutionContext)
     extends BackendController(cc) {
@@ -75,14 +76,7 @@ class ServiceDependenciesController @Inject()(
   def dependenciesForTeam(team: String): Action[AnyContent] =
     Action.async { implicit request =>
       for {
-        teamRepos     <- teamsAndRepositoriesConnector.getTeam(team)
-        deps          <- dependencyDataUpdatingService.getDependencyVersionsForAllRepositories()
-        repos         =  teamRepos.getOrElse(Map())
-        services      =  repos.getOrElse("Service", List())
-        libraries     =  repos.getOrElse("Library", List())
-        teamDeps      =  deps.filter(d => services.contains(d.repositoryName) || libraries.contains(d.repositoryName))
-        depsWithRules <- teamDeps.toList
-                           .traverse(serviceConfigsService.getDependenciesWithBobbyRules)
+        depsWithRules <- teamDependencyService.findAllDepsForTeam(team)
       } yield Ok(Json.toJson(depsWithRules))
     }
 

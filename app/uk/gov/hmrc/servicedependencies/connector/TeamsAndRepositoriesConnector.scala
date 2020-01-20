@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 HM Revenue & Customs
+ * Copyright 2020 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -31,6 +31,14 @@ case class Team(
 ) {
   def allRepos: Seq[String] =
     repos.map(_.values.toSeq.flatten).getOrElse(Seq.empty)
+
+  private def findRepo(name: String) = repos.map(_.getOrElse(name, Seq.empty)).getOrElse(Seq.empty)
+
+  def services   : Seq[String] = findRepo("Service")
+  def libraries  : Seq[String] = findRepo("Library")
+  def others     : Seq[String] = findRepo("Other")
+  def prototypes : Seq[String] = findRepo("Prototype")
+
 }
 
 object Team {
@@ -76,4 +84,8 @@ class TeamsAndRepositoriesConnector @Inject()(
 
   def getTeam(team: String)(implicit hc: HeaderCarrier): Future[Option[Map[String, Seq[String]]]] =
     httpClient.GET[Option[Map[String, Seq[String]]]](s"$teamsAndRepositoriesApiBase/api/teams/$team")
+
+  def getTeamDetails(team: String)(implicit hc: HeaderCarrier): Future[Team] = {
+    httpClient.GET[Team](s"$teamsAndRepositoriesApiBase/api/teams_with_details/$team")
+  }
 }
