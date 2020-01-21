@@ -19,9 +19,10 @@ package uk.gov.hmrc.servicedependencies.service
 import com.google.inject.{Inject, Singleton}
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.mongo.metrix.MetricSource
-import uk.gov.hmrc.servicedependencies.connector.{Team, TeamsAndRepositoriesConnector}
-import uk.gov.hmrc.servicedependencies.model.{MongoRepositoryDependency, Version}
+import uk.gov.hmrc.servicedependencies.connector.TeamsAndRepositoriesConnector
+import uk.gov.hmrc.servicedependencies.model.{MongoRepositoryDependency, Team, Version}
 import uk.gov.hmrc.servicedependencies.persistence.RepositoryLibraryDependenciesRepository
+
 import scala.concurrent.{ExecutionContext, Future}
 
 case class TeamRepos(
@@ -52,18 +53,15 @@ class RepositoryDependenciesSource @Inject()(
                                                                  repoDependencies.sbtPluginDependencies ++
                                                                  repoDependencies.otherDependencies)))
     } yield
-      teamsWithRepositories.map {
-        case Team(name, Some(repos)) =>
-          TeamRepos(
-            teamName = Team.normalisedName(name),
-            repos = dependencies.filter {
-              case (repoName, _) =>
-                val serviceRepos = repos.get("Service")
-                serviceRepos.exists(_.contains(repoName))
-            }.toMap
-          )
-        case Team(name, None) =>
-          TeamRepos(name, Map.empty)
+      teamsWithRepositories.map { team =>
+        TeamRepos(
+          teamName = Team.normalisedName(team.name),
+          repos = dependencies.filter {
+            case (repoName, _) =>
+              val serviceRepos = team.repos.get("Service")
+              serviceRepos.exists(_.contains(repoName))
+          }.toMap
+        )
       }
 
   def collectTeamStats(teamRepos: TeamRepos): Map[String, Int] = {

@@ -17,35 +17,14 @@
 package uk.gov.hmrc.servicedependencies.connector
 
 import com.google.inject.{Inject, Singleton}
-import play.api.libs.json.Json
 import play.api.cache.AsyncCacheApi
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.play.bootstrap.http.HttpClient
 import uk.gov.hmrc.servicedependencies.config.ServiceDependenciesConfig
 import uk.gov.hmrc.servicedependencies.connector.model.{Repository, RepositoryInfo}
+import uk.gov.hmrc.servicedependencies.model.Team
+
 import scala.concurrent.{ExecutionContext, Future}
-
-case class Team(
-  name: String,
-  repos: Option[Map[String, Seq[String]]]
-) {
-  def allRepos: Seq[String] =
-    repos.map(_.values.toSeq.flatten).getOrElse(Seq.empty)
-
-  private def findRepo(name: String) = repos.map(_.getOrElse(name, Seq.empty)).getOrElse(Seq.empty)
-
-  def services   : Seq[String] = findRepo("Service")
-  def libraries  : Seq[String] = findRepo("Library")
-  def others     : Seq[String] = findRepo("Other")
-  def prototypes : Seq[String] = findRepo("Prototype")
-
-}
-
-object Team {
-  implicit val format = Json.format[Team]
-
-  def normalisedName(name: String): String = name.toLowerCase.replaceAll(" ", "_")
-}
 
 case class TeamsForServices(toMap: Map[String, Seq[String]]) {
   def getTeams(service: String): Seq[String] =

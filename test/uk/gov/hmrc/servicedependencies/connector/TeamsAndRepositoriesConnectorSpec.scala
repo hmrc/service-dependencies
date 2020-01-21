@@ -30,6 +30,7 @@ import uk.gov.hmrc.servicedependencies.WireMockConfig
 import uk.gov.hmrc.servicedependencies.connector.model.RepositoryInfo
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.must.Matchers
+import uk.gov.hmrc.servicedependencies.model.Team
 
 class TeamsAndRepositoriesConnectorSpec
     extends AnyFreeSpec
@@ -105,7 +106,7 @@ class TeamsAndRepositoriesConnectorSpec
 
       val teamsWithRepositories = services.getTeamsWithRepositories().futureValue
       teamsWithRepositories mustBe Seq(
-        Team("team A", Some(Map("Service" -> Seq("service A", "service B"), "Library" -> Seq("library A"))))
+        Team("team A", Map("Service" -> Seq("service A", "service B"), "Library" -> Seq("library A")))
       )
     }
   }
