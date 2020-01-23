@@ -22,7 +22,7 @@ import uk.gov.hmrc.servicedependencies.connector.TeamsAndRepositoriesConnector
 import uk.gov.hmrc.servicedependencies.controller.model.Dependencies
 import uk.gov.hmrc.servicedependencies.persistence.SlugInfoRepository
 import uk.gov.hmrc.servicedependencies.service.SlugDependenciesService.TargetVersion
-
+import cats.implicits._
 import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
@@ -35,13 +35,14 @@ class TeamDependencyService @Inject()(
 
   def findAllDepsForTeam(team: String)(implicit hc: HeaderCarrier): Future[Seq[Dependencies]] =
     for {
-       teamDetails     <- teamsAndReposConnector.getTeamDetails(team)
-       githubDeps      <- githubDepLookup.getDependencyVersionsForAllRepositories()
-       libs            =  teamDetails.libraries.map(l => githubDeps.find(_.repositoryName == l))
-       services        =  teamDetails.services.flatMap(s => githubDeps.find(_.repositoryName == s))
-       updatedServices <- Future.sequence(services.map(s => replaceServiceDeps(s)))
-       libsWithRules   <- Future.sequence(libs.flatten.map(serviceConfigsService.getDependenciesWithBobbyRules))
-       allDeps         =  libsWithRules ++ updatedServices
+      (teamDetails, githubDeps) <- ( teamsAndReposConnector.getTeamDetails(team)
+                                   , githubDepLookup.getDependencyVersionsForAllRepositories()
+                                   ).mapN { case (td, gh) => (td, gh) }
+      libs                      =  teamDetails.libraries.map(l => githubDeps.find(_.repositoryName == l))
+      services                  =  teamDetails.services.flatMap(s => githubDeps.find(_.repositoryName == s))
+      updatedServices           <- Future.sequence(services.map(replaceServiceDeps))
+      libsWithRules             <- Future.sequence(libs.flatten.map(serviceConfigsService.getDependenciesWithBobbyRules))
+      allDeps                   =  libsWithRules ++ updatedServices
     } yield allDeps
 
   protected[service] def replaceServiceDeps(dep: Dependencies)  : Future[Dependencies] =
