@@ -33,8 +33,12 @@ object SlugInfoFlag {
 
   val values: List[SlugInfoFlag] = List(Latest, Production, ExternalTest, Staging, QA, Integration, Development)
 
-  def parse(s: String): Option[SlugInfoFlag] =
-    values.find(_.asString.equalsIgnoreCase(s))
+  def parse(s: String): Option[SlugInfoFlag] = {
+    if( s.equalsIgnoreCase("externaltest") )
+      Some(ExternalTest)
+    else
+      values.find(_.asString.equalsIgnoreCase(s))
+  }
 }
 
 case class SlugDependency(
