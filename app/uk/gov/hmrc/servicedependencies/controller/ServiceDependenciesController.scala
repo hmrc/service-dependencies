@@ -131,14 +131,31 @@ class ServiceDependenciesController @Inject()(
       ).merge
     }
 
+  def dependenciesOfSlugForTeam(team: String, flag: String): Action[AnyContent] =
+    Action.async { implicit request =>
+      (for {
+         f    <- EitherT.fromOption[Future](SlugInfoFlag.parse(flag), BadRequest(s"invalid flag '$flag'"))
+         deps <- EitherT.liftF[Future, Result, Map[String, Seq[Dependency]]](
+                   teamDependencyService.dependenciesOfSlugForTeam(team, f)
+                 )
+       } yield {
+         implicit val dw = Dependency.writes
+         Ok(Json.toJson(deps))
+       }
+      ).merge
+    }
+
   def findJDKForEnvironment(flag: String): Action[AnyContent] =
     Action.async { implicit request =>
-      SlugInfoFlag.parse(flag) match {
-        case None    => Future(BadRequest("invalid flag"))
-        case Some(f) => implicit val format = JDKVersionFormats.jdkFormat
-                        slugInfoService
-                          .findJDKVersions(f)
-                          .map(res => Ok(Json.toJson(res)))
-      }
+      (for {
+         f   <- EitherT.fromOption[Future](SlugInfoFlag.parse(flag), BadRequest(s"invalid flag '$flag'"))
+         res <- EitherT.liftF[Future, Result, Seq[JDKVersion]](
+                  slugInfoService.findJDKVersions(f)
+                )
+       } yield {
+         implicit val jdkvf = JDKVersionFormats.jdkFormat
+         Ok(Json.toJson(res))
+       }
+      ).merge
     }
 }

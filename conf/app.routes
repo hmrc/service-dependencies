@@ -9,3 +9,4 @@ GET     /api/jdkVersions                       @uk.gov.hmrc.servicedependencies.
 GET     /api/bobbyViolations                   @uk.gov.hmrc.servicedependencies.controller.BobbyRuleViolationController.findBobbyRuleViolations
 GET     /api/historicBobbyViolations           @uk.gov.hmrc.servicedependencies.controller.BobbyRuleViolationController.findHistoricBobbyRuleViolations
 GET     /api/slug-dependencies/:name           @uk.gov.hmrc.servicedependencies.controller.ServiceDependenciesController.dependenciesOfSlug(name, flag ?= "latest")
+GET     /api/teams/:team/slug-dependencies     @uk.gov.hmrc.servicedependencies.controller.ServiceDependenciesController.dependenciesOfSlugForTeam(team, flag ?= "latest")
