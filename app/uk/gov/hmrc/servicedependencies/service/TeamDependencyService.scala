@@ -16,13 +16,13 @@
 
 package uk.gov.hmrc.servicedependencies.service
 
+import cats.implicits._
 import javax.inject.{Inject, Singleton}
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.servicedependencies.connector.TeamsAndRepositoriesConnector
 import uk.gov.hmrc.servicedependencies.controller.model.Dependencies
+import uk.gov.hmrc.servicedependencies.model.SlugInfoFlag
 import uk.gov.hmrc.servicedependencies.persistence.SlugInfoRepository
-import uk.gov.hmrc.servicedependencies.service.SlugDependenciesService.TargetVersion
-import cats.implicits._
 import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
@@ -47,7 +47,7 @@ class TeamDependencyService @Inject()(
 
   protected[service] def replaceServiceDeps(dep: Dependencies)  : Future[Dependencies] =
     for {
-      slugDeps <- slugDependenciesService.curatedLibrariesOfSlug(dep.repositoryName, TargetVersion.Latest)
+      slugDeps <- slugDependenciesService.curatedLibrariesOfSlug(dep.repositoryName, SlugInfoFlag.Latest)
       output   =  slugDeps.map(deps => dep.copy(libraryDependencies = deps)).getOrElse(dep)
     } yield output
 

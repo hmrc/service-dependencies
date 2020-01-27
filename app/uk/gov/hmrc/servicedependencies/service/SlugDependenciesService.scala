@@ -16,85 +16,55 @@
 
 package uk.gov.hmrc.servicedependencies.service
 
+import cats.implicits._
 import javax.inject.{Inject, Singleton}
 import uk.gov.hmrc.servicedependencies.config.CuratedDependencyConfigProvider
 import uk.gov.hmrc.servicedependencies.controller.model.Dependency
 import uk.gov.hmrc.servicedependencies.model.{MongoLibraryVersion, SlugDependency, SlugInfo, SlugInfoFlag, Version}
 import uk.gov.hmrc.servicedependencies.persistence.LibraryVersionRepository
-import uk.gov.hmrc.servicedependencies.service.SlugDependenciesService.TargetVersion
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
 @Singleton
-class SlugDependenciesService @Inject() (slugInfoService: SlugInfoService,
-                                         curatedDependencyConfigProvider: CuratedDependencyConfigProvider,
-                                         libraryVersionRepository: LibraryVersionRepository,
-                                         serviceConfigsService: ServiceConfigsService) {
+class SlugDependenciesService @Inject()(
+  slugInfoService                : SlugInfoService,
+  curatedDependencyConfigProvider: CuratedDependencyConfigProvider,
+  libraryVersionRepository       : LibraryVersionRepository,
+  serviceConfigsService          : ServiceConfigsService) {
 
   private lazy val curatedLibraries = curatedDependencyConfigProvider.curatedDependencyConfig.libraries.toSet
-  
+
   /*
    * We may want to evolve the model - but for this initial version we reuse the existing Dependency definition.
    */
-  def curatedLibrariesOfSlug(name: String, atVersion: TargetVersion): Future[Option[List[Dependency]]] = {
-    val futLatestVersionByName = libraryVersionRepository.getAllEntries.map(toLatestVersionByName)
-    val futOptCuratedDependencies = retrieveSlugInfo(name, atVersion).map(toCuratedDependencies)
+  def curatedLibrariesOfSlug(name: String, flag: SlugInfoFlag): Future[Option[List[Dependency]]] =
+    slugInfoService.getSlugInfo(name, flag).flatMap {
+      case None           => Future.successful(None)
+      case Some(slugInfo) => curatedLibrariesOfSlugInfo(slugInfo).map(Some.apply)
+    }
+
+  private def curatedLibrariesOfSlugInfo(slugInfo: SlugInfo): Future[List[Dependency]] =
     for {
-      latestVersionByName <- futLatestVersionByName
-      optCuratedDependencies <- futOptCuratedDependencies
-      enrichedDependencies <- enrichSlugDependencies(latestVersionByName.get, optCuratedDependencies)
+      latestVersionByName  <- libraryVersionRepository.getAllEntries.map(toLatestVersionByName)
+      curatedDependencies  =  slugInfo.dependencies.filter(slugDependency => curatedLibraries.contains(slugDependency.artifact))
+      enrichedDependencies <- serviceConfigsService.getDependenciesWithBobbyRules(curatedDependencies
+                                  .map { slugDependency =>
+                                      Dependency(
+                                          name                = slugDependency.artifact
+                                        , currentVersion      = Version(slugDependency.version)  // TODO this is unsafe
+                                        , latestVersion       = // TODO: also a bit of a hack until we do latest version no correctly
+                                                                if (slugDependency.group == "uk.gov.hmrc") latestVersionByName.get(slugDependency.artifact) else None
+                                        , bobbyRuleViolations = Nil
+                                        )
+                                     }
+                                   )
     } yield enrichedDependencies
-  }
 
-  private def toLatestVersionByName(latestVersions: Seq[MongoLibraryVersion]): Map[String, Version] = {
-    val nameVersionPairs = for {
-      library <- latestVersions
-      libraryVersion <- library.version
-    } yield library.libraryName -> libraryVersion
-
-    nameVersionPairs.toMap
-  }
-
-  private def retrieveSlugInfo(name: String, atVersion: TargetVersion): Future[Option[SlugInfo]] = {
-    import SlugDependenciesService.TargetVersion._
-    atVersion match {
-      case Latest => slugInfoService.getSlugInfo(name, SlugInfoFlag.Latest)
-      case Labelled(version) => slugInfoService.getSlugInfo(name, version.toString)
-    }
-  }
-
-  private def toCuratedDependencies(optSlugInfo: Option[SlugInfo]): Option[List[SlugDependency]] =
-    optSlugInfo.map(curatedDependenciesOf)
-
-  private def curatedDependenciesOf(slugInfo: SlugInfo): List[SlugDependency] =
-    slugInfo.dependencies.filter(slugDependency => curatedLibraries.contains(slugDependency.artifact))
-
-  private type VersionLookup = String => Option[Version]
-
-  private def enrichSlugDependencies(versionLookup: VersionLookup,
-                                     slugDependencies: Option[List[SlugDependency]]): Future[Option[List[Dependency]]] = {
-    val asDependencyWithLatestVersion = toDependency(versionLookup) _
-    slugDependencies.fold[Future[Option[List[Dependency]]]](ifEmpty = Future.successful(None)) { slugDependencies =>
-      val dependencies = slugDependencies.map(asDependencyWithLatestVersion)
-      serviceConfigsService.getDependenciesWithBobbyRules(dependencies).map(Some(_))
-    }
-  }
-
-  private def toDependency(latestVersionLookup: VersionLookup)(slugDependency: SlugDependency): Dependency =
-    Dependency(
-      name = slugDependency.artifact,
-      currentVersion = Version(slugDependency.version),  // TODO this is unsafe
-      latestVersion = if(slugDependency.group == "uk.gov.hmrc") latestVersionLookup(slugDependency.artifact) else None, // TODO: also a bit of a hack until we do latest version no correctly
-      bobbyRuleViolations = Nil
-    )
-}
-
-object SlugDependenciesService {
-  sealed trait TargetVersion
-
-  object TargetVersion {
-    case object Latest extends TargetVersion
-    case class Labelled(version: Version) extends TargetVersion
-  }
+  private def toLatestVersionByName(latestVersions: Seq[MongoLibraryVersion]): Map[String, Version] =
+    (for {
+       library        <- latestVersions
+       libraryVersion <- library.version
+     } yield library.libraryName -> libraryVersion
+    ).toMap
 }

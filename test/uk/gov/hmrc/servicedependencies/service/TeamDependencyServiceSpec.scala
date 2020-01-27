@@ -25,9 +25,8 @@ import org.scalatest.wordspec.AnyWordSpec
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.servicedependencies.connector.{ServiceConfigsConnector, TeamsAndRepositoriesConnector}
 import uk.gov.hmrc.servicedependencies.controller.model.{Dependencies, Dependency}
-import uk.gov.hmrc.servicedependencies.model.{Team, Version}
+import uk.gov.hmrc.servicedependencies.model.{SlugInfoFlag, Team, Version}
 import uk.gov.hmrc.servicedependencies.persistence.SlugInfoRepository
-import uk.gov.hmrc.servicedependencies.service.SlugDependenciesService.TargetVersion
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
@@ -48,7 +47,8 @@ class TeamDependencyServiceSpec extends AnyWordSpec with Matchers with MockitoSu
       val lib2 = new Dependency("foolib", Version("1.2.4"), None, List.empty)
       val dep = Dependencies("foo", libraryDependencies = Seq(lib1), Nil, Nil, Instant.now() )
 
-      when(slugDependenciesService.curatedLibrariesOfSlug(dep.repositoryName, TargetVersion.Latest)).thenReturn(Future.successful(Option(List(lib2))))
+      when(slugDependenciesService.curatedLibrariesOfSlug(dep.repositoryName, SlugInfoFlag.Latest))
+        .thenReturn(Future.successful(Option(List(lib2))))
 
       val res = tds.replaceServiceDeps(dep).futureValue
 
@@ -78,20 +78,19 @@ class TeamDependencyServiceSpec extends AnyWordSpec with Matchers with MockitoSu
         lastUpdated = Instant.now()
       )
 
-      when(githubDepLookup.getDependencyVersionsForAllRepositories()).thenReturn(Future.successful(Seq(fooDependencies)))
+      when(githubDepLookup.getDependencyVersionsForAllRepositories())
+        .thenReturn(Future.successful(Seq(fooDependencies)))
 
-      when(slugDependenciesService
-        .curatedLibrariesOfSlug(ArgumentMatchers.eq("foo-service"), ArgumentMatchers.eq(TargetVersion.Latest)))
+      when(slugDependenciesService.curatedLibrariesOfSlug("foo-service", SlugInfoFlag.Latest))
         .thenReturn(Future.successful(Option(List(fooDep1, fooSlugDep))))
 
-      when(serviceConfigsConnector.getBobbyRules()).thenReturn(Future.successful(Map.empty))
+      when(serviceConfigsConnector.getBobbyRules())
+        .thenReturn(Future.successful(Map.empty))
 
       val res = tds.findAllDepsForTeam("foo").futureValue
 
       res.head.libraryDependencies should contain (fooDep1)
       res.head.libraryDependencies should contain (fooSlugDep)
     }
-
   }
-
 }
