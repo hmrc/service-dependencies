@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 HM Revenue & Customs
+ * Copyright 2020 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -33,8 +33,12 @@ object SlugInfoFlag {
 
   val values: List[SlugInfoFlag] = List(Latest, Production, ExternalTest, Staging, QA, Integration, Development)
 
-  def parse(s: String): Option[SlugInfoFlag] =
-    values.find(_.asString.equalsIgnoreCase(s))
+  def parse(s: String): Option[SlugInfoFlag] = {
+    if( s.equalsIgnoreCase("externaltest") )
+      Some(ExternalTest)
+    else
+      values.find(_.asString.equalsIgnoreCase(s))
+  }
 }
 
 case class SlugDependency(

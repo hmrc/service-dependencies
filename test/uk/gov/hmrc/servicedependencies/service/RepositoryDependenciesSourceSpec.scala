@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 HM Revenue & Customs
+ * Copyright 2020 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,7 +21,7 @@ import org.mockito.ArgumentMatchers.any
 import org.mockito.MockitoSugar
 import org.scalatest.concurrent.{IntegrationPatience, ScalaFutures}
 import uk.gov.hmrc.http.HeaderCarrier
-import uk.gov.hmrc.servicedependencies.connector.{Team, TeamsAndRepositoriesConnector}
+import uk.gov.hmrc.servicedependencies.connector.TeamsAndRepositoriesConnector
 import uk.gov.hmrc.servicedependencies.model.{MongoRepositoryDependency, _}
 import uk.gov.hmrc.servicedependencies.persistence.RepositoryLibraryDependenciesRepository
 
@@ -48,7 +48,7 @@ class RepositoryDependenciesSourceSpec
           Future.successful(
             Seq(Team(
               "team A",
-              Some(Map("Service" -> Seq(repository1, repository2, repository3), "Library" -> Seq("library A")))))))
+              Map("Service" -> Seq(repository1, repository2, repository3), "Library" -> Seq("library A"))))))
 
       val libraryDependencies1 = Seq(
         MongoRepositoryDependency("lib1", Version(1, 1, 0)),
@@ -112,8 +112,8 @@ class RepositoryDependenciesSourceSpec
         .thenReturn(
           Future.successful(
             Seq(
-              Team(teamA, Some(Map("Service" -> Seq(repository1, repository2), "Library" -> Seq("library A")))),
-              Team(teamB, Some(Map("Service" -> Seq(repository3))))
+              Team(teamA, Map("Service" -> Seq(repository1, repository2), "Library" -> Seq("library A"))),
+              Team(teamB, Map("Service" -> Seq(repository3)))
             )))
 
       val libraryDependencies1 = Seq(

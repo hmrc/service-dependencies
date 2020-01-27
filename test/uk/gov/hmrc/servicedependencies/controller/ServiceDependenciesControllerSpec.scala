@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 HM Revenue & Customs
+ * Copyright 2020 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -165,6 +165,7 @@ class ServiceDependenciesControllerSpec
       val mockedSlugInfoService               = mock[SlugInfoService]
       val mockedSlugDependenciesService       = mock[SlugDependenciesService]
       val mockServiceConfigsService           = mock[ServiceConfigsService]
+      val mockTeamDependencyService           = mock[TeamDependencyService]
       val controller = new ServiceDependenciesController(
         Configuration(),
         mockedDependencyDataUpdatingService,
@@ -173,6 +174,7 @@ class ServiceDependenciesControllerSpec
         mockedSlugDependenciesService,
         mock[ServiceDependenciesConfig],
         mockServiceConfigsService,
+        mockTeamDependencyService,
         stubControllerComponents()
       )
       Boot(

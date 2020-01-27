@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 HM Revenue & Customs
+ * Copyright 2020 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -187,6 +187,25 @@ class SlugDependenciesServiceSpec extends AnyFreeSpec with MockitoSugar with Mat
         )
       }
 
+      "not add latest version when the dependency's group doesnt match " in new Fixture {
+        stubNoBobbyRulesViolations()
+        stubCuratedLibrariesOf(Dependency2.artifact)
+
+        // this is intended to simulate the internal/external reactive mongo version where the artifact matches but the group from the slug doesnt
+        stubLatestLibraryVersionLookupSuccessfullyReturns(Seq( Dependency2.artifact -> Version("6.7.8")))
+
+        when(slugInfoService.getSlugInfo(SlugName, version = SlugVersion.toString)).thenReturn(
+          Future.successful(
+            Some(slugInfo(withName = SlugName, withVersion = SlugVersion.toString, withDependencies = List(
+             Dependency2
+            )))))
+
+        // we expect there to be no latest version even though the latest version can match on artifact, the dependency is excluded based on the group
+        underTest.curatedLibrariesOfSlug(SlugName, atVersion = Labelled(SlugVersion)).futureValue.value should contain theSameElementsAs Seq(
+          Dependency(name = Dependency2.artifact, currentVersion = Version(Dependency2.version), latestVersion = None, bobbyRuleViolations = Nil)
+        )
+      }
+
       "failing when retrieval of the latest library versions encounters a failure" in new Fixture {
         stubSlugVersionIsUnrecognised(SlugName, SlugVersion.toString)
         val failure = new RuntimeException("failed to retrieve latest library versions")
@@ -259,9 +278,9 @@ class SlugDependenciesServiceSpec extends AnyFreeSpec with MockitoSugar with Mat
 private object SlugDependenciesServiceSpec {
   val SlugName = "a-slug-name"
   val SlugVersion = Version(major = 1, minor = 2, patch = 3)
-  val Dependency1 = SlugDependency(path = "/path/dep1", version = "1.1.1", group = "com.test.group", artifact = "artifact1")
+  val Dependency1 = SlugDependency(path = "/path/dep1", version = "1.1.1", group = "uk.gov.hmrc", artifact = "artifact1")
   val Dependency2 = SlugDependency(path = "/path/dep2", version = "2.2.2", group = "com.test.group", artifact = "artifact2")
-  val Dependency3 = SlugDependency(path = "/path/dep3", version = "3.3.3", group = "com.test.group", artifact = "artifact3")
+  val Dependency3 = SlugDependency(path = "/path/dep3", version = "3.3.3", group = "uk.gov.hmrc", artifact = "artifact3")
   val LatestVersionOfDependency1 = Version("1.2.0")
   val LatestVersionOfDependency3 = Version("3.4.0")
 
