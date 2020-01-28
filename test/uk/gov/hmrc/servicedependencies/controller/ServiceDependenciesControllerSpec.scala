@@ -29,8 +29,7 @@ import play.api.test.Helpers._
 import uk.gov.hmrc.servicedependencies.config.ServiceDependenciesConfig
 import uk.gov.hmrc.servicedependencies.connector.TeamsAndRepositoriesConnector
 import uk.gov.hmrc.servicedependencies.controller.model.{Dependencies, Dependency, DependencyBobbyRule}
-import uk.gov.hmrc.servicedependencies.model.{BobbyVersionRange, Version}
-import uk.gov.hmrc.servicedependencies.service.SlugDependenciesService.TargetVersion.{Labelled, Latest}
+import uk.gov.hmrc.servicedependencies.model.{BobbyVersionRange, SlugInfoFlag, Version}
 import uk.gov.hmrc.servicedependencies.service._
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -102,29 +101,15 @@ class ServiceDependenciesControllerSpec
 
   "getDependenciesOfSlug" - {
 
-    "should get dependencies of a known slug version using the service when a valid version is supplied" in new GetDependenciesOfSlugFixture {
-      val SlugVersion = Version(major = 1, minor = 2, patch = 3)
-      when(boot.mockedSlugDependenciesService.curatedLibrariesOfSlug(SlugName, Labelled(SlugVersion))).thenReturn(
+    "should get dependencies for a SlugInfoGlag" in new GetDependenciesOfSlugFixture {
+      val flag = SlugInfoFlag.Latest
+      when(boot.mockedSlugDependenciesService.curatedLibrariesOfSlug(slugName, flag)).thenReturn(
         Future.successful(
           Some(List(DependencyWithLatestVersionNoRuleViolations, DependencyWithRuleViolationsNoLatestVersion))
         )
       )
 
-      val result = boot.controller.dependenciesOfSlug(SlugName, Some(SlugVersion.toString)).apply(FakeRequest())
-
-      contentAsJson(result) shouldBe Json.parse(
-        s"""[$JsonForDependencyWithLatestVersionNoRuleViolations, $JsonForDependencyWithRuleViolationsNoLatestVersion]"""
-      )
-    }
-
-    "should get dependencies of the latest slug version using the service when a version is not supplied" in new GetDependenciesOfSlugFixture {
-      when(boot.mockedSlugDependenciesService.curatedLibrariesOfSlug(SlugName, Latest)).thenReturn(
-        Future.successful(
-          Some(List(DependencyWithLatestVersionNoRuleViolations, DependencyWithRuleViolationsNoLatestVersion))
-        )
-      )
-
-      val result = boot.controller.dependenciesOfSlug(SlugName, version = None).apply(FakeRequest())
+      val result = boot.controller.dependenciesOfSlug(slugName, flag.asString).apply(FakeRequest())
 
       contentAsJson(result) shouldBe Json.parse(
         s"""[$JsonForDependencyWithLatestVersionNoRuleViolations, $JsonForDependencyWithRuleViolationsNoLatestVersion]"""
@@ -132,19 +117,20 @@ class ServiceDependenciesControllerSpec
     }
 
     "should return Not Found when the requested slug is not recognised" in new GetDependenciesOfSlugFixture {
-      when(boot.mockedSlugDependenciesService.curatedLibrariesOfSlug(SlugName, Latest)).thenReturn(
+      val flag = SlugInfoFlag.Latest
+      when(boot.mockedSlugDependenciesService.curatedLibrariesOfSlug(slugName, flag)).thenReturn(
         Future.successful(None)
       )
 
-      val result = boot.controller.dependenciesOfSlug(SlugName, version = None).apply(FakeRequest())
+      val result = boot.controller.dependenciesOfSlug(slugName, flag.asString).apply(FakeRequest())
 
       status(result) shouldBe NOT_FOUND
     }
 
-    "should reject an invalid version descriptor" in new GetDependenciesOfSlugFixture {
-      val InvalidVersion = "an-invalid-version"
+    "should reject an invalid flag descriptor" in new GetDependenciesOfSlugFixture {
+      val invalidFlag = "an-invalid-flag"
 
-      val result = boot.controller.dependenciesOfSlug(SlugName, Some(InvalidVersion)).apply(FakeRequest())
+      val result = boot.controller.dependenciesOfSlug(slugName, invalidFlag).apply(FakeRequest())
 
       status(result) shouldBe BAD_REQUEST
     }
@@ -188,7 +174,7 @@ class ServiceDependenciesControllerSpec
   }
 
   private trait GetDependenciesOfSlugFixture {
-    val SlugName = "a-slug-name"
+    val slugName = "a-slug-name"
     val boot = Boot.init
 
     private val today = LocalDate.of(2019, 11, 27)

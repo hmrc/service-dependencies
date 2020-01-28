@@ -28,8 +28,6 @@ import uk.gov.hmrc.servicedependencies.config.ServiceDependenciesConfig
 import uk.gov.hmrc.servicedependencies.connector.TeamsAndRepositoriesConnector
 import uk.gov.hmrc.servicedependencies.controller.model.{Dependencies, Dependency}
 import uk.gov.hmrc.servicedependencies.model._
-import uk.gov.hmrc.servicedependencies.service.SlugDependenciesService.TargetVersion
-import uk.gov.hmrc.servicedependencies.service.SlugDependenciesService.TargetVersion.{Labelled, Latest}
 import uk.gov.hmrc.servicedependencies.service.{DependencyDataUpdatingService, ServiceConfigsService, SlugDependenciesService, SlugInfoService, TeamDependencyService}
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -48,7 +46,7 @@ class ServiceDependenciesController @Inject()(
 )(implicit ec: ExecutionContext)
     extends BackendController(cc) {
 
-  implicit val writes: OWrites[Dependencies] = Dependencies.writes
+  implicit val dw: OWrites[Dependencies] = Dependencies.writes
 
   def getDependencyVersionsForRepository(repositoryName: String): Action[AnyContent] =
     Action.async { implicit request =>
@@ -111,39 +109,53 @@ class ServiceDependenciesController @Inject()(
 
   def slugInfo(name: String, flag: String): Action[AnyContent] =
     Action.async { implicit request =>
-      SlugInfoFlag.parse(flag) match {
-        case None    => Future(BadRequest("invalid flag"))
-        case Some(f) => implicit val format = ApiSlugInfoFormats.siFormat
-                        slugInfoService.getSlugInfo(name, f).map {
-                          case None      => NotFound("")
-                          case Some(res) => Ok(Json.toJson(res))
-                        }
-      }
+      (for {
+         f        <- EitherT.fromOption[Future](SlugInfoFlag.parse(flag), BadRequest(s"invalid flag '$flag'"))
+         slugInfo <- EitherT.fromOptionF(slugInfoService.getSlugInfo(name, f), NotFound(""))
+       } yield {
+         implicit val sif = ApiSlugInfoFormats.siFormat
+         Ok(Json.toJson(slugInfo))
+       }
+      ).merge
     }
 
-  def dependenciesOfSlug(name: String, version: Option[String]): Action[AnyContent] =
-    Action.async {
-      implicit val writes: Writes[Dependency] = Dependency.writes
-      val errorMessageOrTargetVersion = version.map { str =>
-        Version.parse(str).toRight(left = "invalid version")
-      }.fold[Either[String, TargetVersion]](ifEmpty = Right(Latest))(_.map(Labelled))
+  def dependenciesOfSlug(name: String, flag: String): Action[AnyContent] =
+    Action.async { implicit request =>
+      (for {
+         f    <- EitherT.fromOption[Future](SlugInfoFlag.parse(flag), BadRequest(s"invalid flag '$flag'"))
+         deps <- EitherT.fromOptionF(slugDependenciesService.curatedLibrariesOfSlug(name, f), NotFound(""))
+       } yield {
+         implicit val dw = Dependency.writes
+         Ok(Json.toJson(deps))
+       }
+      ).merge
+    }
 
-      errorMessageOrTargetVersion.fold(
-        _         => Future.successful(BadRequest("invalid version")),
-        atVersion => slugDependenciesService.curatedLibrariesOfSlug(name, atVersion).map {
-          _.fold(ifEmpty = NotFound(""))(deps => Ok(Json.toJson(deps)))
-        }
-      )
+  def dependenciesOfSlugForTeam(team: String, flag: String): Action[AnyContent] =
+    Action.async { implicit request =>
+      (for {
+         f    <- EitherT.fromOption[Future](SlugInfoFlag.parse(flag), BadRequest(s"invalid flag '$flag'"))
+         deps <- EitherT.liftF[Future, Result, Map[String, Seq[Dependency]]](
+                   teamDependencyService.dependenciesOfSlugForTeam(team, f)
+                 )
+       } yield {
+         implicit val dw = Dependency.writes
+         Ok(Json.toJson(deps))
+       }
+      ).merge
     }
 
   def findJDKForEnvironment(flag: String): Action[AnyContent] =
     Action.async { implicit request =>
-      SlugInfoFlag.parse(flag) match {
-        case None    => Future(BadRequest("invalid flag"))
-        case Some(f) => implicit val format = JDKVersionFormats.jdkFormat
-                        slugInfoService
-                          .findJDKVersions(f)
-                          .map(res => Ok(Json.toJson(res)))
-      }
+      (for {
+         f   <- EitherT.fromOption[Future](SlugInfoFlag.parse(flag), BadRequest(s"invalid flag '$flag'"))
+         res <- EitherT.liftF[Future, Result, Seq[JDKVersion]](
+                  slugInfoService.findJDKVersions(f)
+                )
+       } yield {
+         implicit val jdkvf = JDKVersionFormats.jdkFormat
+         Ok(Json.toJson(res))
+       }
+      ).merge
     }
 }
