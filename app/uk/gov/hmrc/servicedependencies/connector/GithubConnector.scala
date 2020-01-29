@@ -29,60 +29,46 @@ class GithubConnector @Inject() (github: Github) {
 
   lazy val logger = LoggerFactory.getLogger(this.getClass)
 
-  def findOtherDependencies(githubSearchResults: GithubSearchResults): Seq[MongoRepositoryDependency] = {
+  def findOtherDependencies(githubSearchResults: GithubSearchResults): Seq[MongoRepositoryDependency] =
     githubSearchResults.others.foldLeft(Seq.empty[MongoRepositoryDependency]) {
       case (acc, (library, Some(currentVersion))) => acc :+ MongoRepositoryDependency(library, currentVersion)
       case (acc, (_, None)) => acc
-    }
   }
 
 
-  def findPluginDependencies(githubSearchResults: GithubSearchResults): Seq[MongoRepositoryDependency] = {
+  def findPluginDependencies(githubSearchResults: GithubSearchResults): Seq[MongoRepositoryDependency] =
     githubSearchResults.sbtPlugins.foldLeft(Seq.empty[MongoRepositoryDependency]) {
       case (acc, (library, Some(currentVersion))) => acc :+ MongoRepositoryDependency(library, currentVersion)
       case (acc, (_, None)) => acc
     }
-  }
 
 
-  def findLatestLibrariesVersions(githubSearchResults: GithubSearchResults): Seq[MongoRepositoryDependency] = {
+  def findLatestLibrariesVersions(githubSearchResults: GithubSearchResults): Seq[MongoRepositoryDependency] =
     githubSearchResults.libraries.foldLeft(Seq.empty[MongoRepositoryDependency]) {
       case (acc, (library, Some(currentVersion))) => acc :+ MongoRepositoryDependency(library, currentVersion)
       case (acc, (_, None)) => acc
     }
-  }
 
+  def findLatestVersion(repoName: String): Option[Version] =
+    github.findLatestVersion(repoName)
 
-  def findLatestSbtPluginVersion(sbtPluginConfig: SbtPluginConfig) : Option[SbtPluginVersion] = {
-    github.findLatestVersion(sbtPluginConfig.name).map(v => SbtPluginVersion(sbtPluginConfig.name, Some(v)))
-  }
-
-
-  def findLatestLibraryVersion(lib: String): Option[LibraryVersion] = {
-    github.findLatestVersion(lib).map(version => LibraryVersion(lib, Some(version)))
-  }
-
-
-  def buildDependencies(repo: RepositoryInfo, curatedDeps: CuratedDependencyConfig): Option[MongoRepositoryDependencies] = {
-
+  def buildDependencies(repo: RepositoryInfo, curatedDeps: CuratedDependencyConfig): Option[MongoRepositoryDependencies] =
     github.findVersionsForMultipleArtifacts(repo.name, curatedDeps)
       .right
-      .map(searchResults => {
-      MongoRepositoryDependencies(
-        repositoryName        = repo.name,
-        libraryDependencies   = findLatestLibrariesVersions(searchResults),
-        sbtPluginDependencies = findPluginDependencies(searchResults),
-        otherDependencies     = findOtherDependencies(searchResults),
-        updateDate            = Instant.now())})
-    match {
-      case Left(errorMessage) => {
-        logger.error(s"Skipping dependencies update for ${repo.name}, reason: $errorMessage")
-        None
-      }
-      case Right(results) => {
-        logger.debug(s"Github search returned these results for ${repo.name}: $results")
-        Some(results)
-      }
+      .map(searchResults =>
+        MongoRepositoryDependencies(
+          repositoryName        = repo.name,
+          libraryDependencies   = findLatestLibrariesVersions(searchResults),
+          sbtPluginDependencies = findPluginDependencies(searchResults),
+          otherDependencies     = findOtherDependencies(searchResults),
+          updateDate            = Instant.now()
+        )
+      ) match {
+        case Left(errorMessage) =>
+          logger.error(s"Skipping dependencies update for ${repo.name}, reason: $errorMessage")
+          None
+        case Right(results) =>
+          logger.debug(s"Github search returned these results for ${repo.name}: $results")
+          Some(results)
     }
-  }
 }

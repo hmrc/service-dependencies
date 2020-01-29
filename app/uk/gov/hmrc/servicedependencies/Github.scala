@@ -25,7 +25,7 @@ import org.eclipse.egit.github.core.{IRepositoryIdProvider, RepositoryContents}
 import org.slf4j.LoggerFactory
 import uk.gov.hmrc.githubclient._
 import uk.gov.hmrc.servicedependencies.config.ServiceDependenciesConfig
-import uk.gov.hmrc.servicedependencies.config.model.{CuratedDependencyConfig, OtherDependencyConfig, SbtPluginConfig}
+import uk.gov.hmrc.servicedependencies.config.model.{CuratedDependencyConfig, LibraryConfig, OtherDependencyConfig, SbtPluginConfig}
 import uk.gov.hmrc.servicedependencies.model.{GithubSearchResults, Version}
 import uk.gov.hmrc.servicedependencies.util.{Max, VersionParser}
 
@@ -73,14 +73,14 @@ class Github(releaseService: ReleaseService, contentsService: ExtendedContentsSe
 
   private def searchBuildFilesForMultipleArtifacts(
     serviceName: String,
-    artifacts: Seq[String]): Map[String, Option[Version]] = {
+    artifacts: Seq[LibraryConfig]): Map[String, Option[Version]] = {
 
     @tailrec
     def searchRemainingBuildFiles(remainingBuildFiles: Seq[String]): Map[String, Option[Version]] =
       remainingBuildFiles match {
         case filePath :: xs =>
           val versionsMap =
-            performSearchForMultipleArtifacts(serviceName, filePath, parseFileForMultipleArtifacts(_, artifacts))
+            performSearchForMultipleArtifacts(serviceName, filePath, parseFileForMultipleArtifacts(_, artifacts.map(_.name)))
           if (!versionsMap.exists(_._2.isDefined))
             searchRemainingBuildFiles(xs)
           else
@@ -115,9 +115,10 @@ class Github(releaseService: ReleaseService, contentsService: ExtendedContentsSe
       parseFileForMultipleArtifacts(_, sbtPluginConfigs.map(_.name)))
 
   private def parseFileForMultipleArtifacts(
-    response: RepositoryContents,
-    artifacts: Seq[String]): Map[String, Option[Version]] =
-    VersionParser.parse(parseFileContents(response), artifacts)
+    response     : RepositoryContents,
+    artifactNames: Seq[String]  // TODO the artifact group is ignored, so may pick up the wrong version
+    ): Map[String, Option[Version]] =
+    VersionParser.parse(parseFileContents(response), artifactNames)
 
   private def performProjectDirectorySearch(repoName: String): Seq[String] = {
     val buildFilePaths: List[RepositoryContents] = getContentsOrEmpty(repoName, "project")

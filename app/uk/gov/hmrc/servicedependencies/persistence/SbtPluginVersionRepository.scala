@@ -54,7 +54,7 @@ class SbtPluginVersionRepository @Inject()(
       .withTimerAndCounter("mongo.update") {
         collection
           .replaceOne(
-              filter      = equal("sbtPluginName", sbtPluginVersion.sbtPluginName)
+              filter      = equal("sbtPluginName", sbtPluginVersion.name) // TODO ignored group
             , replacement = sbtPluginVersion
             , options     = ReplaceOptions().upsert(true)
             )

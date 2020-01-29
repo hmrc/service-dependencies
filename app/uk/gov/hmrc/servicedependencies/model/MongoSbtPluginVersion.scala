@@ -18,30 +18,48 @@ package uk.gov.hmrc.servicedependencies.model
 
 import java.time.Instant
 
-import play.api.libs.json.Json
+import play.api.libs.json.{Format, Json, __}
+import play.api.libs.functional.syntax._
 import uk.gov.hmrc.mongo.play.json.formats.MongoJavatimeFormats
 
 case class MongoSbtPluginVersion(
-  sbtPluginName: String,
-  version: Option[Version],
-  updateDate: Instant = Instant.now())
+    name         : String
+  , group        : String
+  , version      : Option[Version]
+  , updateDate   : Instant = Instant.now()
+  ) {
+    def toSbtPluginVersion: SbtPluginVersion =
+      SbtPluginVersion(
+          name    = name
+        , group   = group
+        , version = version
+        )
+}
 
 object MongoSbtPluginVersion {
-  implicit val instantF    = MongoJavatimeFormats.instantFormats
   implicit val format = {
+    implicit val iF = MongoJavatimeFormats.instantFormats
     implicit val vf = Version.mongoFormat
-    Json.format[MongoSbtPluginVersion]
+    ( (__ \ "sbtPluginName").format[String]
+    ~ (__ \ "group"        ).formatNullable[String].inmap(???, ???) // "uk.gov.hmrc" // TODO look up from dependency-versions-config
+    ~ (__ \ "version"      ).formatNullable[Version]
+    ~ (__ \ "updateDate"   ).format[Instant]
+    )(MongoSbtPluginVersion.apply, unlift(MongoSbtPluginVersion.unapply))
   }
 }
 
-case class SbtPluginVersion(sbtPluginName: String, version: Option[Version])
+case class SbtPluginVersion(
+    name   : String
+  , group  : String
+  , version: Option[Version]
+  )
 
 object SbtPluginVersion {
-  implicit val format = {
+  implicit val format: Format[SbtPluginVersion] = {
     implicit val vd = Version.apiFormat
-    Json.format[SbtPluginVersion]
+    ( (__ \ "sbtPluginName").format[String]
+    ~ (__ \ "group"        ).format[String]
+    ~ (__ \ "version"      ).formatNullable[Version]
+    )(SbtPluginVersion.apply, unlift(SbtPluginVersion.unapply))
   }
-
-  def apply(mongoSbtPluginVersion: MongoSbtPluginVersion): SbtPluginVersion =
-    SbtPluginVersion(mongoSbtPluginVersion.sbtPluginName, mongoSbtPluginVersion.version)
 }

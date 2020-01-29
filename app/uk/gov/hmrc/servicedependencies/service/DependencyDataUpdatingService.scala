@@ -18,6 +18,7 @@ package uk.gov.hmrc.servicedependencies.service
 
 import java.time.Instant
 
+import cats.implicits._
 import com.google.inject.{Inject, Singleton}
 import org.slf4j.LoggerFactory
 import uk.gov.hmrc.http.HeaderCarrier
@@ -61,18 +62,18 @@ class DependencyDataUpdatingService @Inject()(
     runMongoUpdate(sbtPluginMongoLock) {
       val sbtPluginVersions = dependenciesDataSource.getLatestSbtPluginVersions(curatedDependencyConfig.sbtPlugins)
 
-      Future.sequence(sbtPluginVersions.map { x =>
-        sbtPluginVersionRepository.update(MongoSbtPluginVersion(x.sbtPluginName, x.version, now))
-      })
+      sbtPluginVersions.toList.traverse { sbtPlugin =>
+        sbtPluginVersionRepository.update(MongoSbtPluginVersion(sbtPlugin.name, sbtPlugin.group, sbtPlugin.version, now))
+      }
     }
 
   def reloadLatestLibraryVersions(): Future[Seq[MongoLibraryVersion]] =
     runMongoUpdate(libraryMongoLock) {
       val latestLibraryVersions = dependenciesDataSource.getLatestLibrariesVersions(curatedDependencyConfig.libraries)
 
-      Future.sequence(latestLibraryVersions.map { x =>
-        libraryVersionRepository.update(MongoLibraryVersion(x.libraryName, x.version, now))
-      })
+      latestLibraryVersions.toList.traverse { libraryVersion =>
+        libraryVersionRepository.update(MongoLibraryVersion(libraryVersion.name, libraryVersion.group, libraryVersion.version, now))
+      }
     }
 
   def reloadCurrentDependenciesDataForAllRepositories(force: Boolean = false)(
@@ -111,7 +112,10 @@ class DependencyDataUpdatingService @Inject()(
     repositoryDependencies.sbtPluginDependencies.map { sbtPluginDependency =>
       val mayBeExternalSbtPlugin =
         curatedDependencyConfig.sbtPlugins
-          .find(pluginConfig => pluginConfig.name == sbtPluginDependency.name && pluginConfig.isExternal)
+          .find(pluginConfig => pluginConfig.name == sbtPluginDependency.name   &&
+                                //pluginConfig.org  == sbtPluginDependency.group &&
+                                pluginConfig.isExternal
+               )
 
       val latestVersion =
         mayBeExternalSbtPlugin
@@ -120,7 +124,9 @@ class DependencyDataUpdatingService @Inject()(
               .getOrElse(sys.error(s"External sbt plugin ($mayBeExternalSbtPlugin) must specify the (latest) version")))
           .orElse(
             sbtPluginReferences
-              .find(_.sbtPluginName == sbtPluginDependency.name)
+              .find(sbtPluginRef => sbtPluginRef.name == sbtPluginDependency.name /*&&
+                                    sbtPluginRef.group == sbtPluginDependency.group*/
+                   )
               .flatMap(_.version)
           )
 
@@ -147,7 +153,11 @@ class DependencyDataUpdatingService @Inject()(
               Dependency(
                 d.name,
                 d.currentVersion,
-                libraryReferences.find(mlv => mlv.libraryName == d.name).flatMap(_.version),
+                libraryReferences
+                  .find(libraryRef => libraryRef.name  == d.name /*&&
+                                      libraryRef.group == d.group*/
+                       )
+                  .flatMap(_.version),
                 List.empty
             )),
           getSbtPluginDependencyState(dep, sbtPluginReferences),
@@ -177,7 +187,11 @@ class DependencyDataUpdatingService @Inject()(
               Dependency(
                 d.name,
                 d.currentVersion,
-                libraryReferences.find(_.libraryName == d.name).flatMap(_.version),
+                libraryReferences
+                  .find(libraryRef => libraryRef.name == d.name /*&&
+                                      libraryRef.group = d.group*/
+                       )
+                  .flatMap(_.version),
                 List.empty)),
           getSbtPluginDependencyState(dep, sbtPluginReferences),
           dep.otherDependencies.map(

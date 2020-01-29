@@ -22,9 +22,11 @@ import uk.gov.hmrc.servicedependencies.model.Version
 
 case class OtherDependencyConfig(name: String, latestVersion: Option[Version])
 
+case class LibraryConfig(org: String, name: String)
+
 case class CuratedDependencyConfig(
   sbtPlugins       : Seq[SbtPluginConfig],
-  libraries        : Seq[String],
+  libraries        : Seq[LibraryConfig],
   otherDependencies: Seq[OtherDependencyConfig])
 
 object CuratedDependencyConfig {
@@ -45,19 +47,28 @@ object CuratedDependencyConfig {
       case None    => Reads.pure(None)
     }
 
-  implicit val otherReader: Reads[OtherDependencyConfig] =
+  val otherReader: Reads[OtherDependencyConfig] =
     ( (__ \ "name"         ).read[String]
     ~ (__ \ "latestVersion").readNullable[String].flatMap(optOptionalReads(Version.parse, "invalid version"))
     )(OtherDependencyConfig.apply _)
 
-  implicit val pluginsReader: Reads[SbtPluginConfig] =
+  val libraryReader: Reads[LibraryConfig] =
+    ( (__ \ "org" ).read[String]
+    ~ (__ \ "name").read[String]
+    )(LibraryConfig.apply _)
+
+  val pluginReader: Reads[SbtPluginConfig] =
     ( (__ \ "org"    ).read[String]
     ~ (__ \ "name"   ).read[String]
     ~ (__ \ "version").readNullable[String].flatMap(optOptionalReads(Version.parse, "invalid version"))
     )(SbtPluginConfig.apply _)
 
-  implicit val configReader =
+  implicit val configReader = {
+    implicit val or = otherReader
+    implicit val lr = libraryReader
+    implicit val pr = pluginReader
     Json.reads[CuratedDependencyConfig]
+  }
 }
 
 case class SbtPluginConfig(org: String, name: String, version: Option[Version]) {

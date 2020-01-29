@@ -53,7 +53,7 @@ class LibraryVersionRepository @Inject()(
       .withTimerAndCounter("mongo.update") {
         collection
           .replaceOne(
-              filter      = equal("libraryName", libraryVersion.libraryName)
+              filter      = equal("libraryName", libraryVersion.name) // TODO ignores group...
             , replacement = libraryVersion
             , options     = ReplaceOptions().upsert(true)
             )

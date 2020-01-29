@@ -18,15 +18,21 @@ package uk.gov.hmrc.servicedependencies.model
 
 import java.time.Instant
 
-import play.api.libs.json.{Format, Json}
+import play.api.libs.json.{Format, Json, __}
+import play.api.libs.functional.syntax._
 import uk.gov.hmrc.mongo.play.json.formats.MongoJavatimeFormats
 
-case class MongoRepositoryDependency(name: String, currentVersion: Version)
+case class MongoRepositoryDependency(
+    name          : String
+  , currentVersion: Version
+  )
 
 object MongoRepositoryDependency {
   implicit val format: Format[MongoRepositoryDependency] = {
     implicit val vf = Version.mongoFormat
-    Json.format[MongoRepositoryDependency]
+    ( (__ \ "name"          ).format[String]
+    ~ (__ \ "currentVersion").format[Version]
+    )(MongoRepositoryDependency.apply, unlift(MongoRepositoryDependency.unapply))
   }
 }
 
