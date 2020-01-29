@@ -27,7 +27,15 @@ case class Dependency(
   , latestVersion      : Option[Version]
   , bobbyRuleViolations: List[DependencyBobbyRule]
   , isExternal         : Boolean = false
-  )
+  ) {
+
+  // TODO hack since we currently don't store group for dependency
+  def group: String =
+    name match {
+      case "reactivemongo" => "org.reactivemongo"
+      case _               => "uk.gov.hmrc"
+    }
+}
 
 object Dependency {
 

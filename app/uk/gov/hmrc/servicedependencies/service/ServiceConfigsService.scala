@@ -19,7 +19,7 @@ package uk.gov.hmrc.servicedependencies.service
 import com.google.inject.{Inject, Singleton}
 import uk.gov.hmrc.servicedependencies.connector.ServiceConfigsConnector
 import uk.gov.hmrc.servicedependencies.controller.model.{Dependencies, Dependency, DependencyBobbyRule}
-import uk.gov.hmrc.servicedependencies.model.BobbyRule
+import uk.gov.hmrc.servicedependencies.model.{BobbyRule, BobbyRules}
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -29,12 +29,11 @@ class ServiceConfigsService @Inject()(serviceConfigsConnector: ServiceConfigsCon
   import ServiceConfigsService._
 
   def getDependenciesWithBobbyRules(dependencies: Dependencies): Future[Dependencies] =
-    serviceConfigsConnector.getBobbyRules().map { bobbyRules =>
-      val addViolations = enrichWithBobbyRuleViolations(bobbyRules) _
+    serviceConfigsConnector.getBobbyRules.map { bobbyRules =>
       dependencies.copy(
-        libraryDependencies = dependencies.libraryDependencies.map(addViolations),
-        sbtPluginsDependencies = dependencies.sbtPluginsDependencies.map(addViolations),
-        otherDependencies      = dependencies.otherDependencies.map(addViolations)
+        libraryDependencies    = dependencies.libraryDependencies.map(enrichWithBobbyRuleViolations(bobbyRules))
+      , sbtPluginsDependencies = dependencies.sbtPluginsDependencies.map(enrichWithBobbyRuleViolations(bobbyRules))
+      , otherDependencies      = dependencies.otherDependencies.map(enrichWithBobbyRuleViolations(bobbyRules))
       )
     }
 
@@ -42,23 +41,14 @@ class ServiceConfigsService @Inject()(serviceConfigsConnector: ServiceConfigsCon
    * For consistency with above - but would prefer to simply return a mapping of dependency to violations.
    */
   def getDependenciesWithBobbyRules(dependencies: List[Dependency]): Future[List[Dependency]] =
-    serviceConfigsConnector.getBobbyRules().map { bobbyRules =>
-      dependencies.map {
-        enrichWithBobbyRuleViolations(bobbyRules)(_)
-      }
+    serviceConfigsConnector.getBobbyRules.map { bobbyRules =>
+      dependencies.map(enrichWithBobbyRuleViolations(bobbyRules))
     }
 }
 
 private object ServiceConfigsService {
-  def enrichWithBobbyRuleViolations(bobbyRules: Map[String, List[BobbyRule]])(dependency: Dependency): Dependency =
+  def enrichWithBobbyRuleViolations(bobbyRules: BobbyRules)(dependency: Dependency): Dependency =
     dependency.copy(
-      bobbyRuleViolations = bobbyRuleViolationsFor(bobbyRules)(dependency)
+      bobbyRuleViolations = bobbyRules.violationsFor(dependency)
     )
-
-  def bobbyRuleViolationsFor(bobbyRules: Map[String, List[BobbyRule]])
-                            (dependency: Dependency): List[DependencyBobbyRule] =
-    bobbyRules.
-      getOrElse(dependency.name, Nil).
-      filter(_.range.includes(dependency.currentVersion)).
-      map(_.asDependencyBobbyRule)
 }

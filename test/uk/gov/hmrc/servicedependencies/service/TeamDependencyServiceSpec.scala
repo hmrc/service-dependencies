@@ -25,7 +25,7 @@ import org.scalatest.wordspec.AnyWordSpec
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.servicedependencies.connector.{ServiceConfigsConnector, TeamsAndRepositoriesConnector}
 import uk.gov.hmrc.servicedependencies.controller.model.{Dependencies, Dependency}
-import uk.gov.hmrc.servicedependencies.model.{SlugInfoFlag, Team, Version}
+import uk.gov.hmrc.servicedependencies.model.{BobbyRules, SlugInfoFlag, Team, Version}
 import uk.gov.hmrc.servicedependencies.persistence.SlugInfoRepository
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -84,8 +84,8 @@ class TeamDependencyServiceSpec extends AnyWordSpec with Matchers with MockitoSu
       when(slugDependenciesService.curatedLibrariesOfSlug("foo-service", SlugInfoFlag.Latest))
         .thenReturn(Future.successful(Option(List(fooDep1, fooSlugDep))))
 
-      when(serviceConfigsConnector.getBobbyRules())
-        .thenReturn(Future.successful(Map.empty))
+      when(serviceConfigsConnector.getBobbyRules)
+        .thenReturn(Future.successful(BobbyRules(Map.empty)))
 
       val res = tds.findAllDepsForTeam("foo").futureValue
 

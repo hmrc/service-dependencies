@@ -67,7 +67,7 @@ class ServiceConfigsConnectorSpec
   "Retrieving bobby rules" - {
     "correctly parse json response" in {
 
-      val deprecatedDependencies = services.getBobbyRules().futureValue
+      val deprecatedDependencies = services.getBobbyRules.futureValue
 
       val playFrontend = BobbyRule(
         organisation = "uk.gov.hmrc",
@@ -85,9 +85,9 @@ class ServiceConfigsConnectorSpec
         from         = LocalDate.of(2017, 5, 1)
       )
 
-      deprecatedDependencies must contain theSameElementsAs Map(
-        sbtAutoBuild.name -> List(sbtAutoBuild),
-        playFrontend.name -> List(playFrontend))
+      deprecatedDependencies.asMap must contain theSameElementsAs Map(
+        (sbtAutoBuild.organisation, sbtAutoBuild.name) -> List(sbtAutoBuild),
+        (playFrontend.organisation, playFrontend.name) -> List(playFrontend))
     }
   }
 
