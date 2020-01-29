@@ -23,7 +23,7 @@ import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
 import uk.gov.hmrc.play.bootstrap.http.HttpClient
 import uk.gov.hmrc.servicedependencies.connector.model.DeprecatedDependencies
-import uk.gov.hmrc.servicedependencies.model.BobbyRule
+import uk.gov.hmrc.servicedependencies.model.BobbyRules
 import scala.concurrent.duration.Duration
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -41,10 +41,15 @@ class ServiceConfigsConnector @Inject()(
     servicesConfig
       .getDuration("microservice.services.service-configs.cache.expiration")
 
-  def getBobbyRules(): Future[Map[String, List[BobbyRule]]] =
+  def getBobbyRules: Future[BobbyRules] =
     cache.getOrElseUpdate("bobby-rules", cacheExpiration) {
       httpClient
         .GET[DeprecatedDependencies](s"$serviceUrl/bobby/rules")
-        .map(dependency => (dependency.libraries.toList ++ dependency.plugins).groupBy(_.name))
+        .map { dependencies =>
+           BobbyRules(
+             (dependencies.libraries.toList ++ dependencies.plugins)
+               .groupBy { dependency => (dependency.organisation, dependency.name) }
+           )
+        }
     }
 }

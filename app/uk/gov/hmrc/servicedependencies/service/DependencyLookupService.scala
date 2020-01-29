@@ -57,7 +57,7 @@ class DependencyLookupService @Inject() (
     }
 
     for {
-      rules   <- serviceConfigs.getBobbyRules.map(_.values.flatten.toSeq)
+      rules   <- serviceConfigs.getBobbyRules.map(_.asMap.values.flatten.toSeq)
       _       =  logger.debug(s"Found ${rules.size} rules")
                  // traverse (in parallel) uses more memory and adds contention on data source - fold through it instead
       counts  <- SlugInfoFlag.values.foldLeftM(Seq[((BobbyRule, SlugInfoFlag), Int)]()){ case (acc, env) =>

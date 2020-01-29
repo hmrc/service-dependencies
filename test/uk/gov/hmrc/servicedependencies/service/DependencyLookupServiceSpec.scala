@@ -121,7 +121,7 @@ class DependencyLookupServiceSpec
 
     implicit val hc = HeaderCarrier()
 
-    when(configService.getBobbyRules()).thenReturn(Future(Map("libs" -> List(bobbyRule))))
+    when(configService.getBobbyRules).thenReturn(Future(BobbyRules(Map(("uk.gov.hmrc", "libs") -> List(bobbyRule)))))
     when(slugInfoRepository.getSlugsForEnv(any[SlugInfoFlag])).thenReturn(Future(Seq.empty))
     when(slugInfoRepository.getSlugsForEnv(SlugInfoFlag.Production)).thenReturn(Future(Seq(slug1, slug11, slug12)))
 

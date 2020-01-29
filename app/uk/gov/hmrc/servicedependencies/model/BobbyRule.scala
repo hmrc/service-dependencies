@@ -21,7 +21,7 @@ import play.api.data.format.Formats
 import play.api.libs.functional.syntax._
 import play.api.libs.json.{Reads, OFormat, Writes, __}
 import uk.gov.hmrc.http.controllers.RestFormats
-import uk.gov.hmrc.servicedependencies.controller.model.DependencyBobbyRule
+import uk.gov.hmrc.servicedependencies.controller.model.{Dependency, DependencyBobbyRule}
 
 
 final case class BobbyVersion(
@@ -57,4 +57,12 @@ object BobbyRule {
     ~ (__ \ "from"        ).format[LocalDate]
     )(BobbyRule.apply, unlift(BobbyRule.unapply))
   }
+}
+
+case class BobbyRules(asMap: Map[(String, String), List[BobbyRule]]) {
+  def violationsFor(dependency: Dependency): List[DependencyBobbyRule] =
+    asMap
+      .getOrElse((dependency.group, dependency.name), Nil)
+      .filter(_.range.includes(dependency.currentVersion))
+      .map(_.asDependencyBobbyRule)
 }
