@@ -51,7 +51,7 @@ class DataReloadScheduler @Inject()(
       .map(_ => ())
   }
 
-  schedule("SbtPluginDataReloader", schedulerConfigs.sbtReload){
+  schedule("SbtPluginDataReloader", schedulerConfigs.sbtPluginReload){
     dependencyDataUpdatingService.reloadLatestSbtPluginVersions()
       .map(_ => ())
   }

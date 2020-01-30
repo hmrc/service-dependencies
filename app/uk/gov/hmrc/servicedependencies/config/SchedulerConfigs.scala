@@ -97,7 +97,7 @@ class SchedulerConfigs @Inject()(configuration: Configuration) extends ConfigUti
     , initialDelay = 100.milliseconds
     )
 
-  val sbtReload = SchedulerConfig(
+  val sbtPluginReload = SchedulerConfig(
       configuration
     , enabledKey   = "scheduler.enabled"
     , frequency    = configuration.get[Int]("sbtPlugin.reload.intervalminutes").minutes

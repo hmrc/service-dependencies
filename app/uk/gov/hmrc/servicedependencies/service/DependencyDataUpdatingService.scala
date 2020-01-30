@@ -107,36 +107,33 @@ class DependencyDataUpdatingService @Inject()(
       }
 
   def getSbtPluginDependencyState(
-    repositoryDependencies: MongoRepositoryDependencies,
-    sbtPluginReferences: Seq[MongoSbtPluginVersion]) =
+    repositoryDependencies: MongoRepositoryDependencies
+  , sbtPluginReferences   : Seq[MongoSbtPluginVersion]
+  ): Seq[Dependency] =
     repositoryDependencies.sbtPluginDependencies.map { sbtPluginDependency =>
-      val mayBeExternalSbtPlugin =
+
+      val optPluginConfig =
         curatedDependencyConfig.sbtPlugins
           .find(pluginConfig => pluginConfig.name  == sbtPluginDependency.name  &&
-                                pluginConfig.group == sbtPluginDependency.group &&
-                                pluginConfig.isExternal
+                                pluginConfig.group == sbtPluginDependency.group
+               )
+
+      lazy val optPluginRef =
+        sbtPluginReferences
+          .find(sbtPluginRef => sbtPluginRef.name  == sbtPluginDependency.name &&
+                                sbtPluginRef.group == sbtPluginDependency.group
                )
 
       val latestVersion =
-        mayBeExternalSbtPlugin
-          .map(
-            _.latestVersion
-              .getOrElse(sys.error(s"External sbt plugin ($mayBeExternalSbtPlugin) must specify the (latest) version")))
-          .orElse(
-            sbtPluginReferences
-              .find(sbtPluginRef => sbtPluginRef.name  == sbtPluginDependency.name &&
-                                    sbtPluginRef.group == sbtPluginDependency.group
-                   )
-              .flatMap(_.version)
-          )
+        optPluginConfig.flatMap(_.latestVersion)
+          .orElse(optPluginRef.flatMap(_.version))
 
       Dependency(
         name                = sbtPluginDependency.name
-      , group               =  sbtPluginDependency.group
+      , group               = sbtPluginDependency.group
       , currentVersion      = sbtPluginDependency.currentVersion
       , latestVersion       = latestVersion
       , bobbyRuleViolations = List.empty
-      , isExternal          = mayBeExternalSbtPlugin.isDefined
       )
     }
 
@@ -170,7 +167,6 @@ class DependencyDataUpdatingService @Inject()(
                                      , currentVersion      = d.currentVersion
                                      , latestVersion       = curatedDependencyConfig.otherDependencies.find(_.name == "sbt").flatMap(_.latestVersion)
                                      , bobbyRuleViolations = List.empty
-                                     , isExternal          = d.name == "sbt"
                                      )
                                    )
         , lastUpdated            = dep.updateDate

@@ -260,7 +260,7 @@ class DependencyDataUpdatingServiceSpec
       val curatedDependencyConfig = CuratedDependencyConfig(
         sbtPlugins = List(
           SbtPluginConfig(name = "internal-plugin", group = "uk.gov.hmrc", latestVersion = None),
-          SbtPluginConfig(name = "external-plugin", group = "uk.gov.hmrc", latestVersion = Some(Version(11, 22, 33)))),
+          SbtPluginConfig(name = "external-plugin", group = "uk.edu"     , latestVersion = Some(Version(11, 22, 33)))),
         libraries         = Nil,
         otherDependencies = Nil
       )
@@ -269,7 +269,7 @@ class DependencyDataUpdatingServiceSpec
 
       val sbtPluginDependencies = Seq(
         MongoRepositoryDependency(name = "internal-plugin", group = "uk.gov.hmrc", currentVersion = Version(1, 0, 0)),
-        MongoRepositoryDependency(name = "external-plugin", group = "uk.gov.hmrc", currentVersion = Version(2, 0, 0))
+        MongoRepositoryDependency(name = "external-plugin", group = "uk.edu"     , currentVersion = Version(2, 0, 0))
       )
       val repositoryName = "repoXYZ"
 
@@ -279,7 +279,7 @@ class DependencyDataUpdatingServiceSpec
 
       val referenceSbtPluginVersions = Seq(
         MongoSbtPluginVersion(name = "internal-plugin", group = "uk.gov.hmrc", version = Some(Version(3, 1, 0))),
-        MongoSbtPluginVersion(name = "external-plugin", group = "uk.gov.hmrc", version = None)
+        MongoSbtPluginVersion(name = "external-plugin", group = "uk.edu"     , version = None)
       )
 
       when(underTest.sbtPluginVersionRepository.getAllEntries)
@@ -294,11 +294,11 @@ class DependencyDataUpdatingServiceSpec
       verify(underTest.repositoryLibraryDependenciesRepository, times(1)).getForRepository(repositoryName)
 
       maybeDependencies.value shouldBe Dependencies(
-        repositoryName      = repositoryName,
-        libraryDependencies = Nil,
+        repositoryName         = repositoryName,
+        libraryDependencies    = Nil,
         sbtPluginsDependencies = Seq(
           Dependency(name = "internal-plugin", group = "uk.gov.hmrc", currentVersion = Version(1, 0, 0), latestVersion = Some(Version(3, 1, 0))   , bobbyRuleViolations = List.empty),
-          Dependency(name = "external-plugin", group = "uk.gov.hmrc", currentVersion = Version(2, 0, 0), latestVersion = Some(Version(11, 22, 33)), bobbyRuleViolations = List.empty, isExternal = true)
+          Dependency(name = "external-plugin", group = "uk.edu"     , currentVersion = Version(2, 0, 0), latestVersion = Some(Version(11, 22, 33)), bobbyRuleViolations = List.empty)
         ),
         otherDependencies = Nil,
         timeForTest

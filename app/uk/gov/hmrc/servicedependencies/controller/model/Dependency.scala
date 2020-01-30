@@ -17,7 +17,7 @@
 package uk.gov.hmrc.servicedependencies.controller.model
 
 import play.api.libs.functional.syntax._
-import play.api.libs.json.{OWrites, Writes, __}
+import play.api.libs.json.{JsBoolean, OWrites, Writes, __}
 import uk.gov.hmrc.servicedependencies.model.Version
 
 
@@ -27,7 +27,6 @@ case class Dependency(
   , currentVersion     : Version
   , latestVersion      : Option[Version]
   , bobbyRuleViolations: List[DependencyBobbyRule]
-  , isExternal         : Boolean = false // TODO is this obsolete now we have group (or at least can be inferred)?
   )
 
 object Dependency {
@@ -38,6 +37,8 @@ object Dependency {
     ~ (__ \ "currentVersion"     ).write[Version](Version.legacyApiWrites)
     ~ (__ \ "latestVersion"      ).writeNullable[Version](Version.legacyApiWrites)
     ~ (__ \ "bobbyRuleViolations").lazyWrite(Writes.seq[DependencyBobbyRule](DependencyBobbyRule.writes))
-    ~ (__ \ "isExternal"         ).write[Boolean]
     )(unlift(Dependency.unapply))
+      .transform( js =>
+        js + ("isExternal" -> JsBoolean(!js("group").as[String].startsWith("uk.gov.hmrc")))
+      )
 }
