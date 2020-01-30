@@ -22,8 +22,6 @@ import org.scalatest.matchers.must.Matchers
 
 class VersionParserSpec extends AnyFreeSpec with Matchers {
 
-  val targetArtifact = "play-frontend"
-
   "Parses play-frontend version in line" in {
     val buildFile = """  object Test {
                       |    def apply() = new TestDependencies {
@@ -33,7 +31,7 @@ class VersionParserSpec extends AnyFreeSpec with Matchers {
                       |    }.test
                       |  }""".stripMargin
 
-    VersionParser.parse(buildFile, targetArtifact) mustBe Some(Version(1, 2, 3, "1.2.3"))
+    VersionParser.parse(buildFile, name = "play-frontend", group = "uk.gov.hmrc") mustBe Some(Version(1, 2, 3, "1.2.3"))
   }
 
   "Parses play-frontend version in line with scope after" in {
@@ -45,7 +43,7 @@ class VersionParserSpec extends AnyFreeSpec with Matchers {
                       |    }.test
                       |  }""".stripMargin
 
-    VersionParser.parse(buildFile, targetArtifact) mustBe Some(Version(1, 2, 3, "1.2.3"))
+    VersionParser.parse(buildFile, name = "play-frontend", group = "uk.gov.hmrc") mustBe Some(Version(1, 2, 3, "1.2.3"))
   }
 
   "Parses play-frontend version including suffix in line with scope after" in {
@@ -57,7 +55,7 @@ class VersionParserSpec extends AnyFreeSpec with Matchers {
                       |    }.test
                       |  }""".stripMargin
 
-    VersionParser.parse(buildFile, targetArtifact) mustBe Some(Version(1, 2, 3, "1.2.3-play-26"))
+    VersionParser.parse(buildFile, name = "play-frontend", group = "uk.gov.hmrc") mustBe Some(Version(1, 2, 3, "1.2.3-play-26"))
   }
 
   "Parses play-frontend version form variable" in {
@@ -71,7 +69,7 @@ class VersionParserSpec extends AnyFreeSpec with Matchers {
                       |    }.test
                       |  }""".stripMargin
 
-    VersionParser.parse(buildFile, targetArtifact) mustBe Some(Version(1, 2, 3, "1.2.3"))
+    VersionParser.parse(buildFile, name = "play-frontend", group = "uk.gov.hmrc") mustBe Some(Version(1, 2, 3, "1.2.3"))
   }
 
   "Parses play-frontend version form variable with scope" in {
@@ -85,10 +83,10 @@ class VersionParserSpec extends AnyFreeSpec with Matchers {
                       |    }.test
                       |  }""".stripMargin
 
-    VersionParser.parse(buildFile, targetArtifact) mustBe Some(Version(1, 2, 3, "1.2.3"))
+    VersionParser.parse(buildFile, name = "play-frontend", group = "uk.gov.hmrc") mustBe Some(Version(1, 2, 3, "1.2.3"))
   }
 
-  "Returns None if it cannot find a play-frontend version" in {
+  "Returns None if no match" in {
     val buildFile = """  object Test {
                       |    def apply() = new TestDependencies {
                       |      override lazy val test = Seq(
@@ -97,7 +95,7 @@ class VersionParserSpec extends AnyFreeSpec with Matchers {
                       |    }.test
                       |  }""".stripMargin
 
-    VersionParser.parse(buildFile, targetArtifact) mustBe None
+    VersionParser.parse(buildFile, name = "play-frontend", group = "org.pegdown") mustBe None
   }
 
   "Parses multiple artifacts together" in {
@@ -112,11 +110,51 @@ class VersionParserSpec extends AnyFreeSpec with Matchers {
                       |  }""".stripMargin
 
     VersionParser
-      .parse(buildFile, Seq("play-frontend", "play-backend", "play-middle")) must contain theSameElementsAs Seq(
-      "play-frontend" -> Some(Version(1, 2, 3, "1.2.3")),
-      "play-backend"  -> Some(Version(3, 5, 5, "3.5.5")),
-      "play-middle"   -> Some(Version(6, 8, 8, "6.8.8"))
-    )
+      .parse(buildFile, Seq( ("play-frontend", "uk.gov.hmrc")
+                           , ("play-backend" , "uk.gov.hmrc")
+                           , ("play-middle"  , "uk.gov.hmrc")
+                           )
+            ) must contain theSameElementsAs Seq(
+        ("play-frontend", "uk.gov.hmrc") -> Some(Version(1, 2, 3, "1.2.3"))
+      , ("play-backend" , "uk.gov.hmrc") -> Some(Version(3, 5, 5, "3.5.5"))
+      , ("play-middle"  , "uk.gov.hmrc") -> Some(Version(6, 8, 8, "6.8.8"))
+      )
+  }
+
+  "Parsing version ending with play version returns correct version" in {
+    val buildFile = """  object Test {
+                      |    def apply() = new TestDependencies {
+                      |      override lazy val test = Seq(
+                      |        "uk.gov.hmrc" %% "simple-reactivemongo" % "7.0.0-play-26",
+                      |      )
+                      |    }.test
+                      |  }""".stripMargin
+
+    VersionParser.parse(buildFile, name = "simple-reactivemongo", group = "uk.gov.hmrc") mustBe Some(Version(7, 0, 0, "7.0.0-play-26"))
+  }
+
+  "Parsing version from variable ending with play version returns correct version" in {
+      val buildFile = """  object Test {
+                        |    val mongoVersion = "7.0.0-play-26"
+                        |    def apply() = new TestDependencies {
+                        |      override lazy val test = Seq(
+                        |        "uk.gov.hmrc" %% "simple-reactivemongo" % mongoVersion,
+                        |      )
+                        |    }.test
+                        |  }""".stripMargin
+
+    VersionParser.parse(buildFile, name = "simple-reactivemongo", group = "uk.gov.hmrc") mustBe Some(Version(7, 0, 0, "7.0.0-play-26"))
+  }
+
+  "Parsing non semantic version number returns None" in {
+    val buildFile = """  object Test {
+                      |    def apply() = new TestDependencies {
+                      |      override lazy val test = Seq(
+                      |        "uk.gov.hmrc" %% "library" % "7.22-alpha",
+                      |      )
+                      |    }.test
+                      |  }""".stripMargin
+    VersionParser.parse(buildFile, name = "library", group = "uk.gov.hmrc") mustBe None
   }
 
   "Parses multiple artifacts and return None for any dependency not present" in {
@@ -130,11 +168,15 @@ class VersionParserSpec extends AnyFreeSpec with Matchers {
                       |  }""".stripMargin
 
     VersionParser
-      .parse(buildFile, Seq("play-frontend", "play-backend", "play-middle")) must contain theSameElementsAs Seq(
-      "play-frontend" -> Some(Version(1, 2, 3, "1.2.3")),
-      "play-backend"  -> Some(Version(3, 5, 5, "3.5.5")),
-      "play-middle"   -> None
-    )
+      .parse(buildFile, Seq( ("play-frontend", "uk.gov.hmrc")
+                           , ("play-backend" , "uk.gov.hmrc")
+                           , ("play-middle"  , "uk.gov.hmrc")
+                           )
+            ) must contain theSameElementsAs Seq(
+        ("play-frontend", "uk.gov.hmrc") -> Some(Version(1, 2, 3, "1.2.3"))
+      , ("play-backend" , "uk.gov.hmrc") -> Some(Version(3, 5, 5, "3.5.5"))
+      , ("play-middle"  , "uk.gov.hmrc") -> None
+      )
   }
 
   "Parses PRIVATE release version correctly" in {
@@ -150,42 +192,6 @@ class VersionParserSpec extends AnyFreeSpec with Matchers {
   "Parsing an invalid release version returns None" in {
     val tag = "sthElse/1.0.1"
     VersionParser.parseReleaseVersion(tag) mustBe None
-  }
-
-  "Parsing version ending with play version returns correct version" in {
-    val buildFile = """  object Test {
-                      |    def apply() = new TestDependencies {
-                      |      override lazy val test = Seq(
-                      |        "uk.gov.hmrc" %% "simple-reactivemongo" % "7.0.0-play-26",
-                      |      )
-                      |    }.test
-                      |  }""".stripMargin
-
-    VersionParser.parse(buildFile, "simple-reactivemongo") mustBe Some(Version(7, 0, 0, "7.0.0-play-26"))
-  }
-
-  "Parsing version from variable ending with play version returns correct version" in {
-      val buildFile = """  object Test {
-                        |    val mongoVersion = "7.0.0-play-26"
-                        |    def apply() = new TestDependencies {
-                        |      override lazy val test = Seq(
-                        |        "uk.gov.hmrc" %% "simple-reactivemongo" % mongoVersion,
-                        |      )
-                        |    }.test
-                        |  }""".stripMargin
-
-    VersionParser.parse(buildFile, "simple-reactivemongo") mustBe Some(Version(7, 0, 0, "7.0.0-play-26"))
-  }
-
-  "Parsing non semantic version number returns None" in {
-    val buildFile = """  object Test {
-                      |    def apply() = new TestDependencies {
-                      |      override lazy val test = Seq(
-                      |        "uk.gov.hmrc" %% "library" % "7.22-alpha",
-                      |      )
-                      |    }.test
-                      |  }""".stripMargin
-    VersionParser.parse(buildFile, "library") mustBe None
   }
 
   "Parsing a build.properties file containing only the sbt version returns the sbt version" in {

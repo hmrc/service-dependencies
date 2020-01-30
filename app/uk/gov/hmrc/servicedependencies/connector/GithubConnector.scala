@@ -29,25 +29,12 @@ class GithubConnector @Inject() (github: Github) {
 
   lazy val logger = LoggerFactory.getLogger(this.getClass)
 
-  def findOtherDependencies(githubSearchResults: GithubSearchResults): Seq[MongoRepositoryDependency] =
-    githubSearchResults.others.foldLeft(Seq.empty[MongoRepositoryDependency]) {
-      case (acc, (library, Some(currentVersion))) => acc :+ MongoRepositoryDependency(library, currentVersion)
-      case (acc, (_, None)) => acc
-  }
-
-
-  def findPluginDependencies(githubSearchResults: GithubSearchResults): Seq[MongoRepositoryDependency] =
-    githubSearchResults.sbtPlugins.foldLeft(Seq.empty[MongoRepositoryDependency]) {
-      case (acc, (library, Some(currentVersion))) => acc :+ MongoRepositoryDependency(library, currentVersion)
-      case (acc, (_, None)) => acc
-    }
-
-
-  def findLatestLibrariesVersions(githubSearchResults: GithubSearchResults): Seq[MongoRepositoryDependency] =
-    githubSearchResults.libraries.foldLeft(Seq.empty[MongoRepositoryDependency]) {
-      case (acc, (library, Some(currentVersion))) => acc :+ MongoRepositoryDependency(library, currentVersion)
-      case (acc, (_, None)) => acc
-    }
+  def toMongoRepositoryDependencies(results: Map[(String, String), Option[Version]]): Seq[MongoRepositoryDependency] =
+    results
+      .collect { case ((name, group), Some(currentVersion)) =>
+         MongoRepositoryDependency(name = name, group = group, currentVersion = currentVersion)
+       }
+      .toSeq
 
   def findLatestVersion(repoName: String): Option[Version] =
     github.findLatestVersion(repoName)
@@ -57,11 +44,11 @@ class GithubConnector @Inject() (github: Github) {
       .right
       .map(searchResults =>
         MongoRepositoryDependencies(
-          repositoryName        = repo.name,
-          libraryDependencies   = findLatestLibrariesVersions(searchResults),
-          sbtPluginDependencies = findPluginDependencies(searchResults),
-          otherDependencies     = findOtherDependencies(searchResults),
-          updateDate            = Instant.now()
+          repositoryName        = repo.name
+        , libraryDependencies   = toMongoRepositoryDependencies(searchResults.libraries)
+        , sbtPluginDependencies = toMongoRepositoryDependencies(searchResults.sbtPlugins)
+        , otherDependencies     = toMongoRepositoryDependencies(searchResults.others)
+        , updateDate            = Instant.now()
         )
       ) match {
         case Left(errorMessage) =>

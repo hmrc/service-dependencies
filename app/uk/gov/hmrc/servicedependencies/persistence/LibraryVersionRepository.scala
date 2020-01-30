@@ -18,7 +18,7 @@ package uk.gov.hmrc.servicedependencies.persistence
 
 import com.google.inject.{Inject, Singleton}
 import com.mongodb.BasicDBObject
-import org.mongodb.scala.model.Filters.equal
+import org.mongodb.scala.model.Filters.{and, equal}
 import org.mongodb.scala.model.Indexes.hashed
 import org.mongodb.scala.model.{IndexModel, IndexOptions, ReplaceOptions}
 import play.api.Logger
@@ -53,7 +53,9 @@ class LibraryVersionRepository @Inject()(
       .withTimerAndCounter("mongo.update") {
         collection
           .replaceOne(
-              filter      = equal("libraryName", libraryVersion.name) // TODO ignores group...
+              filter      = and( equal("libraryName", libraryVersion.name)
+                               , equal("group"      , libraryVersion.group)
+                               )
             , replacement = libraryVersion
             , options     = ReplaceOptions().upsert(true)
             )

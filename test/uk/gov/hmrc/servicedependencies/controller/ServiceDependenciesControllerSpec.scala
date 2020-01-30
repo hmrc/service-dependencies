@@ -99,9 +99,9 @@ class ServiceDependenciesControllerSpec
     }
   }
 
-  "getDependenciesOfSlug" - {
+  "dependenciesOfSlug" - {
 
-    "should get dependencies for a SlugInfoGlag" in new GetDependenciesOfSlugFixture {
+    "should get dependencies for a SlugInfoFlag" in new GetDependenciesOfSlugFixture {
       val flag = SlugInfoFlag.Latest
       when(boot.mockedSlugDependenciesService.curatedLibrariesOfSlug(slugName, flag)).thenReturn(
         Future.successful(
@@ -112,7 +112,7 @@ class ServiceDependenciesControllerSpec
       val result = boot.controller.dependenciesOfSlug(slugName, flag.asString).apply(FakeRequest())
 
       contentAsJson(result) shouldBe Json.parse(
-        s"""[$JsonForDependencyWithLatestVersionNoRuleViolations, $JsonForDependencyWithRuleViolationsNoLatestVersion]"""
+        s"""[$jsonForDependencyWithLatestVersionNoRuleViolations, $jsonForDependencyWithRuleViolationsNoLatestVersion]"""
       )
     }
 
@@ -178,26 +178,39 @@ class ServiceDependenciesControllerSpec
     val boot = Boot.init
 
     private val today = LocalDate.of(2019, 11, 27)
-    val DependencyWithLatestVersionNoRuleViolations = Dependency(name = "library1", currentVersion = Version("1.1.1"),
-      latestVersion = Some(Version("1.2.1")), bobbyRuleViolations = Nil)
-    val DependencyWithRuleViolationsNoLatestVersion = Dependency(name = "library2", currentVersion = Version("2.2.2"),
-      latestVersion = None, bobbyRuleViolations = List(
-        DependencyBobbyRule(reason = "security vulnerability", from = today, range = BobbyVersionRange("(,3.0.0)"))
-      )
-    )
 
-    val JsonForDependencyWithLatestVersionNoRuleViolations: String =
+    val DependencyWithLatestVersionNoRuleViolations = Dependency(
+        name                = "library1"
+      , group               = "uk.gov.hmrc"
+      , currentVersion      = Version("1.1.1")
+      , latestVersion       = Some(Version("1.2.1"))
+      , bobbyRuleViolations = Nil
+      )
+
+    val DependencyWithRuleViolationsNoLatestVersion = Dependency(
+        name                = "library2"
+      , group               = "uk.gov.hmrc"
+      , currentVersion      = Version("2.2.2")
+      , latestVersion       = None
+      , bobbyRuleViolations = List(
+          DependencyBobbyRule(reason = "security vulnerability", from = today, range = BobbyVersionRange("(,3.0.0)"))
+        )
+      )
+
+    val jsonForDependencyWithLatestVersionNoRuleViolations: String =
       s"""|{
           |  "name": "library1",
+          |  "group": "uk.gov.hmrc",
           |  "currentVersion": {"major": 1, "minor": 1, "patch": 1, "original": "1.1.1"},
           |  "latestVersion": {"major": 1, "minor": 2, "patch": 1, "original": "1.2.1"},
           |  "bobbyRuleViolations": [],
           |  "isExternal": false
           |}""".stripMargin
 
-    val JsonForDependencyWithRuleViolationsNoLatestVersion: String =
+    val jsonForDependencyWithRuleViolationsNoLatestVersion: String =
       s"""|{
           |  "name": "library2",
+          |  "group": "uk.gov.hmrc",
           |  "currentVersion": {"major": 2, "minor": 2, "patch": 2, "original": "2.2.2"},
           |  "bobbyRuleViolations": [{"reason": "security vulnerability", "from": "2019-11-27", "range": "(,3.0.0)"}],
           |  "isExternal": false

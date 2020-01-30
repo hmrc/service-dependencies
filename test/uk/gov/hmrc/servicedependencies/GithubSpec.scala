@@ -24,7 +24,7 @@ import org.mockito.ArgumentMatchers.{any, eq => is}
 import org.mockito.MockitoSugar
 import org.scalatest.OptionValues
 import uk.gov.hmrc.githubclient._
-import uk.gov.hmrc.servicedependencies.config.model.{CuratedDependencyConfig, OtherDependencyConfig, SbtPluginConfig}
+import uk.gov.hmrc.servicedependencies.config.model.{CuratedDependencyConfig, LibraryConfig, OtherDependencyConfig, SbtPluginConfig}
 import uk.gov.hmrc.servicedependencies.model.Version
 
 import scala.collection.JavaConverters._
@@ -46,8 +46,8 @@ class GithubSpec extends AnyWordSpec with Matchers with MockitoSugar with Option
           repoName,
           CuratedDependencyConfig(
             Seq(
-              SbtPluginConfig("bla", "sbt-plugin", None),
-              SbtPluginConfig("bla", "sbt-auto-build", None)
+              SbtPluginConfig(name = "sbt-plugin"    , group = "bla", latestVersion = None),
+              SbtPluginConfig(name = "sbt-auto-build", group = "bla", latestVersion = None)
             ),
             Nil,
             Nil))
@@ -55,28 +55,28 @@ class GithubSpec extends AnyWordSpec with Matchers with MockitoSugar with Option
         .get
         .sbtPlugins shouldBe
         Map(
-          "sbt-plugin"     -> Some(Version("2.3.10")),
-          "sbt-auto-build" -> Some(Version("1.3.0")))
+          ("sbt-plugin"    , "bla") -> Some(Version("2.3.10")),
+          ("sbt-auto-build", "bla") -> Some(Version("1.3.0")))
     }
 
     "queries build.properties file(s) for sbt version" in new TestSetup {
-      val curatedDependencyConfig = CuratedDependencyConfig(Nil, Nil, Seq(OtherDependencyConfig("sbt", Some(Version(1, 2, 3)))))
-      when(mockContentsService.getContents(any(), is(buildPropertiesFile))).thenReturn(
-        List(new RepositoryContents().setContent(loadFileAsBase64String("/github/build.properties"))).asJava
-      )
+      val curatedDependencyConfig = CuratedDependencyConfig(Nil, Nil, Seq(OtherDependencyConfig(name = "sbt", group = "org.scala-sbt", latestVersion = Some(Version(1, 2, 3)))))
+      when(mockContentsService.getContents(any(), is(buildPropertiesFile)))
+        .thenReturn(List(new RepositoryContents().setContent(loadFileAsBase64String("/github/build.properties"))).asJava)
 
-      github.findVersionsForMultipleArtifacts(repoName, curatedDependencyConfig).right.get.others shouldBe
-        Map("sbt" -> Some(Version("0.13.15")))
+      github.findVersionsForMultipleArtifacts(repoName, curatedDependencyConfig).right.get.others shouldBe Map(
+        ("sbt", "org.scala-sbt") -> Some(Version("0.13.15"))
+      )
     }
 
     "parses build.properties file(s) containing other keys in addition to the sbt version" in new TestSetup {
-      val curatedDependencyConfig = CuratedDependencyConfig(Nil, Nil, Seq(OtherDependencyConfig("sbt", Some(Version(1, 2, 3)))))
-      when(mockContentsService.getContents(any(), is(buildPropertiesFile))).thenReturn(
-        List(new RepositoryContents().setContent(loadFileAsBase64String("/github/multiplekey_build.properties"))).asJava
-      )
+      val curatedDependencyConfig = CuratedDependencyConfig(Nil, Nil, Seq(OtherDependencyConfig(name = "sbt", group = "org.scala-sbt", latestVersion = Some(Version(1, 2, 3)))))
+      when(mockContentsService.getContents(any(), is(buildPropertiesFile)))
+        .thenReturn(List(new RepositoryContents().setContent(loadFileAsBase64String("/github/multiplekey_build.properties"))).asJava)
 
-      github.findVersionsForMultipleArtifacts(repoName, curatedDependencyConfig).right.get.others shouldBe
-        Map("sbt" -> Some(Version("0.13.17")))
+      github.findVersionsForMultipleArtifacts(repoName, curatedDependencyConfig).right.get.others shouldBe Map(
+        ("sbt", "org.scala-sbt") -> Some(Version("0.13.17"))
+      )
     }
 
     "queries github's repository for plugins and libraries" in new TestSetup {
@@ -96,22 +96,24 @@ class GithubSpec extends AnyWordSpec with Matchers with MockitoSugar with Option
         repoName,
         CuratedDependencyConfig(
           Seq(
-            SbtPluginConfig("bla", "sbt-plugin", None),
-            SbtPluginConfig("bla", "sbt-auto-build", None)
+            SbtPluginConfig(name = "sbt-plugin"    , group = "bla", latestVersion = None)
+          , SbtPluginConfig(name = "sbt-auto-build", group = "bla", latestVersion = None)
           ),
           Seq(
-            "play-ui",
-            "play-health"
+            LibraryConfig(name = "play-ui"    , group = "uk.gov.hmrc")
+          , LibraryConfig(name = "play-health", group = "uk.gov.hmrc")
           ),
           Nil)
       )
 
       results.right.get.sbtPlugins shouldBe Map(
-        "sbt-plugin"     -> Some(Version("2.3.10")),
-        "sbt-auto-build" -> Some(Version("1.3.0")))
+          ("sbt-plugin"    , "bla") -> Some(Version("2.3.10"))
+        , ("sbt-auto-build", "bla") -> Some(Version("1.3.0"))
+        )
       results.right.get.libraries shouldBe Map(
-        "play-ui"     -> Some(Version("1.3.0")),
-        "play-health" -> Some(Version("0.5.0")))
+          ("play-ui"    , "uk.gov.hmrc") -> Some(Version("1.3.0"))
+        , ("play-health", "uk.gov.hmrc") -> Some(Version("0.5.0"))
+        )
     }
 
     "does not fail if the project folder does not exist" in new TestSetup {
@@ -126,14 +128,23 @@ class GithubSpec extends AnyWordSpec with Matchers with MockitoSugar with Option
       github
         .findVersionsForMultipleArtifacts(
           repoName,
-          CuratedDependencyConfig(Nil, Seq("play-frontend", "play-ui", "play-health"), Nil))
+          CuratedDependencyConfig(
+            Nil
+          , Seq(
+              LibraryConfig(name = "play-frontend", group = "uk.gov.hmrc")
+            , LibraryConfig(name = "play-ui"      , group = "uk.gov.hmrc")
+            , LibraryConfig(name = "play-health"  , group = "uk.gov.hmrc")
+            )
+          , Nil
+          )
+         )
         .right
         .get
         .libraries shouldBe
         Map(
-          "play-frontend" -> Some(Version("1.1.1")),
-          "play-ui"       -> Some(Version("2.2.2")),
-          "play-health"   -> Some(Version("8.8.8")))
+          ("play-frontend", "uk.gov.hmrc") -> Some(Version("1.1.1")),
+          ("play-ui"      , "uk.gov.hmrc") -> Some(Version("2.2.2")),
+          ("play-health"  , "uk.gov.hmrc") -> Some(Version("8.8.8")))
     }
 
     "does not return an empty list of dependencies but fails when an http error occurs" in new TestSetup {
@@ -149,7 +160,15 @@ class GithubSpec extends AnyWordSpec with Matchers with MockitoSugar with Option
       github
         .findVersionsForMultipleArtifacts(
           repoName,
-          CuratedDependencyConfig(Nil, Seq("play-frontend", "play-ui", "play-health"), Nil))
+          CuratedDependencyConfig(
+              Nil
+            , Seq( LibraryConfig(name = "play-frontend", group = "uk.gov.hmrc")
+                 , LibraryConfig(name = "play-ui"      , group = "uk.gov.hmrc")
+                 , LibraryConfig(name = "play-health"  , group = "uk.gov.hmrc")
+                 )
+            , Nil
+            )
+          )
         .left
         .get shouldBe
         GithubSearchError("Unable to find dependencies for citizen-auth-frontend. Reason: 500", exception)
@@ -164,14 +183,23 @@ class GithubSpec extends AnyWordSpec with Matchers with MockitoSugar with Option
       github
         .findVersionsForMultipleArtifacts(
           repoName,
-          CuratedDependencyConfig(Nil, Seq("play-frontend", "play-ui", "play-health"), Nil))
+          CuratedDependencyConfig(
+              Nil
+            , Seq( LibraryConfig(name = "play-frontend", group = "uk.gov.hmrc")
+                 , LibraryConfig(name = "play-ui"      , group = "uk.gov.hmrc")
+                 , LibraryConfig(name = "play-health"  , group = "uk.gov.hmrc")
+                 )
+           , Nil
+           )
+         )
         .right
         .get
         .libraries shouldBe
         Map(
-          "play-frontend" -> Some(Version("1.1.1")),
-          "play-ui"       -> Some(Version("2.2.2")),
-          "play-health"   -> Some(Version("8.8.8")))
+          ("play-frontend", "uk.gov.hmrc") -> Some(Version("1.1.1"))
+        , ("play-ui"      , "uk.gov.hmrc") -> Some(Version("2.2.2"))
+        , ("play-health"  , "uk.gov.hmrc") -> Some(Version("8.8.8"))
+        )
     }
 
     "return artifacts versions correctly for a repository's dependency file when there is more than one scala file under project" in new TestSetup {
@@ -191,14 +219,23 @@ class GithubSpec extends AnyWordSpec with Matchers with MockitoSugar with Option
       github
         .findVersionsForMultipleArtifacts(
           repoName,
-          CuratedDependencyConfig(Nil, Seq("play-frontend", "play-ui", "play-health"), Nil))
+          CuratedDependencyConfig(
+              Nil
+            , Seq( LibraryConfig(name = "play-frontend", group = "uk.gov.hmrc")
+                 , LibraryConfig(name = "play-ui"      , group = "uk.gov.hmrc")
+                 , LibraryConfig(name = "play-health"  , group = "uk.gov.hmrc")
+                 )
+            , Nil
+            )
+          )
         .right
         .get
         .libraries shouldBe
         Map(
-          "play-frontend" -> None,
-          "play-ui"       -> Some(Version("7.4.0")),
-          "play-health"   -> Some(Version("2.1.0-play-25")))
+          ("play-frontend", "uk.gov.hmrc") -> None
+        , ("play-ui"      , "uk.gov.hmrc") -> Some(Version("7.4.0"))
+        , ("play-health"  , "uk.gov.hmrc") -> Some(Version("2.1.0-play-25"))
+        )
     }
 
     "return artifacts versions correctly for a repository's dependency file when there is scala files in project with no dependencies but an sbt.build file with dependencies" in new TestSetup {
@@ -215,14 +252,23 @@ class GithubSpec extends AnyWordSpec with Matchers with MockitoSugar with Option
       github
         .findVersionsForMultipleArtifacts(
           repoName,
-          CuratedDependencyConfig(Nil, Seq("play-frontend", "play-ui", "play-health"), Nil))
+          CuratedDependencyConfig(
+              Nil
+            , Seq( LibraryConfig(name = "play-frontend", group = "uk.gov.hmrc")
+                 , LibraryConfig(name = "play-ui"      , group = "uk.gov.hmrc")
+                 , LibraryConfig(name = "play-health"  , group = "uk.gov.hmrc")
+                 )
+            , Nil
+            )
+          )
         .right
         .get
         .libraries shouldBe
         Map(
-          "play-frontend" -> Some(Version("1.1.1")),
-          "play-ui"       -> Some(Version("2.2.2")),
-          "play-health"   -> Some(Version("8.8.8")))
+          ("play-frontend", "uk.gov.hmrc") -> Some(Version("1.1.1"))
+        , ("play-ui"      , "uk.gov.hmrc") -> Some(Version("2.2.2"))
+        , ("play-health"  , "uk.gov.hmrc") -> Some(Version("8.8.8"))
+        )
     }
 
     "return artifacts versions correctly for a repository's dependency file when there is scala files in project with dependencies and an build.sbt with no dependencies" in new TestSetup {
@@ -239,14 +285,23 @@ class GithubSpec extends AnyWordSpec with Matchers with MockitoSugar with Option
       github
         .findVersionsForMultipleArtifacts(
           repoName,
-          CuratedDependencyConfig(Nil, Seq("play-frontend", "play-ui", "play-health"), Nil))
+          CuratedDependencyConfig(
+            Nil
+          , Seq( LibraryConfig(name = "play-frontend", group = "uk.gov.hmrc")
+               , LibraryConfig(name = "play-ui"      , group = "uk.gov.hmrc")
+               , LibraryConfig(name = "play-health"  , group = "uk.gov.hmrc")
+               )
+          , Nil
+          )
+        )
         .right
         .get
         .libraries shouldBe
         Map(
-          "play-frontend" -> None,
-          "play-ui"       -> Some(Version("7.4.0")),
-          "play-health"   -> Some(Version("2.1.0-play-25")))
+          ("play-frontend", "uk.gov.hmrc") -> None
+        , ("play-ui"      , "uk.gov.hmrc") -> Some(Version("7.4.0"))
+        , ("play-health"  , "uk.gov.hmrc") -> Some(Version("2.1.0-play-25"))
+        )
     }
 
     "return artifacts versions correctly for a repository's appDependencies.scala file" in new TestSetup {
@@ -260,14 +315,23 @@ class GithubSpec extends AnyWordSpec with Matchers with MockitoSugar with Option
       github
         .findVersionsForMultipleArtifacts(
           repoName,
-          CuratedDependencyConfig(Nil, Seq("play-frontend", "play-ui", "play-health"), Nil))
+          CuratedDependencyConfig(
+              Nil
+            , Seq( LibraryConfig(name = "play-frontend", group = "uk.gov.hmrc")
+                 , LibraryConfig(name = "play-ui"      , group = "uk.gov.hmrc")
+                 , LibraryConfig(name = "play-health"  , group = "uk.gov.hmrc")
+                 )
+            , Nil
+            )
+          )
         .right
         .get
         .libraries shouldBe
         Map(
-          "play-frontend" -> None,
-          "play-ui"       -> Some(Version(7, 4, 0)),
-          "play-health"   -> Some(Version("2.1.0-play-25")))
+          ("play-frontend", "uk.gov.hmrc") -> None
+        , ("play-ui"      , "uk.gov.hmrc") -> Some(Version(7, 4, 0))
+        , ("play-health"  , "uk.gov.hmrc") -> Some(Version("2.1.0-play-25"))
+        )
     }
 
     "return None for artifacts that don't appear in the build file for a repository" in new TestSetup {
@@ -279,13 +343,23 @@ class GithubSpec extends AnyWordSpec with Matchers with MockitoSugar with Option
           .setContent(loadFileAsBase64String("/github/contents_build_file_with_play_frontend.sbt.txt"))).asJava)
 
       github
-        .findVersionsForMultipleArtifacts(repoName, CuratedDependencyConfig(Nil, Seq("play-ui", "non-existing"), Nil))
+        .findVersionsForMultipleArtifacts(
+            repoName
+          , CuratedDependencyConfig(
+                Nil
+              , Seq( LibraryConfig(name = "play-ui"     , group = "uk.gov.hmrc")
+                   , LibraryConfig(name = "non-existing", group = "uk.gov.hmrc")
+                   )
+              , Nil
+              )
+          )
         .right
         .get
         .libraries shouldBe
         Map(
-          "play-ui"      -> Some(Version("1.3.0")),
-          "non-existing" -> None)
+           ("play-ui"     , "uk.gov.hmrc") -> Some(Version("1.3.0"))
+         , ("non-existing", "uk.gov.hmrc") -> None
+         )
     }
 
     "return empty map if curated config is empty passed in" in new TestSetup {
@@ -295,11 +369,11 @@ class GithubSpec extends AnyWordSpec with Matchers with MockitoSugar with Option
           .setContent(loadFileAsBase64String("/github/contents_build_file_with_play_frontend.sbt.txt"))).asJava)
 
       github
-        .findVersionsForMultipleArtifacts(repoName, CuratedDependencyConfig(Nil, Seq.empty[String], Nil))
+        .findVersionsForMultipleArtifacts(repoName, CuratedDependencyConfig(Nil, Nil, Nil))
         .right
         .get
         .libraries shouldBe
-        Map.empty[String, Option[Version]]
+        Map.empty[(String, String), Option[Version]]
     }
   }
 

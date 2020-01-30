@@ -51,8 +51,8 @@ class SlugDependenciesService @Inject()(
       latestVersions        <- libraryVersionRepository.getAllEntries
       curatedDependencies   =  slugInfo.dependencies
                                  .filter(slugDependency =>
-                                   curatedLibraries.exists(lib => lib.name == slugDependency.artifact &&
-                                                                  lib.org  == slugDependency.group
+                                   curatedLibraries.exists(lib => lib.name  == slugDependency.artifact &&
+                                                                  lib.group == slugDependency.group
                                                           )
                                  )
       enrichedDependencies  <- serviceConfigsService.getDependenciesWithBobbyRules(curatedDependencies
@@ -63,6 +63,7 @@ class SlugDependenciesService @Inject()(
                                           .flatMap(_.version)
                                       Dependency(
                                           name                = slugDependency.artifact
+                                        , group               = slugDependency.group
                                         , currentVersion      = Version(slugDependency.version)  // TODO this is unsafe
                                         , latestVersion       = latestVersion
                                         , bobbyRuleViolations = Nil

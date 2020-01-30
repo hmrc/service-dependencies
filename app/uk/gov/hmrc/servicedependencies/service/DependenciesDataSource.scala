@@ -18,6 +18,7 @@ package uk.gov.hmrc.servicedependencies.service
 
 import java.time.Instant
 
+import cats.implicits._
 import com.google.inject.{Inject, Singleton}
 import org.slf4j.LoggerFactory
 import uk.gov.hmrc.http.HeaderCarrier
@@ -63,42 +64,39 @@ class DependenciesDataSource @Inject()(
       .getOrElse(Instant.EPOCH)
 
 
-  private def serialiseFutures[A, B](l: Iterable[A])(fn: A => Future[B]): Future[Seq[B]] =
-    l.foldLeft(Future(List.empty[B])) { (previousFuture, next) ⇒
-      for {
-        previousResults ← previousFuture
-        next ← fn(next)
-      } yield previousResults :+ next
-    }
-
   def persistDependenciesForAllRepositories(
-      curatedDependencyConfig: CuratedDependencyConfig,
-      currentDependencyEntries: Seq[MongoRepositoryDependencies],
-      force: Boolean = false)(implicit hc: HeaderCarrier): Future[Seq[MongoRepositoryDependencies]] =
+    curatedDependencyConfig : CuratedDependencyConfig
+  , currentDependencyEntries: Seq[MongoRepositoryDependencies]
+  , force                   : Boolean                          = false
+  )(implicit hc: HeaderCarrier): Future[Seq[MongoRepositoryDependencies]] =
     teamsAndRepositoriesConnector
       .getAllRepositories()
       .map { repos =>
         logger.debug(s"loading dependencies for ${repos.length} repositories")
         repos.flatMap(r => buildDependency(r, curatedDependencyConfig, currentDependencyEntries, force))
       }
-      .flatMap(serialiseFutures(_)(repo => repoLibDepRepository.update(repo)))
+      .flatMap(
+        _.toList.foldLeftM(List.empty[MongoRepositoryDependencies]){ case (acc, repo) =>
+            repoLibDepRepository.update(repo).map(_ :: acc)
+          }
+      )
 
 
   def getLatestSbtPluginVersions(sbtPlugins: Seq[SbtPluginConfig]): Seq[SbtPluginVersion] =
     sbtPlugins.map { sbtPlugin =>
       val optVersion =
-        if (sbtPlugin.org.startsWith("uk.gov.hmrc"))
+        if (sbtPlugin.group.startsWith("uk.gov.hmrc"))
           githubConnector.findLatestVersion(sbtPlugin.name)
         else None
-      SbtPluginVersion(sbtPlugin.org, sbtPlugin.name, optVersion)
+      SbtPluginVersion(name = sbtPlugin.name, group = sbtPlugin.group, version = optVersion)
     }
 
   def getLatestLibrariesVersions(libraries: Seq[LibraryConfig]): Seq[LibraryVersion] =
     libraries.map { library =>
       val optVersion =
-        if (library.org.startsWith("uk.gov.hmrc"))
+        if (library.group.startsWith("uk.gov.hmrc"))
           githubConnector.findLatestVersion(library.name)
         else None
-      LibraryVersion(library.org, library.name, optVersion)
+      LibraryVersion(name = library.name, group = library.group, version = optVersion)
     }
 }

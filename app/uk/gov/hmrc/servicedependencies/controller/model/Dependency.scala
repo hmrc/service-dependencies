@@ -23,24 +23,18 @@ import uk.gov.hmrc.servicedependencies.model.Version
 
 case class Dependency(
     name               : String
+  , group              : String
   , currentVersion     : Version
   , latestVersion      : Option[Version]
   , bobbyRuleViolations: List[DependencyBobbyRule]
-  , isExternal         : Boolean = false
-  ) {
-
-  // TODO hack since we currently don't store group for dependency
-  def group: String =
-    name match {
-      case "reactivemongo" => "org.reactivemongo"
-      case _               => "uk.gov.hmrc"
-    }
-}
+  , isExternal         : Boolean = false // TODO is this obsolete now we have group (or at least can be inferred)?
+  )
 
 object Dependency {
 
   val writes: OWrites[Dependency] =
     ( (__ \ "name"               ).write[String]
+    ~ (__ \ "group"              ).write[String]
     ~ (__ \ "currentVersion"     ).write[Version](Version.legacyApiWrites)
     ~ (__ \ "latestVersion"      ).writeNullable[Version](Version.legacyApiWrites)
     ~ (__ \ "bobbyRuleViolations").lazyWrite(Writes.seq[DependencyBobbyRule](DependencyBobbyRule.writes))

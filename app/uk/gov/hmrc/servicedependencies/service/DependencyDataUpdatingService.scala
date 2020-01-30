@@ -112,30 +112,31 @@ class DependencyDataUpdatingService @Inject()(
     repositoryDependencies.sbtPluginDependencies.map { sbtPluginDependency =>
       val mayBeExternalSbtPlugin =
         curatedDependencyConfig.sbtPlugins
-          .find(pluginConfig => pluginConfig.name == sbtPluginDependency.name   &&
-                                //pluginConfig.org  == sbtPluginDependency.group &&
+          .find(pluginConfig => pluginConfig.name  == sbtPluginDependency.name  &&
+                                pluginConfig.group == sbtPluginDependency.group &&
                                 pluginConfig.isExternal
                )
 
       val latestVersion =
         mayBeExternalSbtPlugin
           .map(
-            _.version
+            _.latestVersion
               .getOrElse(sys.error(s"External sbt plugin ($mayBeExternalSbtPlugin) must specify the (latest) version")))
           .orElse(
             sbtPluginReferences
-              .find(sbtPluginRef => sbtPluginRef.name == sbtPluginDependency.name /*&&
-                                    sbtPluginRef.group == sbtPluginDependency.group*/
+              .find(sbtPluginRef => sbtPluginRef.name  == sbtPluginDependency.name &&
+                                    sbtPluginRef.group == sbtPluginDependency.group
                    )
               .flatMap(_.version)
           )
 
       Dependency(
-        sbtPluginDependency.name,
-        sbtPluginDependency.currentVersion,
-        latestVersion,
-        List.empty,
-        mayBeExternalSbtPlugin.isDefined
+        name                = sbtPluginDependency.name
+      , group               =  sbtPluginDependency.group
+      , currentVersion      = sbtPluginDependency.currentVersion
+      , latestVersion       = latestVersion
+      , bobbyRuleViolations = List.empty
+      , isExternal          = mayBeExternalSbtPlugin.isDefined
       )
     }
 
@@ -145,33 +146,36 @@ class DependencyDataUpdatingService @Inject()(
       libraryReferences   <- libraryVersionRepository.getAllEntries
       sbtPluginReferences <- sbtPluginVersionRepository.getAllEntries
     } yield
-      dependencies.map { dep =>
+      dependencies.map(dep =>
         Dependencies(
-          repositoryName,
-          dep.libraryDependencies.map(
-            d =>
-              Dependency(
-                d.name,
-                d.currentVersion,
-                libraryReferences
-                  .find(libraryRef => libraryRef.name  == d.name /*&&
-                                      libraryRef.group == d.group*/
-                       )
-                  .flatMap(_.version),
-                List.empty
-            )),
-          getSbtPluginDependencyState(dep, sbtPluginReferences),
-          dep.otherDependencies.map(
-            other =>
-              Dependency(
-                other.name,
-                other.currentVersion,
-                curatedDependencyConfig.otherDependencies.find(_.name == "sbt").flatMap(_.latestVersion),
-                List.empty,
-                isExternal = "sbt".equals(other.name))),
-          dep.updateDate
+          repositoryName         = repositoryName
+        , libraryDependencies    = dep.libraryDependencies.map(d =>
+                                     Dependency(
+                                       name                = d.name
+                                     , group               = d.group
+                                     , currentVersion      = d.currentVersion
+                                     , latestVersion       = libraryReferences
+                                                               .find(libraryRef => libraryRef.name  == d.name &&
+                                                                                   libraryRef.group == d.group
+                                                                    )
+                                                               .flatMap(_.version)
+                                     , bobbyRuleViolations = List.empty
+                                     )
+                                   )
+        , sbtPluginsDependencies = getSbtPluginDependencyState(dep, sbtPluginReferences)
+        , otherDependencies      = dep.otherDependencies.map(d =>
+                                     Dependency(
+                                       name                = d.name
+                                     , group               = d.group
+                                     , currentVersion      = d.currentVersion
+                                     , latestVersion       = curatedDependencyConfig.otherDependencies.find(_.name == "sbt").flatMap(_.latestVersion)
+                                     , bobbyRuleViolations = List.empty
+                                     , isExternal          = d.name == "sbt"
+                                     )
+                                   )
+        , lastUpdated            = dep.updateDate
         )
-      }
+      )
 
   def getDependencyVersionsForAllRepositories(): Future[Seq[Dependencies]] =
     for {
@@ -179,31 +183,35 @@ class DependencyDataUpdatingService @Inject()(
       libraryReferences   <- libraryVersionRepository.getAllEntries
       sbtPluginReferences <- sbtPluginVersionRepository.getAllEntries
     } yield
-      allDependencies.map { dep =>
+      allDependencies.map(dep =>
         Dependencies(
-          dep.repositoryName,
-          dep.libraryDependencies.map(
-            d =>
-              Dependency(
-                d.name,
-                d.currentVersion,
-                libraryReferences
-                  .find(libraryRef => libraryRef.name == d.name /*&&
-                                      libraryRef.group = d.group*/
-                       )
-                  .flatMap(_.version),
-                List.empty)),
-          getSbtPluginDependencyState(dep, sbtPluginReferences),
-          dep.otherDependencies.map(
-            other =>
-              Dependency(
-                other.name,
-                other.currentVersion,
-                curatedDependencyConfig.otherDependencies.find(_.name == "sbt").flatMap(_.latestVersion),
-                List.empty)),
-          dep.updateDate
+          repositoryName         = dep.repositoryName
+        , libraryDependencies    = dep.libraryDependencies.map(d =>
+                                     Dependency(
+                                       name                = d.name
+                                     , group               = d.group
+                                     , currentVersion      = d.currentVersion
+                                     , latestVersion       = libraryReferences
+                                                               .find(libraryRef => libraryRef.name  == d.name &&
+                                                                                   libraryRef.group == d.group
+                                                                    )
+                                                               .flatMap(_.version)
+                                     , bobbyRuleViolations = List.empty
+                                     )
+                                   )
+        , sbtPluginsDependencies = getSbtPluginDependencyState(dep, sbtPluginReferences)
+        , otherDependencies      = dep.otherDependencies.map(d =>
+                                     Dependency(
+                                       name                = d.name
+                                     , group               = d.group
+                                     , currentVersion      = d.currentVersion
+                                     , latestVersion       = curatedDependencyConfig.otherDependencies.find(_.name == "sbt").flatMap(_.latestVersion)
+                                     , bobbyRuleViolations = List.empty
+                                     )
+                                   )
+        , lastUpdated = dep.updateDate
         )
-      }
+      )
 
   def getAllRepositoriesDependencies(): Future[Seq[MongoRepositoryDependencies]] =
     repositoryLibraryDependenciesRepository.getAllEntries

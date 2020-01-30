@@ -46,10 +46,11 @@ class Github(releaseService: ReleaseService, contentsService: ExtendedContentsSe
     try {
       Right(
         GithubSearchResults(
-          sbtPlugins = searchPluginSbtFileForMultipleArtifacts(repoName, curatedDependencyConfig.sbtPlugins),
-          libraries  = searchBuildFilesForMultipleArtifacts(repoName, curatedDependencyConfig.libraries),
-          others     = searchForOtherSpecifiedDependencies(repoName, curatedDependencyConfig.otherDependencies)
-        ))
+          sbtPlugins = searchPluginSbtFileForMultipleArtifacts(repoName, curatedDependencyConfig.sbtPlugins)
+        , libraries  = searchBuildFilesForMultipleArtifacts(repoName, curatedDependencyConfig.libraries)
+        , others     = searchForOtherSpecifiedDependencies(repoName, curatedDependencyConfig.otherDependencies)
+        )
+      )
     } catch {
       case ex: Throwable if ex.getMessage.toLowerCase.contains("api rate limit exceeded") =>
         throw APIRateLimitExceededException(ex)
@@ -72,15 +73,18 @@ class Github(releaseService: ReleaseService, contentsService: ExtendedContentsSe
   }
 
   private def searchBuildFilesForMultipleArtifacts(
-    serviceName: String,
-    artifacts: Seq[LibraryConfig]): Map[String, Option[Version]] = {
+    serviceName: String
+  , artifacts  : Seq[LibraryConfig]
+  ): Map[(String, String), Option[Version]] = {
 
     @tailrec
-    def searchRemainingBuildFiles(remainingBuildFiles: Seq[String]): Map[String, Option[Version]] =
+    def searchRemainingBuildFiles(remainingBuildFiles: Seq[String]): Map[(String, String), Option[Version]] =
       remainingBuildFiles match {
         case filePath :: xs =>
           val versionsMap =
-            performSearchForMultipleArtifacts(serviceName, filePath, parseFileForMultipleArtifacts(_, artifacts.map(_.name)))
+            getContentsOrEmpty(serviceName, filePath)
+              .headOption
+              .fold(Map.empty[(String, String), Option[Version]])(parseFileForMultipleArtifacts(_, artifacts.map(a => (a.name, a.group))))
           if (!versionsMap.exists(_._2.isDefined))
             searchRemainingBuildFiles(xs)
           else
@@ -99,40 +103,31 @@ class Github(releaseService: ReleaseService, contentsService: ExtendedContentsSe
   }
 
   private def searchForOtherSpecifiedDependencies(
-    serviceName: String,
-    otherDependencies: Seq[OtherDependencyConfig]): Map[String, Option[Version]] =
+    serviceName      : String
+  , otherDependencies: Seq[OtherDependencyConfig]
+  ): Map[(String, String), Option[Version]] =
     otherDependencies
-      .find(_.name == "sbt")
-      .map(_ => Map("sbt" -> getCurrentSbtVersion(serviceName)))
-      .getOrElse(Map.empty)
+      .find(d => d.name == "sbt" && d.group == "org.scala-sbt")
+      .fold(Map.empty[(String, String), Option[Version]])(c => Map((c.name, c.group) -> getCurrentSbtVersion(serviceName)))
 
   private def searchPluginSbtFileForMultipleArtifacts(
-    serviceName: String,
-    sbtPluginConfigs: Seq[SbtPluginConfig]): Map[String, Option[Version]] =
-    performSearchForMultipleArtifacts(
-      serviceName,
-      "project/plugins.sbt",
-      parseFileForMultipleArtifacts(_, sbtPluginConfigs.map(_.name)))
+    serviceName     : String
+  , sbtPluginConfigs: Seq[SbtPluginConfig]
+  ): Map[(String, String), Option[Version]] =
+    getContentsOrEmpty(serviceName, "project/plugins.sbt")
+      .headOption
+      .fold(Map.empty[(String, String), Option[Version]])(parseFileForMultipleArtifacts(_, sbtPluginConfigs.map(c => (c.name, c.group))))
 
   private def parseFileForMultipleArtifacts(
-    response     : RepositoryContents,
-    artifactNames: Seq[String]  // TODO the artifact group is ignored, so may pick up the wrong version
-    ): Map[String, Option[Version]] =
-    VersionParser.parse(parseFileContents(response), artifactNames)
+    response : RepositoryContents
+  , artifacts: Seq[(String, String)]
+  ): Map[(String, String), Option[Version]] =
+    VersionParser.parse(parseFileContents(response), artifacts)
 
-  private def performProjectDirectorySearch(repoName: String): Seq[String] = {
-    val buildFilePaths: List[RepositoryContents] = getContentsOrEmpty(repoName, "project")
-    buildFilePaths.map(_.getPath).filter(_.endsWith(".scala"))
-  }
-
-  private def performSearchForMultipleArtifacts(
-    repoName: String,
-    filePath: String,
-    transformF: RepositoryContents => Map[String, Option[Version]]): Map[String, Option[Version]] = {
-    val results = getContentsOrEmpty(repoName, filePath)
-    if (results.isEmpty) Map.empty
-    else transformF(results.head)
-  }
+  private def performProjectDirectorySearch(repoName: String): Seq[String] =
+    getContentsOrEmpty(repoName, "project")
+      .map(_.getPath)
+      .filter(_.endsWith(".scala"))
 
   private def repositoryId(repoName: String, orgName: String): IRepositoryIdProvider =
     new IRepositoryIdProvider {
@@ -143,12 +138,12 @@ class Github(releaseService: ReleaseService, contentsService: ExtendedContentsSe
     new String(Base64.decodeBase64(response.getContent.replaceAll("\n", "")))
 
   private def getContentsOrEmpty(repoName: String, path: String): List[RepositoryContents] = {
-
-    import scala.collection.JavaConversions._
-
-    try { contentsService.getContents(repositoryId(repoName, org), path).toList } catch {
-      case ex: RequestException if ex.getStatus == 404 => List.empty
-    }
+    import scala.collection.JavaConverters._
+    try {
+      contentsService.getContents(repositoryId(repoName, org), path).asScala.toList
+     } catch {
+       case ex: RequestException if ex.getStatus == 404 => Nil
+     }
   }
 
 }

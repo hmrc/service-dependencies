@@ -41,7 +41,7 @@ object MongoSbtPluginVersion {
     implicit val iF = MongoJavatimeFormats.instantFormats
     implicit val vf = Version.mongoFormat
     ( (__ \ "sbtPluginName").format[String]
-    ~ (__ \ "group"        ).formatNullable[String].inmap(???, ???) // "uk.gov.hmrc" // TODO look up from dependency-versions-config
+    ~ (__ \ "group"        ).format[String]
     ~ (__ \ "version"      ).formatNullable[Version]
     ~ (__ \ "updateDate"   ).format[Instant]
     )(MongoSbtPluginVersion.apply, unlift(MongoSbtPluginVersion.unapply))

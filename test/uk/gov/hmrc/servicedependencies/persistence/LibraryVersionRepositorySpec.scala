@@ -43,16 +43,20 @@ class LibraryVersionRepositorySpec
   override protected lazy val collectionName: String   = repo.collectionName
   override protected lazy val indexes: Seq[IndexModel] = repo.indexes
 
+  val libraryVersion = MongoLibraryVersion(
+      name       = "some-library"
+    , group      = "uk.gov.hmrc"
+    , version    = Some(Version(1, 0, 2))
+    , updateDate = Instant.now()
+    )
+
   "update" should {
     "inserts correctly" in {
-      val libraryVersion = MongoLibraryVersion("some-library", Some(Version(1, 0, 2)), Instant.now())
-
       repo.update(libraryVersion).futureValue
       repo.getAllEntries.futureValue shouldBe Seq(libraryVersion)
     }
 
     "updates correctly (based on library name)" in {
-      val libraryVersion    = MongoLibraryVersion("some-library", Some(Version(1, 0, 2)), Instant.now())
       val newLibraryVersion = libraryVersion.copy(version = Some(Version(1, 0, 5)))
 
       repo.update(libraryVersion).futureValue
@@ -63,8 +67,6 @@ class LibraryVersionRepositorySpec
 
   "clearAllDependencyEntries" should {
     "deletes everything" in {
-      val libraryVersion = MongoLibraryVersion("some-library", Some(Version(1, 0, 2)), Instant.now())
-
       repo.update(libraryVersion).futureValue
       repo.getAllEntries.futureValue should have size 1
       repo.clearAllData.futureValue

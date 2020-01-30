@@ -27,12 +27,12 @@ import uk.gov.hmrc.servicedependencies.persistence._
 import scala.concurrent.{ExecutionContext, Future}
 
 class IntegrationTestController @Inject()(
-    libraryRepo               : LibraryVersionRepository
-  , sbtPluginVersionRepository: SbtPluginVersionRepository
-  , dependenciesRepository    : RepositoryLibraryDependenciesRepository
-  , sluginfoRepo              : SlugInfoRepository
-  , bobbyRulesSummaryRepo     : BobbyRulesSummaryRepository
-  , cc                        : ControllerComponents
+    libraryRepo                            : LibraryVersionRepository
+  , sbtPluginVersionRepository             : SbtPluginVersionRepository
+  , repositoryLibraryDependenciesRepository: RepositoryLibraryDependenciesRepository
+  , sluginfoRepo                           : SlugInfoRepository
+  , bobbyRulesSummaryRepo                  : BobbyRulesSummaryRepository
+  , cc                                     : ControllerComponents
   )(implicit ec: ExecutionContext
   ) extends BackendController(cc) {
 
@@ -67,7 +67,7 @@ class IntegrationTestController @Inject()(
 
   def addDependencies =
     Action.async(validateJson[Seq[MongoRepositoryDependencies]]) { implicit request =>
-      Future.sequence(request.body.map(dependenciesRepository.update))
+      Future.sequence(request.body.map(repositoryLibraryDependenciesRepository.update))
         .map(_ => NoContent)
     }
 
@@ -97,7 +97,7 @@ class IntegrationTestController @Inject()(
 
   def deleteDependencies =
     Action.async { implicit request =>
-      dependenciesRepository.clearAllData
+      repositoryLibraryDependenciesRepository.clearAllData
         .map(_ => NoContent)
     }
 
@@ -117,7 +117,7 @@ class IntegrationTestController @Inject()(
     Action.async { implicit request =>
       Future.sequence(List(
           sbtPluginVersionRepository.clearAllData
-        , dependenciesRepository.clearAllData
+        , repositoryLibraryDependenciesRepository.clearAllData
         , libraryRepo.clearAllData
         , sluginfoRepo.clearAllData
         , bobbyRulesSummaryRepo.clearAllData

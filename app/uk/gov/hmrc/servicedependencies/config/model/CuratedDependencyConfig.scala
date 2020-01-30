@@ -20,9 +20,26 @@ import play.api.libs.functional.syntax._
 import play.api.libs.json.{__, Json, JsError, Reads}
 import uk.gov.hmrc.servicedependencies.model.Version
 
-case class OtherDependencyConfig(name: String, latestVersion: Option[Version])
+case class SbtPluginConfig(
+    name         : String
+  , group        : String
+  , latestVersion: Option[Version]
+  ) {
+  // TODO enforce invariant that latestVersion is supplied when !group.startsWith("uk.gov.hmrc")
+  def isInternal = latestVersion.isEmpty
+  def isExternal = !isInternal
+}
 
-case class LibraryConfig(org: String, name: String)
+case class LibraryConfig(
+    name : String
+  , group: String
+  )
+
+case class OtherDependencyConfig(
+    name         : String
+  , group        : String
+  , latestVersion: Option[Version]
+  )
 
 case class CuratedDependencyConfig(
   sbtPlugins       : Seq[SbtPluginConfig],
@@ -49,18 +66,19 @@ object CuratedDependencyConfig {
 
   val otherReader: Reads[OtherDependencyConfig] =
     ( (__ \ "name"         ).read[String]
+    ~ (__ \ "group"        ).read[String]
     ~ (__ \ "latestVersion").readNullable[String].flatMap(optOptionalReads(Version.parse, "invalid version"))
     )(OtherDependencyConfig.apply _)
 
   val libraryReader: Reads[LibraryConfig] =
-    ( (__ \ "org" ).read[String]
-    ~ (__ \ "name").read[String]
+    ( (__ \ "name").read[String]
+    ~ (__ \ "group" ).read[String]
     )(LibraryConfig.apply _)
 
   val pluginReader: Reads[SbtPluginConfig] =
-    ( (__ \ "org"    ).read[String]
-    ~ (__ \ "name"   ).read[String]
-    ~ (__ \ "version").readNullable[String].flatMap(optOptionalReads(Version.parse, "invalid version"))
+    ( (__ \ "name"         ).read[String]
+    ~ (__ \ "group"        ).read[String]
+    ~ (__ \ "latestVersion").readNullable[String].flatMap(optOptionalReads(Version.parse, "invalid version"))
     )(SbtPluginConfig.apply _)
 
   implicit val configReader = {
@@ -69,9 +87,4 @@ object CuratedDependencyConfig {
     implicit val pr = pluginReader
     Json.reads[CuratedDependencyConfig]
   }
-}
-
-case class SbtPluginConfig(org: String, name: String, version: Option[Version]) {
-  def isInternal = version.isEmpty
-  def isExternal = !isInternal
 }

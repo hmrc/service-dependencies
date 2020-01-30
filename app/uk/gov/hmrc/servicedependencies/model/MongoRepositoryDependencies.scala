@@ -24,6 +24,7 @@ import uk.gov.hmrc.mongo.play.json.formats.MongoJavatimeFormats
 
 case class MongoRepositoryDependency(
     name          : String
+  , group         : String
   , currentVersion: Version
   )
 
@@ -31,19 +32,27 @@ object MongoRepositoryDependency {
   implicit val format: Format[MongoRepositoryDependency] = {
     implicit val vf = Version.mongoFormat
     ( (__ \ "name"          ).format[String]
+    ~ (__ \ "group"         ).formatNullable[String]
+                             // Initially we didn't store this information - this is was the assumption at the time.
+                             // TODO really depends on name ("reactivemongo" => "org.reactivemongo")
+                             .inmap[String](a => a.getOrElse("uk.gov.hmrc"), Some.apply)
     ~ (__ \ "currentVersion").format[Version]
     )(MongoRepositoryDependency.apply, unlift(MongoRepositoryDependency.unapply))
   }
 }
 
 case class MongoRepositoryDependencies(
-  repositoryName: String,
-  libraryDependencies: Seq[MongoRepositoryDependency],
-  sbtPluginDependencies: Seq[MongoRepositoryDependency] = Nil,
-  otherDependencies: Seq[MongoRepositoryDependency],
-  updateDate: Instant = Instant.now())
+    repositoryName       : String
+  , libraryDependencies  : Seq[MongoRepositoryDependency]
+  , sbtPluginDependencies: Seq[MongoRepositoryDependency] = Nil
+  , otherDependencies    : Seq[MongoRepositoryDependency]
+  , updateDate           : Instant                        = Instant.now()
+  )
 
 object MongoRepositoryDependencies {
-  implicit val instantF    = MongoJavatimeFormats.instantFormats
-  implicit val format = Json.format[MongoRepositoryDependencies]
+
+  implicit val format = {
+    implicit val iF = MongoJavatimeFormats.instantFormats
+    Json.format[MongoRepositoryDependencies]
+  }
 }

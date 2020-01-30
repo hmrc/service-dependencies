@@ -51,22 +51,22 @@ class RepositoryDependenciesSourceSpec
               Map("Service" -> Seq(repository1, repository2, repository3), "Library" -> Seq("library A"))))))
 
       val libraryDependencies1 = Seq(
-        MongoRepositoryDependency("lib1", Version(1, 1, 0)),
-        MongoRepositoryDependency("lib2", Version(1, 2, 0))
+        MongoRepositoryDependency(name = "lib1", group = "uk.gov.hmrc", currentVersion = Version(1, 1, 0)),
+        MongoRepositoryDependency(name = "lib2", group = "uk.gov.hmrc", currentVersion = Version(1, 2, 0))
       )
       val libraryDependencies2 = Seq(
-        MongoRepositoryDependency("lib1", Version(2, 1, 0)),
-        MongoRepositoryDependency("lib2", Version(2, 2, 0))
+        MongoRepositoryDependency(name = "lib1", group = "uk.gov.hmrc", currentVersion = Version(2, 1, 0)),
+        MongoRepositoryDependency(name = "lib2", group = "uk.gov.hmrc", currentVersion = Version(2, 2, 0))
       )
 
       val sbtPluginDependencies1 = Seq(
-        MongoRepositoryDependency("plugin1", Version(10, 1, 0)),
-        MongoRepositoryDependency("plugin2", Version(10, 2, 0))
+        MongoRepositoryDependency(name = "plugin1", group = "uk.gov.hmrc", currentVersion = Version(10, 1, 0)),
+        MongoRepositoryDependency(name = "plugin2", group = "uk.gov.hmrc", currentVersion = Version(10, 2, 0))
       )
 
       val sbtPluginDependencies2 = Seq(
-        MongoRepositoryDependency("plugin1", Version(20, 1, 0)),
-        MongoRepositoryDependency("plugin2", Version(20, 2, 0))
+        MongoRepositoryDependency(name = "plugin1", group = "uk.gov.hmrc", currentVersion = Version(20, 1, 0)),
+        MongoRepositoryDependency(name = "plugin2", group = "uk.gov.hmrc", currentVersion = Version(20, 2, 0))
       )
 
       when(repositoryLibraryDependenciesRepository.getAllEntries)
@@ -82,16 +82,16 @@ class RepositoryDependenciesSourceSpec
           "team_a",
           Map(
             repository1 -> Seq(
-              MongoRepositoryDependency("lib1", Version(1, 1, 0)),
-              MongoRepositoryDependency("lib2", Version(1, 2, 0)),
-              MongoRepositoryDependency("plugin1", Version(10, 1, 0)),
-              MongoRepositoryDependency("plugin2", Version(10, 2, 0))
+              MongoRepositoryDependency(name = "lib1"   , group = "uk.gov.hmrc", currentVersion = Version(1, 1, 0)),
+              MongoRepositoryDependency(name = "lib2"   , group = "uk.gov.hmrc", currentVersion = Version(1, 2, 0)),
+              MongoRepositoryDependency(name = "plugin1", group = "uk.gov.hmrc", currentVersion = Version(10, 1, 0)),
+              MongoRepositoryDependency(name = "plugin2", group = "uk.gov.hmrc", currentVersion = Version(10, 2, 0))
             ),
             repository2 -> Seq(
-              MongoRepositoryDependency("lib1", Version(2, 1, 0)),
-              MongoRepositoryDependency("lib2", Version(2, 2, 0)),
-              MongoRepositoryDependency("plugin1", Version(20, 1, 0)),
-              MongoRepositoryDependency("plugin2", Version(20, 2, 0))
+              MongoRepositoryDependency(name = "lib1"   , group = "uk.gov.hmrc", currentVersion = Version(2, 1, 0)),
+              MongoRepositoryDependency(name = "lib2"   , group = "uk.gov.hmrc", currentVersion = Version(2, 2, 0)),
+              MongoRepositoryDependency(name = "plugin1", group = "uk.gov.hmrc", currentVersion = Version(20, 1, 0)),
+              MongoRepositoryDependency(name = "plugin2", group = "uk.gov.hmrc", currentVersion = Version(20, 2, 0))
             )
           )
         )
@@ -112,27 +112,28 @@ class RepositoryDependenciesSourceSpec
         .thenReturn(
           Future.successful(
             Seq(
-              Team(teamA, Map("Service" -> Seq(repository1, repository2), "Library" -> Seq("library A"))),
+              Team(teamA, Map( "Service" -> Seq(repository1, repository2)
+                             , "Library" -> Seq("library A"))),
               Team(teamB, Map("Service" -> Seq(repository3)))
             )))
 
       val libraryDependencies1 = Seq(
-        MongoRepositoryDependency("lib1", Version(1, 1, 0)),
-        MongoRepositoryDependency("lib2", Version(1, 2, 0))
+        MongoRepositoryDependency(name = "lib1", group = "uk.gov.hmrc", currentVersion = Version(1, 1, 0)),
+        MongoRepositoryDependency(name = "lib2", group = "uk.gov.hmrc", currentVersion = Version(1, 2, 0))
       )
       val libraryDependencies2 = Seq(
-        MongoRepositoryDependency("lib1", Version(2, 1, 0)),
-        MongoRepositoryDependency("lib2", Version(2, 2, 0))
+        MongoRepositoryDependency(name = "lib1", group = "uk.gov.hmrc", currentVersion = Version(2, 1, 0)),
+        MongoRepositoryDependency(name = "lib2", group = "uk.gov.hmrc", currentVersion = Version(2, 2, 0))
       )
 
       val sbtPluginDependencies1 = Seq(
-        MongoRepositoryDependency("plugin1", Version(10, 1, 0)),
-        MongoRepositoryDependency("plugin2", Version(10, 2, 0))
+        MongoRepositoryDependency(name = "plugin1", group = "uk.gov.hmrc", currentVersion = Version(10, 1, 0)),
+        MongoRepositoryDependency(name = "plugin2", group = "uk.gov.hmrc", currentVersion = Version(10, 2, 0))
       )
 
       val sbtPluginDependencies2 = Seq(
-        MongoRepositoryDependency("plugin1", Version(20, 1, 0)),
-        MongoRepositoryDependency("plugin2", Version(20, 2, 0))
+        MongoRepositoryDependency(name = "plugin1", group = "uk.gov.hmrc", currentVersion = Version(20, 1, 0)),
+        MongoRepositoryDependency(name = "plugin2", group = "uk.gov.hmrc", currentVersion = Version(20, 2, 0))
       )
 
       when(repositoryLibraryDependenciesRepository.getAllEntries)
@@ -157,7 +158,6 @@ class RepositoryDependenciesSourceSpec
         s"teams.team_a.servicesCount"                                    -> 2,
         s"teams.team_b.servicesCount"                                    -> 1
       )
-
     }
   }
 
@@ -170,5 +170,4 @@ class RepositoryDependenciesSourceSpec
 
     val timeForTest = Instant.now()
   }
-
 }

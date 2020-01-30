@@ -17,6 +17,7 @@
 package uk.gov.hmrc.servicedependencies.model
 
 case class GithubSearchResults(
-  sbtPlugins: Map[String, Option[Version]],
-  libraries: Map[String, Option[Version]],
-  others: Map[String, Option[Version]])
+    sbtPlugins: Map[(String, String), Option[Version]]
+  , libraries : Map[(String, String), Option[Version]]
+  , others    : Map[(String, String), Option[Version]]
+  )

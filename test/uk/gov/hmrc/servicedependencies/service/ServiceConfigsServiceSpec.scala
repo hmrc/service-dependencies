@@ -178,8 +178,8 @@ class ServiceConfigsServiceSpec
       ("uk.gov.hmrc", "another-name") -> List(bobbyRule3)
     ))
     val dependencyViolatingRule1   = buildDependency(name = "name"        , version = "2.5.18")
-    val dependencyWithNoViolations = buildDependency(name = "another-name", version = "2.5")
-    val dependencyWithNoRules      = buildDependency(name = "unmatched"   , version = "4.5.6")
+    val dependencyWithNoViolations = buildDependency(name = "another-name", version = "2.5"   )
+    val dependencyWithNoRules      = buildDependency(name = "unmatched"   , version = "4.5.6" )
 
     when(serviceConfigsConnector.getBobbyRules)
       .thenReturn(Future.successful(bobbyRules))
@@ -196,18 +196,21 @@ class ServiceConfigsServiceSpec
   }
 
 
-  private def buildRule(range: String) = BobbyRule(
-    organisation = "hmrc",
-    name         = "name",
-    range        = BobbyVersionRange(range),
-    reason       = "reason",
-    from         = LocalDate.now()
-  )
+  private def buildRule(range: String) =
+    BobbyRule(
+      organisation = "hmrc"
+    , name         = "name"
+    , range        = BobbyVersionRange(range)
+    , reason       = "reason"
+    , from         = LocalDate.now()
+    )
 
-  private def buildDependency(name: String, version: String) = Dependency(
-    name                = name,
-    currentVersion      = Version(version),
-    latestVersion       = None,
-    bobbyRuleViolations = List()
-  )
+  private def buildDependency(name: String, version: String) =
+    Dependency(
+      name                = name
+    , group               = "uk.gov.hmrc"
+    , currentVersion      = Version(version)
+    , latestVersion       = None
+    , bobbyRuleViolations = List()
+    )
 }
