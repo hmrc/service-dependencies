@@ -26,8 +26,7 @@ case class SbtPluginConfig(
   , latestVersion: Option[Version]
   ) {
   // TODO enforce invariant that latestVersion is supplied when !group.startsWith("uk.gov.hmrc")
-  def isInternal = latestVersion.isEmpty
-  def isExternal = !isInternal
+  def isExternal = latestVersion.nonEmpty
 }
 
 case class LibraryConfig(

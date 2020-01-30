@@ -34,7 +34,6 @@ object MongoRepositoryDependency {
     ( (__ \ "name"          ).format[String]
     ~ (__ \ "group"         ).formatNullable[String]
                              // Initially we didn't store this information - this is was the assumption at the time.
-                             // TODO really depends on name ("reactivemongo" => "org.reactivemongo")
                              .inmap[String](a => a.getOrElse("uk.gov.hmrc"), Some.apply)
     ~ (__ \ "currentVersion").format[Version]
     )(MongoRepositoryDependency.apply, unlift(MongoRepositoryDependency.unapply))

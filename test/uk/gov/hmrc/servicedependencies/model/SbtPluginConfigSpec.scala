@@ -23,9 +23,9 @@ import org.scalatest.matchers.should.Matchers
 class SbtPluginConfigSpec extends AnyFreeSpec with Matchers {
 
   "SbtPlugins" - {
-    "should correctly identify internal repositories" in {
-      SbtPluginConfig(name = "something", group = "uk.gov.hmrc", None                  ).isInternal shouldBe true
-      SbtPluginConfig(name = "something", group = "uk.gov.hmrc", Some(Version(1, 2, 3))).isInternal shouldBe false
+    "should correctly identify external repositories" in {
+      SbtPluginConfig(name = "something", group = "uk.gov.hmrc", None                  ).isExternal shouldBe false
+      SbtPluginConfig(name = "something", group = "uk.gov.hmrc", Some(Version(1, 2, 3))).isExternal shouldBe true
     }
   }
 }
