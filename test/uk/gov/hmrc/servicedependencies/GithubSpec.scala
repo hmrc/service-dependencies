@@ -46,8 +46,8 @@ class GithubSpec extends AnyWordSpec with Matchers with MockitoSugar with Option
           repoName,
           CuratedDependencyConfig(
             Seq(
-              SbtPluginConfig(name = "sbt-plugin"    , group = "bla", latestVersion = None),
-              SbtPluginConfig(name = "sbt-auto-build", group = "bla", latestVersion = None)
+              SbtPluginConfig(name = "sbt-plugin"    , group = "com.typesafe.play", latestVersion = None),
+              SbtPluginConfig(name = "sbt-auto-build", group = "uk.gov.hmrc"      , latestVersion = None)
             ),
             Nil,
             Nil))
@@ -55,8 +55,8 @@ class GithubSpec extends AnyWordSpec with Matchers with MockitoSugar with Option
         .get
         .sbtPlugins shouldBe
         Map(
-          ("sbt-plugin"    , "bla") -> Some(Version("2.3.10")),
-          ("sbt-auto-build", "bla") -> Some(Version("1.3.0")))
+          ("sbt-plugin"    , "com.typesafe.play") -> Some(Version("2.3.10")),
+          ("sbt-auto-build", "uk.gov.hmrc"      ) -> Some(Version("1.3.0")))
     }
 
     "queries build.properties file(s) for sbt version" in new TestSetup {
@@ -96,8 +96,8 @@ class GithubSpec extends AnyWordSpec with Matchers with MockitoSugar with Option
         repoName,
         CuratedDependencyConfig(
           Seq(
-            SbtPluginConfig(name = "sbt-plugin"    , group = "bla", latestVersion = None)
-          , SbtPluginConfig(name = "sbt-auto-build", group = "bla", latestVersion = None)
+            SbtPluginConfig(name = "sbt-plugin"    , group = "com.typesafe.play", latestVersion = None)
+          , SbtPluginConfig(name = "sbt-auto-build", group = "uk.gov.hmrc"      , latestVersion = None)
           ),
           Seq(
             LibraryConfig(name = "play-ui"    , group = "uk.gov.hmrc")
@@ -107,8 +107,8 @@ class GithubSpec extends AnyWordSpec with Matchers with MockitoSugar with Option
       )
 
       results.right.get.sbtPlugins shouldBe Map(
-          ("sbt-plugin"    , "bla") -> Some(Version("2.3.10"))
-        , ("sbt-auto-build", "bla") -> Some(Version("1.3.0"))
+          ("sbt-plugin"    , "com.typesafe.play") -> Some(Version("2.3.10"))
+        , ("sbt-auto-build", "uk.gov.hmrc"      ) -> Some(Version("1.3.0"))
         )
       results.right.get.libraries shouldBe Map(
           ("play-ui"    , "uk.gov.hmrc") -> Some(Version("1.3.0"))

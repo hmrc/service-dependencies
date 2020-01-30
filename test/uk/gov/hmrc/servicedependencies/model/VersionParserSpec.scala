@@ -96,6 +96,7 @@ class VersionParserSpec extends AnyFreeSpec with Matchers {
                       |  }""".stripMargin
 
     VersionParser.parse(buildFile, name = "play-frontend", group = "org.pegdown") mustBe None
+    VersionParser.parse(buildFile, name = "pegdown"      , group = "uk.gov.hmrc") mustBe None
   }
 
   "Parses multiple artifacts together" in {

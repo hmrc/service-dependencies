@@ -43,9 +43,8 @@ object VersionParser {
   }
 
   def parse(fileContent: String, name: String, group: String): Option[Version] = {
-    val artifact = name // TODO filter by group too
-    val stringVersion   = ("\"" + artifact + "\"" + """\s*%\s*"(\d+\.\d+\.\d+-?\S*)"""").r.unanchored
-    val variableVersion = ("\"" + artifact + "\"" + """\s*%\s*(\w*)""").r.unanchored
+    val stringVersion   = ("\"" + group + "\"[\\s%]*\"" + name + "\"" + """\s*%\s*"(\d+\.\d+\.\d+-?\S*)"""").r.unanchored
+    val variableVersion = ("\"" + group + "\"[\\s%]*\"" + name + "\"" + """\s*%\s*(\w*)""").r.unanchored
     fileContent match {
       case stringVersion(version)    => Version.parse(version)
       case variableVersion(variable) => extractVersionInVariable(fileContent, variable)
