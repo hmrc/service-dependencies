@@ -27,14 +27,7 @@ case class MongoLibraryVersion(
   , group      : String
   , version    : Option[Version]
   , updateDate : Instant = Instant.now()
-  ) {
-    def toLibraryVersion: LibraryVersion =
-      LibraryVersion(
-          name    = name
-        , group   = group
-        , version = version
-        )
-  }
+  )
 
 object MongoLibraryVersion {
   implicit val format = {

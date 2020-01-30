@@ -27,14 +27,7 @@ case class MongoSbtPluginVersion(
   , group        : String
   , version      : Option[Version]
   , updateDate   : Instant = Instant.now()
-  ) {
-    def toSbtPluginVersion: SbtPluginVersion =
-      SbtPluginVersion(
-          name    = name
-        , group   = group
-        , version = version
-        )
-}
+  )
 
 object MongoSbtPluginVersion {
   implicit val format = {

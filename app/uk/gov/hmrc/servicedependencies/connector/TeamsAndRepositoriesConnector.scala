@@ -41,8 +41,9 @@ class TeamsAndRepositoriesConnector @Inject()(
 
   val teamsAndRepositoriesApiBase = serviceConfiguration.teamsAndRepositoriesServiceUrl
 
-  implicit val formats = Repository.format
-  implicit val repositoryInfoFormats = RepositoryInfo.format
+  implicit val rf  = Repository.format
+  implicit val rif = RepositoryInfo.format
+  implicit val tf  = Team.format
 
   def getRepository(repositoryName: String)(implicit hc: HeaderCarrier): Future[Option[Repository]] =
     httpClient.GET[Option[Repository]](s"$teamsAndRepositoriesApiBase/api/repositories/$repositoryName")

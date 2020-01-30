@@ -52,7 +52,7 @@ class DependenciesDataSource @Inject()(
       logger.debug(s"No changes for repository (${repo.name}). Skipping....")
       None
     } else {
-      logger.debug(s"building repo for ${repo.name}")
+      logger.warn(s"building repo for ${repo.name}")
       githubConnector.buildDependencies(repo, curatedDependencyConfig)
     }
   }
@@ -69,18 +69,13 @@ class DependenciesDataSource @Inject()(
   , currentDependencyEntries: Seq[MongoRepositoryDependencies]
   , force                   : Boolean                          = false
   )(implicit hc: HeaderCarrier): Future[Seq[MongoRepositoryDependencies]] =
-    teamsAndRepositoriesConnector
-      .getAllRepositories()
-      .map { repos =>
-        logger.debug(s"loading dependencies for ${repos.length} repositories")
-        repos.flatMap(r => buildDependency(r, curatedDependencyConfig, currentDependencyEntries, force))
-      }
-      .flatMap(
-        _.toList.foldLeftM(List.empty[MongoRepositoryDependencies]){ case (acc, repo) =>
-            repoLibDepRepository.update(repo).map(_ :: acc)
-          }
-      )
-
+    for {
+      repos <- teamsAndRepositoriesConnector.getAllRepositories()
+      res   <- repos.toList.traverse { repo =>
+                 buildDependency(repo, curatedDependencyConfig, currentDependencyEntries, force)
+                   .traverse(repoLibDepRepository.update)
+               }
+    } yield res.flatten
 
   def getLatestSbtPluginVersions(sbtPlugins: Seq[SbtPluginConfig]): Seq[SbtPluginVersion] =
     sbtPlugins.map { sbtPlugin =>
