@@ -27,8 +27,12 @@ object VersionParser {
     }
   }
 
-  def parse(fileContent: String, artifacts: Seq[String]): Map[String, Option[Version]] =
-    artifacts.map(artifact => artifact -> parse(fileContent, artifact)).toMap
+  def parse(fileContent: String, artifacts: Seq[(String, String)]): Map[(String, String), Option[Version]] =
+    artifacts
+      .map { case (name, group) =>
+        (name, group) -> parse(fileContent = fileContent, name = name, group = group)
+       }
+      .toMap
 
   def parseReleaseVersion(tag: String): Option[Version] = {
     val tagRegex = """^(?:release\/|v)(\d+\.\d+\.\d+)$""".r.unanchored
@@ -38,9 +42,9 @@ object VersionParser {
     }
   }
 
-  def parse(fileContent: String, artifact: String): Option[Version] = {
-    val stringVersion   = ("\"" + artifact + "\"" + """\s*%\s*"(\d+\.\d+\.\d+-?\S*)"""").r.unanchored
-    val variableVersion = ("\"" + artifact + "\"" + """\s*%\s*(\w*)""").r.unanchored
+  def parse(fileContent: String, name: String, group: String): Option[Version] = {
+    val stringVersion   = ("\"" + group + "\"[\\s%]*\"" + name + "\"" + """\s*%\s*"(\d+\.\d+\.\d+-?\S*)"""").r.unanchored
+    val variableVersion = ("\"" + group + "\"[\\s%]*\"" + name + "\"" + """\s*%\s*(\w*)""").r.unanchored
     fileContent match {
       case stringVersion(version)    => Version.parse(version)
       case variableVersion(variable) => extractVersionInVariable(fileContent, variable)

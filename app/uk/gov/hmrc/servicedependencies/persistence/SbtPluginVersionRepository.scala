@@ -18,7 +18,7 @@ package uk.gov.hmrc.servicedependencies.persistence
 
 import com.google.inject.{Inject, Singleton}
 import com.mongodb.BasicDBObject
-import org.mongodb.scala.model.Filters.equal
+import org.mongodb.scala.model.Filters.{and, equal}
 import org.mongodb.scala.model.Indexes.hashed
 import org.mongodb.scala.model.{IndexModel, IndexOptions, ReplaceOptions}
 import play.api.Logger
@@ -54,7 +54,9 @@ class SbtPluginVersionRepository @Inject()(
       .withTimerAndCounter("mongo.update") {
         collection
           .replaceOne(
-              filter      = equal("sbtPluginName", sbtPluginVersion.sbtPluginName)
+              filter      = and( equal("sbtPluginName", sbtPluginVersion.name)
+                               , equal("group"        , sbtPluginVersion.group)
+                               )
             , replacement = sbtPluginVersion
             , options     = ReplaceOptions().upsert(true)
             )

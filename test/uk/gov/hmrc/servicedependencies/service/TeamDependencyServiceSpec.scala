@@ -43,8 +43,8 @@ class TeamDependencyServiceSpec extends AnyWordSpec with Matchers with MockitoSu
   "replaceServiceDeps" should {
     "replace library section with slug data" in {
 
-      val lib1 = new Dependency("foolib", Version("1.2.3"), None, List.empty)
-      val lib2 = new Dependency("foolib", Version("1.2.4"), None, List.empty)
+      val lib1 = new Dependency(name = "foolib", group = "uk.gov.hmrc", currentVersion = Version("1.2.3"), latestVersion = None, bobbyRuleViolations = List.empty)
+      val lib2 = new Dependency(name = "foolib", group = "uk.gov.hmrc", currentVersion = Version("1.2.4"), latestVersion = None, bobbyRuleViolations = List.empty)
       val dep = Dependencies("foo", libraryDependencies = Seq(lib1), Nil, Nil, Instant.now() )
 
       when(slugDependenciesService.curatedLibrariesOfSlug(dep.repositoryName, SlugInfoFlag.Latest))
@@ -67,9 +67,9 @@ class TeamDependencyServiceSpec extends AnyWordSpec with Matchers with MockitoSu
 
       when(teamsAndReposConnector.getTeamDetails("foo")).thenReturn(Future.successful(team))
 
-      val fooDep1    = Dependency("foo-dep1", Version("1.2.0"), None, List.empty)
-      val fooDep2    = Dependency("foo-dep2", Version("0.6.0"), None, List.empty)
-      val fooSlugDep = Dependency("foo-dep2", Version("7.7.7"), None, List.empty)
+      val fooDep1    = Dependency(name = "foo-dep1", group = "uk.gov.hmrc", currentVersion = Version("1.2.0"), latestVersion = None, bobbyRuleViolations = List.empty)
+      val fooDep2    = Dependency(name = "foo-dep2", group = "uk.gov.hmrc", currentVersion = Version("0.6.0"), latestVersion = None, bobbyRuleViolations = List.empty)
+      val fooSlugDep = Dependency(name = "foo-dep2", group = "uk.gov.hmrc", currentVersion = Version("7.7.7"), latestVersion = None, bobbyRuleViolations = List.empty)
 
       val fooDependencies = Dependencies(
         "foo-service", libraryDependencies = Seq(fooDep1, fooDep2),

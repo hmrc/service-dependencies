@@ -18,11 +18,12 @@ package uk.gov.hmrc.servicedependencies.service
 
 import java.time.Instant
 
+import cats.implicits._
 import com.google.inject.{Inject, Singleton}
 import org.slf4j.LoggerFactory
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.servicedependencies.config.ServiceDependenciesConfig
-import uk.gov.hmrc.servicedependencies.config.model.{CuratedDependencyConfig, SbtPluginConfig}
+import uk.gov.hmrc.servicedependencies.config.model.{CuratedDependencyConfig, LibraryConfig, SbtPluginConfig}
 import uk.gov.hmrc.servicedependencies.connector.model.RepositoryInfo
 import uk.gov.hmrc.servicedependencies.connector.{GithubConnector, TeamsAndRepositoriesConnector}
 import uk.gov.hmrc.servicedependencies.model._
@@ -34,7 +35,7 @@ import scala.concurrent.{ExecutionContext, Future}
 class DependenciesDataSource @Inject()(
   teamsAndRepositoriesConnector: TeamsAndRepositoriesConnector,
   config                       : ServiceDependenciesConfig,
-  github                       : GithubConnector,
+  githubConnector              : GithubConnector,
   repoLibDepRepository         : RepositoryLibraryDependenciesRepository
   )(implicit ec: ExecutionContext
   ) {
@@ -51,8 +52,8 @@ class DependenciesDataSource @Inject()(
       logger.debug(s"No changes for repository (${repo.name}). Skipping....")
       None
     } else {
-      logger.debug(s"building repo for ${repo.name}")
-      github.buildDependencies(repo, curatedDependencyConfig)
+      logger.warn(s"building repo for ${repo.name}")
+      githubConnector.buildDependencies(repo, curatedDependencyConfig)
     }
   }
 
@@ -63,31 +64,34 @@ class DependenciesDataSource @Inject()(
       .getOrElse(Instant.EPOCH)
 
 
-  private def serialiseFutures[A, B](l: Iterable[A])(fn: A => Future[B]): Future[Seq[B]] =
-    l.foldLeft(Future(List.empty[B])) { (previousFuture, next) ⇒
-      for {
-        previousResults ← previousFuture
-        next ← fn(next)
-      } yield previousResults :+ next
-    }
-
   def persistDependenciesForAllRepositories(
-      curatedDependencyConfig: CuratedDependencyConfig,
-      currentDependencyEntries: Seq[MongoRepositoryDependencies],
-      force: Boolean = false)(implicit hc: HeaderCarrier): Future[Seq[MongoRepositoryDependencies]] =
-    teamsAndRepositoriesConnector
-      .getAllRepositories()
-      .map { repos =>
-        logger.debug(s"loading dependencies for ${repos.length} repositories")
-        repos.flatMap(r => buildDependency(r, curatedDependencyConfig, currentDependencyEntries, force))
-      }
-      .flatMap(serialiseFutures(_)(repo => repoLibDepRepository.update(repo)))
-
+    curatedDependencyConfig : CuratedDependencyConfig
+  , currentDependencyEntries: Seq[MongoRepositoryDependencies]
+  , force                   : Boolean                          = false
+  )(implicit hc: HeaderCarrier): Future[Seq[MongoRepositoryDependencies]] =
+    for {
+      repos <- teamsAndRepositoriesConnector.getAllRepositories()
+      res   <- repos.toList.traverse { repo =>
+                 buildDependency(repo, curatedDependencyConfig, currentDependencyEntries, force)
+                   .traverse(repoLibDepRepository.update)
+               }
+    } yield res.flatten
 
   def getLatestSbtPluginVersions(sbtPlugins: Seq[SbtPluginConfig]): Seq[SbtPluginVersion] =
-    sbtPlugins.flatMap(github.findLatestSbtPluginVersion)
+    sbtPlugins.map { sbtPlugin =>
+      val optVersion =
+        if (sbtPlugin.group.startsWith("uk.gov.hmrc"))
+          githubConnector.findLatestVersion(sbtPlugin.name)
+        else None
+      SbtPluginVersion(name = sbtPlugin.name, group = sbtPlugin.group, version = optVersion)
+    }
 
-
-  def getLatestLibrariesVersions(libraries: Seq[String]): Seq[LibraryVersion] =
-    libraries.flatMap(github.findLatestLibraryVersion)
+  def getLatestLibrariesVersions(libraries: Seq[LibraryConfig]): Seq[LibraryVersion] =
+    libraries.map { library =>
+      val optVersion =
+        if (library.group.startsWith("uk.gov.hmrc"))
+          githubConnector.findLatestVersion(library.name)
+        else None
+      LibraryVersion(name = library.name, group = library.group, version = optVersion)
+    }
 }

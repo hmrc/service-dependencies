@@ -41,37 +41,33 @@ class SbtPluginVersionRepositorySpec
   override protected lazy val collectionName: String   = repo.collectionName
   override protected lazy val indexes: Seq[IndexModel] = repo.indexes
 
+  val sbtPluginVersion = MongoSbtPluginVersion(
+      name       = "some-sbtPlugin"
+    , group      = "uk.gov.hmrc"
+    , version    = Some(Version(1, 0, 2))
+    , updateDate = Instant.now()
+    )
+
   "update" should {
     "inserts correctly" in {
-
-      val sbtPluginVersion = MongoSbtPluginVersion("some-sbtPlugin", Some(Version(1, 0, 2)), Instant.now())
       repo.update(sbtPluginVersion).futureValue
-
       repo.getAllEntries.futureValue shouldBe Seq(sbtPluginVersion)
     }
 
     "updates correctly (based on sbtPlugin name)" in {
-
-      val sbtPluginVersion    = MongoSbtPluginVersion("some-sbtPlugin", Some(Version(1, 0, 2)), Instant.now())
       val newSbtPluginVersion = sbtPluginVersion.copy(version = Some(Version(1, 0, 5)))
+
       repo.update(sbtPluginVersion).futureValue
-
       repo.update(newSbtPluginVersion).futureValue
-
       repo.getAllEntries.futureValue shouldBe Seq(newSbtPluginVersion)
     }
   }
 
   "clearAllDependencyEntries" should {
     "deletes everything" in {
-
-      val sbtPluginVersion = MongoSbtPluginVersion("some-sbtPlugin", Some(Version(1, 0, 2)), Instant.now())
       repo.update(sbtPluginVersion).futureValue
-
       repo.getAllEntries.futureValue should have size 1
-
       repo.clearAllData.futureValue
-
       repo.getAllEntries.futureValue shouldBe Nil
     }
   }

@@ -67,13 +67,13 @@ class DependencyDataUpdatingServiceSpec
 
       val underTest = new TestDependencyDataUpdatingService(noLockTestMongoLockBuilder, curatedDependencyConfig)
       when(underTest.dependenciesDataSource.getLatestLibrariesVersions(any()))
-        .thenReturn(Seq(LibraryVersion("libYY", Some(Version(1, 1, 1)))))
+        .thenReturn(Seq(LibraryVersion(name = "libYY", group = "uk.gov.hmrc", version = Some(Version(1, 1, 1)))))
       when(underTest.libraryVersionRepository.update(any())).thenReturn(Future.successful(mock[MongoLibraryVersion]))
 
       underTest.testDependencyUpdatingService.reloadLatestLibraryVersions().futureValue
 
       verify(underTest.libraryVersionRepository, times(1))
-        .update(MongoLibraryVersion("libYY", Some(Version(1, 1, 1)), timeForTest))
+        .update(MongoLibraryVersion(name = "libYY", group = "uk.gov.hmrc", version = Some(Version(1, 1, 1)), updateDate = timeForTest))
       verifyZeroInteractions(underTest.repositoryLibraryDependenciesRepository)
     }
 
@@ -86,7 +86,6 @@ class DependencyDataUpdatingServiceSpec
       verifyZeroInteractions(underTest.dependenciesDataSource)
       verifyZeroInteractions(underTest.repositoryLibraryDependenciesRepository)
     }
-
   }
 
   describe("reloadSbtPluginVersions") {
@@ -95,14 +94,14 @@ class DependencyDataUpdatingServiceSpec
 
       val underTest = new TestDependencyDataUpdatingService(noLockTestMongoLockBuilder, curatedDependencyConfig)
       when(underTest.dependenciesDataSource.getLatestSbtPluginVersions(any()))
-        .thenReturn(Seq(SbtPluginVersion("sbtPlugin123", Some(Version(1, 1, 1)))))
+        .thenReturn(Seq(SbtPluginVersion(name = "sbtPlugin123", group = "uk.gov.hmrc", version = Some(Version(1, 1, 1)))))
       when(underTest.sbtPluginVersionRepository.update(any()))
         .thenReturn(Future.successful(mock[MongoSbtPluginVersion]))
 
       underTest.testDependencyUpdatingService.reloadLatestSbtPluginVersions().futureValue
 
       verify(underTest.sbtPluginVersionRepository, times(1))
-        .update(MongoSbtPluginVersion("sbtPlugin123", Some(Version(1, 1, 1)), timeForTest))
+        .update(MongoSbtPluginVersion(name = "sbtPlugin123", group = "uk.gov.hmrc", version = Some(Version(1, 1, 1)), updateDate = timeForTest))
       verifyZeroInteractions(underTest.repositoryLibraryDependenciesRepository)
       verifyZeroInteractions(underTest.libraryVersionRepository)
     }
@@ -117,7 +116,6 @@ class DependencyDataUpdatingServiceSpec
       verifyZeroInteractions(underTest.dependenciesDataSource)
       verifyZeroInteractions(underTest.repositoryLibraryDependenciesRepository)
     }
-
   }
 
   describe("reloadMongoRepositoryDependencyDataForAllRepositories") {
@@ -174,7 +172,6 @@ class DependencyDataUpdatingServiceSpec
 
       verifyZeroInteractions(underTest.libraryVersionRepository)
     }
-
   }
 
   describe("getDependencyVersionsForRepository") {
@@ -182,8 +179,8 @@ class DependencyDataUpdatingServiceSpec
       val underTest = new TestDependencyDataUpdatingService(noLockTestMongoLockBuilder, curatedDependencyConfig)
 
       val libraryDependencies = Seq(
-        MongoRepositoryDependency("lib1", Version(1, 0, 0)),
-        MongoRepositoryDependency("lib2", Version(2, 0, 0))
+        MongoRepositoryDependency(name = "lib1", group = "uk.gov.hmrc", currentVersion = Version(1, 0, 0)),
+        MongoRepositoryDependency(name = "lib2", group = "uk.gov.hmrc", currentVersion = Version(2, 0, 0))
       )
       val repositoryName = "repoXYZ"
 
@@ -192,8 +189,8 @@ class DependencyDataUpdatingServiceSpec
           Some(MongoRepositoryDependencies(repositoryName, libraryDependencies, Nil, Nil, timeForTest))))
 
       val referenceLibraryVersions = Seq(
-        MongoLibraryVersion("lib1", Some(Version(1, 1, 0))),
-        MongoLibraryVersion("lib2", Some(Version(2, 1, 0)))
+        MongoLibraryVersion(name = "lib1", group = "uk.gov.hmrc", version = Some(Version(1, 1, 0))),
+        MongoLibraryVersion(name = "lib2", group = "uk.gov.hmrc", version = Some(Version(2, 1, 0)))
       )
       when(underTest.libraryVersionRepository.getAllEntries)
         .thenReturn(Future.successful(referenceLibraryVersions))
@@ -209,22 +206,21 @@ class DependencyDataUpdatingServiceSpec
       maybeDependencies.value shouldBe Dependencies(
         repositoryName = repositoryName,
         libraryDependencies = Seq(
-          Dependency("lib1", Version(1, 0, 0), Some(Version(1, 1, 0)), List.empty),
-          Dependency("lib2", Version(2, 0, 0), Some(Version(2, 1, 0)), List.empty)
+          Dependency(name = "lib1", group = "uk.gov.hmrc", currentVersion = Version(1, 0, 0), latestVersion = Some(Version(1, 1, 0)), bobbyRuleViolations = List.empty),
+          Dependency(name = "lib2", group = "uk.gov.hmrc", currentVersion = Version(2, 0, 0), latestVersion = Some(Version(2, 1, 0)), bobbyRuleViolations = List.empty)
         ),
         sbtPluginsDependencies = Nil,
         otherDependencies      = Nil,
         timeForTest
       )
-
     }
 
     it("should return the current and latest sbt plugin dependency versions for a repository") {
       val underTest = new TestDependencyDataUpdatingService(noLockTestMongoLockBuilder, curatedDependencyConfig)
 
       val sbtPluginDependencies = Seq(
-        MongoRepositoryDependency("plugin1", Version(1, 0, 0)),
-        MongoRepositoryDependency("plugin2", Version(2, 0, 0))
+        MongoRepositoryDependency(name = "plugin1", group = "uk.gov.hmrc", currentVersion = Version(1, 0, 0)),
+        MongoRepositoryDependency(name = "plugin2", group = "uk.gov.hmrc", currentVersion = Version(2, 0, 0))
       )
       val repositoryName = "repoXYZ"
 
@@ -233,8 +229,8 @@ class DependencyDataUpdatingServiceSpec
           Some(MongoRepositoryDependencies(repositoryName, Nil, sbtPluginDependencies, Nil, timeForTest))))
 
       val referenceSbtPluginVersions = Seq(
-        MongoSbtPluginVersion("plugin1", Some(Version(3, 1, 0))),
-        MongoSbtPluginVersion("plugin2", Some(Version(4, 1, 0)))
+        MongoSbtPluginVersion(name = "plugin1", group = "uk.gov.hmrc", version = Some(Version(3, 1, 0))),
+        MongoSbtPluginVersion(name = "plugin2", group = "uk.gov.hmrc", version = Some(Version(4, 1, 0)))
       )
 
       when(underTest.sbtPluginVersionRepository.getAllEntries)
@@ -252,20 +248,19 @@ class DependencyDataUpdatingServiceSpec
         repositoryName,
         Nil,
         Seq(
-          Dependency("plugin1", Version(1, 0, 0), Some(Version(3, 1, 0)), List.empty),
-          Dependency("plugin2", Version(2, 0, 0), Some(Version(4, 1, 0)), List.empty)
+          Dependency(name = "plugin1", group = "uk.gov.hmrc", currentVersion = Version(1, 0, 0), latestVersion = Some(Version(3, 1, 0)), bobbyRuleViolations = List.empty),
+          Dependency(name = "plugin2", group = "uk.gov.hmrc", currentVersion = Version(2, 0, 0), latestVersion = Some(Version(4, 1, 0)), bobbyRuleViolations = List.empty)
         ),
         Nil,
         timeForTest
       )
-
     }
 
     it("should return the current and latest external sbt plugin dependency versions for a repository") {
       val curatedDependencyConfig = CuratedDependencyConfig(
         sbtPlugins = List(
-          SbtPluginConfig("org.com", "internal-plugin", None),
-          SbtPluginConfig("org.com", "external-plugin", Some(Version(11, 22, 33)))),
+          SbtPluginConfig(name = "internal-plugin", group = "uk.gov.hmrc", latestVersion = None),
+          SbtPluginConfig(name = "external-plugin", group = "uk.edu"     , latestVersion = Some(Version(11, 22, 33)))),
         libraries         = Nil,
         otherDependencies = Nil
       )
@@ -273,8 +268,8 @@ class DependencyDataUpdatingServiceSpec
       val underTest = new TestDependencyDataUpdatingService(noLockTestMongoLockBuilder, curatedDependencyConfig)
 
       val sbtPluginDependencies = Seq(
-        MongoRepositoryDependency("internal-plugin", Version(1, 0, 0)),
-        MongoRepositoryDependency("external-plugin", Version(2, 0, 0))
+        MongoRepositoryDependency(name = "internal-plugin", group = "uk.gov.hmrc", currentVersion = Version(1, 0, 0)),
+        MongoRepositoryDependency(name = "external-plugin", group = "uk.edu"     , currentVersion = Version(2, 0, 0))
       )
       val repositoryName = "repoXYZ"
 
@@ -283,8 +278,8 @@ class DependencyDataUpdatingServiceSpec
           Some(MongoRepositoryDependencies(repositoryName, Nil, sbtPluginDependencies, Nil, timeForTest))))
 
       val referenceSbtPluginVersions = Seq(
-        MongoSbtPluginVersion("internal-plugin", Some(Version(3, 1, 0))),
-        MongoSbtPluginVersion("external-plugin", None)
+        MongoSbtPluginVersion(name = "internal-plugin", group = "uk.gov.hmrc", version = Some(Version(3, 1, 0))),
+        MongoSbtPluginVersion(name = "external-plugin", group = "uk.edu"     , version = None)
       )
 
       when(underTest.sbtPluginVersionRepository.getAllEntries)
@@ -299,16 +294,15 @@ class DependencyDataUpdatingServiceSpec
       verify(underTest.repositoryLibraryDependenciesRepository, times(1)).getForRepository(repositoryName)
 
       maybeDependencies.value shouldBe Dependencies(
-        repositoryName      = repositoryName,
-        libraryDependencies = Nil,
+        repositoryName         = repositoryName,
+        libraryDependencies    = Nil,
         sbtPluginsDependencies = Seq(
-          Dependency("internal-plugin", Version(1, 0, 0), Some(Version(3, 1, 0)), List.empty),
-          Dependency("external-plugin", Version(2, 0, 0), Some(Version(11, 22, 33)), List.empty, isExternal = true)
+          Dependency(name = "internal-plugin", group = "uk.gov.hmrc", currentVersion = Version(1, 0, 0), latestVersion = Some(Version(3, 1, 0))   , bobbyRuleViolations = List.empty),
+          Dependency(name = "external-plugin", group = "uk.edu"     , currentVersion = Version(2, 0, 0), latestVersion = Some(Version(11, 22, 33)), bobbyRuleViolations = List.empty)
         ),
         otherDependencies = Nil,
         timeForTest
       )
-
     }
 
     it("test for none") {
@@ -331,15 +325,14 @@ class DependencyDataUpdatingServiceSpec
       verify(underTest.repositoryLibraryDependenciesRepository, times(1)).getForRepository(repositoryName)
 
       maybeDependencies shouldBe None
-
     }
 
     it("test for non existing latest") {
       val underTest = new TestDependencyDataUpdatingService(noLockTestMongoLockBuilder, curatedDependencyConfig)
 
       val libraryDependencies = Seq(
-        MongoRepositoryDependency("lib1", Version(1, 0, 0)),
-        MongoRepositoryDependency("lib2", Version(2, 0, 0))
+        MongoRepositoryDependency(name = "lib1", group = "uk.gov.hmrc", currentVersion = Version(1, 0, 0)),
+        MongoRepositoryDependency(name = "lib2", group = "uk.gov.hmrc", currentVersion = Version(2, 0, 0))
       )
       val repositoryName = "repoXYZ"
 
@@ -361,59 +354,57 @@ class DependencyDataUpdatingServiceSpec
       maybeDependencies.value shouldBe Dependencies(
         repositoryName = repositoryName,
         libraryDependencies = Seq(
-          Dependency("lib1", Version(1, 0, 0), None, List.empty),
-          Dependency("lib2", Version(2, 0, 0), None, List.empty)
+          Dependency(name = "lib1", group = "uk.gov.hmrc", currentVersion = Version(1, 0, 0), latestVersion = None, bobbyRuleViolations = List.empty),
+          Dependency(name = "lib2", group = "uk.gov.hmrc", currentVersion = Version(2, 0, 0), latestVersion = None, bobbyRuleViolations = List.empty)
         ),
         sbtPluginsDependencies = Nil,
         otherDependencies      = Nil,
         timeForTest
       )
-
     }
-
   }
 
   describe("getDependencyVersionsForAllRepositories") {
     it("should return the current and latest library, sbt plugin and other dependency versions for all repositories") {
       val underTest = new TestDependencyDataUpdatingService(
         noLockTestMongoLockBuilder,
-        curatedDependencyConfig.copy(otherDependencies = Seq(OtherDependencyConfig("sbt", Some(Version(100, 10, 1))))))
+        curatedDependencyConfig.copy(otherDependencies = Seq(OtherDependencyConfig(name = "sbt", group = "org.scala-sbt", latestVersion = Some(Version(100, 10, 1))))))
 
       val libraryDependencies1 = Seq(
-        MongoRepositoryDependency("lib1", Version(1, 1, 0)),
-        MongoRepositoryDependency("lib2", Version(1, 2, 0))
+        MongoRepositoryDependency(name = "lib1", group = "uk.gov.hmrc", currentVersion = Version(1, 1, 0)),
+        MongoRepositoryDependency(name = "lib2", group = "uk.gov.hmrc", currentVersion = Version(1, 2, 0))
       )
       val libraryDependencies2 = Seq(
-        MongoRepositoryDependency("lib1", Version(2, 1, 0)),
-        MongoRepositoryDependency("lib2", Version(2, 2, 0))
+        MongoRepositoryDependency(name = "lib1", group = "uk.gov.hmrc", currentVersion = Version(2, 1, 0)),
+        MongoRepositoryDependency(name = "lib2", group = "uk.gov.hmrc", currentVersion = Version(2, 2, 0))
       )
 
       val sbtPluginDependencies1 = Seq(
-        MongoRepositoryDependency("plugin1", Version(10, 1, 0)),
-        MongoRepositoryDependency("plugin2", Version(10, 2, 0))
+        MongoRepositoryDependency(name = "plugin1", group = "uk.gov.hmrc", currentVersion = Version(10, 1, 0)),
+        MongoRepositoryDependency(name = "plugin2", group = "uk.gov.hmrc", currentVersion = Version(10, 2, 0))
       )
 
       val sbtPluginDependencies2 = Seq(
-        MongoRepositoryDependency("plugin1", Version(20, 1, 0)),
-        MongoRepositoryDependency("plugin2", Version(20, 2, 0))
+        MongoRepositoryDependency(name = "plugin1", group = "uk.gov.hmrc", currentVersion = Version(20, 1, 0)),
+        MongoRepositoryDependency(name = "plugin2", group = "uk.gov.hmrc", currentVersion = Version(20, 2, 0))
       )
 
       val otherDependencies1 = Seq(
-        MongoRepositoryDependency("sbt", Version(0, 13, 1))
+        MongoRepositoryDependency(name = "sbt", group = "org.scala-sbt", currentVersion = Version(0, 13, 1))
       )
 
       val otherDependencies2 = Seq(
-        MongoRepositoryDependency("sbt", Version(0, 13, 2))
+        MongoRepositoryDependency(name = "sbt", group = "org.scala-sbt", currentVersion = Version(0, 13, 2))
       )
 
       val referenceLibraryVersions = Seq(
-        MongoLibraryVersion("lib1", Some(Version(3, 0, 0))),
-        MongoLibraryVersion("lib2", Some(Version(4, 0, 0)))
+        MongoLibraryVersion(name = "lib1", group = "uk.gov.hmrc", version = Some(Version(3, 0, 0))),
+        MongoLibraryVersion(name = "lib2", group = "uk.gov.hmrc", version = Some(Version(4, 0, 0)))
       )
 
       val referenceSbtPluginVersions = Seq(
-        MongoSbtPluginVersion("plugin1", Some(Version(30, 0, 0))),
-        MongoSbtPluginVersion("plugin2", Some(Version(40, 0, 0)))
+        MongoSbtPluginVersion(name = "plugin1", group = "uk.gov.hmrc", version = Some(Version(30, 0, 0))),
+        MongoSbtPluginVersion(name = "plugin2", group = "uk.gov.hmrc", version = Some(Version(40, 0, 0)))
       )
 
       val repository1 = "repo1"
@@ -449,35 +440,34 @@ class DependencyDataUpdatingServiceSpec
         Dependencies(
           repositoryName = repository1,
           libraryDependencies = Seq(
-            Dependency("lib1", Version(1, 1, 0), Some(Version(3, 0, 0)), List.empty),
-            Dependency("lib2", Version(1, 2, 0), Some(Version(4, 0, 0)), List.empty)
+            Dependency(name = "lib1", group = "uk.gov.hmrc", currentVersion = Version(1, 1, 0), latestVersion = Some(Version(3, 0, 0)), bobbyRuleViolations = List.empty),
+            Dependency(name = "lib2", group = "uk.gov.hmrc", currentVersion = Version(1, 2, 0), latestVersion = Some(Version(4, 0, 0)), bobbyRuleViolations = List.empty)
           ),
           sbtPluginsDependencies = Seq(
-            Dependency("plugin1", Version(10, 1, 0), Some(Version(30, 0, 0)), List.empty),
-            Dependency("plugin2", Version(10, 2, 0), Some(Version(40, 0, 0)), List.empty)
+            Dependency(name = "plugin1", group = "uk.gov.hmrc", currentVersion = Version(10, 1, 0), latestVersion = Some(Version(30, 0, 0)), bobbyRuleViolations = List.empty),
+            Dependency(name = "plugin2", group = "uk.gov.hmrc", currentVersion = Version(10, 2, 0), latestVersion = Some(Version(40, 0, 0)), bobbyRuleViolations = List.empty)
           ),
           otherDependencies = Seq(
-            Dependency("sbt", Version(0, 13, 1), Some(Version(100, 10, 1)), List.empty)
+            Dependency(name = "sbt", group = "org.scala-sbt", currentVersion = Version(0, 13, 1), latestVersion = Some(Version(100, 10, 1)), bobbyRuleViolations = List.empty)
           ),
           timeForTest
         ),
         Dependencies(
           repositoryName = repository2,
           libraryDependencies = Seq(
-            Dependency("lib1", Version(2, 1, 0), Some(Version(3, 0, 0)), List.empty),
-            Dependency("lib2", Version(2, 2, 0), Some(Version(4, 0, 0)), List.empty)
+            Dependency(name = "lib1", group = "uk.gov.hmrc", currentVersion = Version(2, 1, 0), latestVersion = Some(Version(3, 0, 0)), bobbyRuleViolations = List.empty),
+            Dependency(name = "lib2", group = "uk.gov.hmrc", currentVersion = Version(2, 2, 0), latestVersion = Some(Version(4, 0, 0)), bobbyRuleViolations = List.empty)
           ),
           sbtPluginsDependencies = Seq(
-            Dependency("plugin1", Version(20, 1, 0), Some(Version(30, 0, 0)), List.empty),
-            Dependency("plugin2", Version(20, 2, 0), Some(Version(40, 0, 0)), List.empty)
+            Dependency(name = "plugin1", group = "uk.gov.hmrc", currentVersion = Version(20, 1, 0), latestVersion = Some(Version(30, 0, 0)), bobbyRuleViolations = List.empty),
+            Dependency(name = "plugin2", group = "uk.gov.hmrc", currentVersion = Version(20, 2, 0), latestVersion = Some(Version(40, 0, 0)), bobbyRuleViolations = List.empty)
           ),
           otherDependencies = Seq(
-            Dependency("sbt", Version(0, 13, 2), Some(Version(100, 10, 1)), List.empty)
+            Dependency(name = "sbt", group = "org.scala-sbt", currentVersion = Version(0, 13, 2), latestVersion = Some(Version(100, 10, 1)), bobbyRuleViolations = List.empty)
           ),
           timeForTest
         )
       )
-
     }
   }
 

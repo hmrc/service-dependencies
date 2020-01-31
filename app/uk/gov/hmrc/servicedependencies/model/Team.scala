@@ -16,12 +16,13 @@
 
 package uk.gov.hmrc.servicedependencies.model
 
-import play.api.libs.json.{Format, JsError, JsResult, JsSuccess, JsValue, Json, Writes}
+import play.api.libs.json._
+import play.api.libs.functional.syntax._
 
 case class Team(
-                 name: String,
-                 repos: Map[String, Seq[String]]
-               ) {
+    name: String
+  , repos: Map[String, Seq[String]]
+  ) {
   def allRepos: Seq[String] =
     repos.values.toSeq.flatten
 
@@ -31,28 +32,15 @@ case class Team(
   def libraries  : Seq[String] = findRepo("Library")
   def others     : Seq[String] = findRepo("Other")
   def prototypes : Seq[String] = findRepo("Prototype")
-
 }
 
 object Team {
-  case class ApiTeam(name: String,
-                     repos: Option[Map[String, Seq[String]]])
+  val format =
+    ( (__ \ "name" ).format[String]
+    ~ (__ \ "repos").formatNullable[Map[String, Seq[String]]]
+                    .inmap[Map[String, Seq[String]]](_.getOrElse(Map.empty), Some.apply)
+    )(Team.apply, unlift(Team.unapply))
 
-  object ApiTeam {
-    implicit val format = Json.format[ApiTeam]
-  }
-
-  implicit val format: Format[Team] = new Format[Team] {
-    override def reads(json: JsValue): JsResult[Team] =
-      json.validate[ApiTeam] match {
-        case JsSuccess(apiTeam, path) =>
-          val team = Team(apiTeam.name, apiTeam.repos.getOrElse(Map.empty))
-          JsSuccess(team, path)
-        case error: JsError => error
-      }
-
-    override def writes(team: Team): JsValue = Json.writes[Team].writes(team)
-  }
-
-  def normalisedName(name: String): String = name.toLowerCase.replaceAll(" ", "_")
+  def normalisedName(name: String): String =
+    name.toLowerCase.replaceAll(" ", "_")
 }

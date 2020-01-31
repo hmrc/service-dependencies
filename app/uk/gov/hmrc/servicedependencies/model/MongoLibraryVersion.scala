@@ -18,30 +18,42 @@ package uk.gov.hmrc.servicedependencies.model
 
 import java.time.Instant
 
-import play.api.libs.json.Json
+import play.api.libs.json.{Format, Json, __}
+import play.api.libs.functional.syntax._
 import uk.gov.hmrc.mongo.play.json.formats.MongoJavatimeFormats
 
 case class MongoLibraryVersion(
-    libraryName: String
+    name       : String
+  , group      : String
   , version    : Option[Version]
   , updateDate : Instant = Instant.now()
   )
 
 object MongoLibraryVersion {
-  implicit val instantF    = MongoJavatimeFormats.instantFormats
   implicit val format = {
+    implicit val iF = MongoJavatimeFormats.instantFormats
     implicit val vf = Version.mongoFormat
-    Json.format[MongoLibraryVersion]
+    ( (__ \ "libraryName").format[String]
+    ~ (__ \ "group"      ).format[String]
+    ~ (__ \ "version"    ).formatNullable[Version]
+    ~ (__ \ "updateDate" ).format[Instant]
+    )(MongoLibraryVersion.apply, unlift(MongoLibraryVersion.unapply))
   }
 }
 
-case class LibraryVersion(libraryName: String, version: Option[Version])
+case class LibraryVersion(
+    name   : String
+  , group  : String
+  , version: Option[Version]
+  )
+
 object LibraryVersion {
   implicit val format = {
     implicit val vf = Version.apiFormat
     Json.format[LibraryVersion]
+    ( (__ \ "libraryName").format[String]
+    ~ (__ \ "group"      ).format[String]
+    ~ (__ \ "version"    ).formatNullable[Version]
+    )(LibraryVersion.apply, unlift(LibraryVersion.unapply))
   }
-
-  def apply(mongoLibraryVersion: MongoLibraryVersion): LibraryVersion =
-    LibraryVersion(mongoLibraryVersion.libraryName, mongoLibraryVersion.version)
 }

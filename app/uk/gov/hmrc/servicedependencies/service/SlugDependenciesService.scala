@@ -19,6 +19,7 @@ package uk.gov.hmrc.servicedependencies.service
 import cats.implicits._
 import javax.inject.{Inject, Singleton}
 import uk.gov.hmrc.servicedependencies.config.CuratedDependencyConfigProvider
+import uk.gov.hmrc.servicedependencies.config.model.LibraryConfig
 import uk.gov.hmrc.servicedependencies.controller.model.Dependency
 import uk.gov.hmrc.servicedependencies.model.{MongoLibraryVersion, SlugDependency, SlugInfo, SlugInfoFlag, Version}
 import uk.gov.hmrc.servicedependencies.persistence.LibraryVersionRepository
@@ -33,7 +34,8 @@ class SlugDependenciesService @Inject()(
   libraryVersionRepository       : LibraryVersionRepository,
   serviceConfigsService          : ServiceConfigsService) {
 
-  private lazy val curatedLibraries = curatedDependencyConfigProvider.curatedDependencyConfig.libraries.toSet
+  private lazy val curatedLibraries: Set[LibraryConfig] =
+    curatedDependencyConfigProvider.curatedDependencyConfig.libraries.toSet
 
   /*
    * We may want to evolve the model - but for this initial version we reuse the existing Dependency definition.
@@ -46,25 +48,27 @@ class SlugDependenciesService @Inject()(
 
   private def curatedLibrariesOfSlugInfo(slugInfo: SlugInfo): Future[List[Dependency]] =
     for {
-      latestVersionByName  <- libraryVersionRepository.getAllEntries.map(toLatestVersionByName)
-      curatedDependencies  =  slugInfo.dependencies.filter(slugDependency => curatedLibraries.contains(slugDependency.artifact))
-      enrichedDependencies <- serviceConfigsService.getDependenciesWithBobbyRules(curatedDependencies
+      latestVersions        <- libraryVersionRepository.getAllEntries
+      curatedDependencies   =  slugInfo.dependencies
+                                 .filter(slugDependency =>
+                                   curatedLibraries.exists(lib => lib.name  == slugDependency.artifact &&
+                                                                  lib.group == slugDependency.group
+                                                          )
+                                 )
+      enrichedDependencies  <- serviceConfigsService.getDependenciesWithBobbyRules(curatedDependencies
                                   .map { slugDependency =>
+                                      val latestVersion =
+                                        latestVersions
+                                          .find(v => v.group == slugDependency.group && v.name == slugDependency.artifact)
+                                          .flatMap(_.version)
                                       Dependency(
                                           name                = slugDependency.artifact
+                                        , group               = slugDependency.group
                                         , currentVersion      = Version(slugDependency.version)  // TODO this is unsafe
-                                        , latestVersion       = // TODO: also a bit of a hack until we do latest version no correctly
-                                                                if (slugDependency.group == "uk.gov.hmrc") latestVersionByName.get(slugDependency.artifact) else None
+                                        , latestVersion       = latestVersion
                                         , bobbyRuleViolations = Nil
                                         )
                                      }
                                    )
     } yield enrichedDependencies
-
-  private def toLatestVersionByName(latestVersions: Seq[MongoLibraryVersion]): Map[String, Version] =
-    (for {
-       library        <- latestVersions
-       libraryVersion <- library.version
-     } yield library.libraryName -> libraryVersion
-    ).toMap
 }

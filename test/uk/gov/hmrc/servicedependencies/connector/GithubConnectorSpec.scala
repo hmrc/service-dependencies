@@ -37,67 +37,21 @@ class GithubConnectorSpec extends AnyWordSpec with Matchers with MockitoSugar {
 
   val githubConnector = new GithubConnector(mockGithub)
 
-  "findPluginDependencies" should {
+  "toMongoRepositoryDependencies" should {
 
     "return a list of sbt dependencies" in {
-      val search = new GithubSearchResults(
-        sbtPlugins = Map("sbt-auto-build" -> Some(Version(1,2,3)), "sbt-artifactory" -> Some(Version(0,13,3))),
-        libraries = Map.empty,
-        others = Map.empty)
+      val sbtPlugins = Map( ("sbt-auto-build" , "uk.gov.hmrc") -> Some(Version(1,2,3))
+                          , ("sbt-artifactory", "uk.gov.hmrc") -> Some(Version(0,13,3))
+                          )
 
-      val result = githubConnector.findPluginDependencies(search)
+      val result = githubConnector.toMongoRepositoryDependencies(sbtPlugins)
       result.length mustBe 2
-      result(0) mustBe MongoRepositoryDependency("sbt-auto-build", Version(1,2,3))
-      result(1) mustBe MongoRepositoryDependency("sbt-artifactory", Version(0,13,3))
+      result(0) mustBe MongoRepositoryDependency(name = "sbt-auto-build" , group = "uk.gov.hmrc", currentVersion = Version(1,2,3))
+      result(1) mustBe MongoRepositoryDependency(name = "sbt-artifactory", group = "uk.gov.hmrc", currentVersion = Version(0,13,3))
     }
 
     "return an empty list when no sbt dependencies are present" in {
-      val search = new GithubSearchResults(Map.empty, Map.empty, Map.empty)
-      val result = githubConnector.findPluginDependencies(search)
-      result.length mustBe 0
-    }
-  }
-
-  "findLatestLibrariesVersions" should {
-
-    "return a list of library version" in {
-      val search = new GithubSearchResults(
-        sbtPlugins = Map.empty,
-        libraries  = Map("bootstrap-play" -> Some(Version(7,0,0)), "mongo-lock" -> Some(Version(1,4,1))),
-        others     = Map.empty)
-
-
-      val result = githubConnector.findLatestLibrariesVersions(search)
-      result.length mustBe 2
-      result(0) mustBe MongoRepositoryDependency("bootstrap-play", Version(7,0,0))
-      result(1) mustBe MongoRepositoryDependency("mongo-lock", Version(1,4,1))
-    }
-
-    "return an empty list when no libraries are present" in {
-      val search = new GithubSearchResults(Map.empty, Map.empty, Map.empty)
-      val result = githubConnector.findLatestLibrariesVersions(search)
-      result.length mustBe 0
-    }
-  }
-
-  "findOtherDependencies" should {
-
-    "return a list of library version" in {
-      val search = new GithubSearchResults(
-        sbtPlugins = Map.empty,
-        libraries  = Map.empty,
-        others     = Map("sbt" -> Some(Version(0,13,1))))
-
-      val result = githubConnector.findOtherDependencies(search)
-      result.length mustBe 1
-      result.head mustBe MongoRepositoryDependency("sbt", Version(0,13,1))
-
-    }
-
-    "return an empty list when no libraries are present" in {
-      val search = new GithubSearchResults(Map.empty, Map.empty, Map.empty)
-      val result = githubConnector.findOtherDependencies(search)
-      result.length mustBe 0
+      githubConnector.toMongoRepositoryDependencies(Map.empty) mustBe Nil
     }
   }
 
@@ -117,9 +71,14 @@ class GithubConnectorSpec extends AnyWordSpec with Matchers with MockitoSugar {
     "return all the dependencies wehn repo is in github" in {
 
       val mockResult = GithubSearchResults(
-        sbtPlugins = Map("sbt-auto-build" -> Some(Version(1,2,3)), "sbt-artifactory" -> Some(Version(0,13,3))),
-        libraries  = Map("bootstrap-play" -> Some(Version(7,0,0)), "mongo-lock" -> Some(Version(1,4,1))),
-        others     = Map("sbt" -> Some(Version(0,13,1))))
+          sbtPlugins = Map( ("sbt-auto-build" , "uk.gov.hmrc"  ) -> Some(Version(1,2,3))
+                          , ("sbt-artifactory", "uk.gov.hmrc"  ) -> Some(Version(0,13,3))
+                          )
+        , libraries  = Map( ("bootstrap-play" , "uk.gov.hmrc"  ) -> Some(Version(7,0,0))
+                          , ("mongo-lock"     , "uk.gov.hmrc"  ) -> Some(Version(1,4,1))
+                          )
+        , others     = Map( ("sbt"            , "org.scala-sbt") -> Some(Version(0,13,1)))
+        )
 
 
       when(mockGithub.findVersionsForMultipleArtifacts(any(), any()))
@@ -127,12 +86,13 @@ class GithubConnectorSpec extends AnyWordSpec with Matchers with MockitoSugar {
 
       val result = githubConnector.buildDependencies(repoInfo, depConfig)
       result.isDefined mustBe true
-      result.get.sbtPluginDependencies mustBe Seq(MongoRepositoryDependency("sbt-auto-build", Version(1,2,3)), MongoRepositoryDependency("sbt-artifactory", Version(0,13,3)))
-      result.get.libraryDependencies mustBe Seq(MongoRepositoryDependency("bootstrap-play", Version(7,0,0)), MongoRepositoryDependency("mongo-lock", Version(1,4,1)))
-      result.get.otherDependencies mustBe Seq(MongoRepositoryDependency("sbt", Version(0,13,1)))
-
+      result.get.sbtPluginDependencies mustBe Seq( MongoRepositoryDependency(name = "sbt-auto-build" , group = "uk.gov.hmrc"  , currentVersion = Version(1,2,3))
+                                                 , MongoRepositoryDependency(name = "sbt-artifactory", group = "uk.gov.hmrc"  , currentVersion = Version(0,13,3))
+                                                 )
+      result.get.libraryDependencies   mustBe Seq( MongoRepositoryDependency(name = "bootstrap-play" , group = "uk.gov.hmrc"  , currentVersion = Version(7,0,0))
+                                                 , MongoRepositoryDependency(name = "mongo-lock"     , group = "uk.gov.hmrc"  , currentVersion = Version(1,4,1))
+                                                 )
+      result.get.otherDependencies     mustBe Seq(MongoRepositoryDependency(name = "sbt"             , group = "org.scala-sbt", currentVersion = Version(0,13,1)))
     }
-
   }
-
 }

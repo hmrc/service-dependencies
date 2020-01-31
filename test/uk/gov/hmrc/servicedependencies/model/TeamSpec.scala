@@ -22,6 +22,8 @@ import play.api.libs.json.{JsError, Json}
 
 class TeamSpec extends AnyFlatSpec with Matchers {
 
+  implicit val tf = Team.format
+
   "Given correctly formatted JSON, creating a team with repositories" should "return expected Team" in {
     val json = Json.parse(
       """{

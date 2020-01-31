@@ -29,7 +29,7 @@ import org.scalatest.OptionValues
 import uk.gov.hmrc.githubclient.{APIRateLimitExceededException, GitApiConfig}
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.servicedependencies.config._
-import uk.gov.hmrc.servicedependencies.config.model.{CuratedDependencyConfig, OtherDependencyConfig, SbtPluginConfig}
+import uk.gov.hmrc.servicedependencies.config.model.{CuratedDependencyConfig, LibraryConfig, OtherDependencyConfig, SbtPluginConfig}
 import uk.gov.hmrc.servicedependencies.connector.model.{Repository, RepositoryInfo}
 import uk.gov.hmrc.servicedependencies.connector.{GithubConnector, TeamsAndRepositoriesConnector, TeamsForServices}
 import uk.gov.hmrc.servicedependencies.model._
@@ -55,9 +55,7 @@ class DependenciesDataSourceSpec
   val timeNow       = Instant.now()
   val timeInThePast = Instant.now().minus(1, ChronoUnit.DAYS)
 
-  class GithubStub(
-    val lookupMap: Map[String, Option[String]],
-    val repositoryAndVersions: Map[String, Version] = Map.empty
+  class GithubStub(val repositoryAndVersions: Map[String, Version] = Map.empty
   ) extends Github(null, null) {
 
     override def findLatestVersion(repoName: String): Option[Version] =
@@ -67,9 +65,13 @@ class DependenciesDataSourceSpec
   "getDependenciesForAllRepositories" - {
 
     val curatedDependencyConfig = CuratedDependencyConfig(
-      Nil,
-      Seq("library1", "library2", "library3"),
-      Seq(OtherDependencyConfig("sbt", Some(Version(1, 2, 3)))))
+        Nil
+      , Seq( LibraryConfig(name = "library1", group = "uk.gov.hmrc")
+           , LibraryConfig(name = "library2", group = "uk.gov.hmrc")
+           , LibraryConfig(name = "library3", group = "uk.gov.hmrc")
+           )
+      , Seq(OtherDependencyConfig(name = "sbt", group = "org.scala-sbt", latestVersion = Some(Version(1, 2, 3))))
+      )
 
     "should persist the dependencies (library, plugin and other) for each repository" in new TestCase {
 
@@ -92,29 +94,29 @@ class DependenciesDataSourceSpec
       allStoredDependencies(0)
 
       allStoredDependencies(0).libraryDependencies should contain theSameElementsAs Seq(
-        MongoRepositoryDependency("library1", Version(1, 0, 1)))
+        MongoRepositoryDependency(name = "library1", group = "uk.gov.hmrc", currentVersion = Version(1, 0, 1)))
       allStoredDependencies(1).libraryDependencies should contain theSameElementsAs Seq(
-        MongoRepositoryDependency("library1", Version(1, 0, 2)),
-        MongoRepositoryDependency("library2", Version(2, 0, 3)))
+        MongoRepositoryDependency(name = "library1", group = "uk.gov.hmrc", currentVersion = Version(1, 0, 2)),
+        MongoRepositoryDependency(name = "library2", group = "uk.gov.hmrc", currentVersion = Version(2, 0, 3)))
       allStoredDependencies(2).libraryDependencies should contain theSameElementsAs Seq(
-        MongoRepositoryDependency("library1", Version(1, 0, 3)),
-        MongoRepositoryDependency("library3", Version(3, 0, 4)))
+        MongoRepositoryDependency(name = "library1", group = "uk.gov.hmrc", currentVersion = Version(1, 0, 3)),
+        MongoRepositoryDependency(name = "library3", group = "uk.gov.hmrc", currentVersion = Version(3, 0, 4)))
 
       allStoredDependencies(0).sbtPluginDependencies should contain theSameElementsAs Seq(
-        MongoRepositoryDependency("plugin1", Version(100, 0, 1)))
+        MongoRepositoryDependency(name = "plugin1", group = "uk.gov.hmrc", currentVersion = Version(100, 0, 1)))
       allStoredDependencies(1).sbtPluginDependencies should contain theSameElementsAs Seq(
-        MongoRepositoryDependency("plugin1", Version(100, 0, 2)),
-        MongoRepositoryDependency("plugin2", Version(200, 0, 3)))
+        MongoRepositoryDependency(name = "plugin1", group = "uk.gov.hmrc", currentVersion = Version(100, 0, 2)),
+        MongoRepositoryDependency(name = "plugin2", group = "uk.gov.hmrc", currentVersion = Version(200, 0, 3)))
       allStoredDependencies(2).sbtPluginDependencies should contain theSameElementsAs Seq(
-        MongoRepositoryDependency("plugin1", Version(100, 0, 3)),
-        MongoRepositoryDependency("plugin3", Version(300, 0, 4)))
+        MongoRepositoryDependency(name = "plugin1", group = "uk.gov.hmrc", currentVersion = Version(100, 0, 3)),
+        MongoRepositoryDependency(name = "plugin3", group = "uk.gov.hmrc", currentVersion = Version(300, 0, 4)))
 
       allStoredDependencies(0).otherDependencies should contain theSameElementsAs Seq(
-        MongoRepositoryDependency("sbt", Version(1, 13, 100)))
+        MongoRepositoryDependency(name = "sbt", group = "org.scala-sbt", currentVersion = Version(1, 13, 100)))
       allStoredDependencies(1).otherDependencies should contain theSameElementsAs Seq(
-        MongoRepositoryDependency("sbt", Version(1, 13, 200)))
+        MongoRepositoryDependency(name = "sbt", group = "org.scala-sbt", currentVersion = Version(1, 13, 200)))
       allStoredDependencies(2).otherDependencies should contain theSameElementsAs Seq(
-        MongoRepositoryDependency("sbt", Version(1, 13, 300)))
+        MongoRepositoryDependency(name = "sbt", group = "org.scala-sbt", currentVersion = Version(1, 13, 300)))
     }
 
     "should persist the empty dependencies (non-sbt - i.e: no library, no plugins and no other dependencies)" in new TestCase {
@@ -243,35 +245,40 @@ class DependenciesDataSourceSpec
       allStoredDependencies(0).repositoryName shouldBe "repo2"
       allStoredDependencies(1).repositoryName shouldBe "repo4"
     }
-
   }
 
   "getLatestLibrariesVersions" - {
 
-    def extractLibVersion(results: Seq[LibraryVersion], lib: String): Option[Version] =
-      results.filter(_.libraryName == lib).head.version
+    def extractLibVersion(results: Seq[LibraryVersion], name: String, group: String): Option[Version] =
+      results.find(r => r.name == name && r.group == group).flatMap(_.version)
 
     "should get the latest library version" in new TestCase {
       override def repositories: Seq[Repository] = Seq(repo1, repo2, repo3)
 
       override def githubStub() =
-        new GithubStub(
-          Map(),
-          Map("library1" -> Version(1, 0, 0), "library2" -> Version(2, 0, 0), "library3" -> Version(3, 0, 0)))
+        new GithubStub(Map(
+            "library1" -> Version(1, 0, 0)
+          , "library2" -> Version(2, 0, 0)
+          , "library3" -> Version(3, 0, 0)
+          )
+        )
 
-      val curatedListOfLibraries = Seq("library1", "library2", "library3")
+      val curatedListOfLibraries = Seq(
+          LibraryConfig(name = "library1", group = "uk.gov.hmrc")
+        , LibraryConfig(name = "library2", group = "uk.gov.hmrc")
+        , LibraryConfig(name = "library3", group = "uk.gov.hmrc")
+        )
 
       val results = dependenciesDataSource.getLatestLibrariesVersions(curatedListOfLibraries)
 
       // 3 is for "library1", "library2" and "library3"
+      println(s"results=$results")
       results.size shouldBe 3
 
-      extractLibVersion(results, "library1") shouldBe Some(Version(1, 0, 0))
-      extractLibVersion(results, "library2") shouldBe Some(Version(2, 0, 0))
-      extractLibVersion(results, "library3") shouldBe Some(Version(3, 0, 0))
-
+      extractLibVersion(results, name = "library1", group = "uk.gov.hmrc") shouldBe Some(Version(1, 0, 0))
+      extractLibVersion(results, name = "library2", group = "uk.gov.hmrc") shouldBe Some(Version(2, 0, 0))
+      extractLibVersion(results, name = "library3", group = "uk.gov.hmrc") shouldBe Some(Version(3, 0, 0))
     }
-
   }
 
   "getLatestSbtPluginVersions" - {
@@ -279,24 +286,24 @@ class DependenciesDataSourceSpec
     "should get the latest sbt plugin version" in new TestCase {
 
       override def repositories: Seq[Repository] = Seq(repo1, repo2, repo3)
-      override def githubStub = new GithubStub(
-        lookupMap = Map(),
-        repositoryAndVersions =
-          Map("sbtplugin1" -> Version(1, 0, 0), "sbtplugin2" -> Version(2, 0, 0), "sbtplugin3" -> Version(3, 0, 0))
-      )
+      override def githubStub = new GithubStub(Map(
+          "sbtplugin1" -> Version(1, 0, 0)
+        , "sbtplugin2" -> Version(2, 0, 0)
+        , "sbtplugin3" -> Version(3, 0, 0))
+        )
 
       val curatedListOfSbtPluginConfigs = Seq(
-        SbtPluginConfig("org", "sbtplugin1", Some(Version(1, 2, 3))),
-        SbtPluginConfig("org", "sbtplugin2", Some(Version(1, 2, 3))),
-        SbtPluginConfig("org", "sbtplugin3", Some(Version(1, 2, 3)))
-      )
+          SbtPluginConfig(name = "sbtplugin1", group = "uk.gov.hmrc", latestVersion = Some(Version(1, 2, 3)))
+        , SbtPluginConfig(name = "sbtplugin2", group = "uk.gov.hmrc", latestVersion = Some(Version(1, 2, 3)))
+        , SbtPluginConfig(name = "sbtplugin3", group = "uk.gov.hmrc", latestVersion = Some(Version(1, 2, 3)))
+        )
 
       val results = dependenciesDataSource.getLatestSbtPluginVersions(curatedListOfSbtPluginConfigs)
 
       results should contain {
-        SbtPluginVersion("sbtplugin1", Some(Version(1, 0, 0)))
-        SbtPluginVersion("sbtplugin2", Some(Version(2, 0, 0)))
-        SbtPluginVersion("sbtplugin3", Some(Version(3, 0, 0)))
+        SbtPluginVersion(name = "sbtplugin1", group = "uk.gov.hmrc", version = Some(Version(1, 0, 0)))
+        SbtPluginVersion(name = "sbtplugin2", group = "uk.gov.hmrc", version = Some(Version(2, 0, 0)))
+        SbtPluginVersion(name = "sbtplugin3", group = "uk.gov.hmrc", version = Some(Version(3, 0, 0)))
       }
     }
   }
@@ -314,33 +321,42 @@ class DependenciesDataSourceSpec
     def lookupTable(repo: String) = repo match {
       case "repo1" =>
         GithubSearchResults(
-          Map("plugin1"  -> Some(Version(100, 0, 1))),
-          Map("library1" -> Some(Version(1, 0, 1))),
-          Map("sbt"      -> Some(Version(1, 13, 100)))
+          Map(("plugin1" , "uk.gov.hmrc"  ) -> Some(Version(100, 0, 1))),
+          Map(("library1", "uk.gov.hmrc"  ) -> Some(Version(1, 0, 1))),
+          Map(("sbt"     , "org.scala-sbt") -> Some(Version(1, 13, 100)))
         )
       case "repo2" =>
         GithubSearchResults(
-          Map("plugin1"  -> Some(Version(100, 0, 2)), "plugin2" -> Some(Version(200, 0, 3))),
-          Map("library1" -> Some(Version(1, 0, 2)), "library2" -> Some(Version(2, 0, 3))),
-          Map("sbt"      -> Some(Version(1, 13, 200)))
+          Map( ("plugin1" , "uk.gov.hmrc"  ) -> Some(Version(100, 0, 2))
+             , ("plugin2" , "uk.gov.hmrc"  ) -> Some(Version(200, 0, 3))
+             )
+        , Map( ("library1", "uk.gov.hmrc"  ) -> Some(Version(1, 0, 2))
+             , ("library2", "uk.gov.hmrc"  ) -> Some(Version(2, 0, 3))
+             )
+        , Map( ("sbt"     , "org.scala-sbt") -> Some(Version(1, 13, 200)))
         )
       case "repo3" =>
         GithubSearchResults(
-          Map("plugin1"  -> Some(Version(100, 0, 3)), "plugin3" -> Some(Version(300, 0, 4))),
-          Map("library1" -> Some(Version(1, 0, 3)), "library3" -> Some(Version(3, 0, 4))),
-          Map("sbt"      -> Some(Version(1, 13, 300)))
+          Map( ("plugin1" , "uk.gov.hmrc"  ) -> Some(Version(100, 0, 3))
+             , ("plugin3" , "uk.gov.hmrc"  ) -> Some(Version(300, 0, 4))
+             )
+        , Map( ("library1", "uk.gov.hmrc"  ) -> Some(Version(1, 0, 3))
+             , ("library3", "uk.gov.hmrc"  ) -> Some(Version(3, 0, 4)))
+        , Map( ("sbt"     , "org.scala-sbt") -> Some(Version(1, 13, 300)))
         )
       case "repo4" =>
         GithubSearchResults(
-          Map.empty,
-          Map("library1" -> Some(Version(1, 0, 3)), "library3" -> Some(Version(3, 0, 4))),
-          Map("sbt"      -> Some(Version(1, 13, 400)))
+          Map.empty
+        , Map( ("library1", "uk.gov.hmrc"  ) -> Some(Version(1, 0, 3))
+             , ("library3", "uk.gov.hmrc"  ) -> Some(Version(3, 0, 4))
+             )
+        , Map( ("sbt"     , "org.scala-sbt") -> Some(Version(1, 13, 400)))
         )
       case "repo5" =>
         GithubSearchResults(
           Map.empty,
           Map.empty,
-          Map("sbt" -> None)
+          Map(("sbt", "org.scala-sbt") -> None)
         )
       case _ => throw new RuntimeException(s"No entry in lookup function for repoName: $repo")
     }

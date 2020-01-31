@@ -18,26 +18,52 @@ package uk.gov.hmrc.servicedependencies.model
 
 import java.time.Instant
 
-import play.api.libs.json.{Format, Json}
+import play.api.libs.json.{Format, Json, __}
+import play.api.libs.functional.syntax._
 import uk.gov.hmrc.mongo.play.json.formats.MongoJavatimeFormats
 
-case class MongoRepositoryDependency(name: String, currentVersion: Version)
+case class MongoRepositoryDependency(
+    name          : String
+  , group         : String
+  , currentVersion: Version
+  )
 
 object MongoRepositoryDependency {
   implicit val format: Format[MongoRepositoryDependency] = {
     implicit val vf = Version.mongoFormat
-    Json.format[MongoRepositoryDependency]
+    ( (__ \ "name"          ).format[String]
+    ~ (__ \ "group"         ).formatNullable[String]
+    ~ (__ \ "currentVersion").format[Version]
+    )(toMongoRepositoryDependency, fromMongoRepositoryDependency)
   }
+
+  def toMongoRepositoryDependency(name: String, group: Option[String], currentVersion: Version): MongoRepositoryDependency = {
+    // Initially we didn't store this information - this is was the assumption at the time.
+    val inferredGroup = name match {
+      case "sbt-plugin"    => "com.typesafe.play"
+      case "reactivemongo" => "org.reactivemongo"
+      case "sbt"           => "org.scala-sbt"
+      case _               => "uk.gov.hmrc"
+    }
+    MongoRepositoryDependency(name, group.getOrElse(inferredGroup), currentVersion)
+  }
+
+  def fromMongoRepositoryDependency(d: MongoRepositoryDependency): (String, Option[String], Version) =
+    (d.name, Some(d.group), d.currentVersion)
 }
 
 case class MongoRepositoryDependencies(
-  repositoryName: String,
-  libraryDependencies: Seq[MongoRepositoryDependency],
-  sbtPluginDependencies: Seq[MongoRepositoryDependency] = Nil,
-  otherDependencies: Seq[MongoRepositoryDependency],
-  updateDate: Instant = Instant.now())
+    repositoryName       : String
+  , libraryDependencies  : Seq[MongoRepositoryDependency]
+  , sbtPluginDependencies: Seq[MongoRepositoryDependency] = Nil
+  , otherDependencies    : Seq[MongoRepositoryDependency]
+  , updateDate           : Instant                        = Instant.now()
+  )
 
 object MongoRepositoryDependencies {
-  implicit val instantF    = MongoJavatimeFormats.instantFormats
-  implicit val format = Json.format[MongoRepositoryDependencies]
+
+  implicit val format = {
+    implicit val iF = MongoJavatimeFormats.instantFormats
+    Json.format[MongoRepositoryDependencies]
+  }
 }

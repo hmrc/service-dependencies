@@ -1,22 +1,13 @@
 {
   "sbtPlugins": [
-    {
-      "org": "uk.gov.hmrc",
-      "name": "internal-plugin"
-    },
-    {
-      "org": "com.example.external",
-      "name": "external-plugin",
-      "version": "1.4.0"
-    }
+    { "group": "uk.gov.hmrc", "name": "internal-plugin" },
+    { "group": "com.example.external", "name": "external-plugin", "latestVersion": "1.4.0" }
   ],
   "libraries": [
-    "lib1",
-    "lib2"
+    { "group": "uk.gov.hmrc", "name": "lib1" },
+    { "group": "uk.gov.hmrc", "name": "lib2" }
   ],
   "otherDependencies": [
-    {
-      "name": "sbt", "latestVersion": "0.13.11"
-    }
+    { "name": "sbt", "group": "org.scala-sbt", "latestVersion": "0.13.11" }
   ]
 }
