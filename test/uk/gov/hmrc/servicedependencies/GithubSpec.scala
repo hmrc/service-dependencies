@@ -100,8 +100,8 @@ class GithubSpec extends AnyWordSpec with Matchers with MockitoSugar with Option
           , SbtPluginConfig(name = "sbt-auto-build", group = "uk.gov.hmrc"      , latestVersion = None)
           ),
           Seq(
-            LibraryConfig(name = "play-ui"    , group = "uk.gov.hmrc")
-          , LibraryConfig(name = "play-health", group = "uk.gov.hmrc")
+            LibraryConfig(name = "play-ui"    , group = "uk.gov.hmrc", latestVersion = None)
+          , LibraryConfig(name = "play-health", group = "uk.gov.hmrc", latestVersion = None)
           ),
           Nil)
       )
@@ -131,9 +131,9 @@ class GithubSpec extends AnyWordSpec with Matchers with MockitoSugar with Option
           CuratedDependencyConfig(
             Nil
           , Seq(
-              LibraryConfig(name = "play-frontend", group = "uk.gov.hmrc")
-            , LibraryConfig(name = "play-ui"      , group = "uk.gov.hmrc")
-            , LibraryConfig(name = "play-health"  , group = "uk.gov.hmrc")
+              LibraryConfig(name = "play-frontend", group = "uk.gov.hmrc", latestVersion = None)
+            , LibraryConfig(name = "play-ui"      , group = "uk.gov.hmrc", latestVersion = None)
+            , LibraryConfig(name = "play-health"  , group = "uk.gov.hmrc", latestVersion = None)
             )
           , Nil
           )
@@ -162,9 +162,9 @@ class GithubSpec extends AnyWordSpec with Matchers with MockitoSugar with Option
           repoName,
           CuratedDependencyConfig(
               Nil
-            , Seq( LibraryConfig(name = "play-frontend", group = "uk.gov.hmrc")
-                 , LibraryConfig(name = "play-ui"      , group = "uk.gov.hmrc")
-                 , LibraryConfig(name = "play-health"  , group = "uk.gov.hmrc")
+            , Seq( LibraryConfig(name = "play-frontend", group = "uk.gov.hmrc", latestVersion = None)
+                 , LibraryConfig(name = "play-ui"      , group = "uk.gov.hmrc", latestVersion = None)
+                 , LibraryConfig(name = "play-health"  , group = "uk.gov.hmrc", latestVersion = None)
                  )
             , Nil
             )
@@ -185,9 +185,9 @@ class GithubSpec extends AnyWordSpec with Matchers with MockitoSugar with Option
           repoName,
           CuratedDependencyConfig(
               Nil
-            , Seq( LibraryConfig(name = "play-frontend", group = "uk.gov.hmrc")
-                 , LibraryConfig(name = "play-ui"      , group = "uk.gov.hmrc")
-                 , LibraryConfig(name = "play-health"  , group = "uk.gov.hmrc")
+            , Seq( LibraryConfig(name = "play-frontend", group = "uk.gov.hmrc", latestVersion = None)
+                 , LibraryConfig(name = "play-ui"      , group = "uk.gov.hmrc", latestVersion = None)
+                 , LibraryConfig(name = "play-health"  , group = "uk.gov.hmrc", latestVersion = None)
                  )
            , Nil
            )
@@ -221,9 +221,9 @@ class GithubSpec extends AnyWordSpec with Matchers with MockitoSugar with Option
           repoName,
           CuratedDependencyConfig(
               Nil
-            , Seq( LibraryConfig(name = "play-frontend", group = "uk.gov.hmrc")
-                 , LibraryConfig(name = "play-ui"      , group = "uk.gov.hmrc")
-                 , LibraryConfig(name = "play-health"  , group = "uk.gov.hmrc")
+            , Seq( LibraryConfig(name = "play-frontend", group = "uk.gov.hmrc", latestVersion = None)
+                 , LibraryConfig(name = "play-ui"      , group = "uk.gov.hmrc", latestVersion = None)
+                 , LibraryConfig(name = "play-health"  , group = "uk.gov.hmrc", latestVersion = None)
                  )
             , Nil
             )
@@ -254,9 +254,9 @@ class GithubSpec extends AnyWordSpec with Matchers with MockitoSugar with Option
           repoName,
           CuratedDependencyConfig(
               Nil
-            , Seq( LibraryConfig(name = "play-frontend", group = "uk.gov.hmrc")
-                 , LibraryConfig(name = "play-ui"      , group = "uk.gov.hmrc")
-                 , LibraryConfig(name = "play-health"  , group = "uk.gov.hmrc")
+            , Seq( LibraryConfig(name = "play-frontend", group = "uk.gov.hmrc", latestVersion = None)
+                 , LibraryConfig(name = "play-ui"      , group = "uk.gov.hmrc", latestVersion = None)
+                 , LibraryConfig(name = "play-health"  , group = "uk.gov.hmrc", latestVersion = None)
                  )
             , Nil
             )
@@ -287,9 +287,9 @@ class GithubSpec extends AnyWordSpec with Matchers with MockitoSugar with Option
           repoName,
           CuratedDependencyConfig(
             Nil
-          , Seq( LibraryConfig(name = "play-frontend", group = "uk.gov.hmrc")
-               , LibraryConfig(name = "play-ui"      , group = "uk.gov.hmrc")
-               , LibraryConfig(name = "play-health"  , group = "uk.gov.hmrc")
+          , Seq( LibraryConfig(name = "play-frontend", group = "uk.gov.hmrc", latestVersion = None)
+               , LibraryConfig(name = "play-ui"      , group = "uk.gov.hmrc", latestVersion = None)
+               , LibraryConfig(name = "play-health"  , group = "uk.gov.hmrc", latestVersion = None)
                )
           , Nil
           )
@@ -317,9 +317,9 @@ class GithubSpec extends AnyWordSpec with Matchers with MockitoSugar with Option
           repoName,
           CuratedDependencyConfig(
               Nil
-            , Seq( LibraryConfig(name = "play-frontend", group = "uk.gov.hmrc")
-                 , LibraryConfig(name = "play-ui"      , group = "uk.gov.hmrc")
-                 , LibraryConfig(name = "play-health"  , group = "uk.gov.hmrc")
+            , Seq( LibraryConfig(name = "play-frontend", group = "uk.gov.hmrc", latestVersion = None)
+                 , LibraryConfig(name = "play-ui"      , group = "uk.gov.hmrc", latestVersion = None)
+                 , LibraryConfig(name = "play-health"  , group = "uk.gov.hmrc", latestVersion = None)
                  )
             , Nil
             )
@@ -347,8 +347,8 @@ class GithubSpec extends AnyWordSpec with Matchers with MockitoSugar with Option
             repoName
           , CuratedDependencyConfig(
                 Nil
-              , Seq( LibraryConfig(name = "play-ui"     , group = "uk.gov.hmrc")
-                   , LibraryConfig(name = "non-existing", group = "uk.gov.hmrc")
+              , Seq( LibraryConfig(name = "play-ui"     , group = "uk.gov.hmrc", latestVersion = None)
+                   , LibraryConfig(name = "non-existing", group = "uk.gov.hmrc", latestVersion = None)
                    )
               , Nil
               )
