@@ -20,22 +20,29 @@ import play.api.libs.functional.syntax._
 import play.api.libs.json.{__, Json, JsError, Reads}
 import uk.gov.hmrc.servicedependencies.model.Version
 
+trait DependencyConfig {
+  def name         : String
+  def group        : String
+  def latestVersion: Option[Version]
+}
+
 case class SbtPluginConfig(
     name         : String
   , group        : String
   , latestVersion: Option[Version]
-  )
+  ) extends DependencyConfig
 
 case class LibraryConfig(
-    name : String
-  , group: String
-  )
+    name         : String
+  , group        : String
+  , latestVersion: Option[Version]
+  ) extends DependencyConfig
 
 case class OtherDependencyConfig(
     name         : String
   , group        : String
   , latestVersion: Option[Version]
-  )
+  ) extends DependencyConfig
 
 case class CuratedDependencyConfig(
   sbtPlugins       : Seq[SbtPluginConfig],
@@ -60,28 +67,33 @@ object CuratedDependencyConfig {
       case None    => Reads.pure(None)
     }
 
+  private def validateLatestVersion[C <: DependencyConfig](c: C): Reads[C] =
+    (c.group.startsWith("uk.gov.hmrc"), c.latestVersion.isDefined) match {
+      case (true , true ) => failed("latestVersion is not needed for internal ('uk.gov.hmrc') libraries")
+      case (false, false) => failed("latestVersion is required for external (non 'uk.gov.hmrc') libraries")
+      case _              => Reads.pure(c)
+    }
+
   val otherReader: Reads[OtherDependencyConfig] =
     ( (__ \ "name"         ).read[String]
     ~ (__ \ "group"        ).read[String]
     ~ (__ \ "latestVersion").readNullable[String].flatMap(optOptionalReads(Version.parse, "invalid version"))
     )(OtherDependencyConfig.apply _)
+      .flatMap(validateLatestVersion)
 
   val libraryReader: Reads[LibraryConfig] =
-    ( (__ \ "name").read[String]
-    ~ (__ \ "group" ).read[String]
+    ( (__ \ "name"         ).read[String]
+    ~ (__ \ "group"        ).read[String]
+    ~ (__ \ "latestVersion").readNullable[String].flatMap(optOptionalReads(Version.parse, "invalid version"))
     )(LibraryConfig.apply _)
+      .flatMap(validateLatestVersion)
 
   val sbtPluginReader: Reads[SbtPluginConfig] =
     ( (__ \ "name"         ).read[String]
     ~ (__ \ "group"        ).read[String]
     ~ (__ \ "latestVersion").readNullable[String].flatMap(optOptionalReads(Version.parse, "invalid version"))
-    )(SbtPluginConfig.apply _).flatMap { c =>
-    (c.group.startsWith("uk.gov.hmrc"), c.latestVersion.isDefined) match {
-      case (true, true)   => failed("latestVersion is not needed for internal ('uk.gov.hmrc') libraries")
-      case (false, false) => failed("latestVersion is required for external (non 'uk.gov.hmrc') libraries")
-      case _              => Reads.pure(c)
-    }
-  }
+    )(SbtPluginConfig.apply _)
+      .flatMap(validateLatestVersion)
 
   implicit val configReader = {
     implicit val or = otherReader

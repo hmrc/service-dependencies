@@ -92,8 +92,8 @@ class SlugDependenciesServiceSpec extends AnyFreeSpec with MockitoSugar with Mat
 
     "returning only curated libraries when the slug is recognised" in new Fixture {
       stubCuratedLibrariesOf(
-          LibraryConfig(name = Dependency1.artifact, group = Dependency1.group)
-        , LibraryConfig(name = Dependency3.artifact, group = Dependency3.group)
+          LibraryConfig(name = Dependency1.artifact, group = Dependency1.group, latestVersion = None)
+        , LibraryConfig(name = Dependency3.artifact, group = Dependency3.group, latestVersion = None)
         )
       stubNoEnrichmentsForDependencies()
       when(slugInfoService.getSlugInfo(SlugName, flag)).thenReturn(
@@ -133,9 +133,9 @@ class SlugDependenciesServiceSpec extends AnyFreeSpec with MockitoSugar with Mat
       "only adding the latest version when known" in new Fixture {
         stubNoBobbyRulesViolations()
         stubCuratedLibrariesOf(
-          LibraryConfig(name = Dependency1.artifact, group = Dependency1.group)
-        , LibraryConfig(name = Dependency2.artifact, group = Dependency2.group)
-        , LibraryConfig(name = Dependency3.artifact, group = Dependency3.group)
+          LibraryConfig(name = Dependency1.artifact, group = Dependency1.group, latestVersion = None)
+        , LibraryConfig(name = Dependency2.artifact, group = Dependency2.group, latestVersion = None)
+        , LibraryConfig(name = Dependency3.artifact, group = Dependency3.group, latestVersion = None)
         )
         stubLatestLibraryVersionLookupSuccessfullyReturns(Seq(
             Dependency1 -> LatestVersionOfDependency1
@@ -176,9 +176,9 @@ class SlugDependenciesServiceSpec extends AnyFreeSpec with MockitoSugar with Mat
     "enriches dependencies with Bobby rule violations" - {
       "only adding rule violations when there are active violations" in new Fixture {
         stubCuratedLibrariesOf(
-            LibraryConfig(name = Dependency1.artifact, group = Dependency1.group)
-          , LibraryConfig(name = Dependency2.artifact, group = Dependency2.group)
-          , LibraryConfig(name = Dependency3.artifact, group = Dependency3.group)
+            LibraryConfig(name = Dependency1.artifact, group = Dependency1.group, latestVersion = None)
+          , LibraryConfig(name = Dependency2.artifact, group = Dependency2.group, latestVersion = None)
+          , LibraryConfig(name = Dependency3.artifact, group = Dependency3.group, latestVersion = None)
           )
         stubLatestLibraryVersionLookupSuccessfullyReturns(Seq.empty)
         val bobbyRuleViolation1 = DependencyBobbyRule(reason = "a reason"      , from = LocalDate.now(), range = BobbyVersionRange("(,6.6.6)"))
@@ -213,9 +213,9 @@ class SlugDependenciesServiceSpec extends AnyFreeSpec with MockitoSugar with Mat
 
       "failing when the retrieval or application of Bobby rules encounters a failure" in new Fixture {
         stubCuratedLibrariesOf(
-          LibraryConfig(name = Dependency1.artifact, group = Dependency1.group)
-        , LibraryConfig(name = Dependency2.artifact, group = Dependency2.group)
-        , LibraryConfig(name = Dependency3.artifact, group = Dependency3.group)
+          LibraryConfig(name = Dependency1.artifact, group = Dependency1.group, latestVersion = None)
+        , LibraryConfig(name = Dependency2.artifact, group = Dependency2.group, latestVersion = None)
+        , LibraryConfig(name = Dependency3.artifact, group = Dependency3.group, latestVersion = None)
         )
         stubLatestLibraryVersionLookupSuccessfullyReturns(Seq.empty)
         when(slugInfoService.getSlugInfo(SlugName, flag)).thenReturn(

@@ -66,9 +66,9 @@ class DependenciesDataSourceSpec
 
     val curatedDependencyConfig = CuratedDependencyConfig(
         Nil
-      , Seq( LibraryConfig(name = "library1", group = "uk.gov.hmrc")
-           , LibraryConfig(name = "library2", group = "uk.gov.hmrc")
-           , LibraryConfig(name = "library3", group = "uk.gov.hmrc")
+      , Seq( LibraryConfig(name = "library1", group = "uk.gov.hmrc", latestVersion = None)
+           , LibraryConfig(name = "library2", group = "uk.gov.hmrc", latestVersion = None)
+           , LibraryConfig(name = "library3", group = "uk.gov.hmrc", latestVersion = None)
            )
       , Seq(OtherDependencyConfig(name = "sbt", group = "org.scala-sbt", latestVersion = Some(Version(1, 2, 3))))
       )
@@ -264,9 +264,9 @@ class DependenciesDataSourceSpec
         )
 
       val curatedListOfLibraries = Seq(
-          LibraryConfig(name = "library1", group = "uk.gov.hmrc")
-        , LibraryConfig(name = "library2", group = "uk.gov.hmrc")
-        , LibraryConfig(name = "library3", group = "uk.gov.hmrc")
+          LibraryConfig(name = "library1", group = "uk.gov.hmrc", latestVersion = None)
+        , LibraryConfig(name = "library2", group = "uk.gov.hmrc", latestVersion = None)
+        , LibraryConfig(name = "library3", group = "uk.gov.hmrc", latestVersion = None)
         )
 
       val results = dependenciesDataSource.getLatestLibrariesVersions(curatedListOfLibraries)

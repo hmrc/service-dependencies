@@ -36,8 +36,8 @@ class CuratedDependencyConfigProviderSpec extends AnyFunSpec with Matchers with 
             , SbtPluginConfig(name = "external-plugin", group = "com.example.external", latestVersion = Some(Version("1.4.0")))
             )
         , libraries = List(
-            LibraryConfig(name = "lib1", group = "uk.gov.hmrc")
-          , LibraryConfig(name = "lib2", group = "uk.gov.hmrc")
+            LibraryConfig(name = "lib1", group = "uk.gov.hmrc", latestVersion = None)
+          , LibraryConfig(name = "lib2", group = "uk.gov.hmrc", latestVersion = None)
           )
         , otherDependencies = Seq(
             OtherDependencyConfig(name = "sbt", group = "org.scala-sbt", latestVersion = Some(Version("0.13.11")))
