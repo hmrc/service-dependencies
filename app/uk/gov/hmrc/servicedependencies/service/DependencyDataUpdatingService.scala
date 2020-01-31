@@ -108,34 +108,21 @@ class DependencyDataUpdatingService @Inject()(
           Seq.empty
       }
 
-  private def toLibraryDependency(libraryReferences: Seq[MongoLibraryVersion])(d: MongoRepositoryDependency): Dependency =
-    Dependency(
-      name                = d.name
-    , group               = d.group
-    , currentVersion      = d.currentVersion
-    , latestVersion       = libraryReferences
-                              .find(libraryRef => libraryRef.name  == d.name &&
-                                                  libraryRef.group == d.group
-                                   )
-                              .flatMap(_.version)
-    , bobbyRuleViolations = List.empty
-    )
-
-  private def toSbtPluginDependency(sbtPluginReferences: Seq[MongoSbtPluginVersion])(d: MongoRepositoryDependency): Dependency = {
-    val optPluginConfig =
-    curatedDependencyConfig.sbtPlugins
-      .find(pluginConfig => pluginConfig.name  == d.name  &&
-                            pluginConfig.group == d.group
-           )
-
-    lazy val optPluginRef =
-      sbtPluginReferences
-        .find(sbtPluginRef => sbtPluginRef.name  == d.name &&
-                              sbtPluginRef.group == d.group
+  private def toLibraryDependency(libraryReferences: Seq[MongoLibraryVersion])(d: MongoRepositoryDependency): Dependency = {
+    val optConfig =
+      curatedDependencyConfig.libraries
+        .find(pluginConfig => pluginConfig.name  == d.name  &&
+                              pluginConfig.group == d.group
              )
 
-    val latestVersion = optPluginConfig.flatMap(_.latestVersion)
-      .orElse(optPluginRef.flatMap(_.version))
+    val optRef =
+      libraryReferences
+        .find(libraryRef => libraryRef.name  == d.name &&
+                            libraryRef.group == d.group
+             )
+
+    val latestVersion = optConfig.flatMap(_.latestVersion)
+      .orElse(optRef.flatMap(_.version))
 
     Dependency(
       name                = d.name
@@ -146,18 +133,50 @@ class DependencyDataUpdatingService @Inject()(
     )
   }
 
-  private def toOtherDependency(d: MongoRepositoryDependency): Dependency =
+  private def toSbtPluginDependency(sbtPluginReferences: Seq[MongoSbtPluginVersion])(d: MongoRepositoryDependency): Dependency = {
+    val optConfig =
+      curatedDependencyConfig.sbtPlugins
+        .find(pluginConfig => pluginConfig.name  == d.name  &&
+                              pluginConfig.group == d.group
+             )
+
+    lazy val optRef =
+      sbtPluginReferences
+        .find(sbtPluginRef => sbtPluginRef.name  == d.name &&
+                              sbtPluginRef.group == d.group
+             )
+
+    val latestVersion = optConfig.flatMap(_.latestVersion)
+      .orElse(optRef.flatMap(_.version))
+
     Dependency(
       name                = d.name
     , group               = d.group
     , currentVersion      = d.currentVersion
-    , latestVersion       = curatedDependencyConfig.otherDependencies
-                              .find(otherRef => otherRef.name  == d.name &&
-                                                otherRef.group == d.group
-                                   )
-                              .flatMap(_.latestVersion)
+    , latestVersion       = latestVersion
     , bobbyRuleViolations = List.empty
     )
+  }
+
+  private def toOtherDependency(d: MongoRepositoryDependency): Dependency = {
+
+    val optConfig =
+      curatedDependencyConfig.otherDependencies
+        .find(otherRef => otherRef.name  == d.name &&
+                          otherRef.group == d.group
+             )
+
+
+    val latestVersion = optConfig.flatMap(_.latestVersion)
+
+    Dependency(
+      name                = d.name
+    , group               = d.group
+    , currentVersion      = d.currentVersion
+    , latestVersion       = latestVersion
+    , bobbyRuleViolations = List.empty
+    )
+  }
 
   def getDependencyVersionsForRepository(repositoryName: String): Future[Option[Dependencies]] =
     for {

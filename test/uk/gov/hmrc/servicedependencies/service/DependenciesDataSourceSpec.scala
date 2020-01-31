@@ -272,7 +272,6 @@ class DependenciesDataSourceSpec
       val results = dependenciesDataSource.getLatestLibrariesVersions(curatedListOfLibraries)
 
       // 3 is for "library1", "library2" and "library3"
-      println(s"results=$results")
       results.size shouldBe 3
 
       extractLibVersion(results, name = "library1", group = "uk.gov.hmrc") shouldBe Some(Version(1, 0, 0))
