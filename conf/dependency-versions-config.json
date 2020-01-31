@@ -14,7 +14,6 @@
     { "group": "uk.gov.hmrc", "name": "sbt-service-manager"},
     { "group": "uk.gov.hmrc", "name": "sbt-settings" }
   ],
-  "libraries_comment": "we cannot have duplcate names, even with different orgs",
   "libraries": [
     { "group": "org.reactivemongo", "name": "reactivemongo" },
     { "group": "uk.gov.hmrc", "name": "a-b-test" },

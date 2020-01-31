@@ -33,11 +33,23 @@ object MongoRepositoryDependency {
     implicit val vf = Version.mongoFormat
     ( (__ \ "name"          ).format[String]
     ~ (__ \ "group"         ).formatNullable[String]
-                             // Initially we didn't store this information - this is was the assumption at the time.
-                             .inmap[String](_.getOrElse("uk.gov.hmrc"), Some.apply)
     ~ (__ \ "currentVersion").format[Version]
-    )(MongoRepositoryDependency.apply, unlift(MongoRepositoryDependency.unapply))
+    )(toMongoRepositoryDependency, fromMongoRepositoryDependency)
   }
+
+  def toMongoRepositoryDependency(name: String, group: Option[String], currentVersion: Version): MongoRepositoryDependency = {
+    // Initially we didn't store this information - this is was the assumption at the time.
+    val inferredGroup = name match {
+      case "sbt-plugin"    => "com.typesafe.play"
+      case "reactivemongo" => "org.reactivemongo"
+      case "sbt"           => "org.scala-sbt"
+      case _               => "uk.gov.hmrc"
+    }
+    MongoRepositoryDependency(name, group.getOrElse(inferredGroup), currentVersion)
+  }
+
+  def fromMongoRepositoryDependency(d: MongoRepositoryDependency): (String, Option[String], Version) =
+    (d.name, Some(d.group), d.currentVersion)
 }
 
 case class MongoRepositoryDependencies(
