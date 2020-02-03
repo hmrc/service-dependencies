@@ -21,15 +21,18 @@ import play.api.Logger
 import play.api.libs.json.Json
 import play.api.mvc.ControllerComponents
 import uk.gov.hmrc.play.bootstrap.controller.BackendController
+import uk.gov.hmrc.servicedependencies.persistence.LocksRepository
 import uk.gov.hmrc.servicedependencies.service.DependencyDataUpdatingService
 
 import scala.concurrent.ExecutionContext
 
 @Singleton
 class AdministrationController @Inject()(
-  dependencyDataUpdatingService: DependencyDataUpdatingService,
-  cc: ControllerComponents)(implicit ec: ExecutionContext)
-    extends BackendController(cc) {
+    dependencyDataUpdatingService: DependencyDataUpdatingService
+  , locksRepository              : LocksRepository
+  , cc                           : ControllerComponents
+  )(implicit ec: ExecutionContext
+  ) extends BackendController(cc) {
 
   def reloadLibraryDependenciesForAllRepositories(force: Option[Boolean] = None) = Action { implicit request =>
     dependencyDataUpdatingService
@@ -62,7 +65,11 @@ class AdministrationController @Inject()(
   }
 
   def dropCollection(collection: String) = Action.async { implicit request =>
-    dependencyDataUpdatingService.dropCollection(collection).map(_ => Ok(s"$collection dropped"))
+    (collection match {
+       case "locks"    => locksRepository.clearAllData
+       case collection => dependencyDataUpdatingService.dropCollection(collection)
+     }
+    ).map(_ => Ok(s"$collection dropped"))
   }
 
   def clearUpdateDates = Action.async { implicit request =>
@@ -70,6 +77,6 @@ class AdministrationController @Inject()(
   }
 
   def mongoLocks() = Action.async { implicit request =>
-    dependencyDataUpdatingService.locks().map(locks => Ok(Json.toJson(locks)))
+    locksRepository.getAllEntries.map(locks => Ok(Json.toJson(locks)))
   }
 }
