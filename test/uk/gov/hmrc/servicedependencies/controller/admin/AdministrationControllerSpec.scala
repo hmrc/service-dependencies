@@ -23,6 +23,7 @@ import org.scalatest.{BeforeAndAfterEach, OptionValues}
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
 import uk.gov.hmrc.servicedependencies.model.MongoRepositoryDependencies
+import uk.gov.hmrc.servicedependencies.persistence.LocksRepository
 import uk.gov.hmrc.servicedependencies.service.DependencyDataUpdatingService
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -85,8 +86,10 @@ class AdministrationControllerSpec
   object Boot {
     def init: Boot = {
       val mockedDependencyDataUpdatingService = mock[DependencyDataUpdatingService]
+      val locksRepository = mock[LocksRepository]
       val controller = new AdministrationController(
         mockedDependencyDataUpdatingService,
+        locksRepository,
         stubControllerComponents()
       )
       Boot(

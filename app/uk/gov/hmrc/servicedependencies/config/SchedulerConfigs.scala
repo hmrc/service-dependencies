@@ -82,25 +82,17 @@ class SchedulerConfigs @Inject()(configuration: Configuration) extends ConfigUti
     , initialDelayKey = "repositoryDependencies.metricsGauges.initialDelay"
     )
 
-  val dependenciesReload = SchedulerConfig(
+  val dependencyReload = SchedulerConfig(
       configuration
-    , enabledKey   = "scheduler.enabled"
-      // TODO move 'minutes' out of key name into value - then reuse getDuration
-    , frequency    = configuration.get[Int]("dependency.reload.intervalminutes").minutes
-    , initialDelay = 100.milliseconds
+    , enabledKey      = "dependencyReload.scheduler.enabled"
+    , frequencyKey    = "dependencyReload.scheduler.interval"
+    , initialDelayKey = "dependencyReload.scheduler.initialDelay"
     )
 
   val libraryReload = SchedulerConfig(
       configuration
-    , enabledKey   = "scheduler.enabled"
-    , frequency    = configuration.get[Int]("library.reload.intervalminutes").minutes
-    , initialDelay = 100.milliseconds
-    )
-
-  val sbtPluginReload = SchedulerConfig(
-      configuration
-    , enabledKey   = "scheduler.enabled"
-    , frequency    = configuration.get[Int]("sbtPlugin.reload.intervalminutes").minutes
-    , initialDelay = 100.milliseconds
+    , enabledKey      = "libraryReload.scheduler.enabled"
+    , frequencyKey    = "libraryReload.scheduler.interval"
+    , initialDelayKey = "libraryReload.scheduler.initialDelay"
     )
 }

@@ -22,6 +22,7 @@ import javax.inject.Inject
 import play.api.inject.ApplicationLifecycle
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.servicedependencies.config.SchedulerConfigs
+import uk.gov.hmrc.servicedependencies.persistence.MongoLocks
 import uk.gov.hmrc.servicedependencies.service.DependencyDataUpdatingService
 import uk.gov.hmrc.servicedependencies.util.SchedulerUtils
 
@@ -32,6 +33,7 @@ import scala.concurrent.ExecutionContext
 class DataReloadScheduler @Inject()(
       schedulerConfigs             : SchedulerConfigs
     , dependencyDataUpdatingService: DependencyDataUpdatingService
+    , mongoLocks                   : MongoLocks
     )(implicit
       actorSystem         : ActorSystem
     , applicationLifecycle: ApplicationLifecycle
@@ -40,19 +42,15 @@ class DataReloadScheduler @Inject()(
 
   implicit val hc: HeaderCarrier = HeaderCarrier()
 
-  // note, locks in service layer
-  schedule("libraryDependencyDataReloader", schedulerConfigs.dependenciesReload){
+  scheduleWithLock("libraryDependencyDataReloader", schedulerConfigs.dependencyReload, mongoLocks.dependencyReloadSchedulerLock){
     dependencyDataUpdatingService.reloadCurrentDependenciesDataForAllRepositories()
       .map(_ => ())
   }
 
-  schedule("libraryDataReloader", schedulerConfigs.libraryReload){
-    dependencyDataUpdatingService.reloadLatestLibraryVersions()
-      .map(_ => ())
-  }
-
-  schedule("SbtPluginDataReloader", schedulerConfigs.sbtPluginReload){
-    dependencyDataUpdatingService.reloadLatestSbtPluginVersions()
-      .map(_ => ())
+  scheduleWithLock("libraryDataReloader", schedulerConfigs.libraryReload, mongoLocks.libraryReloadSchedulerLock){
+    for {
+      _ <- dependencyDataUpdatingService.reloadLatestLibraryVersions()
+      _ <- dependencyDataUpdatingService.reloadLatestSbtPluginVersions()
+    } yield ()
   }
 }
