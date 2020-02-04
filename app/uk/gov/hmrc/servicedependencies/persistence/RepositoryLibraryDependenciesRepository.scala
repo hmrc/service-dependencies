@@ -62,10 +62,8 @@ class RepositoryLibraryDependenciesRepository @Inject()(
           .map(_ => repositoryLibraryDependencies)
       }
       .recover {
-        case lastError =>
-          throw new RuntimeException(
-            s"failed to persist RepositoryLibraryDependencies: $repositoryLibraryDependencies",
-            lastError)
+        case e =>
+          throw new RuntimeException(s"failed to persist RepositoryLibraryDependencies $repositoryLibraryDependencies ${e.getMessage}", e)
       }
   }
 

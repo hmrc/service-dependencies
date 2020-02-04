@@ -18,6 +18,7 @@ package uk.gov.hmrc.servicedependencies.persistence
 
 import com.google.inject.{Inject, Singleton}
 import com.mongodb.BasicDBObject
+import org.mongodb.scala.bson.BsonDocument
 import org.mongodb.scala.model.Filters.{and, equal}
 import org.mongodb.scala.model.Indexes.hashed
 import org.mongodb.scala.model.{IndexModel, IndexOptions, ReplaceOptions}
@@ -44,6 +45,7 @@ class SbtPluginVersionRepository @Inject()(
   , indexes        = Seq(
                        IndexModel(hashed("sbtPluginName"), IndexOptions().name("sbtPluginNameIdx").background(true))
                      )
+  , optSchema      = Some(BsonDocument(MongoSbtPluginVersion.schema))
   ) with WithThrottling {
 
   val logger: Logger = Logger(this.getClass)
@@ -64,8 +66,8 @@ class SbtPluginVersionRepository @Inject()(
           .map(_ => sbtPluginVersion)
       }
       .recover {
-        case lastError =>
-          throw new RuntimeException(s"failed to persist SbtPluginVersion: $sbtPluginVersion", lastError)
+        case e =>
+          throw new RuntimeException(s"failed to persist SbtPluginVersion $sbtPluginVersion: ${e.getMessage}", e)
       }
   }
 

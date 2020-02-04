@@ -62,7 +62,8 @@ class LibraryVersionRepository @Inject()(
           .toThrottledFuture
           .map(_ => libraryVersion)
     } recover {
-      case lastError => throw new RuntimeException(s"failed to persist LibraryVersion: $libraryVersion", lastError)
+      case e =>
+        throw new RuntimeException(s"failed to persist LibraryVersion $libraryVersion: ${e.getMessage}", e)
     }
   }
 

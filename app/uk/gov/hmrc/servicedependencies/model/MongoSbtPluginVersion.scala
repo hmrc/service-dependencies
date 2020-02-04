@@ -39,6 +39,21 @@ object MongoSbtPluginVersion {
     ~ (__ \ "updateDate"   ).format[Instant]
     )(MongoSbtPluginVersion.apply, unlift(MongoSbtPluginVersion.unapply))
   }
+
+  val schema =
+    """
+    { bsonType: "object"
+    , required: [ "sbtPluginName", "group", "updateDate" ]
+    , properties:
+      { sbtPluginName: { bsonType: "string" }
+      , group        : { bsonType: "string" }
+      , version      : { bsonType: "string"
+                       , pattern: "^((\\d+)\\.(\\d+)\\.(\\d+)(.*)|(\\d+)\\.(\\d+)(.*)|(\\d+)(.*))$"
+                       }
+      , updateDate   : { bsonType: "date" }
+      }
+    }
+    """
 }
 
 case class SbtPluginVersion(
