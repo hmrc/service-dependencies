@@ -39,6 +39,21 @@ object MongoLibraryVersion {
     ~ (__ \ "updateDate" ).format[Instant]
     )(MongoLibraryVersion.apply, unlift(MongoLibraryVersion.unapply))
   }
+
+  val schema =
+    """
+    { bsonType: "object"
+    , required: [ "libraryName", "group", "updateDate" ]
+    , properties:
+      { libraryName: { bsonType: "string" }
+      , group      : { bsonType: "string" }
+      , version    : { bsonType: "string"
+                     , pattern: "^((\\d+)\\.(\\d+)\\.(\\d+)(.*)|(\\d+)\\.(\\d+)(.*)|(\\d+)(.*))$"
+                     }
+      , updateDate : { bsonType: "date" }
+      }
+    }
+    """
 }
 
 case class LibraryVersion(

@@ -17,6 +17,7 @@
 package uk.gov.hmrc.servicedependencies.persistence
 
 import org.mockito.MockitoSugar
+import org.mongodb.scala.bson.BsonDocument
 import org.mongodb.scala.model.IndexModel
 import uk.gov.hmrc.mongo.test.DefaultMongoCollectionSupport
 import uk.gov.hmrc.servicedependencies.model._
@@ -35,8 +36,9 @@ class ServiceDependenciesRepositorySpec
   lazy val slugInfoRepo            = new SlugInfoRepository(mongoComponent, throttleConfig)
   lazy val serviceDependenciesRepo = new ServiceDependenciesRepository(mongoComponent, throttleConfig)
 
-  override protected lazy val collectionName: String   = serviceDependenciesRepo.collectionName
-  override protected lazy val indexes: Seq[IndexModel] = serviceDependenciesRepo.indexes
+  override protected lazy val collectionName: String          = serviceDependenciesRepo.collectionName
+  override protected lazy val indexes: Seq[IndexModel]        = serviceDependenciesRepo.indexes
+  override protected lazy val optSchema: Option[BsonDocument] = serviceDependenciesRepo.optSchema
 
   "ServiceDependenciesRepository.findServices" should {
 

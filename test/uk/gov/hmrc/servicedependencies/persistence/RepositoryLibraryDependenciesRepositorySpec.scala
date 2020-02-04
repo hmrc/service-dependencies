@@ -20,6 +20,7 @@ import java.time.Instant
 import java.time.temporal.ChronoUnit
 
 import org.mockito.MockitoSugar
+import org.mongodb.scala.bson.BsonDocument
 import org.mongodb.scala.model.IndexModel
 import uk.gov.hmrc.mongo.test.CleanMongoCollectionSupport
 import uk.gov.hmrc.servicedependencies.model.{MongoRepositoryDependencies, MongoRepositoryDependency, Version}
@@ -43,8 +44,9 @@ class RepositoryLibraryDependenciesRepositorySpec
 
   override implicit val patienceConfig = PatienceConfig(timeout = 30.seconds, interval = 100.millis)
 
-  override protected lazy val collectionName: String   = repo.collectionName
-  override protected lazy val indexes: Seq[IndexModel] = repo.indexes
+  override protected lazy val collectionName: String          = repo.collectionName
+  override protected lazy val indexes: Seq[IndexModel]        = repo.indexes
+  override protected lazy val optSchema: Option[BsonDocument] = repo.optSchema
 
   "update" should {
     "inserts correctly" in {

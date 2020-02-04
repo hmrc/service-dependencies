@@ -73,6 +73,17 @@ object BobbyRulesSummary {
     ~ (__ \ "summary"  ).format[Map[(BobbyRule, SlugInfoFlag), Int]]
     )(BobbyRulesSummary.apply _, unlift(BobbyRulesSummary.unapply _))
   }
+
+  val mongoSchema =
+    """
+    { bsonType: "object"
+    , required: [ "date", "summary" ]
+    , properties:
+      { date   : { bsonType: "date" }
+      , summary: { bsonType: "array" }
+      }
+    }
+    """
 }
 
 object HistoricBobbyRulesSummary {

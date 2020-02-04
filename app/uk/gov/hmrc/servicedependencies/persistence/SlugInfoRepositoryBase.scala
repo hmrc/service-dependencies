@@ -17,12 +17,14 @@
 package uk.gov.hmrc.servicedependencies.persistence
 
 import com.google.inject.{Inject, Singleton}
+import org.mongodb.scala.bson.BsonDocument
 import org.mongodb.scala.model.Indexes.{ascending, compoundIndex, descending, hashed}
 import org.mongodb.scala.model.{IndexModel, IndexOptions}
 import play.api.Logger
 import play.api.libs.json.Format
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.play.json.PlayMongoCollection
+import uk.gov.hmrc.servicedependencies.model.MongoSlugInfoFormats
 
 import scala.concurrent.ExecutionContext
 import scala.reflect.ClassTag
@@ -45,6 +47,7 @@ abstract class SlugInfoRepositoryBase[A: ClassTag] @Inject()(
                        IndexModel(compoundIndex(ascending("name"), descending("latest")),
                          IndexOptions().name("slugInfoNameLatestIdx").background(true))
                       )
+  , optSchema      = Some(BsonDocument(MongoSlugInfoFormats.schema))
   ) {
 
   val logger: Logger = Logger(this.getClass)

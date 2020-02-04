@@ -19,6 +19,7 @@ package uk.gov.hmrc.servicedependencies.persistence
 import java.time.Instant
 
 import org.mockito.MockitoSugar
+import org.mongodb.scala.bson.BsonDocument
 import org.mongodb.scala.model.IndexModel
 import uk.gov.hmrc.mongo.test.DefaultMongoCollectionSupport
 import uk.gov.hmrc.servicedependencies.model.{MongoSbtPluginVersion, Version}
@@ -38,8 +39,9 @@ class SbtPluginVersionRepositorySpec
   val futureHelper: FutureHelpers = new MockFutureHelpers()
   lazy val repo                   = new SbtPluginVersionRepository(mongoComponent, futureHelper, throttleConfig)
 
-  override protected lazy val collectionName: String   = repo.collectionName
-  override protected lazy val indexes: Seq[IndexModel] = repo.indexes
+  override protected lazy val collectionName: String          = repo.collectionName
+  override protected lazy val indexes: Seq[IndexModel]        = repo.indexes
+  override protected lazy val optSchema: Option[BsonDocument] = repo.optSchema
 
   val sbtPluginVersion = MongoSbtPluginVersion(
       name       = "some-sbtPlugin"

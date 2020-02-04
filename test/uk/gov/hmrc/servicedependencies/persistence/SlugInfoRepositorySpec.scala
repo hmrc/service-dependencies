@@ -17,6 +17,7 @@
 package uk.gov.hmrc.servicedependencies.persistence
 
 import org.mockito.MockitoSugar
+import org.mongodb.scala.bson.BsonDocument
 import org.mongodb.scala.model.IndexModel
 import uk.gov.hmrc.mongo.test.DefaultMongoCollectionSupport
 import uk.gov.hmrc.servicedependencies.persistence.TestSlugInfos._
@@ -33,8 +34,9 @@ class SlugInfoRepositorySpec
 
   lazy val slugInfoRepo = new SlugInfoRepository(mongoComponent, throttleConfig)
 
-  override protected lazy val collectionName: String   = slugInfoRepo.collectionName
-  override protected lazy val indexes: Seq[IndexModel] = slugInfoRepo.indexes
+  override protected lazy val collectionName: String          = slugInfoRepo.collectionName
+  override protected lazy val indexes: Seq[IndexModel]        = slugInfoRepo.indexes
+  override protected lazy val optSchema: Option[BsonDocument] = slugInfoRepo.optSchema
 
   "SlugInfoRepository.add" should {
     "insert correctly" in {

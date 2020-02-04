@@ -17,6 +17,7 @@
 package uk.gov.hmrc.servicedependencies.persistence
 
 import org.mockito.MockitoSugar
+import org.mongodb.scala.bson.BsonDocument
 import org.mongodb.scala.model.IndexModel
 import uk.gov.hmrc.mongo.test.DefaultMongoCollectionSupport
 import uk.gov.hmrc.servicedependencies.model.SlugInfoFlag.Latest
@@ -35,8 +36,9 @@ class JdkVersionRepositorySpec
   lazy val slugInfoRepo  = new SlugInfoRepository(mongoComponent, throttleConfig)
   lazy val jdkVersionRepo = new JdkVersionRepository(mongoComponent, throttleConfig)
 
-  override protected lazy val collectionName: String   = jdkVersionRepo.collectionName
-  override protected lazy val indexes: Seq[IndexModel] = jdkVersionRepo.indexes
+  override protected lazy val collectionName: String          = jdkVersionRepo.collectionName
+  override protected lazy val indexes: Seq[IndexModel]        = jdkVersionRepo.indexes
+  override protected lazy val optSchema: Option[BsonDocument] = jdkVersionRepo.optSchema
 
   "JdkVersionRepository.findJDKUsage" should {
     "find all the jdk version for a given environment" in {

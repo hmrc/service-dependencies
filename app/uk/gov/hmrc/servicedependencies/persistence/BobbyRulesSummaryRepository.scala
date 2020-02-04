@@ -19,8 +19,7 @@ package uk.gov.hmrc.servicedependencies.persistence
 import java.time.LocalDate
 
 import com.google.inject.{Inject, Singleton}
-import com.mongodb.BasicDBObject
-import org.mongodb.scala._
+import org.mongodb.scala.bson.BsonDocument
 import org.mongodb.scala.model.Filters.equal
 import org.mongodb.scala.model.Indexes.ascending
 import org.mongodb.scala.model.Sorts.descending
@@ -44,6 +43,7 @@ class BobbyRulesSummaryRepository @Inject()(
   , indexes        = Seq(
                        IndexModel(ascending("date"), IndexOptions().name("dateIdx").unique(true))
                      )
+  , optSchema      = Some(BsonDocument(BobbyRulesSummary.mongoSchema))
   ) with WithThrottling {
 
   private implicit val brsf = BobbyRulesSummary.mongoFormat
@@ -76,7 +76,7 @@ class BobbyRulesSummaryRepository @Inject()(
       .map(_.toList)
 
   def clearAllData: Future[Boolean] =
-    collection.deleteMany(new BasicDBObject())
+    collection.deleteMany(BsonDocument())
       .toThrottledFuture
       .map(_.wasAcknowledged())
 }

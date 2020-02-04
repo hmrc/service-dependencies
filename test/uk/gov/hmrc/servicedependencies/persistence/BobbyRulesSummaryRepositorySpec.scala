@@ -22,6 +22,7 @@ import cats.instances.all._
 import cats.syntax.all._
 import org.mockito.MockitoSugar
 import org.mongodb.scala.ReadPreference
+import org.mongodb.scala.bson.BsonDocument
 import org.mongodb.scala.model.IndexModel
 import uk.gov.hmrc.mongo.test.DefaultMongoCollectionSupport
 import uk.gov.hmrc.servicedependencies.model.{BobbyRule, BobbyRulesSummary, BobbyVersionRange, SlugInfoFlag}
@@ -42,8 +43,9 @@ class BobbyRulesSummaryRepositorySpec
       collection.withReadPreference(ReadPreference.secondaryPreferred).find().toFuture().map(_.toList)
   }
 
-  override protected lazy val collectionName: String   = repo.collectionName
-  override protected lazy val indexes: Seq[IndexModel] = repo.indexes
+  override protected lazy val collectionName: String          = repo.collectionName
+  override protected lazy val indexes: Seq[IndexModel]        = repo.indexes
+  override protected lazy val optSchema: Option[BsonDocument] = repo.optSchema
 
   override implicit val patienceConfig = PatienceConfig(timeout = 2.seconds, interval = 15.millis)
 

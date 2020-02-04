@@ -120,26 +120,26 @@ trait MongoSlugInfoFormats {
     )(SlugInfo.apply, unlift(SlugInfo.unapply))
 
   implicit val serviceDependencyFormat: OFormat[ServiceDependency] =
-    ( (__ \ "slugName"              ).format[String]
-      ~ (__ \ "slugVersion"          ).format[String]
-      ~ (__ \ "teams"             ).formatWithDefault[List[String]](List.empty)
-      ~ (__ \ "depGroup"          ).format[String]
-      ~ (__ \ "depArtifact"          ).format[String]
-      ~ (__ \ "depVersion"          ).format[String]
-      )(ServiceDependency.apply, unlift(ServiceDependency.unapply))
+    ( (__ \ "slugName"         ).format[String]
+    ~ (__ \ "slugVersion"      ).format[String]
+    ~ (__ \ "teams"            ).formatWithDefault[List[String]](List.empty)
+    ~ (__ \ "depGroup"         ).format[String]
+    ~ (__ \ "depArtifact"      ).format[String]
+    ~ (__ \ "depVersion"       ).format[String]
+    )(ServiceDependency.apply, unlift(ServiceDependency.unapply))
 
   implicit val jdkVersionFormat: OFormat[JDKVersion] = {
-    ( (__ \ "name"              ).format[String]
-      ~ (__ \ "version"          ).format[String]
-      ~ (__ \ "vendor"           ).formatWithDefault[String]("Oracle")
-      ~ (__ \ "kind"             ).formatWithDefault[String]("JDK")
-      )(JDKVersion.apply, unlift(JDKVersion.unapply))
+    ( (__ \ "name"             ).format[String]
+    ~ (__ \ "version"          ).format[String]
+    ~ (__ \ "vendor"           ).formatWithDefault[String]("Oracle")
+    ~ (__ \ "kind"             ).formatWithDefault[String]("JDK")
+    )(JDKVersion.apply, unlift(JDKVersion.unapply))
   }
 
   implicit val groupArtefactsFormat: OFormat[GroupArtefacts] = {
     ( (__ \ "_id"              ).format[String]
-      ~ (__ \ "artifacts"          ).format[List[String]]
-      )(GroupArtefacts.apply, unlift(GroupArtefacts.unapply))
+    ~ (__ \ "artifacts"        ).format[List[String]]
+    )(GroupArtefacts.apply, unlift(GroupArtefacts.unapply))
   }
 
   val dcFormat: OFormat[DependencyConfig] =
@@ -152,6 +152,68 @@ trait MongoSlugInfoFormats {
                                                   )
     )(DependencyConfig.apply, unlift(DependencyConfig.unapply))
 
+  val schema =
+    """
+    { bsonType: "object"
+    , required: [ "uri"
+                , "created"
+                , "name"
+                , "version"
+                , "runnerVersion"
+                , "classpath"
+                , "java"
+                , "dependencies"
+                , "latest"
+                , "production"
+                , "qa"
+                , "staging"
+                , "development"
+                , "external test"
+                , "integration"
+                ]
+    , properties:
+      { uri              : { bsonType: "string" }
+      , created          : { bsonType: "string" }
+      , name             : { bsonType: "string" }
+      , version          : { bsonType: "string"
+                           , pattern: "^((\\d+)\\.(\\d+)\\.(\\d+)(.*)|(\\d+)\\.(\\d+)(.*)|(\\d+)(.*))$"
+                           }
+      , runnerVersion    : { bsonType: "string" }
+      , classpath        : { bsonType: "string" }
+      , java             : { bsonType: "object"
+                           , required: [ "version" ]
+                           , properties:
+                             { version: { bsonType: "string" }
+                             , vendor : { bsonType: "string" }
+                             , kind   : { bsonType: "string" }
+                             }
+                           }
+      , dependencies     : { bsonType: "array"
+                           , items   : { bsonType: "object"
+                                       , required: [ "path", "version", "group", "artifact" ]
+                                       , properties:
+                                         { path    : { bsonType: "string" }
+                                         , version : { bsonType: "string"
+                                                   , pattern: "^((\\d+)\\.(\\d+)\\.(\\d+)(.*)|(\\d+)\\.(\\d+)(.*)|(\\d+)(.*))$"
+                                                   }
+                                         , group   : { bsonType: "string" }
+                                         , artifact: { bsonType: "string" }
+                                         , meta    : { bsonType: "string" }
+                                         }
+                                       }
+                           }
+      , applicationConfig: { bsonType: "string" }
+      , slugConfig       : { bsonType: "string" }
+      , latest           : { bsonType: "bool" }
+      , production       : { bsonType: "bool" }
+      , qa               : { bsonType: "bool" }
+      , staging          : { bsonType: "bool" }
+      , development      : { bsonType: "bool" }
+      , "external test"  : { bsonType: "bool" }
+      , integration      : { bsonType: "bool" }
+      }
+    }
+    """
 }
 
 object MongoSlugInfoFormats extends MongoSlugInfoFormats

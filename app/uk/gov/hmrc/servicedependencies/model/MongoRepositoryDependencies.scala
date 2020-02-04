@@ -50,6 +50,7 @@ object MongoRepositoryDependency {
 
   def fromMongoRepositoryDependency(d: MongoRepositoryDependency): (String, Option[String], Version) =
     (d.name, Some(d.group), d.currentVersion)
+
 }
 
 case class MongoRepositoryDependencies(
@@ -65,5 +66,45 @@ object MongoRepositoryDependencies {
   implicit val format = {
     implicit val iF = MongoJavatimeFormats.instantFormats
     Json.format[MongoRepositoryDependencies]
+    ( (__ \ "repositoryName"       ).format[String]
+    ~ (__ \ "libraryDependencies"  ).format[Seq[MongoRepositoryDependency]]
+    ~ (__ \ "sbtPluginDependencies").format[Seq[MongoRepositoryDependency]]
+    ~ (__ \ "otherDependencies"    ).format[Seq[MongoRepositoryDependency]]
+    ~ (__ \ "updateDate"           ).format[Instant]
+    )(MongoRepositoryDependencies.apply, unlift(MongoRepositoryDependencies.unapply))
   }
+
+    private val mongoRepositoryDependencySchema =
+      """
+      { bsonType: "object"
+      , required: [ "name", "currentVersion" ]
+      , properties:
+        { libraryName   : { bsonType: "string" }
+        , group         : { bsonType: "string" }
+        , currentVersion: { bsonType: "string"
+                          , pattern: "^((\\d+)\\.(\\d+)\\.(\\d+)(.*)|(\\d+)\\.(\\d+)(.*)|(\\d+)(.*))$"
+                          }
+        }
+      }
+      """
+
+    val schema =
+      s"""
+      { bsonType: "object"
+      , required: [ "repositoryName"
+                  , "libraryDependencies"
+                  , "sbtPluginDependencies"
+                  , "otherDependencies"
+                  , "updateDate"
+                  ]
+      , properties:
+        { repositoryName       : { bsonType: "string" }
+        , libraryDependencies  : { bsonType: "array", items: $mongoRepositoryDependencySchema }
+        , sbtPluginDependencies: { bsonType: "array", items: $mongoRepositoryDependencySchema }
+        , otherDependencies    : { bsonType: "array", items: $mongoRepositoryDependencySchema }
+        , updateDate           : { bsonType: "date"  }
+        }
+      }
+      """
+
 }

@@ -19,7 +19,7 @@ package uk.gov.hmrc.servicedependencies.persistence
 import java.time.Instant
 
 import com.google.inject.{Inject, Singleton}
-import com.mongodb.BasicDBObject
+import org.mongodb.scala.bson.BsonDocument
 import org.mongodb.scala.model.Filters.{equal, regex}
 import org.mongodb.scala.model.Indexes.hashed
 import org.mongodb.scala.model.{IndexModel, IndexOptions, ReplaceOptions}
@@ -44,6 +44,7 @@ class RepositoryLibraryDependenciesRepository @Inject()(
   , indexes        = Seq(
                        IndexModel(hashed("repositoryName"), IndexOptions().name("RepositoryNameIdx").background(true))
                      )
+  , optSchema      = Some(BsonDocument(MongoRepositoryDependencies.schema))
   ) with WithThrottling {
 
   val logger: Logger = Logger(this.getClass)
@@ -89,7 +90,7 @@ class RepositoryLibraryDependenciesRepository @Inject()(
   }
 
   def clearAllData: Future[Boolean] =
-    collection.deleteMany(new BasicDBObject())
+    collection.deleteMany(BsonDocument())
       .toThrottledFuture
       .map(_.wasAcknowledged())
 

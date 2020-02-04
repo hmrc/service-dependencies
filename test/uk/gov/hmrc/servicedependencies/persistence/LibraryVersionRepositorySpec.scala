@@ -20,6 +20,7 @@ import java.time.Instant
 
 import com.codahale.metrics.MetricRegistry
 import org.mockito.MockitoSugar
+import org.mongodb.scala.bson.BsonDocument
 import org.mongodb.scala.model.IndexModel
 import uk.gov.hmrc.mongo.test.DefaultMongoCollectionSupport
 import uk.gov.hmrc.servicedependencies.model.{MongoLibraryVersion, Version}
@@ -40,8 +41,9 @@ class LibraryVersionRepositorySpec
 
   lazy val repo = new LibraryVersionRepository(mongoComponent, futureHelper, throttleConfig)
 
-  override protected lazy val collectionName: String   = repo.collectionName
-  override protected lazy val indexes: Seq[IndexModel] = repo.indexes
+  override protected lazy val collectionName: String          = repo.collectionName
+  override protected lazy val indexes: Seq[IndexModel]        = repo.indexes
+  override protected lazy val optSchema: Option[BsonDocument] = repo.optSchema
 
   val libraryVersion = MongoLibraryVersion(
       name       = "some-library"

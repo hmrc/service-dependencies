@@ -17,7 +17,6 @@
 package uk.gov.hmrc.servicedependencies.persistence
 
 import com.google.inject.{Inject, Singleton}
-import com.mongodb.BasicDBObject
 import org.mongodb.scala.bson.BsonDocument
 import org.mongodb.scala.model.Filters.{and, equal}
 import org.mongodb.scala.model.Indexes.hashed
@@ -76,7 +75,7 @@ class SbtPluginVersionRepository @Inject()(
       .toThrottledFuture
 
   def clearAllData: Future[Boolean] =
-    collection.deleteMany(new BasicDBObject())
+    collection.deleteMany(BsonDocument())
       .toThrottledFuture
       .map(_.wasAcknowledged())
 }
