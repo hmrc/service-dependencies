@@ -19,7 +19,7 @@ package uk.gov.hmrc.servicedependencies.persistence
 import org.mockito.MockitoSugar
 import org.mongodb.scala.bson.BsonDocument
 import org.mongodb.scala.model.IndexModel
-import uk.gov.hmrc.mongo.test.DefaultMongoCollectionSupport
+import uk.gov.hmrc.mongo.test.DefaultPlayMongoRepositorySupport
 import uk.gov.hmrc.servicedependencies.model._
 import uk.gov.hmrc.servicedependencies.persistence.TestSlugInfos._
 
@@ -31,14 +31,11 @@ class ServiceDependenciesRepositorySpec
     extends AnyWordSpecLike
       with Matchers
       with MockitoSugar
-      with DefaultMongoCollectionSupport {
+      with DefaultPlayMongoRepositorySupport[ServiceDependency] {
 
-  lazy val slugInfoRepo            = new SlugInfoRepository(mongoComponent, throttleConfig)
-  lazy val serviceDependenciesRepo = new ServiceDependenciesRepository(mongoComponent, throttleConfig)
+  override lazy val repository = new ServiceDependenciesRepository(mongoComponent, throttleConfig)
 
-  override protected lazy val collectionName: String          = serviceDependenciesRepo.collectionName
-  override protected lazy val indexes: Seq[IndexModel]        = serviceDependenciesRepo.indexes
-  override protected lazy val optSchema: Option[BsonDocument] = serviceDependenciesRepo.optSchema
+  lazy val slugInfoRepo = new SlugInfoRepository(mongoComponent, throttleConfig)
 
   "ServiceDependenciesRepository.findServices" should {
 
@@ -46,7 +43,7 @@ class ServiceDependenciesRepositorySpec
       slugInfoRepo.add(oldSlugInfo).futureValue
       slugInfoRepo.add(slugInfo).futureValue
 
-      val result = serviceDependenciesRepo.findServices(SlugInfoFlag.Latest, "com.test.group",  "lib1").futureValue
+      val result = repository.findServices(SlugInfoFlag.Latest, "com.test.group",  "lib1").futureValue
 
       result.length shouldBe 1
 
@@ -55,7 +52,6 @@ class ServiceDependenciesRepositorySpec
       result.head.depGroup shouldBe "com.test.group"
       result.head.depVersion shouldBe "1.2.0"
       result.head.depSemanticVersion shouldBe Some(Version(1, 2, 0))
-
     }
 
     "find all slugs with a dependency matched by group and artifact" in {
@@ -63,7 +59,7 @@ class ServiceDependenciesRepositorySpec
       slugInfoRepo.add(slugInfo).futureValue
       slugInfoRepo.add(otherSlug).futureValue
 
-      val result = serviceDependenciesRepo.findServices(SlugInfoFlag.Latest,  "com.test.group",  "lib2").futureValue
+      val result = repository.findServices(SlugInfoFlag.Latest,  "com.test.group",  "lib2").futureValue
       result.length shouldBe 1
 
       result.head.slugVersion shouldBe "0.27.0"
@@ -72,5 +68,4 @@ class ServiceDependenciesRepositorySpec
       result.head.depVersion shouldBe "0.66"
     }
   }
-
 }

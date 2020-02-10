@@ -25,7 +25,7 @@ import org.mongodb.scala.model.Indexes.ascending
 import org.mongodb.scala.model.Sorts.descending
 import org.mongodb.scala.model.{IndexModel, IndexOptions, ReplaceOptions}
 import uk.gov.hmrc.mongo.MongoComponent
-import uk.gov.hmrc.mongo.play.json.PlayMongoCollection
+import uk.gov.hmrc.mongo.play.json.PlayMongoRepository
 import uk.gov.hmrc.mongo.throttle.{ThrottleConfig, WithThrottling}
 import uk.gov.hmrc.servicedependencies.model.BobbyRulesSummary
 
@@ -36,7 +36,7 @@ class BobbyRulesSummaryRepository @Inject()(
     mongoComponent    : MongoComponent
   , val throttleConfig: ThrottleConfig
   )(implicit ec: ExecutionContext
-  ) extends PlayMongoCollection[BobbyRulesSummary](
+  ) extends PlayMongoRepository[BobbyRulesSummary](
     collectionName = "bobbyRulesSummary"
   , mongoComponent = mongoComponent
   , domainFormat   = BobbyRulesSummary.mongoFormat

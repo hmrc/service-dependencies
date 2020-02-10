@@ -24,7 +24,7 @@ import org.mongodb.scala.model.{IndexModel, IndexOptions, ReplaceOptions}
 import play.api.Logger
 import play.api.libs.json.Json
 import uk.gov.hmrc.mongo.MongoComponent
-import uk.gov.hmrc.mongo.play.json.PlayMongoCollection
+import uk.gov.hmrc.mongo.play.json.PlayMongoRepository
 import uk.gov.hmrc.mongo.throttle.{ThrottleConfig, WithThrottling}
 import uk.gov.hmrc.servicedependencies.model._
 import uk.gov.hmrc.servicedependencies.util.FutureHelpers
@@ -37,7 +37,7 @@ class SbtPluginVersionRepository @Inject()(
   , futureHelpers     : FutureHelpers
   , val throttleConfig: ThrottleConfig
   )(implicit ec: ExecutionContext
-  ) extends PlayMongoCollection[MongoSbtPluginVersion](
+  ) extends PlayMongoRepository[MongoSbtPluginVersion](
     collectionName = "sbtPluginVersions"
   , mongoComponent = mongoComponent
   , domainFormat   = MongoSbtPluginVersion.format

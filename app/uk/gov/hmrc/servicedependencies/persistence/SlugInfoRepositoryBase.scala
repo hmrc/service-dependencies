@@ -23,7 +23,7 @@ import org.mongodb.scala.model.{IndexModel, IndexOptions}
 import play.api.Logger
 import play.api.libs.json.Format
 import uk.gov.hmrc.mongo.MongoComponent
-import uk.gov.hmrc.mongo.play.json.PlayMongoCollection
+import uk.gov.hmrc.mongo.play.json.PlayMongoRepository
 import uk.gov.hmrc.servicedependencies.model.MongoSlugInfoFormats
 
 import scala.concurrent.ExecutionContext
@@ -34,7 +34,7 @@ abstract class SlugInfoRepositoryBase[A: ClassTag] @Inject()(
     mongoComponent: MongoComponent
   , domainFormat  : Format[A]
   )(implicit ec: ExecutionContext
-  ) extends PlayMongoCollection[A](
+  ) extends PlayMongoRepository[A](
     collectionName = "slugInfos"
   , mongoComponent = mongoComponent
   , domainFormat   = domainFormat

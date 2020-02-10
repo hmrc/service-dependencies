@@ -20,7 +20,6 @@ import com.google.inject.{Inject, Singleton}
 import org.mongodb.scala.bson.BsonDocument
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.lock.{MongoLockRepository, Lock}
-import uk.gov.hmrc.mongo.play.json.PlayMongoCollection
 import uk.gov.hmrc.mongo.throttle.{ThrottleConfig, WithThrottling}
 
 import scala.concurrent.{ExecutionContext, Future}

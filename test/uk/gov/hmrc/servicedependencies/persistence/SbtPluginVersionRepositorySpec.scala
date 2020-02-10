@@ -21,7 +21,7 @@ import java.time.Instant
 import org.mockito.MockitoSugar
 import org.mongodb.scala.bson.BsonDocument
 import org.mongodb.scala.model.IndexModel
-import uk.gov.hmrc.mongo.test.DefaultMongoCollectionSupport
+import uk.gov.hmrc.mongo.test.DefaultPlayMongoRepositorySupport
 import uk.gov.hmrc.servicedependencies.model.{MongoSbtPluginVersion, Version}
 import uk.gov.hmrc.servicedependencies.util.{FutureHelpers, MockFutureHelpers}
 import uk.gov.hmrc.time.DateTimeUtils
@@ -34,14 +34,10 @@ class SbtPluginVersionRepositorySpec
     extends AnyWordSpecLike
     with Matchers
     with MockitoSugar
-    with DefaultMongoCollectionSupport {
+    with DefaultPlayMongoRepositorySupport[MongoSbtPluginVersion] {
 
   val futureHelper: FutureHelpers = new MockFutureHelpers()
-  lazy val repo                   = new SbtPluginVersionRepository(mongoComponent, futureHelper, throttleConfig)
-
-  override protected lazy val collectionName: String          = repo.collectionName
-  override protected lazy val indexes: Seq[IndexModel]        = repo.indexes
-  override protected lazy val optSchema: Option[BsonDocument] = repo.optSchema
+  override protected lazy val repository = new SbtPluginVersionRepository(mongoComponent, futureHelper, throttleConfig)
 
   val sbtPluginVersion = MongoSbtPluginVersion(
       name       = "some-sbtPlugin"
@@ -52,25 +48,25 @@ class SbtPluginVersionRepositorySpec
 
   "update" should {
     "inserts correctly" in {
-      repo.update(sbtPluginVersion).futureValue
-      repo.getAllEntries.futureValue shouldBe Seq(sbtPluginVersion)
+      repository.update(sbtPluginVersion).futureValue
+      repository.getAllEntries.futureValue shouldBe Seq(sbtPluginVersion)
     }
 
     "updates correctly (based on sbtPlugin name)" in {
       val newSbtPluginVersion = sbtPluginVersion.copy(version = Some(Version(1, 0, 5)))
 
-      repo.update(sbtPluginVersion).futureValue
-      repo.update(newSbtPluginVersion).futureValue
-      repo.getAllEntries.futureValue shouldBe Seq(newSbtPluginVersion)
+      repository.update(sbtPluginVersion).futureValue
+      repository.update(newSbtPluginVersion).futureValue
+      repository.getAllEntries.futureValue shouldBe Seq(newSbtPluginVersion)
     }
   }
 
   "clearAllDependencyEntries" should {
     "deletes everything" in {
-      repo.update(sbtPluginVersion).futureValue
-      repo.getAllEntries.futureValue should have size 1
-      repo.clearAllData.futureValue
-      repo.getAllEntries.futureValue shouldBe Nil
+      repository.update(sbtPluginVersion).futureValue
+      repository.getAllEntries.futureValue should have size 1
+      repository.clearAllData.futureValue
+      repository.getAllEntries.futureValue shouldBe Nil
     }
   }
 }

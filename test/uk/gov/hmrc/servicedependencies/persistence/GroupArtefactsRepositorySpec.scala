@@ -21,7 +21,7 @@ import org.mongodb.scala.bson.BsonDocument
 import org.mongodb.scala.model.IndexModel
 import org.scalatest.matchers.{HavePropertyMatchResult, HavePropertyMatcher}
 import org.scalatest.OptionValues
-import uk.gov.hmrc.mongo.test.CleanMongoCollectionSupport
+import uk.gov.hmrc.mongo.test.{CleanMongoCollectionSupport, PlayMongoRepositorySupport}
 import uk.gov.hmrc.servicedependencies.model.GroupArtefacts
 import uk.gov.hmrc.servicedependencies.persistence.TestSlugInfos._
 
@@ -36,59 +36,24 @@ class GroupArtefactsRepositorySpec
       with OptionValues
       with MockitoSugar
       // We don't mixin IndexedMongoQueriesSupport here, as this repo makes use of queries not satisfied by an index
+      with PlayMongoRepositorySupport[GroupArtefacts]
       with CleanMongoCollectionSupport {
 
-  lazy val groupArtefactsRepo = new GroupArtefactRepository(mongoComponent, throttleConfig)
+  override lazy val repository = new GroupArtefactRepository(mongoComponent, throttleConfig)
+
   lazy val slugInfoRepo = new SlugInfoRepository(mongoComponent, throttleConfig)
 
   override implicit val patienceConfig = PatienceConfig(timeout = 30.seconds, interval = 100.millis)
-
-  override protected lazy val collectionName: String          = groupArtefactsRepo.collectionName
-  override protected lazy val indexes: Seq[IndexModel]        = groupArtefactsRepo.indexes
-  override protected lazy val optSchema: Option[BsonDocument] = groupArtefactsRepo.optSchema
-
-  import GroupArtefactsRepositorySpec._
 
   "GroupArtefactsRepository.findGroupsArtefacts" should {
     "return a map of artefact group to list of found artefacts" in {
       slugInfoRepo.add(slugInfo).futureValue
 
-      val result = groupArtefactsRepo.findGroupsArtefacts.futureValue
+      val result = repository.findGroupsArtefacts.futureValue
 
       result should have size 1
-      result.headOption.value should have (
-        group ("com.test.group"),
-        artefacts (Set("lib1", "lib2"))
-      )
+      result.head.group           shouldBe "com.test.group"
+      result.head.artefacts.toSet shouldBe Set("lib1", "lib2")
     }
   }
-
-}
-
-private object GroupArtefactsRepositorySpec {
-  def group(expectedGroup: String): HavePropertyMatcher[GroupArtefacts, String] =
-    new HavePropertyMatcher[GroupArtefacts, String] {
-      def apply(groupArtefacts: GroupArtefacts): HavePropertyMatchResult[String] = {
-        val actualGroup = groupArtefacts.group
-        HavePropertyMatchResult(
-          expectedGroup == actualGroup,
-          "group",
-          expectedGroup,
-          actualGroup
-        )
-      }
-    }
-
-  def artefacts(expectedArtefacts: Set[String]): HavePropertyMatcher[GroupArtefacts, Set[String]] =
-    new HavePropertyMatcher[GroupArtefacts, Set[String]] {
-      def apply(groupArtefacts: GroupArtefacts): HavePropertyMatchResult[Set[String]] = {
-        val actualArtefacts = groupArtefacts.artefacts.toSet
-        HavePropertyMatchResult(
-          expectedArtefacts == actualArtefacts,
-          "artefacts",
-          expectedArtefacts,
-          actualArtefacts
-        )
-      }
-    }
 }

@@ -23,7 +23,7 @@ import org.mongodb.scala.model.Indexes.hashed
 import org.mongodb.scala.model.{IndexModel, IndexOptions, ReplaceOptions}
 import play.api.Logger
 import uk.gov.hmrc.mongo.MongoComponent
-import uk.gov.hmrc.mongo.play.json.PlayMongoCollection
+import uk.gov.hmrc.mongo.play.json.PlayMongoRepository
 import uk.gov.hmrc.mongo.throttle.{ThrottleConfig, WithThrottling}
 import uk.gov.hmrc.servicedependencies.model._
 import uk.gov.hmrc.servicedependencies.util.FutureHelpers
@@ -36,7 +36,7 @@ class LibraryVersionRepository @Inject()(
   , futureHelpers     : FutureHelpers
   , val throttleConfig: ThrottleConfig
   )(implicit ec: ExecutionContext
-  ) extends PlayMongoCollection[MongoLibraryVersion](
+  ) extends PlayMongoRepository[MongoLibraryVersion](
     collectionName = "libraryVersions"
   , mongoComponent = mongoComponent
   , domainFormat   = MongoLibraryVersion.format
