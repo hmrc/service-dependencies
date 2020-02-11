@@ -17,13 +17,13 @@
 package uk.gov.hmrc.servicedependencies.persistence
 
 import com.google.inject.{Inject, Singleton}
-import com.mongodb.BasicDBObject
+import org.mongodb.scala.bson.BsonDocument
 import org.mongodb.scala.model.Filters.{and, equal}
 import org.mongodb.scala.model.Indexes.hashed
 import org.mongodb.scala.model.{IndexModel, IndexOptions, ReplaceOptions}
 import play.api.Logger
 import uk.gov.hmrc.mongo.MongoComponent
-import uk.gov.hmrc.mongo.play.json.PlayMongoCollection
+import uk.gov.hmrc.mongo.play.json.PlayMongoRepository
 import uk.gov.hmrc.mongo.throttle.{ThrottleConfig, WithThrottling}
 import uk.gov.hmrc.servicedependencies.model._
 import uk.gov.hmrc.servicedependencies.util.FutureHelpers
@@ -36,13 +36,14 @@ class LibraryVersionRepository @Inject()(
   , futureHelpers     : FutureHelpers
   , val throttleConfig: ThrottleConfig
   )(implicit ec: ExecutionContext
-  ) extends PlayMongoCollection[MongoLibraryVersion](
+  ) extends PlayMongoRepository[MongoLibraryVersion](
     collectionName = "libraryVersions"
   , mongoComponent = mongoComponent
   , domainFormat   = MongoLibraryVersion.format
   , indexes        = Seq(
                        IndexModel(hashed("libraryName"), IndexOptions().name("libraryNameIdx").background(true))
                      )
+  , optSchema      = Some(BsonDocument(MongoLibraryVersion.schema))
   ) with WithThrottling {
 
   val logger: Logger = Logger(this.getClass)
@@ -62,7 +63,8 @@ class LibraryVersionRepository @Inject()(
           .toThrottledFuture
           .map(_ => libraryVersion)
     } recover {
-      case lastError => throw new RuntimeException(s"failed to persist LibraryVersion: $libraryVersion", lastError)
+      case e =>
+        throw new RuntimeException(s"failed to persist LibraryVersion $libraryVersion: ${e.getMessage}", e)
     }
   }
 
@@ -71,7 +73,7 @@ class LibraryVersionRepository @Inject()(
       .toThrottledFuture
 
   def clearAllData: Future[Boolean] =
-    collection.deleteMany(new BasicDBObject())
+    collection.deleteMany(BsonDocument())
       .toThrottledFuture
       .map(_.wasAcknowledged())
 }

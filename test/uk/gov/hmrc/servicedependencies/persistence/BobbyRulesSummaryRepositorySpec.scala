@@ -22,8 +22,9 @@ import cats.instances.all._
 import cats.syntax.all._
 import org.mockito.MockitoSugar
 import org.mongodb.scala.ReadPreference
+import org.mongodb.scala.bson.BsonDocument
 import org.mongodb.scala.model.IndexModel
-import uk.gov.hmrc.mongo.test.DefaultMongoCollectionSupport
+import uk.gov.hmrc.mongo.test.DefaultPlayMongoRepositorySupport
 import uk.gov.hmrc.servicedependencies.model.{BobbyRule, BobbyRulesSummary, BobbyVersionRange, SlugInfoFlag}
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
@@ -35,33 +36,28 @@ class BobbyRulesSummaryRepositorySpec
     extends AnyWordSpecLike
     with Matchers
     with MockitoSugar
-    with DefaultMongoCollectionSupport {
+    with DefaultPlayMongoRepositorySupport[BobbyRulesSummary] {
 
-  private lazy val repo = new BobbyRulesSummaryRepository(mongoComponent, throttleConfig) {
+  override protected lazy val repository = new BobbyRulesSummaryRepository(mongoComponent, throttleConfig) {
     def findAll(): Future[Seq[BobbyRulesSummary]] =
       collection.withReadPreference(ReadPreference.secondaryPreferred).find().toFuture().map(_.toList)
   }
-
-  override protected lazy val collectionName: String   = repo.collectionName
-  override protected lazy val indexes: Seq[IndexModel] = repo.indexes
-
-  override implicit val patienceConfig = PatienceConfig(timeout = 2.seconds, interval = 15.millis)
 
   "BobbyRulesSummaryRepository.add" should {
     val summary = bobbyRulesSummary(LocalDate.now, SlugInfoFlag.Development, 1)
 
     "insert correctly" in {
-      repo.add(summary).futureValue
-      repo.findAll().futureValue shouldBe Seq(summary)
+      repository.add(summary).futureValue
+      repository.findAll().futureValue shouldBe Seq(summary)
     }
 
     "replace existing" in {
-      repo.add(summary).futureValue
-      repo.findAll().futureValue should have size 1
+      repository.add(summary).futureValue
+      repository.findAll().futureValue should have size 1
 
       val duplicate = summary.copy(summary = Map.empty)
-      repo.add(duplicate).futureValue
-      repo.findAll().futureValue shouldBe Seq(duplicate)
+      repository.add(duplicate).futureValue
+      repository.findAll().futureValue shouldBe Seq(duplicate)
     }
   }
 
@@ -74,9 +70,9 @@ class BobbyRulesSummaryRepositorySpec
       val older  = bobbyRulesSummary(now.minusDays(1), SlugInfoFlag.Latest, count     = 2)
       val oldest = bobbyRulesSummary(now.minusDays(2), SlugInfoFlag.Production, count = 3)
 
-      List(latest, older, oldest).traverse(repo.add).futureValue
+      List(latest, older, oldest).traverse(repository.add).futureValue
 
-      repo.getLatest.futureValue shouldBe Some(latest)
+      repository.getLatest.futureValue shouldBe Some(latest)
     }
   }
 
@@ -88,9 +84,9 @@ class BobbyRulesSummaryRepositorySpec
       val older  = bobbyRulesSummary(now.minusDays(1), SlugInfoFlag.Latest, count     = 2)
       val oldest = bobbyRulesSummary(now.minusDays(2), SlugInfoFlag.Production, count = 3)
 
-      List(latest, older, oldest).traverse(repo.add).futureValue
+      List(latest, older, oldest).traverse(repository.add).futureValue
 
-      repo.getHistoric.futureValue shouldBe Seq(latest, older, oldest)
+      repository.getHistoric.futureValue shouldBe Seq(latest, older, oldest)
     }
   }
 
@@ -104,5 +100,4 @@ class BobbyRulesSummaryRepositorySpec
 
   def bobbyRulesSummary(date: LocalDate, env: SlugInfoFlag, count: Int) =
     BobbyRulesSummary(date, Map((playFrontend, env) -> count))
-
 }

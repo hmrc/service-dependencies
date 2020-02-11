@@ -20,8 +20,9 @@ import java.time.Instant
 
 import com.codahale.metrics.MetricRegistry
 import org.mockito.MockitoSugar
+import org.mongodb.scala.bson.BsonDocument
 import org.mongodb.scala.model.IndexModel
-import uk.gov.hmrc.mongo.test.DefaultMongoCollectionSupport
+import uk.gov.hmrc.mongo.test.DefaultPlayMongoRepositorySupport
 import uk.gov.hmrc.servicedependencies.model.{MongoLibraryVersion, Version}
 import uk.gov.hmrc.servicedependencies.util.{FutureHelpers, MockFutureHelpers}
 
@@ -33,15 +34,12 @@ class LibraryVersionRepositorySpec
     extends AnyWordSpecLike
     with Matchers
     with MockitoSugar
-    with DefaultMongoCollectionSupport {
+    with DefaultPlayMongoRepositorySupport[MongoLibraryVersion] {
 
   val metricsRegistry             = new MetricRegistry()
   val futureHelper: FutureHelpers = new MockFutureHelpers()
 
-  lazy val repo = new LibraryVersionRepository(mongoComponent, futureHelper, throttleConfig)
-
-  override protected lazy val collectionName: String   = repo.collectionName
-  override protected lazy val indexes: Seq[IndexModel] = repo.indexes
+  override lazy val repository = new LibraryVersionRepository(mongoComponent, futureHelper, throttleConfig)
 
   val libraryVersion = MongoLibraryVersion(
       name       = "some-library"
@@ -52,25 +50,25 @@ class LibraryVersionRepositorySpec
 
   "update" should {
     "inserts correctly" in {
-      repo.update(libraryVersion).futureValue
-      repo.getAllEntries.futureValue shouldBe Seq(libraryVersion)
+      repository.update(libraryVersion).futureValue
+      repository.getAllEntries.futureValue shouldBe Seq(libraryVersion)
     }
 
     "updates correctly (based on library name)" in {
       val newLibraryVersion = libraryVersion.copy(version = Some(Version(1, 0, 5)))
 
-      repo.update(libraryVersion).futureValue
-      repo.update(newLibraryVersion).futureValue
-      repo.getAllEntries.futureValue shouldBe Seq(newLibraryVersion)
+      repository.update(libraryVersion).futureValue
+      repository.update(newLibraryVersion).futureValue
+      repository.getAllEntries.futureValue shouldBe Seq(newLibraryVersion)
     }
   }
 
   "clearAllDependencyEntries" should {
     "deletes everything" in {
-      repo.update(libraryVersion).futureValue
-      repo.getAllEntries.futureValue should have size 1
-      repo.clearAllData.futureValue
-      repo.getAllEntries.futureValue shouldBe Nil
+      repository.update(libraryVersion).futureValue
+      repository.getAllEntries.futureValue should have size 1
+      repository.clearAllData.futureValue
+      repository.getAllEntries.futureValue shouldBe Nil
     }
   }
 }

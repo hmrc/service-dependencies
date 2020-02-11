@@ -19,13 +19,13 @@ package uk.gov.hmrc.servicedependencies.persistence
 import java.time.Instant
 
 import com.google.inject.{Inject, Singleton}
-import com.mongodb.BasicDBObject
+import org.mongodb.scala.bson.BsonDocument
 import org.mongodb.scala.model.Filters.{equal, regex}
 import org.mongodb.scala.model.Indexes.hashed
 import org.mongodb.scala.model.{IndexModel, IndexOptions, ReplaceOptions}
 import play.api.Logger
 import uk.gov.hmrc.mongo.MongoComponent
-import uk.gov.hmrc.mongo.play.json.PlayMongoCollection
+import uk.gov.hmrc.mongo.play.json.PlayMongoRepository
 import uk.gov.hmrc.mongo.throttle.{ThrottleConfig, WithThrottling}
 import uk.gov.hmrc.servicedependencies.model._
 import uk.gov.hmrc.servicedependencies.util.FutureHelpers
@@ -37,13 +37,14 @@ class RepositoryLibraryDependenciesRepository @Inject()(
   , futureHelper      : FutureHelpers
   , val throttleConfig: ThrottleConfig
   )(implicit ec: ExecutionContext
-  ) extends PlayMongoCollection[MongoRepositoryDependencies](
+  ) extends PlayMongoRepository[MongoRepositoryDependencies](
     collectionName = "repositoryLibraryDependencies"
   , mongoComponent = mongoComponent
   , domainFormat   = MongoRepositoryDependencies.format
   , indexes        = Seq(
                        IndexModel(hashed("repositoryName"), IndexOptions().name("RepositoryNameIdx").background(true))
                      )
+  , optSchema      = Some(BsonDocument(MongoRepositoryDependencies.schema))
   ) with WithThrottling {
 
   val logger: Logger = Logger(this.getClass)
@@ -62,10 +63,8 @@ class RepositoryLibraryDependenciesRepository @Inject()(
           .map(_ => repositoryLibraryDependencies)
       }
       .recover {
-        case lastError =>
-          throw new RuntimeException(
-            s"failed to persist RepositoryLibraryDependencies: $repositoryLibraryDependencies",
-            lastError)
+        case e =>
+          throw new RuntimeException(s"failed to persist RepositoryLibraryDependencies $repositoryLibraryDependencies ${e.getMessage}", e)
       }
   }
 
@@ -91,7 +90,7 @@ class RepositoryLibraryDependenciesRepository @Inject()(
   }
 
   def clearAllData: Future[Boolean] =
-    collection.deleteMany(new BasicDBObject())
+    collection.deleteMany(BsonDocument())
       .toThrottledFuture
       .map(_.wasAcknowledged())
 

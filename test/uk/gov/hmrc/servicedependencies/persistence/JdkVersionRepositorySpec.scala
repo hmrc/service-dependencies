@@ -17,8 +17,10 @@
 package uk.gov.hmrc.servicedependencies.persistence
 
 import org.mockito.MockitoSugar
+import org.mongodb.scala.bson.BsonDocument
 import org.mongodb.scala.model.IndexModel
-import uk.gov.hmrc.mongo.test.DefaultMongoCollectionSupport
+import uk.gov.hmrc.mongo.test.DefaultPlayMongoRepositorySupport
+import uk.gov.hmrc.servicedependencies.model.JDKVersion
 import uk.gov.hmrc.servicedependencies.model.SlugInfoFlag.Latest
 import uk.gov.hmrc.servicedependencies.persistence.TestSlugInfos._
 
@@ -30,19 +32,17 @@ class JdkVersionRepositorySpec
     extends AnyWordSpecLike
        with Matchers
       with MockitoSugar
-      with DefaultMongoCollectionSupport {
+      with DefaultPlayMongoRepositorySupport[JDKVersion] {
+
+  override protected lazy val repository = new JdkVersionRepository(mongoComponent, throttleConfig)
 
   lazy val slugInfoRepo  = new SlugInfoRepository(mongoComponent, throttleConfig)
-  lazy val jdkVersionRepo = new JdkVersionRepository(mongoComponent, throttleConfig)
-
-  override protected lazy val collectionName: String   = jdkVersionRepo.collectionName
-  override protected lazy val indexes: Seq[IndexModel] = jdkVersionRepo.indexes
 
   "JdkVersionRepository.findJDKUsage" should {
     "find all the jdk version for a given environment" in {
       slugInfoRepo.add(slugInfo).futureValue
 
-      val result = jdkVersionRepo.findJDKUsage(Latest).futureValue
+      val result = repository.findJDKUsage(Latest).futureValue
 
       result.length       shouldBe 1
       result.head.name    shouldBe slugInfo.name
@@ -55,7 +55,7 @@ class JdkVersionRepositorySpec
       slugInfoRepo.add(slugInfo).futureValue
       slugInfoRepo.add(nonJavaSlugInfo).futureValue
 
-      val result = jdkVersionRepo.findJDKUsage(Latest).futureValue
+      val result = repository.findJDKUsage(Latest).futureValue
 
       result.length shouldBe 1
       result.head.name shouldBe "my-slug"

@@ -17,8 +17,10 @@
 package uk.gov.hmrc.servicedependencies.persistence
 
 import org.mockito.MockitoSugar
+import org.mongodb.scala.bson.BsonDocument
 import org.mongodb.scala.model.IndexModel
-import uk.gov.hmrc.mongo.test.DefaultMongoCollectionSupport
+import uk.gov.hmrc.mongo.test.DefaultPlayMongoRepositorySupport
+import uk.gov.hmrc.servicedependencies.model.SlugInfo
 import uk.gov.hmrc.servicedependencies.persistence.TestSlugInfos._
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -29,46 +31,42 @@ class SlugInfoRepositorySpec
     extends AnyWordSpecLike
       with Matchers
       with MockitoSugar
-      with DefaultMongoCollectionSupport {
+      with DefaultPlayMongoRepositorySupport[SlugInfo] {
 
-  lazy val slugInfoRepo = new SlugInfoRepository(mongoComponent, throttleConfig)
-
-  override protected lazy val collectionName: String   = slugInfoRepo.collectionName
-  override protected lazy val indexes: Seq[IndexModel] = slugInfoRepo.indexes
+  override lazy val repository = new SlugInfoRepository(mongoComponent, throttleConfig)
 
   "SlugInfoRepository.add" should {
     "insert correctly" in {
-      slugInfoRepo.add(slugInfo).futureValue
-      slugInfoRepo.getAllEntries.futureValue shouldBe Seq(slugInfo)
+      repository.add(slugInfo).futureValue
+      repository.getAllEntries.futureValue shouldBe Seq(slugInfo)
     }
 
     "replace existing" in {
-      slugInfoRepo.add(slugInfo).futureValue shouldBe true
-      slugInfoRepo.getAllEntries.futureValue should have size 1
+      repository.add(slugInfo).futureValue shouldBe true
+      repository.getAllEntries.futureValue should have size 1
 
       val duplicate = slugInfo.copy(name = "my-slug-2")
-      slugInfoRepo.add(duplicate).futureValue shouldBe true
-      slugInfoRepo.getAllEntries.futureValue shouldBe Seq(duplicate)
+      repository.add(duplicate).futureValue shouldBe true
+      repository.getAllEntries.futureValue shouldBe Seq(duplicate)
     }
   }
 
   "SlugInfoRepository.clearAllData" should {
     "delete everything" in {
-      slugInfoRepo.add(slugInfo).futureValue
-      slugInfoRepo.getAllEntries.futureValue should have size 1
+      repository.add(slugInfo).futureValue
+      repository.getAllEntries.futureValue should have size 1
 
-      slugInfoRepo.clearAllData.futureValue
-      slugInfoRepo.getAllEntries.futureValue shouldBe Nil
+      repository.clearAllData.futureValue
+      repository.getAllEntries.futureValue shouldBe Nil
     }
   }
 
   "SlugInfoRepository.getUniqueSlugNames" should {
     "filter out duplicate names" in {
-      slugInfoRepo.add(slugInfo).futureValue
-      slugInfoRepo.add(otherSlug).futureValue
-      slugInfoRepo.add(otherSlug).futureValue
-      slugInfoRepo.getUniqueSlugNames.futureValue shouldBe Seq("my-slug", "other-slug")
+      repository.add(slugInfo).futureValue
+      repository.add(otherSlug).futureValue
+      repository.add(otherSlug).futureValue
+      repository.getUniqueSlugNames.futureValue shouldBe Seq("my-slug", "other-slug")
     }
   }
-
 }

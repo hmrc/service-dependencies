@@ -19,14 +19,13 @@ package uk.gov.hmrc.servicedependencies.persistence
 import java.time.LocalDate
 
 import com.google.inject.{Inject, Singleton}
-import com.mongodb.BasicDBObject
-import org.mongodb.scala._
+import org.mongodb.scala.bson.BsonDocument
 import org.mongodb.scala.model.Filters.equal
 import org.mongodb.scala.model.Indexes.ascending
 import org.mongodb.scala.model.Sorts.descending
 import org.mongodb.scala.model.{IndexModel, IndexOptions, ReplaceOptions}
 import uk.gov.hmrc.mongo.MongoComponent
-import uk.gov.hmrc.mongo.play.json.PlayMongoCollection
+import uk.gov.hmrc.mongo.play.json.PlayMongoRepository
 import uk.gov.hmrc.mongo.throttle.{ThrottleConfig, WithThrottling}
 import uk.gov.hmrc.servicedependencies.model.BobbyRulesSummary
 
@@ -37,13 +36,14 @@ class BobbyRulesSummaryRepository @Inject()(
     mongoComponent    : MongoComponent
   , val throttleConfig: ThrottleConfig
   )(implicit ec: ExecutionContext
-  ) extends PlayMongoCollection[BobbyRulesSummary](
+  ) extends PlayMongoRepository[BobbyRulesSummary](
     collectionName = "bobbyRulesSummary"
   , mongoComponent = mongoComponent
   , domainFormat   = BobbyRulesSummary.mongoFormat
   , indexes        = Seq(
                        IndexModel(ascending("date"), IndexOptions().name("dateIdx").unique(true))
                      )
+  , optSchema      = Some(BsonDocument(BobbyRulesSummary.mongoSchema))
   ) with WithThrottling {
 
   private implicit val brsf = BobbyRulesSummary.mongoFormat
@@ -76,7 +76,7 @@ class BobbyRulesSummaryRepository @Inject()(
       .map(_.toList)
 
   def clearAllData: Future[Boolean] =
-    collection.deleteMany(new BasicDBObject())
+    collection.deleteMany(BsonDocument())
       .toThrottledFuture
       .map(_.wasAcknowledged())
 }
