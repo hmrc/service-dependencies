@@ -48,7 +48,7 @@ class LibraryVersionRepository @Inject()(
 
   val logger: Logger = Logger(this.getClass)
 
-  def update(libraryVersion: MongoLibraryVersion): Future[MongoLibraryVersion] = {
+  def update(libraryVersion: MongoLibraryVersion): Future[Unit] = {
     logger.debug(s"writing $libraryVersion")
     futureHelpers
       .withTimerAndCounter("mongo.update") {
@@ -61,7 +61,7 @@ class LibraryVersionRepository @Inject()(
             , options     = ReplaceOptions().upsert(true)
             )
           .toThrottledFuture
-          .map(_ => libraryVersion)
+          .map(_ => ())
     } recover {
       case e =>
         throw new RuntimeException(s"failed to persist LibraryVersion $libraryVersion: ${e.getMessage}", e)

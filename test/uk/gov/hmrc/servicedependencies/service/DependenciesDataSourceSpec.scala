@@ -242,68 +242,6 @@ class DependenciesDataSourceSpec
     }
   }
 
-  "getLatestLibrariesVersions" - {
-
-    def extractLibVersion(results: Seq[LibraryVersion], name: String, group: String): Option[Version] =
-      results.find(r => r.name == name && r.group == group).flatMap(_.version)
-
-    "should get the latest library version" in new TestCase {
-      override def repositories: Seq[Repository] = Seq(repo1, repo2, repo3)
-
-     when(mockedArtifactoryConnector.findLatestVersion(group = "uk.gov.hmrc", artefact = "library1"))
-       .thenReturn(Future.successful(Some(Version(1, 0, 0))))
-     when(mockedArtifactoryConnector.findLatestVersion(group = "uk.gov.hmrc", artefact = "library2"))
-       .thenReturn(Future.successful(Some(Version(2, 0, 0))))
-     when(mockedArtifactoryConnector.findLatestVersion(group = "uk.gov.hmrc", artefact = "library3"))
-       .thenReturn(Future.successful(Some(Version(3, 0, 0))))
-
-
-      val curatedListOfLibraries = List(
-          LibraryConfig(name = "library1", group = "uk.gov.hmrc", latestVersion = None)
-        , LibraryConfig(name = "library2", group = "uk.gov.hmrc", latestVersion = None)
-        , LibraryConfig(name = "library3", group = "uk.gov.hmrc", latestVersion = None)
-        )
-
-      val results = dependenciesDataSource.getLatestLibrariesVersions(curatedListOfLibraries).futureValue
-
-      // 3 is for "library1", "library2" and "library3"
-      results.size shouldBe 3
-
-      extractLibVersion(results, name = "library1", group = "uk.gov.hmrc") shouldBe Some(Version(1, 0, 0))
-      extractLibVersion(results, name = "library2", group = "uk.gov.hmrc") shouldBe Some(Version(2, 0, 0))
-      extractLibVersion(results, name = "library3", group = "uk.gov.hmrc") shouldBe Some(Version(3, 0, 0))
-    }
-  }
-
-  "getLatestSbtPluginVersions" - {
-
-    "should get the latest sbt plugin version" in new TestCase {
-
-      override def repositories: Seq[Repository] = Seq(repo1, repo2, repo3)
-
-      when(mockedArtifactoryConnector.findLatestVersion(group = "uk.gov.hmrc", artefact = "sbtplugin1"))
-        .thenReturn(Future.successful(Some(Version(1, 0, 0))))
-      when(mockedArtifactoryConnector.findLatestVersion(group = "uk.gov.hmrc", artefact = "sbtplugin2"))
-        .thenReturn(Future.successful(Some(Version(2, 0, 0))))
-      when(mockedArtifactoryConnector.findLatestVersion(group = "uk.gov.hmrc", artefact = "sbtplugin3"))
-        .thenReturn(Future.successful(Some(Version(3, 0, 0))))
-
-      val curatedListOfSbtPluginConfigs = List(
-          SbtPluginConfig(name = "sbtplugin1", group = "uk.gov.hmrc", latestVersion = Some(Version(1, 2, 3)))
-        , SbtPluginConfig(name = "sbtplugin2", group = "uk.gov.hmrc", latestVersion = Some(Version(1, 2, 3)))
-        , SbtPluginConfig(name = "sbtplugin3", group = "uk.gov.hmrc", latestVersion = Some(Version(1, 2, 3)))
-        )
-
-      val results = dependenciesDataSource.getLatestSbtPluginVersions(curatedListOfSbtPluginConfigs).futureValue
-
-      results should contain {
-        SbtPluginVersion(name = "sbtplugin1", group = "uk.gov.hmrc", version = Some(Version(1, 0, 0)))
-        SbtPluginVersion(name = "sbtplugin2", group = "uk.gov.hmrc", version = Some(Version(2, 0, 0)))
-        SbtPluginVersion(name = "sbtplugin3", group = "uk.gov.hmrc", version = Some(Version(3, 0, 0)))
-      }
-    }
-  }
-
   trait TestCase {
 
     def repositories: Seq[Repository]
@@ -376,10 +314,6 @@ class DependenciesDataSourceSpec
 
     when(mockedTeamsAndRepositoriesConnector.getRepository(any())(any())).thenAnswer( (i: InvocationOnMock) => Future(repositories.find(_.name == i.getArgument[String](0))))
 
-    val mockedArtifactoryConnector = mock[ArtifactoryConnector]
-    when(mockedArtifactoryConnector.findLatestVersion(any(), any()))
-      .thenReturn(Future.successful(None))
-
     def githubStub(): Github = new Github(null, null) {
       override def findVersionsForMultipleArtifacts(
         repoName: String,
@@ -393,7 +327,6 @@ class DependenciesDataSourceSpec
         teamsAndRepositoriesConnector = mockedTeamsAndRepositoriesConnector
       , config                        = mockedDependenciesConfig
       , githubConnector               = githubConnector
-      , artifactoryConnector          = mockedArtifactoryConnector
       , repoLibDepRepository          = mockedRepositoryLibraryDependenciesRepository
       ) {
       override def now: Instant       = timeNow

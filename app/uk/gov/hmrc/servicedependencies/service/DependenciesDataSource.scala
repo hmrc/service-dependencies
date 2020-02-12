@@ -25,7 +25,7 @@ import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.servicedependencies.config.ServiceDependenciesConfig
 import uk.gov.hmrc.servicedependencies.config.model.{CuratedDependencyConfig, LibraryConfig, SbtPluginConfig}
 import uk.gov.hmrc.servicedependencies.connector.model.RepositoryInfo
-import uk.gov.hmrc.servicedependencies.connector.{ArtifactoryConnector, GithubConnector, TeamsAndRepositoriesConnector}
+import uk.gov.hmrc.servicedependencies.connector.{GithubConnector, TeamsAndRepositoriesConnector}
 import uk.gov.hmrc.servicedependencies.model._
 import uk.gov.hmrc.servicedependencies.persistence.RepositoryLibraryDependenciesRepository
 
@@ -36,7 +36,6 @@ class DependenciesDataSource @Inject()(
     teamsAndRepositoriesConnector: TeamsAndRepositoriesConnector
   , config                       : ServiceDependenciesConfig
   , githubConnector              : GithubConnector
-  , artifactoryConnector         : ArtifactoryConnector
   , repoLibDepRepository         : RepositoryLibraryDependenciesRepository
   )(implicit ec: ExecutionContext
   ) {
@@ -77,20 +76,4 @@ class DependenciesDataSource @Inject()(
                    .traverse(repoLibDepRepository.update)
                }
     } yield res.flatten
-
-  def getLatestSbtPluginVersions(sbtPlugins: List[SbtPluginConfig]): Future[List[SbtPluginVersion]] =
-    sbtPlugins.traverse { sbtPlugin =>
-      artifactoryConnector.findLatestVersion(sbtPlugin.group, sbtPlugin.name)
-        .map(optVersion =>
-          SbtPluginVersion(name = sbtPlugin.name, group = sbtPlugin.group, version = optVersion)
-        )
-    }
-
-  def getLatestLibrariesVersions(libraries: List[LibraryConfig]): Future[List[LibraryVersion]] =
-    libraries.traverse { library =>
-      artifactoryConnector.findLatestVersion(library.group, library.name)
-        .map(optVersion =>
-          LibraryVersion(name = library.name, group = library.group, version = optVersion)
-        )
-    }
 }

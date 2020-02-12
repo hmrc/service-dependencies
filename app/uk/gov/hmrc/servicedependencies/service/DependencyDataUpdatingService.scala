@@ -23,6 +23,8 @@ import com.google.inject.{Inject, Singleton}
 import org.slf4j.LoggerFactory
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.servicedependencies.config.CuratedDependencyConfigProvider
+import uk.gov.hmrc.servicedependencies.connector.ArtifactoryConnector
+import uk.gov.hmrc.servicedependencies.controller.model.{Dependencies, Dependency}
 import uk.gov.hmrc.servicedependencies.controller.model.{Dependencies, Dependency}
 import uk.gov.hmrc.servicedependencies.model._
 import uk.gov.hmrc.servicedependencies.persistence._
@@ -31,11 +33,12 @@ import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
 class DependencyDataUpdatingService @Inject()(
-  curatedDependencyConfigProvider        : CuratedDependencyConfigProvider,
-  repositoryLibraryDependenciesRepository: RepositoryLibraryDependenciesRepository,
-  libraryVersionRepository               : LibraryVersionRepository,
-  sbtPluginVersionRepository             : SbtPluginVersionRepository,
-  dependenciesDataSource                 : DependenciesDataSource
+  curatedDependencyConfigProvider        : CuratedDependencyConfigProvider
+, repositoryLibraryDependenciesRepository: RepositoryLibraryDependenciesRepository
+, libraryVersionRepository               : LibraryVersionRepository
+, sbtPluginVersionRepository             : SbtPluginVersionRepository
+, dependenciesDataSource                 : DependenciesDataSource
+, artifactoryConnector                   : ArtifactoryConnector
 )(implicit ec: ExecutionContext
 ) {
 
@@ -46,22 +49,26 @@ class DependencyDataUpdatingService @Inject()(
   lazy val curatedDependencyConfig =
     curatedDependencyConfigProvider.curatedDependencyConfig
 
+  // TODO skip if config.optVersion is defined? (it will be ignored later?)
+  // or store the config.optVersion, then don't need to consult it later?
   def reloadLatestSbtPluginVersions(): Future[List[MongoSbtPluginVersion]] =
-    for {
-      latest <- dependenciesDataSource.getLatestSbtPluginVersions(curatedDependencyConfig.sbtPlugins) // TODO inline usage of ArtifactorConnector
-      res    <- latest.traverse { sbtPlugin =>
-                  sbtPluginVersionRepository.update(MongoSbtPluginVersion(sbtPlugin.name, sbtPlugin.group, sbtPlugin.version, now))
-                }
-    } yield res
+    curatedDependencyConfig.sbtPlugins.traverse { config =>
+      for {
+        optVersion <- artifactoryConnector.findLatestVersion(config.group, config.name)
+        version    =  MongoSbtPluginVersion(name = config.name, group = config.group, version = optVersion, now)
+        _          <- sbtPluginVersionRepository.update(version)
+      } yield version
+    }
 
   // TODO consolidate model to remove duplication
   def reloadLatestLibraryVersions(): Future[Seq[MongoLibraryVersion]] =
-    for {
-      latest <- dependenciesDataSource.getLatestLibrariesVersions(curatedDependencyConfig.libraries) // TODO inline usage of ArtifactorConnector
-      res    <- latest.traverse { libraryVersion =>
-                  libraryVersionRepository.update(MongoLibraryVersion(libraryVersion.name, libraryVersion.group, libraryVersion.version, now))
-                }
-    } yield res
+    curatedDependencyConfig.libraries.traverse { config =>
+      for {
+        optVersion <- artifactoryConnector.findLatestVersion(config.group, config.name)
+        version    =  MongoLibraryVersion(name = config.name, group = config.group, version = optVersion, now)
+        _          <- libraryVersionRepository.update(version)
+      } yield version
+    }
 
   def reloadCurrentDependenciesDataForAllRepositories(
       force: Boolean = false

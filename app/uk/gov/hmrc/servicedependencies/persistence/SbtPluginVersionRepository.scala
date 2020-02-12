@@ -49,7 +49,7 @@ class SbtPluginVersionRepository @Inject()(
 
   val logger: Logger = Logger(this.getClass)
 
-  def update(sbtPluginVersion: MongoSbtPluginVersion): Future[MongoSbtPluginVersion] = {
+  def update(sbtPluginVersion: MongoSbtPluginVersion): Future[Unit] = {
     logger.debug(s"writing $sbtPluginVersion")
     futureHelpers
       .withTimerAndCounter("mongo.update") {
@@ -62,7 +62,7 @@ class SbtPluginVersionRepository @Inject()(
             , options     = ReplaceOptions().upsert(true)
             )
           .toThrottledFuture
-          .map(_ => sbtPluginVersion)
+          .map(_ => ())
       }
       .recover {
         case e =>

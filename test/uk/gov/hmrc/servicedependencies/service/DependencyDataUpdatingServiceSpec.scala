@@ -28,7 +28,8 @@ import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.mongo.CurrentTimestampSupport
 import uk.gov.hmrc.mongo.test.MongoSupport
 import uk.gov.hmrc.servicedependencies.config.CuratedDependencyConfigProvider
-import uk.gov.hmrc.servicedependencies.config.model.{CuratedDependencyConfig, OtherDependencyConfig, SbtPluginConfig}
+import uk.gov.hmrc.servicedependencies.config.model.{CuratedDependencyConfig, LibraryConfig, OtherDependencyConfig, SbtPluginConfig}
+import uk.gov.hmrc.servicedependencies.connector.ArtifactoryConnector
 import uk.gov.hmrc.servicedependencies.controller.model.{Dependencies, Dependency}
 import uk.gov.hmrc.servicedependencies.model._
 import uk.gov.hmrc.servicedependencies.persistence._
@@ -64,9 +65,16 @@ class DependencyDataUpdatingServiceSpec
 
     it("should call the library update function on the repository") {
 
-      val boot = new Boot(curatedDependencyConfig)
-      when(boot.mockDependenciesDataSource.getLatestLibrariesVersions(any()))
-        .thenReturn(Future.successful(List(LibraryVersion(name = "libYY", group = "uk.gov.hmrc", version = Some(Version(1, 1, 1))))))
+      val boot = new Boot(CuratedDependencyConfig(
+        sbtPlugins        = Nil
+      , libraries         = List(LibraryConfig(name = "libYY", group= "uk.gov.hmrc", latestVersion = None))
+      , otherDependencies = Nil
+      ))
+
+      when(boot.mockArtifactoryConnector.findLatestVersion(group = "uk.gov.hmrc", artefact = "libYY"))
+        .thenReturn(Future.successful(Some(Version(1, 1, 1))))
+
+        //.thenReturn(Future.successful(List(LibraryVersion(name = "libYY", group = "uk.gov.hmrc", version = Some(Version(1, 1, 1))))))
       when(boot.mockLibraryVersionRepository.update(any()))
         .thenReturn(Future.successful(mock[MongoLibraryVersion]))
 
@@ -82,9 +90,15 @@ class DependencyDataUpdatingServiceSpec
 
     it("should call the sbt plugin update function on the repository") {
 
-      val boot = new Boot(curatedDependencyConfig)
-      when(boot.mockDependenciesDataSource.getLatestSbtPluginVersions(any()))
-        .thenReturn(Future.successful(List(SbtPluginVersion(name = "sbtPlugin123", group = "uk.gov.hmrc", version = Some(Version(1, 1, 1))))))
+      val boot = new Boot(CuratedDependencyConfig(
+        sbtPlugins        = List(SbtPluginConfig(name = "sbtPlugin123", group= "uk.gov.hmrc", latestVersion = None))
+      , libraries         = Nil
+      , otherDependencies = Nil
+      ))
+
+      when(boot.mockArtifactoryConnector.findLatestVersion(group = "uk.gov.hmrc", artefact = "sbtPlugin123"))
+        .thenReturn(Future.successful(Some(Version(1, 1, 1))))
+
       when(boot.mockSbtPluginVersionRepository.update(any()))
         .thenReturn(Future.successful(mock[MongoSbtPluginVersion]))
 
@@ -457,12 +471,15 @@ class DependencyDataUpdatingServiceSpec
 
     val mockDependenciesDataSource = mock[DependenciesDataSource]
 
+    val mockArtifactoryConnector = mock[ArtifactoryConnector]
+
     val dependencyUpdatingService = new DependencyDataUpdatingService(
       mockCuratedDependencyConfigProvider,
       mockRepositoryLibraryDependenciesRepository,
       mockLibraryVersionRepository,
       mockSbtPluginVersionRepository,
-      mockDependenciesDataSource
+      mockDependenciesDataSource,
+      mockArtifactoryConnector
     ) {
       override def now: Instant = timeForTest
     }
