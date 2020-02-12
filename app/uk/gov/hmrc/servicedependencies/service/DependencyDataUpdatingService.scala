@@ -46,18 +46,22 @@ class DependencyDataUpdatingService @Inject()(
   lazy val curatedDependencyConfig =
     curatedDependencyConfigProvider.curatedDependencyConfig
 
-  def reloadLatestSbtPluginVersions(): Future[Seq[MongoSbtPluginVersion]] =
-      dependenciesDataSource
-        .getLatestSbtPluginVersions(curatedDependencyConfig.sbtPlugins)
-        .toList.traverse { sbtPlugin =>
-          sbtPluginVersionRepository.update(MongoSbtPluginVersion(sbtPlugin.name, sbtPlugin.group, sbtPlugin.version, now))
-        }
+  def reloadLatestSbtPluginVersions(): Future[List[MongoSbtPluginVersion]] =
+    for {
+      latest <- dependenciesDataSource.getLatestSbtPluginVersions(curatedDependencyConfig.sbtPlugins) // TODO inline usage of ArtifactorConnector
+      res    <- latest.traverse { sbtPlugin =>
+                  sbtPluginVersionRepository.update(MongoSbtPluginVersion(sbtPlugin.name, sbtPlugin.group, sbtPlugin.version, now))
+                }
+    } yield res
 
+  // TODO consolidate model to remove duplication
   def reloadLatestLibraryVersions(): Future[Seq[MongoLibraryVersion]] =
-      dependenciesDataSource.getLatestLibrariesVersions(curatedDependencyConfig.libraries)
-        .toList.traverse { libraryVersion =>
-          libraryVersionRepository.update(MongoLibraryVersion(libraryVersion.name, libraryVersion.group, libraryVersion.version, now))
-        }
+    for {
+      latest <- dependenciesDataSource.getLatestLibrariesVersions(curatedDependencyConfig.libraries) // TODO inline usage of ArtifactorConnector
+      res    <- latest.traverse { libraryVersion =>
+                  libraryVersionRepository.update(MongoLibraryVersion(libraryVersion.name, libraryVersion.group, libraryVersion.version, now))
+                }
+    } yield res
 
   def reloadCurrentDependenciesDataForAllRepositories(
       force: Boolean = false

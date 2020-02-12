@@ -31,15 +31,15 @@ class CuratedDependencyConfigProviderSpec extends AnyFunSpec with Matchers with 
         new CuratedDependencyConfigProvider(Configuration("curated.config.path" -> "/config/test-config.json"))
 
       curatedDependencyConfigProvider.curatedDependencyConfig shouldBe CuratedDependencyConfig(
-          sbtPlugins = Seq(
-              SbtPluginConfig(name = "internal-plugin", group = "uk.gov.hmrc"         , latestVersion = None)
-            , SbtPluginConfig(name = "external-plugin", group = "com.example.external", latestVersion = Some(Version("1.4.0")))
-            )
+          sbtPlugins = List(
+             SbtPluginConfig(name = "internal-plugin", group = "uk.gov.hmrc"         , latestVersion = None)
+           , SbtPluginConfig(name = "external-plugin", group = "com.example.external", latestVersion = Some(Version("1.4.0")))
+           )
         , libraries = List(
             LibraryConfig(name = "lib1", group = "uk.gov.hmrc", latestVersion = None)
           , LibraryConfig(name = "lib2", group = "uk.gov.hmrc", latestVersion = None)
           )
-        , otherDependencies = Seq(
+        , otherDependencies = List(
             OtherDependencyConfig(name = "sbt", group = "org.scala-sbt", latestVersion = Some(Version("0.13.11")))
           )
         )

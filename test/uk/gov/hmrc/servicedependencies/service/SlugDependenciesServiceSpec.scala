@@ -49,7 +49,7 @@ class SlugDependenciesServiceSpec extends AnyFreeSpec with MockitoSugar with Mat
 
     def stubCuratedLibrariesOf(libraryNames: LibraryConfig*): Unit =
       when(curatedDependencyConfigProvider.curatedDependencyConfig)
-        .thenReturn(aCuratedDependencyConfig(libraryNames))
+        .thenReturn(aCuratedDependencyConfig(libraryNames.toList))
 
     def stubLatestLibraryVersionLookupSuccessfullyReturns(versionsByName: Seq[(SlugDependency, Version)]): Unit =
       when(libraryVersionRepository.getAllEntries)
@@ -267,10 +267,10 @@ private object SlugDependenciesServiceSpec {
       integration       = false
     )
 
-  def aCuratedDependencyConfig(withLibraries: Seq[LibraryConfig]) =
+  def aCuratedDependencyConfig(withLibraries: List[LibraryConfig]) =
     CuratedDependencyConfig(
-      sbtPlugins        = Seq.empty,
+      sbtPlugins        = List.empty,
       libraries         = withLibraries,
-      otherDependencies = Seq.empty
+      otherDependencies = List.empty
     )
 }

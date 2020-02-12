@@ -58,20 +58,6 @@ class Github(releaseService: ReleaseService, contentsService: ExtendedContentsSe
         Left(GithubSearchError(s"Unable to find dependencies for $repoName. Reason: ${ex.getMessage}", ex))
     }
 
-
-  def findLatestVersion(repoName: String): Option[Version] = {
-
-    val allVersions = Try(releaseService.getTags(org, repoName).map(_.name))
-      .recover {
-        case ex: RequestException if ex.getStatus == 404 =>
-          logger.info(s"Repository for $repoName not found")
-          Nil
-      }.get
-
-    val maybeVersions: Seq[Option[Version]] = allVersions.map(VersionParser.parseReleaseVersion)
-    Max.maxOf(maybeVersions)
-  }
-
   private def searchBuildFilesForMultipleArtifacts(
     serviceName: String
   , artifacts  : Seq[LibraryConfig]
@@ -145,7 +131,6 @@ class Github(releaseService: ReleaseService, contentsService: ExtendedContentsSe
        case ex: RequestException if ex.getStatus == 404 => Nil
      }
   }
-
 }
 
 

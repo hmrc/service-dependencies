@@ -66,7 +66,7 @@ class DependencyDataUpdatingServiceSpec
 
       val boot = new Boot(curatedDependencyConfig)
       when(boot.mockDependenciesDataSource.getLatestLibrariesVersions(any()))
-        .thenReturn(Seq(LibraryVersion(name = "libYY", group = "uk.gov.hmrc", version = Some(Version(1, 1, 1)))))
+        .thenReturn(Future.successful(List(LibraryVersion(name = "libYY", group = "uk.gov.hmrc", version = Some(Version(1, 1, 1))))))
       when(boot.mockLibraryVersionRepository.update(any()))
         .thenReturn(Future.successful(mock[MongoLibraryVersion]))
 
@@ -84,7 +84,7 @@ class DependencyDataUpdatingServiceSpec
 
       val boot = new Boot(curatedDependencyConfig)
       when(boot.mockDependenciesDataSource.getLatestSbtPluginVersions(any()))
-        .thenReturn(Seq(SbtPluginVersion(name = "sbtPlugin123", group = "uk.gov.hmrc", version = Some(Version(1, 1, 1)))))
+        .thenReturn(Future.successful(List(SbtPluginVersion(name = "sbtPlugin123", group = "uk.gov.hmrc", version = Some(Version(1, 1, 1))))))
       when(boot.mockSbtPluginVersionRepository.update(any()))
         .thenReturn(Future.successful(mock[MongoSbtPluginVersion]))
 
@@ -335,7 +335,9 @@ class DependencyDataUpdatingServiceSpec
   describe("getDependencyVersionsForAllRepositories") {
     it("should return the current and latest library, sbt plugin and other dependency versions for all repositories") {
       val boot = new Boot(
-        curatedDependencyConfig.copy(otherDependencies = Seq(OtherDependencyConfig(name = "sbt", group = "org.scala-sbt", latestVersion = Some(Version(100, 10, 1)))))
+        curatedDependencyConfig.copy(otherDependencies =
+          List(OtherDependencyConfig(name = "sbt", group = "org.scala-sbt", latestVersion = Some(Version(100, 10, 1))))
+        )
       )
 
       val libraryDependencies1 = Seq(

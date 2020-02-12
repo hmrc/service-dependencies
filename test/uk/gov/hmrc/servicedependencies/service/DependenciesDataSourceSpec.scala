@@ -31,7 +31,7 @@ import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.servicedependencies.config._
 import uk.gov.hmrc.servicedependencies.config.model.{CuratedDependencyConfig, LibraryConfig, OtherDependencyConfig, SbtPluginConfig}
 import uk.gov.hmrc.servicedependencies.connector.model.{Repository, RepositoryInfo}
-import uk.gov.hmrc.servicedependencies.connector.{GithubConnector, TeamsAndRepositoriesConnector, TeamsForServices}
+import uk.gov.hmrc.servicedependencies.connector.{ArtifactoryConnector, GithubConnector, TeamsAndRepositoriesConnector, TeamsForServices}
 import uk.gov.hmrc.servicedependencies.model._
 import uk.gov.hmrc.servicedependencies.persistence.RepositoryLibraryDependenciesRepository
 import uk.gov.hmrc.servicedependencies.{Github, GithubSearchError}
@@ -55,22 +55,16 @@ class DependenciesDataSourceSpec
   val timeNow       = Instant.now()
   val timeInThePast = Instant.now().minus(1, ChronoUnit.DAYS)
 
-  class GithubStub(val repositoryAndVersions: Map[String, Version] = Map.empty
-  ) extends Github(null, null) {
-
-    override def findLatestVersion(repoName: String): Option[Version] =
-      repositoryAndVersions.get(repoName)
-  }
-
   "getDependenciesForAllRepositories" - {
 
     val curatedDependencyConfig = CuratedDependencyConfig(
         Nil
-      , Seq( LibraryConfig(name = "library1", group = "uk.gov.hmrc", latestVersion = None)
-           , LibraryConfig(name = "library2", group = "uk.gov.hmrc", latestVersion = None)
-           , LibraryConfig(name = "library3", group = "uk.gov.hmrc", latestVersion = None)
-           )
-      , Seq(OtherDependencyConfig(name = "sbt", group = "org.scala-sbt", latestVersion = Some(Version(1, 2, 3))))
+      , List(
+          LibraryConfig(name = "library1", group = "uk.gov.hmrc", latestVersion = None)
+        , LibraryConfig(name = "library2", group = "uk.gov.hmrc", latestVersion = None)
+        , LibraryConfig(name = "library3", group = "uk.gov.hmrc", latestVersion = None)
+        )
+      , List(OtherDependencyConfig(name = "sbt", group = "org.scala-sbt", latestVersion = Some(Version(1, 2, 3))))
       )
 
     "should persist the dependencies (library, plugin and other) for each repository" in new TestCase {
@@ -80,12 +74,12 @@ class DependenciesDataSourceSpec
       val captor: ArgumentCaptor[MongoRepositoryDependencies] =
         ArgumentCaptor.forClass(classOf[MongoRepositoryDependencies])
 
-      when(repositoryLibraryDependenciesRepository.update(any()))
+      when(mockedRepositoryLibraryDependenciesRepository.update(any()))
         .thenReturn(Future.successful(mock[MongoRepositoryDependencies]))
 
       dependenciesDataSource.persistDependenciesForAllRepositories(curatedDependencyConfig, Nil).futureValue
 
-      Mockito.verify(repositoryLibraryDependenciesRepository, Mockito.times(3)).update(captor.capture())
+      Mockito.verify(mockedRepositoryLibraryDependenciesRepository, Mockito.times(3)).update(captor.capture())
 
       val allStoredDependencies: List[MongoRepositoryDependencies] = captor.getAllValues.toList
 
@@ -126,12 +120,12 @@ class DependenciesDataSourceSpec
       val captor: ArgumentCaptor[MongoRepositoryDependencies] =
         ArgumentCaptor.forClass(classOf[MongoRepositoryDependencies])
 
-      when(repositoryLibraryDependenciesRepository.update(any()))
+      when(mockedRepositoryLibraryDependenciesRepository.update(any()))
         .thenReturn(Future.successful(mock[MongoRepositoryDependencies]))
 
       dependenciesDataSource.persistDependenciesForAllRepositories(curatedDependencyConfig, Nil).futureValue
 
-      Mockito.verify(repositoryLibraryDependenciesRepository, Mockito.times(1)).update(captor.capture())
+      Mockito.verify(mockedRepositoryLibraryDependenciesRepository, Mockito.times(1)).update(captor.capture())
 
       val allStoredDependencies: List[MongoRepositoryDependencies] = captor.getAllValues.toList
 
@@ -145,7 +139,7 @@ class DependenciesDataSourceSpec
 
       override def repositories: Seq[Repository] = Seq(repo1.copy(lastActive = timeInThePast))
 
-      Mockito.verifyNoInteractions(repositoryLibraryDependenciesRepository)
+      Mockito.verifyNoInteractions(mockedRepositoryLibraryDependenciesRepository)
 
       val currentDependencyEntries =
         Seq(MongoRepositoryDependencies("repo1", Nil, Nil, Nil, timeInThePast.plus(1, ChronoUnit.MINUTES)))
@@ -160,7 +154,7 @@ class DependenciesDataSourceSpec
       val captor: ArgumentCaptor[MongoRepositoryDependencies] =
         ArgumentCaptor.forClass(classOf[MongoRepositoryDependencies])
 
-      when(repositoryLibraryDependenciesRepository.update(any()))
+      when(mockedRepositoryLibraryDependenciesRepository.update(any()))
         .thenReturn(Future.successful(mock[MongoRepositoryDependencies]))
 
       val currentDependencyEntries =
@@ -170,7 +164,7 @@ class DependenciesDataSourceSpec
         .persistDependenciesForAllRepositories(curatedDependencyConfig, currentDependencyEntries, force = true)
         .futureValue
 
-      Mockito.verify(repositoryLibraryDependenciesRepository, Mockito.times(3)).update(captor.capture())
+      Mockito.verify(mockedRepositoryLibraryDependenciesRepository, Mockito.times(3)).update(captor.capture())
 
       val allStoredDependencies: List[MongoRepositoryDependencies] = captor.getAllValues.toList
       allStoredDependencies.size should be(3)
@@ -180,12 +174,12 @@ class DependenciesDataSourceSpec
 
       override def repositories: Seq[Repository] = Seq(repo1, repo2)
 
-      when(repositoryLibraryDependenciesRepository.update(any()))
+      when(mockedRepositoryLibraryDependenciesRepository.update(any()))
         .thenReturn(Future.successful(mock[MongoRepositoryDependencies]))
 
       dependenciesDataSource.persistDependenciesForAllRepositories(curatedDependencyConfig, Nil).futureValue
 
-      Mockito.verify( teamsAndRepositoriesConnector, Mockito.never()).getRepository(_)
+      Mockito.verify(mockedTeamsAndRepositoriesConnector, Mockito.never()).getRepository(_)
     }
 
     "should short circuit operation when RequestException is thrown for api rate limiting reason" in new TestCase {
@@ -193,7 +187,7 @@ class DependenciesDataSourceSpec
       override def repositories: Seq[Repository] = Seq(repo1, repo2, repo3, repo4)
 
       var callCount = 0
-      override def githubStub: Github = new GithubStub(Map()) {
+      override def githubStub: Github = new Github(null, null) {
         override def findVersionsForMultipleArtifacts(
           repoName: String,
           curatedDependencyConfig: CuratedDependencyConfig): Either[GithubSearchError, GithubSearchResults] = {
@@ -209,8 +203,9 @@ class DependenciesDataSourceSpec
         }
       }
 
-      when(repositoryLibraryDependenciesRepository.update(any()))
+      when(mockedRepositoryLibraryDependenciesRepository.update(any()))
         .thenReturn(Future.successful(mock[MongoRepositoryDependencies]))
+
       intercept[Exception] {
         dependenciesDataSource.persistDependenciesForAllRepositories(curatedDependencyConfig, Nil).futureValue
       }
@@ -230,14 +225,14 @@ class DependenciesDataSourceSpec
       val captor: ArgumentCaptor[MongoRepositoryDependencies] =
         ArgumentCaptor.forClass(classOf[MongoRepositoryDependencies])
 
-      when(repositoryLibraryDependenciesRepository.update(any()))
+      when(mockedRepositoryLibraryDependenciesRepository.update(any()))
         .thenReturn(Future.successful(mock[MongoRepositoryDependencies]))
 
       dependenciesDataSource
         .persistDependenciesForAllRepositories(curatedDependencyConfig, dependenciesAlreadyInDb)
         .futureValue
 
-      Mockito.verify(repositoryLibraryDependenciesRepository, Mockito.times(2)).update(captor.capture())
+      Mockito.verify(mockedRepositoryLibraryDependenciesRepository, Mockito.times(2)).update(captor.capture())
 
       val allStoredDependencies: List[MongoRepositoryDependencies] = captor.getAllValues.toList
 
@@ -255,21 +250,21 @@ class DependenciesDataSourceSpec
     "should get the latest library version" in new TestCase {
       override def repositories: Seq[Repository] = Seq(repo1, repo2, repo3)
 
-      override def githubStub() =
-        new GithubStub(Map(
-            "library1" -> Version(1, 0, 0)
-          , "library2" -> Version(2, 0, 0)
-          , "library3" -> Version(3, 0, 0)
-          )
-        )
+     when(mockedArtifactoryConnector.findLatestVersion(group = "uk.gov.hmrc", artefact = "library1"))
+       .thenReturn(Future.successful(Some(Version(1, 0, 0))))
+     when(mockedArtifactoryConnector.findLatestVersion(group = "uk.gov.hmrc", artefact = "library2"))
+       .thenReturn(Future.successful(Some(Version(2, 0, 0))))
+     when(mockedArtifactoryConnector.findLatestVersion(group = "uk.gov.hmrc", artefact = "library3"))
+       .thenReturn(Future.successful(Some(Version(3, 0, 0))))
 
-      val curatedListOfLibraries = Seq(
+
+      val curatedListOfLibraries = List(
           LibraryConfig(name = "library1", group = "uk.gov.hmrc", latestVersion = None)
         , LibraryConfig(name = "library2", group = "uk.gov.hmrc", latestVersion = None)
         , LibraryConfig(name = "library3", group = "uk.gov.hmrc", latestVersion = None)
         )
 
-      val results = dependenciesDataSource.getLatestLibrariesVersions(curatedListOfLibraries)
+      val results = dependenciesDataSource.getLatestLibrariesVersions(curatedListOfLibraries).futureValue
 
       // 3 is for "library1", "library2" and "library3"
       results.size shouldBe 3
@@ -285,19 +280,21 @@ class DependenciesDataSourceSpec
     "should get the latest sbt plugin version" in new TestCase {
 
       override def repositories: Seq[Repository] = Seq(repo1, repo2, repo3)
-      override def githubStub = new GithubStub(Map(
-          "sbtplugin1" -> Version(1, 0, 0)
-        , "sbtplugin2" -> Version(2, 0, 0)
-        , "sbtplugin3" -> Version(3, 0, 0))
-        )
 
-      val curatedListOfSbtPluginConfigs = Seq(
+      when(mockedArtifactoryConnector.findLatestVersion(group = "uk.gov.hmrc", artefact = "sbtplugin1"))
+        .thenReturn(Future.successful(Some(Version(1, 0, 0))))
+      when(mockedArtifactoryConnector.findLatestVersion(group = "uk.gov.hmrc", artefact = "sbtplugin2"))
+        .thenReturn(Future.successful(Some(Version(2, 0, 0))))
+      when(mockedArtifactoryConnector.findLatestVersion(group = "uk.gov.hmrc", artefact = "sbtplugin3"))
+        .thenReturn(Future.successful(Some(Version(3, 0, 0))))
+
+      val curatedListOfSbtPluginConfigs = List(
           SbtPluginConfig(name = "sbtplugin1", group = "uk.gov.hmrc", latestVersion = Some(Version(1, 2, 3)))
         , SbtPluginConfig(name = "sbtplugin2", group = "uk.gov.hmrc", latestVersion = Some(Version(1, 2, 3)))
         , SbtPluginConfig(name = "sbtplugin3", group = "uk.gov.hmrc", latestVersion = Some(Version(1, 2, 3)))
         )
 
-      val results = dependenciesDataSource.getLatestSbtPluginVersions(curatedListOfSbtPluginConfigs)
+      val results = dependenciesDataSource.getLatestSbtPluginVersions(curatedListOfSbtPluginConfigs).futureValue
 
       results should contain {
         SbtPluginVersion(name = "sbtplugin1", group = "uk.gov.hmrc", version = Some(Version(1, 0, 0)))
@@ -367,22 +364,23 @@ class DependenciesDataSourceSpec
     val mockedDependenciesConfig = mock[ServiceDependenciesConfig]
     when(mockedDependenciesConfig.githubApiOpenConfig).thenReturn(mockedGitApiConfig)
 
-    val repositoryLibraryDependenciesRepository = mock[RepositoryLibraryDependenciesRepository]
+    val mockedRepositoryLibraryDependenciesRepository = mock[RepositoryLibraryDependenciesRepository]
 
-    val teamsAndRepositoriesConnector = mock[TeamsAndRepositoriesConnector]
+    val mockedTeamsAndRepositoriesConnector = mock[TeamsAndRepositoriesConnector]
 
-    when(teamsAndRepositoriesConnector.getTeamsForServices()(any()))
+    when(mockedTeamsAndRepositoriesConnector.getTeamsForServices()(any()))
       .thenReturn(Future.successful(TeamsForServices(Map("service1" -> Seq("PlatOps", "WebOps")))))
 
-    when(teamsAndRepositoriesConnector.getAllRepositories()(any()))
+    when(mockedTeamsAndRepositoriesConnector.getAllRepositories()(any()))
       .thenReturn(Future.successful(repositories.map(r => RepositoryInfo(r.name, r.lastActive, r.lastActive, "Service"))))
 
-    when(teamsAndRepositoriesConnector.getRepository(any())(any())).thenAnswer( (i: InvocationOnMock) => Future(repositories.find(_.name == i.getArgument[String](0))))
+    when(mockedTeamsAndRepositoriesConnector.getRepository(any())(any())).thenAnswer( (i: InvocationOnMock) => Future(repositories.find(_.name == i.getArgument[String](0))))
 
-    def githubStub(): Github = new GithubStub(Map()) {
+    val mockedArtifactoryConnector = mock[ArtifactoryConnector]
+    when(mockedArtifactoryConnector.findLatestVersion(any(), any()))
+      .thenReturn(Future.successful(None))
 
-      override def findLatestVersion(repoName: String): Option[Version] = super.findLatestVersion(repoName)
-
+    def githubStub(): Github = new Github(null, null) {
       override def findVersionsForMultipleArtifacts(
         repoName: String,
         curatedDependencyConfig: CuratedDependencyConfig): Either[GithubSearchError, GithubSearchResults] =
@@ -392,13 +390,13 @@ class DependenciesDataSourceSpec
     val githubConnector = new GithubConnector(githubStub())
 
     val dependenciesDataSource = new DependenciesDataSource(
-      teamsAndRepositoriesConnector,
-      mockedDependenciesConfig,
-      githubConnector,
-      repositoryLibraryDependenciesRepository
+        teamsAndRepositoriesConnector = mockedTeamsAndRepositoriesConnector
+      , config                        = mockedDependenciesConfig
+      , githubConnector               = githubConnector
+      , artifactoryConnector          = mockedArtifactoryConnector
+      , repoLibDepRepository          = mockedRepositoryLibraryDependenciesRepository
       ) {
       override def now: Instant       = timeNow
     }
   }
-
 }

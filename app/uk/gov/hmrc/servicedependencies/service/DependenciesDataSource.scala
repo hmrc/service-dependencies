@@ -25,7 +25,7 @@ import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.servicedependencies.config.ServiceDependenciesConfig
 import uk.gov.hmrc.servicedependencies.config.model.{CuratedDependencyConfig, LibraryConfig, SbtPluginConfig}
 import uk.gov.hmrc.servicedependencies.connector.model.RepositoryInfo
-import uk.gov.hmrc.servicedependencies.connector.{GithubConnector, TeamsAndRepositoriesConnector}
+import uk.gov.hmrc.servicedependencies.connector.{ArtifactoryConnector, GithubConnector, TeamsAndRepositoriesConnector}
 import uk.gov.hmrc.servicedependencies.model._
 import uk.gov.hmrc.servicedependencies.persistence.RepositoryLibraryDependenciesRepository
 
@@ -33,21 +33,23 @@ import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
 class DependenciesDataSource @Inject()(
-  teamsAndRepositoriesConnector: TeamsAndRepositoriesConnector,
-  config                       : ServiceDependenciesConfig,
-  githubConnector              : GithubConnector,
-  repoLibDepRepository         : RepositoryLibraryDependenciesRepository
+    teamsAndRepositoriesConnector: TeamsAndRepositoriesConnector
+  , config                       : ServiceDependenciesConfig
+  , githubConnector              : GithubConnector
+  , artifactoryConnector         : ArtifactoryConnector
+  , repoLibDepRepository         : RepositoryLibraryDependenciesRepository
   )(implicit ec: ExecutionContext
   ) {
   lazy val logger = LoggerFactory.getLogger(this.getClass)
 
   def now: Instant = Instant.now()
 
-  def buildDependency(repo: RepositoryInfo,
-                     curatedDependencyConfig: CuratedDependencyConfig,
-                     currentDeps: Seq[MongoRepositoryDependencies],
-                     force: Boolean): Option[MongoRepositoryDependencies] = {
-
+  def buildDependency(
+      repo                   : RepositoryInfo
+    , curatedDependencyConfig: CuratedDependencyConfig
+    , currentDeps            : Seq[MongoRepositoryDependencies]
+    , force                  : Boolean
+    ): Option[MongoRepositoryDependencies] =
     if (!force && lastUpdated(repo.name, currentDeps).isAfter(repo.lastUpdatedAt)) {
       logger.debug(s"No changes for repository (${repo.name}). Skipping....")
       None
@@ -55,7 +57,6 @@ class DependenciesDataSource @Inject()(
       logger.warn(s"building repo for ${repo.name}")
       githubConnector.buildDependencies(repo, curatedDependencyConfig)
     }
-  }
 
 
   private def lastUpdated(repoName: String, currentDeps: Seq[MongoRepositoryDependencies]): Instant =
@@ -77,21 +78,19 @@ class DependenciesDataSource @Inject()(
                }
     } yield res.flatten
 
-  def getLatestSbtPluginVersions(sbtPlugins: Seq[SbtPluginConfig]): Seq[SbtPluginVersion] =
-    sbtPlugins.map { sbtPlugin =>
-      val optVersion =
-        if (sbtPlugin.group.startsWith("uk.gov.hmrc"))
-          githubConnector.findLatestVersion(sbtPlugin.name)
-        else None
-      SbtPluginVersion(name = sbtPlugin.name, group = sbtPlugin.group, version = optVersion)
+  def getLatestSbtPluginVersions(sbtPlugins: List[SbtPluginConfig]): Future[List[SbtPluginVersion]] =
+    sbtPlugins.traverse { sbtPlugin =>
+      artifactoryConnector.findLatestVersion(sbtPlugin.group, sbtPlugin.name)
+        .map(optVersion =>
+          SbtPluginVersion(name = sbtPlugin.name, group = sbtPlugin.group, version = optVersion)
+        )
     }
 
-  def getLatestLibrariesVersions(libraries: Seq[LibraryConfig]): Seq[LibraryVersion] =
-    libraries.map { library =>
-      val optVersion =
-        if (library.group.startsWith("uk.gov.hmrc"))
-          githubConnector.findLatestVersion(library.name)
-        else None
-      LibraryVersion(name = library.name, group = library.group, version = optVersion)
+  def getLatestLibrariesVersions(libraries: List[LibraryConfig]): Future[List[LibraryVersion]] =
+    libraries.traverse { library =>
+      artifactoryConnector.findLatestVersion(library.group, library.name)
+        .map(optVersion =>
+          LibraryVersion(name = library.name, group = library.group, version = optVersion)
+        )
     }
 }

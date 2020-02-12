@@ -45,9 +45,10 @@ case class OtherDependencyConfig(
   ) extends DependencyConfig
 
 case class CuratedDependencyConfig(
-  sbtPlugins       : Seq[SbtPluginConfig],
-  libraries        : Seq[LibraryConfig],
-  otherDependencies: Seq[OtherDependencyConfig])
+    sbtPlugins       : List[SbtPluginConfig]
+  , libraries        : List[LibraryConfig]
+  , otherDependencies: List[OtherDependencyConfig]
+  )
 
 object CuratedDependencyConfig {
 
