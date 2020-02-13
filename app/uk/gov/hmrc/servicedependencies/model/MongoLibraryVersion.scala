@@ -22,30 +22,30 @@ import play.api.libs.json.{Format, Json, __}
 import play.api.libs.functional.syntax._
 import uk.gov.hmrc.mongo.play.json.formats.MongoJavatimeFormats
 
-case class MongoLibraryVersion(
+case class MongoDependencyVersion(
     name       : String
   , group      : String
   , version    : Option[Version]
   , updateDate : Instant = Instant.now()
   )
 
-object MongoLibraryVersion {
+object MongoDependencyVersion {
   implicit val format = {
     implicit val iF = MongoJavatimeFormats.instantFormats
     implicit val vf = Version.mongoFormat
-    ( (__ \ "libraryName").format[String]
+    ( (__ \ "name"       ).format[String]
     ~ (__ \ "group"      ).format[String]
     ~ (__ \ "version"    ).formatNullable[Version]
     ~ (__ \ "updateDate" ).format[Instant]
-    )(MongoLibraryVersion.apply, unlift(MongoLibraryVersion.unapply))
+    )(MongoDependencyVersion.apply, unlift(MongoDependencyVersion.unapply))
   }
 
   val schema =
     """
     { bsonType: "object"
-    , required: [ "libraryName", "group", "updateDate" ]
+    , required: [ "name", "group", "updateDate" ]
     , properties:
-      { libraryName: { bsonType: "string" }
+      { name       : { bsonType: "string" }
       , group      : { bsonType: "string" }
       , version    : { bsonType: "string" }
       , updateDate : { bsonType: "date"   }
@@ -54,19 +54,8 @@ object MongoLibraryVersion {
     """
 }
 
-case class LibraryVersion(
+case class DependencyVersion(
     name   : String
   , group  : String
   , version: Option[Version]
   )
-
-object LibraryVersion {
-  implicit val format = {
-    implicit val vf = Version.apiFormat
-    Json.format[LibraryVersion]
-    ( (__ \ "libraryName").format[String]
-    ~ (__ \ "group"      ).format[String]
-    ~ (__ \ "version"    ).formatNullable[Version]
-    )(LibraryVersion.apply, unlift(LibraryVersion.unapply))
-  }
-}

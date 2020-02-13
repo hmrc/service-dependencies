@@ -21,7 +21,7 @@ import javax.inject.{Inject, Singleton}
 import uk.gov.hmrc.servicedependencies.config.CuratedDependencyConfigProvider
 import uk.gov.hmrc.servicedependencies.config.model.DependencyConfig
 import uk.gov.hmrc.servicedependencies.controller.model.Dependency
-import uk.gov.hmrc.servicedependencies.model.{MongoLibraryVersion, SlugDependency, SlugInfo, SlugInfoFlag, Version}
+import uk.gov.hmrc.servicedependencies.model.{SlugDependency, SlugInfo, SlugInfoFlag, Version}
 import uk.gov.hmrc.servicedependencies.persistence.LibraryVersionRepository
 
 import scala.concurrent.ExecutionContext.Implicits.global

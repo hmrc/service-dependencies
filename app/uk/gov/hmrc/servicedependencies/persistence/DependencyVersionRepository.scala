@@ -22,7 +22,6 @@ import org.mongodb.scala.model.Filters.{and, equal}
 import org.mongodb.scala.model.Indexes.hashed
 import org.mongodb.scala.model.{IndexModel, IndexOptions, ReplaceOptions}
 import play.api.Logger
-import play.api.libs.json.Json
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.play.json.PlayMongoRepository
 import uk.gov.hmrc.mongo.throttle.{ThrottleConfig, WithThrottling}
@@ -32,45 +31,71 @@ import uk.gov.hmrc.servicedependencies.util.FutureHelpers
 import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
+class LibraryVersionRepository @Inject()(
+    mongoComponent: MongoComponent
+  , futureHelpers : FutureHelpers
+  , throttleConfig: ThrottleConfig
+  )(implicit ec: ExecutionContext
+  ) extends DependencyVersionRepository(
+    collectionName = "libraryVersions"
+  , mongoComponent = mongoComponent
+  , futureHelpers = futureHelpers
+  , throttleConfig = throttleConfig
+  )
+
+@Singleton
 class SbtPluginVersionRepository @Inject()(
-    mongoComponent    : MongoComponent
+    mongoComponent: MongoComponent
+  , futureHelpers : FutureHelpers
+  , throttleConfig: ThrottleConfig
+  )(implicit ec: ExecutionContext
+  ) extends DependencyVersionRepository(
+    collectionName = "sbtPluginVersions"
+  , mongoComponent = mongoComponent
+  , futureHelpers = futureHelpers
+  , throttleConfig = throttleConfig
+  )
+
+// TODO Should we just store sbtPluginVersions and libraryVersions all together? also otherDependencies?
+class DependencyVersionRepository @Inject()(
+    collectionName    : String
+  , mongoComponent    : MongoComponent
   , futureHelpers     : FutureHelpers
   , val throttleConfig: ThrottleConfig
   )(implicit ec: ExecutionContext
-  ) extends PlayMongoRepository[MongoSbtPluginVersion](
-    collectionName = "sbtPluginVersions"
+  ) extends PlayMongoRepository[MongoDependencyVersion](
+    collectionName = collectionName
   , mongoComponent = mongoComponent
-  , domainFormat   = MongoSbtPluginVersion.format
+  , domainFormat   = MongoDependencyVersion.format
   , indexes        = Seq(
-                       IndexModel(hashed("sbtPluginName"), IndexOptions().name("sbtPluginNameIdx").background(true))
+                       IndexModel(hashed("name"), IndexOptions().name("nameIdx").background(true))
                      )
-  , optSchema      = Some(BsonDocument(MongoSbtPluginVersion.schema))
+  , optSchema      = Some(BsonDocument(MongoDependencyVersion.schema))
   ) with WithThrottling {
 
   val logger: Logger = Logger(this.getClass)
 
-  def update(sbtPluginVersion: MongoSbtPluginVersion): Future[Unit] = {
-    logger.debug(s"writing $sbtPluginVersion")
+  def update(dependencyVersion: MongoDependencyVersion): Future[Unit] = {
+    logger.debug(s"writing $dependencyVersion")
     futureHelpers
       .withTimerAndCounter("mongo.update") {
         collection
           .replaceOne(
-              filter      = and( equal("sbtPluginName", sbtPluginVersion.name)
-                               , equal("group"        , sbtPluginVersion.group)
+              filter      = and( equal("name" , dependencyVersion.name)
+                               , equal("group", dependencyVersion.group)
                                )
-            , replacement = sbtPluginVersion
+            , replacement = dependencyVersion
             , options     = ReplaceOptions().upsert(true)
             )
           .toThrottledFuture
           .map(_ => ())
-      }
-      .recover {
-        case e =>
-          throw new RuntimeException(s"failed to persist SbtPluginVersion $sbtPluginVersion: ${e.getMessage}", e)
-      }
+    } recover {
+      case e =>
+        throw new RuntimeException(s"failed to persist dependency version $dependencyVersion in $collectionName: ${e.getMessage}", e)
+    }
   }
 
-  def getAllEntries: Future[Seq[MongoSbtPluginVersion]] =
+  def getAllEntries: Future[Seq[MongoDependencyVersion]] =
     collection.find()
       .toThrottledFuture
 

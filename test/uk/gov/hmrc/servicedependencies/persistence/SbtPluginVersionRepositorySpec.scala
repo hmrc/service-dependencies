@@ -22,7 +22,7 @@ import org.mockito.MockitoSugar
 import org.mongodb.scala.bson.BsonDocument
 import org.mongodb.scala.model.IndexModel
 import uk.gov.hmrc.mongo.test.DefaultPlayMongoRepositorySupport
-import uk.gov.hmrc.servicedependencies.model.{MongoSbtPluginVersion, Version}
+import uk.gov.hmrc.servicedependencies.model.{MongoDependencyVersion, Version}
 import uk.gov.hmrc.servicedependencies.util.{FutureHelpers, MockFutureHelpers}
 import uk.gov.hmrc.time.DateTimeUtils
 
@@ -34,12 +34,12 @@ class SbtPluginVersionRepositorySpec
     extends AnyWordSpecLike
     with Matchers
     with MockitoSugar
-    with DefaultPlayMongoRepositorySupport[MongoSbtPluginVersion] {
+    with DefaultPlayMongoRepositorySupport[MongoDependencyVersion] {
 
   val futureHelper: FutureHelpers = new MockFutureHelpers()
   override protected lazy val repository = new SbtPluginVersionRepository(mongoComponent, futureHelper, throttleConfig)
 
-  val sbtPluginVersion = MongoSbtPluginVersion(
+  val sbtPluginVersion = MongoDependencyVersion(
       name       = "some-sbtPlugin"
     , group      = "uk.gov.hmrc"
     , version    = Some(Version(1, 0, 2))

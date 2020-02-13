@@ -24,10 +24,10 @@ import org.slf4j.LoggerFactory
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.servicedependencies.connector.{ArtifactoryConnector, GithubConnector, TeamsAndRepositoriesConnector}
 import uk.gov.hmrc.servicedependencies.config.CuratedDependencyConfigProvider
-import uk.gov.hmrc.servicedependencies.config.model.CuratedDependencyConfig
+import uk.gov.hmrc.servicedependencies.config.model.{CuratedDependencyConfig, DependencyConfig}
 import uk.gov.hmrc.servicedependencies.connector.model.RepositoryInfo
 import uk.gov.hmrc.servicedependencies.controller.model.{Dependencies, Dependency}
-import uk.gov.hmrc.servicedependencies.model._
+import uk.gov.hmrc.servicedependencies.model.{MongoRepositoryDependencies, MongoRepositoryDependency, MongoDependencyVersion}
 import uk.gov.hmrc.servicedependencies.persistence._
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -51,8 +51,11 @@ class DependencyDataUpdatingService @Inject()(
   lazy val curatedDependencyConfig =
     curatedDependencyConfigProvider.curatedDependencyConfig
 
-  def reloadLatestSbtPluginVersions(): Future[List[MongoSbtPluginVersion]] =
-    curatedDependencyConfig.sbtPlugins.traverse { config =>
+  private def reloadLatestDependencyVersions(
+    dependencyConfigs          : List[DependencyConfig]
+  , dependencyVersionRepository: DependencyVersionRepository
+  ): Future[List[MongoDependencyVersion]] =
+    dependencyConfigs.traverse { config =>
       for {
         optVersion <- config.latestVersion
                         .fold(
@@ -60,25 +63,16 @@ class DependencyDataUpdatingService @Inject()(
                           )(v =>
                             Future.successful(Some(v))
                           )
-        version    =  MongoSbtPluginVersion(name = config.name, group = config.group, version = optVersion, now)
-        _          <- sbtPluginVersionRepository.update(version)
+        version    =  MongoDependencyVersion(name = config.name, group = config.group, version = optVersion, now)
+        _          <- dependencyVersionRepository.update(version)
       } yield version
     }
 
-  // TODO consolidate model to remove duplication
-  def reloadLatestLibraryVersions(): Future[Seq[MongoLibraryVersion]] =
-    curatedDependencyConfig.libraries.traverse { config =>
-      for {
-        optVersion <- config.latestVersion
-                        .fold(
-                            artifactoryConnector.findLatestVersion(config.group, config.name)
-                          )(v =>
-                            Future.successful(Some(v))
-                          )
-        version    =  MongoLibraryVersion(name = config.name, group = config.group, version = optVersion, now)
-        _          <- libraryVersionRepository.update(version)
-      } yield version
-    }
+  def reloadLatestLibraryVersions: Future[List[MongoDependencyVersion]] =
+    reloadLatestDependencyVersions(curatedDependencyConfig.libraries, libraryVersionRepository)
+
+  def reloadLatestSbtPluginVersions: Future[List[MongoDependencyVersion]] =
+    reloadLatestDependencyVersions(curatedDependencyConfig.sbtPlugins, sbtPluginVersionRepository)
 
   def reloadCurrentDependenciesDataForAllRepositories(
       force: Boolean = false
@@ -116,25 +110,9 @@ class DependencyDataUpdatingService @Inject()(
     }
   }
 
-  private def toLibraryDependency(libraryReferences: Seq[MongoLibraryVersion])(d: MongoRepositoryDependency): Dependency = {
+  private def toDependency(references: Seq[MongoDependencyVersion])(d: MongoRepositoryDependency): Dependency = {
     val optRef =
-      libraryReferences
-        .find(ref => ref.name  == d.name &&
-                     ref.group == d.group
-             )
-
-    Dependency(
-      name                = d.name
-    , group               = d.group
-    , currentVersion      = d.currentVersion
-    , latestVersion       = optRef.flatMap(_.version)
-    , bobbyRuleViolations = List.empty
-    )
-  }
-
-  private def toSbtPluginDependency(sbtPluginReferences: Seq[MongoSbtPluginVersion])(d: MongoRepositoryDependency): Dependency = {
-    val optRef =
-      sbtPluginReferences
+      references
         .find(ref => ref.name  == d.name &&
                      ref.group == d.group
              )
@@ -173,8 +151,8 @@ class DependencyDataUpdatingService @Inject()(
       dependencies.map(dep =>
         Dependencies(
           repositoryName         = dep.repositoryName
-        , libraryDependencies    = dep.libraryDependencies.map(toLibraryDependency(libraryReferences))
-        , sbtPluginsDependencies = dep.sbtPluginDependencies.map(toSbtPluginDependency(sbtPluginReferences))
+        , libraryDependencies    = dep.libraryDependencies.map(toDependency(libraryReferences))
+        , sbtPluginsDependencies = dep.sbtPluginDependencies.map(toDependency(sbtPluginReferences))
         , otherDependencies      = dep.otherDependencies.map(toOtherDependency)
         , lastUpdated            = dep.updateDate
         )
@@ -189,8 +167,8 @@ class DependencyDataUpdatingService @Inject()(
       allDependencies.map(dep =>
         Dependencies(
           repositoryName         = dep.repositoryName
-        , libraryDependencies    = dep.libraryDependencies.map(toLibraryDependency(libraryReferences))
-        , sbtPluginsDependencies = dep.sbtPluginDependencies.map(toSbtPluginDependency(sbtPluginReferences))
+        , libraryDependencies    = dep.libraryDependencies.map(toDependency(libraryReferences))
+        , sbtPluginsDependencies = dep.sbtPluginDependencies.map(toDependency(sbtPluginReferences))
         , otherDependencies      = dep.otherDependencies.map(toOtherDependency)
         , lastUpdated            = dep.updateDate
         )

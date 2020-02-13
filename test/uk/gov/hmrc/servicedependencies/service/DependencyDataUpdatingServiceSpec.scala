@@ -78,12 +78,12 @@ class DependencyDataUpdatingServiceSpec
         .thenReturn(Future.successful(Some(Version(1, 1, 1))))
 
       when(boot.mockLibraryVersionRepository.update(any()))
-        .thenReturn(Future.successful(mock[MongoLibraryVersion]))
+        .thenReturn(Future.successful(mock[MongoDependencyVersion]))
 
-      boot.dependencyUpdatingService.reloadLatestLibraryVersions().futureValue
+      boot.dependencyUpdatingService.reloadLatestLibraryVersions.futureValue
 
       verify(boot.mockLibraryVersionRepository, times(1))
-        .update(MongoLibraryVersion(name = "libYY", group = "uk.gov.hmrc", version = Some(Version(1, 1, 1)), updateDate = timeForTest))
+        .update(MongoDependencyVersion(name = "libYY", group = "uk.gov.hmrc", version = Some(Version(1, 1, 1)), updateDate = timeForTest))
       verifyZeroInteractions(boot.mockRepositoryLibraryDependenciesRepository)
     }
   }
@@ -102,12 +102,12 @@ class DependencyDataUpdatingServiceSpec
         .thenReturn(Future.successful(Some(Version(1, 1, 1))))
 
       when(boot.mockSbtPluginVersionRepository.update(any()))
-        .thenReturn(Future.successful(mock[MongoSbtPluginVersion]))
+        .thenReturn(Future.successful(mock[MongoDependencyVersion]))
 
-      boot.dependencyUpdatingService.reloadLatestSbtPluginVersions().futureValue
+      boot.dependencyUpdatingService.reloadLatestSbtPluginVersions.futureValue
 
       verify(boot.mockSbtPluginVersionRepository, times(1))
-        .update(MongoSbtPluginVersion(name = "sbtPlugin123", group = "uk.gov.hmrc", version = Some(Version(1, 1, 1)), updateDate = timeForTest))
+        .update(MongoDependencyVersion(name = "sbtPlugin123", group = "uk.gov.hmrc", version = Some(Version(1, 1, 1)), updateDate = timeForTest))
       verifyZeroInteractions(boot.mockRepositoryLibraryDependenciesRepository)
       verifyZeroInteractions(boot.mockLibraryVersionRepository)
     }
@@ -200,8 +200,8 @@ class DependencyDataUpdatingServiceSpec
           Some(MongoRepositoryDependencies(repositoryName, libraryDependencies, Nil, Nil, timeForTest))))
 
       val referenceLibraryVersions = Seq(
-        MongoLibraryVersion(name = "lib1", group = "uk.gov.hmrc", version = Some(Version(1, 1, 0))),
-        MongoLibraryVersion(name = "lib2", group = "uk.gov.hmrc", version = Some(Version(2, 1, 0)))
+        MongoDependencyVersion(name = "lib1", group = "uk.gov.hmrc", version = Some(Version(1, 1, 0)))
+      , MongoDependencyVersion(name = "lib2", group = "uk.gov.hmrc", version = Some(Version(2, 1, 0)))
       )
       when(boot.mockLibraryVersionRepository.getAllEntries)
         .thenReturn(Future.successful(referenceLibraryVersions))
@@ -240,8 +240,8 @@ class DependencyDataUpdatingServiceSpec
           Some(MongoRepositoryDependencies(repositoryName, Nil, sbtPluginDependencies, Nil, timeForTest))))
 
       val referenceSbtPluginVersions = Seq(
-        MongoSbtPluginVersion(name = "plugin1", group = "uk.gov.hmrc", version = Some(Version(3, 1, 0))),
-        MongoSbtPluginVersion(name = "plugin2", group = "uk.gov.hmrc", version = Some(Version(4, 1, 0)))
+        MongoDependencyVersion(name = "plugin1", group = "uk.gov.hmrc", version = Some(Version(3, 1, 0)))
+      , MongoDependencyVersion(name = "plugin2", group = "uk.gov.hmrc", version = Some(Version(4, 1, 0)))
       )
 
       when(boot.mockSbtPluginVersionRepository.getAllEntries)
@@ -281,8 +281,8 @@ class DependencyDataUpdatingServiceSpec
           Some(MongoRepositoryDependencies(repositoryName, Nil, sbtPluginDependencies, Nil, timeForTest))))
 
       val referenceSbtPluginVersions = Seq(
-        MongoSbtPluginVersion(name = "internal-plugin", group = "uk.gov.hmrc", version = Some(Version(3, 1, 0)))
-      , MongoSbtPluginVersion(name = "external-plugin", group = "uk.edu"     , version = Some(Version(11, 22, 33)))
+        MongoDependencyVersion(name = "internal-plugin", group = "uk.gov.hmrc", version = Some(Version(3, 1, 0)))
+      , MongoDependencyVersion(name = "external-plugin", group = "uk.edu"     , version = Some(Version(11, 22, 33)))
       )
 
       when(boot.mockSbtPluginVersionRepository.getAllEntries)
@@ -403,13 +403,13 @@ class DependencyDataUpdatingServiceSpec
       )
 
       val referenceLibraryVersions = Seq(
-        MongoLibraryVersion(name = "lib1", group = "uk.gov.hmrc", version = Some(Version(3, 0, 0))),
-        MongoLibraryVersion(name = "lib2", group = "uk.gov.hmrc", version = Some(Version(4, 0, 0)))
+        MongoDependencyVersion(name = "lib1", group = "uk.gov.hmrc", version = Some(Version(3, 0, 0)))
+      , MongoDependencyVersion(name = "lib2", group = "uk.gov.hmrc", version = Some(Version(4, 0, 0)))
       )
 
       val referenceSbtPluginVersions = Seq(
-        MongoSbtPluginVersion(name = "plugin1", group = "uk.gov.hmrc", version = Some(Version(30, 0, 0))),
-        MongoSbtPluginVersion(name = "plugin2", group = "uk.gov.hmrc", version = Some(Version(40, 0, 0)))
+        MongoDependencyVersion(name = "plugin1", group = "uk.gov.hmrc", version = Some(Version(30, 0, 0)))
+      , MongoDependencyVersion(name = "plugin2", group = "uk.gov.hmrc", version = Some(Version(40, 0, 0)))
       )
 
       val repository1 = "repo1"

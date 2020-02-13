@@ -27,7 +27,7 @@ import uk.gov.hmrc.servicedependencies.persistence._
 import scala.concurrent.{ExecutionContext, Future}
 
 class IntegrationTestController @Inject()(
-    libraryRepo                            : LibraryVersionRepository
+    libraryVersionRepository               : LibraryVersionRepository
   , sbtPluginVersionRepository             : SbtPluginVersionRepository
   , repositoryLibraryDependenciesRepository: RepositoryLibraryDependenciesRepository
   , sluginfoRepo                           : SlugInfoRepository
@@ -36,16 +36,15 @@ class IntegrationTestController @Inject()(
   )(implicit ec: ExecutionContext
   ) extends BackendController(cc) {
 
-  implicit val dtf                   = MongoJavatimeFormats.localDateFormats
-  implicit val vf                    = Version.apiFormat
-  implicit val libraryVersionReads   = Json.using[Json.WithDefaultValues].reads[MongoLibraryVersion]
-  implicit val sbtVersionReads       = Json.using[Json.WithDefaultValues].reads[MongoSbtPluginVersion]
-  implicit val dependenciesReads     = Json.using[Json.WithDefaultValues].reads[MongoRepositoryDependencies]
+  implicit val dtf                    = MongoJavatimeFormats.localDateFormats
+  implicit val vf                     = Version.apiFormat
+  implicit val dependencyVersionReads = Json.using[Json.WithDefaultValues].reads[MongoDependencyVersion]
+  implicit val dependenciesReads      = Json.using[Json.WithDefaultValues].reads[MongoRepositoryDependencies]
 
-  implicit val sluginfoReads         = { implicit val sdr = Json.using[Json.WithDefaultValues].reads[SlugDependency]
-                                         implicit val javaInfoReads = Json.using[Json.WithDefaultValues].reads[JavaInfo]
-                                         Json.using[Json.WithDefaultValues].reads[SlugInfo]
-                                       }
+  implicit val sluginfoReads          = { implicit val sdr = Json.using[Json.WithDefaultValues].reads[SlugDependency]
+                                          implicit val javaInfoReads = Json.using[Json.WithDefaultValues].reads[JavaInfo]
+                                          Json.using[Json.WithDefaultValues].reads[SlugInfo]
+                                        }
   implicit val bobbyRulesSummaryReads = BobbyRulesSummary.apiFormat
 
   private def validateJson[A : Reads] =
@@ -54,13 +53,13 @@ class IntegrationTestController @Inject()(
     )
 
   def addLibraryVersion =
-    Action.async(validateJson[Seq[MongoLibraryVersion]]) { implicit request =>
-      Future.sequence(request.body.map(libraryRepo.update))
+    Action.async(validateJson[Seq[MongoDependencyVersion]]) { implicit request =>
+      Future.sequence(request.body.map(libraryVersionRepository.update))
         .map(_ => NoContent)
     }
 
   def addSbtVersions =
-    Action.async(validateJson[Seq[MongoSbtPluginVersion]]) { implicit request =>
+    Action.async(validateJson[Seq[MongoDependencyVersion]]) { implicit request =>
       Future.sequence(request.body.map(sbtPluginVersionRepository.update))
         .map(_ => NoContent)
     }
@@ -85,7 +84,7 @@ class IntegrationTestController @Inject()(
 
   def deleteLibraryVersions =
     Action.async { implicit request =>
-      libraryRepo.clearAllData
+      libraryVersionRepository.clearAllData
         .map(_ => NoContent)
     }
 
@@ -118,7 +117,7 @@ class IntegrationTestController @Inject()(
       Future.sequence(List(
           sbtPluginVersionRepository.clearAllData
         , repositoryLibraryDependenciesRepository.clearAllData
-        , libraryRepo.clearAllData
+        , libraryVersionRepository.clearAllData
         , sluginfoRepo.clearAllData
         , bobbyRulesSummaryRepo.clearAllData
         )).map(_ => NoContent)

@@ -23,7 +23,7 @@ import org.mockito.MockitoSugar
 import org.mongodb.scala.bson.BsonDocument
 import org.mongodb.scala.model.IndexModel
 import uk.gov.hmrc.mongo.test.DefaultPlayMongoRepositorySupport
-import uk.gov.hmrc.servicedependencies.model.{MongoLibraryVersion, Version}
+import uk.gov.hmrc.servicedependencies.model.{MongoDependencyVersion, Version}
 import uk.gov.hmrc.servicedependencies.util.{FutureHelpers, MockFutureHelpers}
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -34,14 +34,14 @@ class LibraryVersionRepositorySpec
     extends AnyWordSpecLike
     with Matchers
     with MockitoSugar
-    with DefaultPlayMongoRepositorySupport[MongoLibraryVersion] {
+    with DefaultPlayMongoRepositorySupport[MongoDependencyVersion] {
 
   val metricsRegistry             = new MetricRegistry()
   val futureHelper: FutureHelpers = new MockFutureHelpers()
 
   override lazy val repository = new LibraryVersionRepository(mongoComponent, futureHelper, throttleConfig)
 
-  val libraryVersion = MongoLibraryVersion(
+  val libraryVersion = MongoDependencyVersion(
       name       = "some-library"
     , group      = "uk.gov.hmrc"
     , version    = Some(Version(1, 0, 2))
