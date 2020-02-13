@@ -19,7 +19,7 @@ package uk.gov.hmrc.servicedependencies.service
 import cats.implicits._
 import javax.inject.{Inject, Singleton}
 import uk.gov.hmrc.servicedependencies.config.CuratedDependencyConfigProvider
-import uk.gov.hmrc.servicedependencies.config.model.LibraryConfig
+import uk.gov.hmrc.servicedependencies.config.model.DependencyConfig
 import uk.gov.hmrc.servicedependencies.controller.model.Dependency
 import uk.gov.hmrc.servicedependencies.model.{MongoLibraryVersion, SlugDependency, SlugInfo, SlugInfoFlag, Version}
 import uk.gov.hmrc.servicedependencies.persistence.LibraryVersionRepository
@@ -34,7 +34,7 @@ class SlugDependenciesService @Inject()(
   libraryVersionRepository       : LibraryVersionRepository,
   serviceConfigsService          : ServiceConfigsService) {
 
-  private lazy val curatedLibraries: Set[LibraryConfig] =
+  private lazy val curatedLibraries: Set[DependencyConfig] =
     curatedDependencyConfigProvider.curatedDependencyConfig.libraries.toSet
 
   /*

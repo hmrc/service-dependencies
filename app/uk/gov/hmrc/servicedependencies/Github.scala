@@ -25,7 +25,7 @@ import org.eclipse.egit.github.core.{IRepositoryIdProvider, RepositoryContents}
 import org.slf4j.LoggerFactory
 import uk.gov.hmrc.githubclient._
 import uk.gov.hmrc.servicedependencies.config.ServiceDependenciesConfig
-import uk.gov.hmrc.servicedependencies.config.model.{CuratedDependencyConfig, LibraryConfig, OtherDependencyConfig, SbtPluginConfig}
+import uk.gov.hmrc.servicedependencies.config.model.{CuratedDependencyConfig, DependencyConfig}
 import uk.gov.hmrc.servicedependencies.model.{GithubSearchResults, Version}
 import uk.gov.hmrc.servicedependencies.util.{Max, VersionParser}
 
@@ -60,7 +60,7 @@ class Github(releaseService: ReleaseService, contentsService: ExtendedContentsSe
 
   private def searchBuildFilesForMultipleArtifacts(
     serviceName: String
-  , artifacts  : Seq[LibraryConfig]
+  , artifacts  : Seq[DependencyConfig]
   ): Map[(String, String), Option[Version]] = {
 
     @tailrec
@@ -90,7 +90,7 @@ class Github(releaseService: ReleaseService, contentsService: ExtendedContentsSe
 
   private def searchForOtherSpecifiedDependencies(
     serviceName      : String
-  , otherDependencies: Seq[OtherDependencyConfig]
+  , otherDependencies: Seq[DependencyConfig]
   ): Map[(String, String), Option[Version]] =
     otherDependencies
       .find(d => d.name == "sbt" && d.group == "org.scala-sbt")
@@ -98,7 +98,7 @@ class Github(releaseService: ReleaseService, contentsService: ExtendedContentsSe
 
   private def searchPluginSbtFileForMultipleArtifacts(
     serviceName     : String
-  , sbtPluginConfigs: Seq[SbtPluginConfig]
+  , sbtPluginConfigs: Seq[DependencyConfig]
   ): Map[(String, String), Option[Version]] =
     getContentsOrEmpty(serviceName, "project/plugins.sbt")
       .headOption

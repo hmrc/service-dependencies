@@ -18,7 +18,7 @@ package uk.gov.hmrc.servicedependencies.config
 
 import org.scalatest.OptionValues
 import play.api.Configuration
-import uk.gov.hmrc.servicedependencies.config.model.{CuratedDependencyConfig, LibraryConfig, OtherDependencyConfig, SbtPluginConfig}
+import uk.gov.hmrc.servicedependencies.config.model.{CuratedDependencyConfig, DependencyConfig}
 import uk.gov.hmrc.servicedependencies.model.Version
 import org.scalatest.funspec.AnyFunSpec
 import org.scalatest.matchers.should.Matchers
@@ -31,17 +31,17 @@ class CuratedDependencyConfigProviderSpec extends AnyFunSpec with Matchers with 
         new CuratedDependencyConfigProvider(Configuration("curated.config.path" -> "/config/test-config.json"))
 
       curatedDependencyConfigProvider.curatedDependencyConfig shouldBe CuratedDependencyConfig(
-          sbtPlugins = List(
-             SbtPluginConfig(name = "internal-plugin", group = "uk.gov.hmrc"         , latestVersion = None)
-           , SbtPluginConfig(name = "external-plugin", group = "com.example.external", latestVersion = Some(Version("1.4.0")))
-           )
-        , libraries = List(
-            LibraryConfig(name = "lib1", group = "uk.gov.hmrc", latestVersion = None)
-          , LibraryConfig(name = "lib2", group = "uk.gov.hmrc", latestVersion = None)
-          )
+          sbtPlugins        = List(
+                                DependencyConfig(name = "internal-plugin", group = "uk.gov.hmrc"         , latestVersion = None)
+                              , DependencyConfig(name = "external-plugin", group = "com.example.external", latestVersion = Some(Version("1.4.0")))
+                              )
+        , libraries         = List(
+                                DependencyConfig(name = "lib1", group = "uk.gov.hmrc", latestVersion = None)
+                              , DependencyConfig(name = "lib2", group = "uk.gov.hmrc", latestVersion = None)
+                              )
         , otherDependencies = List(
-            OtherDependencyConfig(name = "sbt", group = "org.scala-sbt", latestVersion = Some(Version("0.13.11")))
-          )
+                                DependencyConfig(name = "sbt", group = "org.scala-sbt", latestVersion = Some(Version("0.13.11")))
+                              )
         )
     }
   }

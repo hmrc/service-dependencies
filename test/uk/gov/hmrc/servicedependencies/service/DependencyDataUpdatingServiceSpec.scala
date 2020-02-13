@@ -31,7 +31,7 @@ import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.mongo.CurrentTimestampSupport
 import uk.gov.hmrc.mongo.test.MongoSupport
 import uk.gov.hmrc.servicedependencies.config.CuratedDependencyConfigProvider
-import uk.gov.hmrc.servicedependencies.config.model.{CuratedDependencyConfig, LibraryConfig, OtherDependencyConfig, SbtPluginConfig}
+import uk.gov.hmrc.servicedependencies.config.model.{CuratedDependencyConfig, DependencyConfig}
 import uk.gov.hmrc.servicedependencies.connector.{ArtifactoryConnector, GithubConnector, TeamsAndRepositoriesConnector}
 import uk.gov.hmrc.servicedependencies.connector.model.RepositoryInfo
 import uk.gov.hmrc.servicedependencies.controller.model.{Dependencies, Dependency}
@@ -70,7 +70,7 @@ class DependencyDataUpdatingServiceSpec
 
       val boot = new Boot(CuratedDependencyConfig(
         sbtPlugins        = Nil
-      , libraries         = List(LibraryConfig(name = "libYY", group= "uk.gov.hmrc", latestVersion = None))
+      , libraries         = List(DependencyConfig(name = "libYY", group= "uk.gov.hmrc", latestVersion = None))
       , otherDependencies = Nil
       ))
 
@@ -93,7 +93,7 @@ class DependencyDataUpdatingServiceSpec
     it("should call the sbt plugin update function on the repository") {
 
       val boot = new Boot(CuratedDependencyConfig(
-        sbtPlugins        = List(SbtPluginConfig(name = "sbtPlugin123", group= "uk.gov.hmrc", latestVersion = None))
+        sbtPlugins        = List(DependencyConfig(name = "sbtPlugin123", group= "uk.gov.hmrc", latestVersion = None))
       , libraries         = Nil
       , otherDependencies = Nil
       ))
@@ -371,7 +371,7 @@ class DependencyDataUpdatingServiceSpec
     it("should return the current and latest library, sbt plugin and other dependency versions for all repositories") {
       val boot = new Boot(
         curatedDependencyConfig.copy(otherDependencies =
-          List(OtherDependencyConfig(name = "sbt", group = "org.scala-sbt", latestVersion = Some(Version(100, 10, 1))))
+          List(DependencyConfig(name = "sbt", group = "org.scala-sbt", latestVersion = Some(Version(100, 10, 1))))
         )
       )
 

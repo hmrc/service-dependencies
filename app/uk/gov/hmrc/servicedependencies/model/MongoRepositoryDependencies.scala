@@ -38,7 +38,7 @@ object MongoRepositoryDependency {
   }
 
   def toMongoRepositoryDependency(name: String, group: Option[String], currentVersion: Version): MongoRepositoryDependency = {
-    // Initially we didn't store this information - this is was the assumption at the time.
+    // Initially we didn't store this information - this was the assumption at the time.
     val inferredGroup = name match {
       case "sbt-plugin"    => "com.typesafe.play"
       case "reactivemongo" => "org.reactivemongo"
