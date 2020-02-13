@@ -27,8 +27,7 @@ import uk.gov.hmrc.servicedependencies.persistence._
 import scala.concurrent.{ExecutionContext, Future}
 
 class IntegrationTestController @Inject()(
-    libraryVersionRepository               : LibraryVersionRepository
-  , sbtPluginVersionRepository             : SbtPluginVersionRepository
+    dependencyVersionRepository            : DependencyVersionRepository
   , repositoryLibraryDependenciesRepository: RepositoryLibraryDependenciesRepository
   , sluginfoRepo                           : SlugInfoRepository
   , bobbyRulesSummaryRepo                  : BobbyRulesSummaryRepository
@@ -52,15 +51,9 @@ class IntegrationTestController @Inject()(
       _.validate[A].asEither.left.map(e => BadRequest(JsError.toJson(e)))
     )
 
-  def addLibraryVersion =
+  def addDependencyVersions =
     Action.async(validateJson[Seq[MongoDependencyVersion]]) { implicit request =>
-      Future.sequence(request.body.map(libraryVersionRepository.update))
-        .map(_ => NoContent)
-    }
-
-  def addSbtVersions =
-    Action.async(validateJson[Seq[MongoDependencyVersion]]) { implicit request =>
-      Future.sequence(request.body.map(sbtPluginVersionRepository.update))
+      Future.sequence(request.body.map(dependencyVersionRepository.update))
         .map(_ => NoContent)
     }
 
@@ -82,15 +75,9 @@ class IntegrationTestController @Inject()(
         .map(_ => NoContent)
     }
 
-  def deleteLibraryVersions =
+  def deleteDependencyVersions =
     Action.async { implicit request =>
-      libraryVersionRepository.clearAllData
-        .map(_ => NoContent)
-    }
-
-  def deleteSbtVersions =
-    Action.async { implicit request =>
-      sbtPluginVersionRepository.clearAllData
+      dependencyVersionRepository.clearAllData
         .map(_ => NoContent)
     }
 
@@ -115,9 +102,8 @@ class IntegrationTestController @Inject()(
   def deleteAll =
     Action.async { implicit request =>
       Future.sequence(List(
-          sbtPluginVersionRepository.clearAllData
+          dependencyVersionRepository.clearAllData
         , repositoryLibraryDependenciesRepository.clearAllData
-        , libraryVersionRepository.clearAllData
         , sluginfoRepo.clearAllData
         , bobbyRulesSummaryRepo.clearAllData
         )).map(_ => NoContent)

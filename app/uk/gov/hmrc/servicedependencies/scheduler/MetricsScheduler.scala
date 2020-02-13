@@ -49,7 +49,7 @@ class MetricsScheduler @Inject()(
   private val schedulerConfig = schedulerConfigs.metrics
 
   val lock =
-    mongoLockRepository.toService("repositoryDependenciesLock", schedulerConfig.frequency())
+    mongoLockRepository.toService("repositoryDependenciesLock", schedulerConfig.interval)
 
   val metricOrchestrator = new MetricOrchestrator(
     metricSources    = List(repositoryDependenciesSource),

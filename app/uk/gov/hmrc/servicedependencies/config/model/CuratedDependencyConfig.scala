@@ -62,7 +62,10 @@ case class CuratedDependencyConfig(
     sbtPlugins: List[DependencyConfig]
   , libraries : List[DependencyConfig]
   , others    : List[DependencyConfig]
-  )
+  ) {
+    val allDependencies =
+      sbtPlugins ++ libraries ++ others
+  }
 
 object CuratedDependencyConfig {
   val reads = {

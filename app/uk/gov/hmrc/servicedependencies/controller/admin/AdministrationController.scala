@@ -43,20 +43,11 @@ class AdministrationController @Inject()(
     Accepted("reload started")
   }
 
-  def reloadLibraryVersions() = Action { implicit request =>
+  def reloadDependencyVersions = Action { implicit request =>
     dependencyDataUpdatingService
-      .reloadLatestLibraryVersions
+      .reloadLatestDependencyVersions
       .onFailure {
-        case ex => throw new RuntimeException("reload of libraries failed", ex)
-      }
-    Accepted("reload started")
-  }
-
-  def reloadSbtPluginVersions() = Action { implicit request =>
-    dependencyDataUpdatingService
-      .reloadLatestSbtPluginVersions
-      .onFailure {
-        case ex => throw new RuntimeException("reload of sbt plugins failed", ex)
+        case ex => throw new RuntimeException("reload of dependency versions failed", ex)
       }
     Accepted("reload started")
   }

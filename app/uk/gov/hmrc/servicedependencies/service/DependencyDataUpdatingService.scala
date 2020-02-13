@@ -28,7 +28,7 @@ import uk.gov.hmrc.servicedependencies.config.model.{CuratedDependencyConfig, De
 import uk.gov.hmrc.servicedependencies.connector.model.RepositoryInfo
 import uk.gov.hmrc.servicedependencies.controller.model.{Dependencies, Dependency}
 import uk.gov.hmrc.servicedependencies.model.{MongoRepositoryDependencies, MongoRepositoryDependency, MongoDependencyVersion}
-import uk.gov.hmrc.servicedependencies.persistence._
+import uk.gov.hmrc.servicedependencies.persistence.{DependencyVersionRepository, RepositoryLibraryDependenciesRepository}
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -36,8 +36,7 @@ import scala.concurrent.{ExecutionContext, Future}
 class DependencyDataUpdatingService @Inject()(
   curatedDependencyConfigProvider        : CuratedDependencyConfigProvider
 , repositoryLibraryDependenciesRepository: RepositoryLibraryDependenciesRepository
-, libraryVersionRepository               : LibraryVersionRepository
-, sbtPluginVersionRepository             : SbtPluginVersionRepository
+, dependencyVersionRepository            : DependencyVersionRepository
 , teamsAndRepositoriesConnector          : TeamsAndRepositoriesConnector
 , artifactoryConnector                   : ArtifactoryConnector
 , githubConnector                        : GithubConnector
@@ -51,11 +50,8 @@ class DependencyDataUpdatingService @Inject()(
   lazy val curatedDependencyConfig =
     curatedDependencyConfigProvider.curatedDependencyConfig
 
-  private def reloadLatestDependencyVersions(
-    dependencyConfigs          : List[DependencyConfig]
-  , dependencyVersionRepository: DependencyVersionRepository
-  ): Future[List[MongoDependencyVersion]] =
-    dependencyConfigs.traverse { config =>
+  def reloadLatestDependencyVersions: Future[List[MongoDependencyVersion]] =
+    curatedDependencyConfig.allDependencies.traverse { config =>
       for {
         optVersion <- config.latestVersion
                         .fold(
@@ -67,12 +63,6 @@ class DependencyDataUpdatingService @Inject()(
         _          <- dependencyVersionRepository.update(version)
       } yield version
     }
-
-  def reloadLatestLibraryVersions: Future[List[MongoDependencyVersion]] =
-    reloadLatestDependencyVersions(curatedDependencyConfig.libraries, libraryVersionRepository)
-
-  def reloadLatestSbtPluginVersions: Future[List[MongoDependencyVersion]] =
-    reloadLatestDependencyVersions(curatedDependencyConfig.sbtPlugins, sbtPluginVersionRepository)
 
   def reloadCurrentDependenciesDataForAllRepositories(
       force: Boolean = false
@@ -126,50 +116,32 @@ class DependencyDataUpdatingService @Inject()(
     )
   }
 
-  private def toOtherDependency(d: MongoRepositoryDependency): Dependency = {
-    val optConfig =
-      curatedDependencyConfig.others
-        .find(ref => ref.name  == d.name &&
-                     ref.group == d.group
-             )
-
-    Dependency(
-      name                = d.name
-    , group               = d.group
-    , currentVersion      = d.currentVersion
-    , latestVersion       = optConfig.flatMap(_.latestVersion)
-    , bobbyRuleViolations = List.empty
-    )
-  }
-
   def getDependencyVersionsForRepository(repositoryName: String): Future[Option[Dependencies]] =
     for {
-      dependencies        <- repositoryLibraryDependenciesRepository.getForRepository(repositoryName)
-      libraryReferences   <- libraryVersionRepository.getAllEntries
-      sbtPluginReferences <- sbtPluginVersionRepository.getAllEntries
+      dependencies       <- repositoryLibraryDependenciesRepository.getForRepository(repositoryName)
+      dependencyVersions <- dependencyVersionRepository.getAllEntries
     } yield
       dependencies.map(dep =>
         Dependencies(
           repositoryName         = dep.repositoryName
-        , libraryDependencies    = dep.libraryDependencies.map(toDependency(libraryReferences))
-        , sbtPluginsDependencies = dep.sbtPluginDependencies.map(toDependency(sbtPluginReferences))
-        , otherDependencies      = dep.otherDependencies.map(toOtherDependency)
+        , libraryDependencies    = dep.libraryDependencies.map(toDependency(dependencyVersions))
+        , sbtPluginsDependencies = dep.sbtPluginDependencies.map(toDependency(dependencyVersions))
+        , otherDependencies      = dep.otherDependencies.map(toDependency(dependencyVersions))
         , lastUpdated            = dep.updateDate
         )
       )
 
   def getDependencyVersionsForAllRepositories: Future[Seq[Dependencies]] =
     for {
-      allDependencies     <- repositoryLibraryDependenciesRepository.getAllEntries
-      libraryReferences   <- libraryVersionRepository.getAllEntries
-      sbtPluginReferences <- sbtPluginVersionRepository.getAllEntries
+      allDependencies    <- repositoryLibraryDependenciesRepository.getAllEntries
+      dependencyVersions <- dependencyVersionRepository.getAllEntries
     } yield
       allDependencies.map(dep =>
         Dependencies(
           repositoryName         = dep.repositoryName
-        , libraryDependencies    = dep.libraryDependencies.map(toDependency(libraryReferences))
-        , sbtPluginsDependencies = dep.sbtPluginDependencies.map(toDependency(sbtPluginReferences))
-        , otherDependencies      = dep.otherDependencies.map(toOtherDependency)
+        , libraryDependencies    = dep.libraryDependencies.map(toDependency(dependencyVersions))
+        , sbtPluginsDependencies = dep.sbtPluginDependencies.map(toDependency(dependencyVersions))
+        , otherDependencies      = dep.otherDependencies.map(toDependency(dependencyVersions))
         , lastUpdated            = dep.updateDate
         )
       )
@@ -180,8 +152,7 @@ class DependencyDataUpdatingService @Inject()(
   def dropCollection(collectionName: String) =
     collectionName match {
       case "repositoryLibraryDependencies" => repositoryLibraryDependenciesRepository.clearAllData
-      case "libraryVersions"               => libraryVersionRepository.clearAllData
-      case "sbtPluginVersions"             => sbtPluginVersionRepository.clearAllData
+      case "dependencyVersions"            => dependencyVersionRepository.clearAllData
       case other                           => sys.error(s"dropping $other collection is not supported")
     }
 

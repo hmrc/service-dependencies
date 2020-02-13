@@ -19,8 +19,7 @@ package uk.gov.hmrc.servicedependencies.persistence
 import com.google.inject.{Inject, Singleton}
 import org.mongodb.scala.bson.BsonDocument
 import org.mongodb.scala.model.Filters.{and, equal}
-import org.mongodb.scala.model.Indexes.hashed
-import org.mongodb.scala.model.{IndexModel, IndexOptions, ReplaceOptions}
+import org.mongodb.scala.model.{Indexes, IndexModel, IndexOptions, ReplaceOptions}
 import play.api.Logger
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.play.json.PlayMongoRepository
@@ -31,44 +30,17 @@ import uk.gov.hmrc.servicedependencies.util.FutureHelpers
 import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
-class LibraryVersionRepository @Inject()(
-    mongoComponent: MongoComponent
-  , futureHelpers : FutureHelpers
-  , throttleConfig: ThrottleConfig
-  )(implicit ec: ExecutionContext
-  ) extends DependencyVersionRepository(
-    collectionName = "libraryVersions"
-  , mongoComponent = mongoComponent
-  , futureHelpers = futureHelpers
-  , throttleConfig = throttleConfig
-  )
-
-@Singleton
-class SbtPluginVersionRepository @Inject()(
-    mongoComponent: MongoComponent
-  , futureHelpers : FutureHelpers
-  , throttleConfig: ThrottleConfig
-  )(implicit ec: ExecutionContext
-  ) extends DependencyVersionRepository(
-    collectionName = "sbtPluginVersions"
-  , mongoComponent = mongoComponent
-  , futureHelpers = futureHelpers
-  , throttleConfig = throttleConfig
-  )
-
-// TODO Should we just store sbtPluginVersions and libraryVersions all together? also otherDependencies?
 class DependencyVersionRepository @Inject()(
-    collectionName    : String
-  , mongoComponent    : MongoComponent
+    mongoComponent    : MongoComponent
   , futureHelpers     : FutureHelpers
   , val throttleConfig: ThrottleConfig
   )(implicit ec: ExecutionContext
   ) extends PlayMongoRepository[MongoDependencyVersion](
-    collectionName = collectionName
+    collectionName = "dependencyVersions"
   , mongoComponent = mongoComponent
   , domainFormat   = MongoDependencyVersion.format
   , indexes        = Seq(
-                       IndexModel(hashed("name"), IndexOptions().name("nameIdx").background(true))
+                       IndexModel(Indexes.ascending("name", "group"), IndexOptions().unique(true))
                      )
   , optSchema      = Some(BsonDocument(MongoDependencyVersion.schema))
   ) with WithThrottling {
@@ -91,7 +63,7 @@ class DependencyVersionRepository @Inject()(
           .map(_ => ())
     } recover {
       case e =>
-        throw new RuntimeException(s"failed to persist dependency version $dependencyVersion in $collectionName: ${e.getMessage}", e)
+        throw new RuntimeException(s"failed to persist dependency version $dependencyVersion: ${e.getMessage}", e)
     }
   }
 

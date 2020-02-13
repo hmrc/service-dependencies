@@ -47,10 +47,9 @@ class DataReloadScheduler @Inject()(
       .map(_ => ())
   }
 
-  scheduleWithLock("libraryDataReloader", schedulerConfigs.libraryReload, mongoLocks.libraryReloadSchedulerLock){
+  scheduleWithLock("dependencyVersionsReloader", schedulerConfigs.dependencyVersionsReload, mongoLocks.dependencyVersionsReloadSchedulerLock){
     for {
-      _ <- dependencyDataUpdatingService.reloadLatestLibraryVersions
-      _ <- dependencyDataUpdatingService.reloadLatestSbtPluginVersions
+      _ <- dependencyDataUpdatingService.reloadLatestDependencyVersions
     } yield ()
   }
 }

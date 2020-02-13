@@ -24,75 +24,34 @@ import scala.concurrent.duration.{DurationInt, FiniteDuration}
 case class SchedulerConfig(
     enabledKey  : String
   , enabled     : Boolean
-  , frequency   : () => FiniteDuration
-  , initialDelay: () => FiniteDuration
+  , interval    : FiniteDuration
+  , initialDelay: FiniteDuration
   )
 
 object SchedulerConfig {
   import ConfigUtils._
 
   def apply(
-      configuration: Configuration
-    , enabledKey   : String
-    , frequency    : => FiniteDuration
-    , initialDelay : => FiniteDuration
-    ): SchedulerConfig =
-      SchedulerConfig(
-          enabledKey
-        , enabled      = configuration.get[Boolean](enabledKey)
-        , frequency    = () => frequency
-        , initialDelay = () => initialDelay
-        )
-
-  def apply(
       configuration   : Configuration
-    , enabledKey      : String
-    , frequencyKey    : String
-    , initialDelayKey : String
-    ): SchedulerConfig =
+    , schedulerKey    : String
+    ): SchedulerConfig = {
+      val enabledKey      = s"$schedulerKey.enabled"
+      val intervalKey     = s"$schedulerKey.interval"
+      val initialDelayKey = s"$schedulerKey.initialDelay"
       SchedulerConfig(
-          enabledKey
+          enabledKey   = enabledKey
         , enabled      = configuration.get[Boolean](enabledKey)
-        , frequency    = () => getDuration(configuration, frequencyKey)
-        , initialDelay = () => getDuration(configuration, initialDelayKey)
+        , interval     = configuration.get[FiniteDuration](intervalKey)
+        , initialDelay = configuration.get[FiniteDuration](initialDelayKey)
         )
+    }
 }
 
 @Singleton
 class SchedulerConfigs @Inject()(configuration: Configuration) extends ConfigUtils {
-
-  val slugMetadataUpdate = SchedulerConfig(
-      configuration
-    , enabledKey      = "repositoryDependencies.slugJob.enabled"
-    , frequencyKey    = "repositoryDependencies.slugJob.interval"
-    , initialDelayKey = "repositoryDependencies.slugJob.initialDelay"
-    )
-
-  val bobbyRulesSummary = SchedulerConfig(
-      configuration
-    , enabledKey      = "repositoryDependencies.bobbyRulesSummaryScheduler.enabled"
-    , frequencyKey    = "repositoryDependencies.bobbyRulesSummaryScheduler.interval"
-    , initialDelayKey = "repositoryDependencies.bobbyRulesSummaryScheduler.initialDelay"
-    )
-
-  val metrics = SchedulerConfig(
-      configuration
-    , enabledKey      = "repositoryDependencies.metricsGauges.enabled"
-    , frequencyKey    = "repositoryDependencies.metricsGauges.interval"
-    , initialDelayKey = "repositoryDependencies.metricsGauges.initialDelay"
-    )
-
-  val dependencyReload = SchedulerConfig(
-      configuration
-    , enabledKey      = "dependencyReload.scheduler.enabled"
-    , frequencyKey    = "dependencyReload.scheduler.interval"
-    , initialDelayKey = "dependencyReload.scheduler.initialDelay"
-    )
-
-  val libraryReload = SchedulerConfig(
-      configuration
-    , enabledKey      = "libraryReload.scheduler.enabled"
-    , frequencyKey    = "libraryReload.scheduler.interval"
-    , initialDelayKey = "libraryReload.scheduler.initialDelay"
-    )
+  val slugMetadataUpdate       = SchedulerConfig(configuration, "repositoryDependencies.slugJob"                   )
+  val bobbyRulesSummary        = SchedulerConfig(configuration, "repositoryDependencies.bobbyRulesSummaryScheduler")
+  val metrics                  = SchedulerConfig(configuration, "repositoryDependencies.metricsGauges"             )
+  val dependencyReload         = SchedulerConfig(configuration, "dependencyReload.scheduler"                       )
+  val dependencyVersionsReload = SchedulerConfig(configuration, "dependencyVersionsReload.scheduler"               )
 }
