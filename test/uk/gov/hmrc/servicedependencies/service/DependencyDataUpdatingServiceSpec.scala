@@ -19,8 +19,11 @@ package uk.gov.hmrc.servicedependencies.service
 import java.time.Instant
 
 import org.mockito.ArgumentMatchers.{any, eq => eqTo}
-import org.mockito.MockitoSugar
+import org.mockito.{Mockito, MockitoSugar}
 import org.scalatest.OptionValues
+import org.scalatest.concurrent.IntegrationPatience
+import org.scalatest.funspec.AnyFunSpec
+import org.scalatest.matchers.should.Matchers
 import org.scalatestplus.play.guice.GuiceOneAppPerTest
 import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
@@ -29,7 +32,8 @@ import uk.gov.hmrc.mongo.CurrentTimestampSupport
 import uk.gov.hmrc.mongo.test.MongoSupport
 import uk.gov.hmrc.servicedependencies.config.CuratedDependencyConfigProvider
 import uk.gov.hmrc.servicedependencies.config.model.{CuratedDependencyConfig, LibraryConfig, OtherDependencyConfig, SbtPluginConfig}
-import uk.gov.hmrc.servicedependencies.connector.ArtifactoryConnector
+import uk.gov.hmrc.servicedependencies.connector.{ArtifactoryConnector, GithubConnector, TeamsAndRepositoriesConnector}
+import uk.gov.hmrc.servicedependencies.connector.model.RepositoryInfo
 import uk.gov.hmrc.servicedependencies.controller.model.{Dependencies, Dependency}
 import uk.gov.hmrc.servicedependencies.model._
 import uk.gov.hmrc.servicedependencies.persistence._
@@ -37,8 +41,6 @@ import uk.gov.hmrc.servicedependencies.persistence._
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}
-import org.scalatest.funspec.AnyFunSpec
-import org.scalatest.matchers.should.Matchers
 
 class DependencyDataUpdatingServiceSpec
   extends AnyFunSpec
@@ -46,7 +48,8 @@ class DependencyDataUpdatingServiceSpec
      with Matchers
      with GuiceOneAppPerTest
      with OptionValues
-     with MongoSupport {
+     with MongoSupport
+     with IntegrationPatience {
 
   override def fakeApplication(): Application =
     new GuiceApplicationBuilder()
@@ -74,7 +77,6 @@ class DependencyDataUpdatingServiceSpec
       when(boot.mockArtifactoryConnector.findLatestVersion(group = "uk.gov.hmrc", artefact = "libYY"))
         .thenReturn(Future.successful(Some(Version(1, 1, 1))))
 
-        //.thenReturn(Future.successful(List(LibraryVersion(name = "libYY", group = "uk.gov.hmrc", version = Some(Version(1, 1, 1))))))
       when(boot.mockLibraryVersionRepository.update(any()))
         .thenReturn(Future.successful(mock[MongoLibraryVersion]))
 
@@ -113,46 +115,73 @@ class DependencyDataUpdatingServiceSpec
 
   describe("reloadMongoRepositoryDependencyDataForAllRepositories") {
 
-    it("should call the dependency update function to persist the dependencies") {
+    def testReloadCurrentDependenciesDataForAllRepositories(
+      force            : Boolean
+    , repoLastUpdatedAt: Instant
+    , shouldUpdate     : Boolean
+    ) = {
       val boot = new Boot(curatedDependencyConfig)
 
-      val mongoRepositoryDependencies = Seq(MongoRepositoryDependencies("repoXyz", Nil, Nil, Nil, timeForTest))
+      val repositoryName = "repoXyz"
+
+      val mongoRepositoryDependencies =
+        MongoRepositoryDependencies(repositoryName, Nil, Nil, Nil, updateDate = timeForTest)
+
+      val repositoryInfo =
+        RepositoryInfo(
+          name          = repositoryName
+        , createdAt     = Instant.EPOCH
+        , lastUpdatedAt = repoLastUpdatedAt
+        )
 
       when(boot.mockRepositoryLibraryDependenciesRepository.getAllEntries)
-        .thenReturn(Future.successful(mongoRepositoryDependencies))
-      when(boot.mockDependenciesDataSource.persistDependenciesForAllRepositories(any(), any(), any())(any()))
+        .thenReturn(Future.successful(Seq(mongoRepositoryDependencies)))
+
+      when(boot.mockTeamsAndRepositoriesConnector.getAllRepositories(any()))
+        .thenReturn(Future.successful(Seq(repositoryInfo)))
+
+      when(boot.mockGithubConnector.buildDependencies(any(), any()))
+        .thenReturn(Some(mongoRepositoryDependencies))
+
+      when(boot.mockRepositoryLibraryDependenciesRepository.update(any()))
         .thenReturn(Future.successful(mongoRepositoryDependencies))
 
-      boot.dependencyUpdatingService
-        .reloadCurrentDependenciesDataForAllRepositories()(HeaderCarrier())
-        .futureValue shouldBe mongoRepositoryDependencies
+      val res = boot.dependencyUpdatingService
+        .reloadCurrentDependenciesDataForAllRepositories(force)(HeaderCarrier())
+        .futureValue
 
-      //!@ TODO: how do we verify the persister function being called (last param)?
-      verify(boot.mockDependenciesDataSource, times(1)).persistDependenciesForAllRepositories(
-        eqTo(boot.dependencyUpdatingService.curatedDependencyConfig),
-        eqTo(mongoRepositoryDependencies),
-        eqTo(false))(any())
+      if (shouldUpdate) {
+        res shouldBe Seq(mongoRepositoryDependencies)
+        verify(boot.mockRepositoryLibraryDependenciesRepository, times(1))
+          .update(eqTo(mongoRepositoryDependencies))
+      } else {
+        res shouldBe Nil
+        verify(boot.mockRepositoryLibraryDependenciesRepository, Mockito.never())
+          .update(any())
+      }
     }
 
-    it("should force the persistence of updates if the 'force' flag is true") {
-      val boot = new Boot(curatedDependencyConfig)
+    it("should call the dependency update function to persist the dependencies if repo has been modified") {
+      testReloadCurrentDependenciesDataForAllRepositories(
+        force             = false
+      , repoLastUpdatedAt = timeForTest
+      , shouldUpdate      = true
+      )
+    }
+    it("should not call the dependency update function to persist the dependencies if repo has not been modified") {
+      testReloadCurrentDependenciesDataForAllRepositories(
+        force             = false
+      , repoLastUpdatedAt = Instant.EPOCH
+      , shouldUpdate      = false
+      )
+    }
 
-      val mongoRepositoryDependencies = Seq(MongoRepositoryDependencies("repoXyz", Nil, Nil, Nil, timeForTest))
-
-      when(boot.mockRepositoryLibraryDependenciesRepository.getAllEntries)
-        .thenReturn(Future.successful(mongoRepositoryDependencies))
-      when(boot.mockDependenciesDataSource.persistDependenciesForAllRepositories(any(), any(), any())(any()))
-        .thenReturn(Future.successful(mongoRepositoryDependencies))
-
-      boot.dependencyUpdatingService
-        .reloadCurrentDependenciesDataForAllRepositories(force = true)(HeaderCarrier())
-        .futureValue shouldBe mongoRepositoryDependencies
-
-      //!@ TODO: how do we verify the persister function being called (last param)?
-      verify(boot.mockDependenciesDataSource, times(1)).persistDependenciesForAllRepositories(
-        eqTo(boot.dependencyUpdatingService.curatedDependencyConfig),
-        eqTo(mongoRepositoryDependencies),
-        eqTo(true))(any())
+    it("should call the dependency update function to persist the dependencies if repo has not been modified but force") {
+      testReloadCurrentDependenciesDataForAllRepositories(
+        force             = true
+      , repoLastUpdatedAt = Instant.EPOCH
+      , shouldUpdate      = true
+      )
     }
   }
 
@@ -416,7 +445,7 @@ class DependencyDataUpdatingServiceSpec
       when(boot.mockSbtPluginVersionRepository.getAllEntries)
         .thenReturn(Future.successful(referenceSbtPluginVersions))
 
-      val maybeDependencies = boot.dependencyUpdatingService.getDependencyVersionsForAllRepositories().futureValue
+      val maybeDependencies = boot.dependencyUpdatingService.getDependencyVersionsForAllRepositories.futureValue
 
       verify(boot.mockRepositoryLibraryDependenciesRepository, times(1)).getAllEntries
 
@@ -464,24 +493,22 @@ class DependencyDataUpdatingServiceSpec
       .thenReturn(dependencyConfig)
 
     val mockRepositoryLibraryDependenciesRepository = mock[RepositoryLibraryDependenciesRepository]
-
-    val mockLibraryVersionRepository = mock[LibraryVersionRepository]
-
-    val mockSbtPluginVersionRepository = mock[SbtPluginVersionRepository]
-
-    val mockDependenciesDataSource = mock[DependenciesDataSource]
-
-    val mockArtifactoryConnector = mock[ArtifactoryConnector]
+    val mockLibraryVersionRepository                = mock[LibraryVersionRepository]
+    val mockSbtPluginVersionRepository              = mock[SbtPluginVersionRepository]
+    val mockTeamsAndRepositoriesConnector           = mock[TeamsAndRepositoriesConnector]
+    val mockArtifactoryConnector                    = mock[ArtifactoryConnector]
+    val mockGithubConnector                         = mock[GithubConnector]
 
     val dependencyUpdatingService = new DependencyDataUpdatingService(
-      mockCuratedDependencyConfigProvider,
-      mockRepositoryLibraryDependenciesRepository,
-      mockLibraryVersionRepository,
-      mockSbtPluginVersionRepository,
-      mockDependenciesDataSource,
-      mockArtifactoryConnector
-    ) {
-      override def now: Instant = timeForTest
-    }
+        mockCuratedDependencyConfigProvider
+      , mockRepositoryLibraryDependenciesRepository
+      , mockLibraryVersionRepository
+      , mockSbtPluginVersionRepository
+      , mockTeamsAndRepositoriesConnector
+      , mockArtifactoryConnector
+      , mockGithubConnector
+      ) {
+        override def now: Instant = timeForTest
+      }
   }
 }

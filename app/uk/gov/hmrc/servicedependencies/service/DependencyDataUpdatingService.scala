@@ -22,9 +22,10 @@ import cats.implicits._
 import com.google.inject.{Inject, Singleton}
 import org.slf4j.LoggerFactory
 import uk.gov.hmrc.http.HeaderCarrier
+import uk.gov.hmrc.servicedependencies.connector.{ArtifactoryConnector, GithubConnector, TeamsAndRepositoriesConnector}
 import uk.gov.hmrc.servicedependencies.config.CuratedDependencyConfigProvider
-import uk.gov.hmrc.servicedependencies.connector.ArtifactoryConnector
-import uk.gov.hmrc.servicedependencies.controller.model.{Dependencies, Dependency}
+import uk.gov.hmrc.servicedependencies.config.model.CuratedDependencyConfig
+import uk.gov.hmrc.servicedependencies.connector.model.RepositoryInfo
 import uk.gov.hmrc.servicedependencies.controller.model.{Dependencies, Dependency}
 import uk.gov.hmrc.servicedependencies.model._
 import uk.gov.hmrc.servicedependencies.persistence._
@@ -37,8 +38,9 @@ class DependencyDataUpdatingService @Inject()(
 , repositoryLibraryDependenciesRepository: RepositoryLibraryDependenciesRepository
 , libraryVersionRepository               : LibraryVersionRepository
 , sbtPluginVersionRepository             : SbtPluginVersionRepository
-, dependenciesDataSource                 : DependenciesDataSource
+, teamsAndRepositoriesConnector          : TeamsAndRepositoriesConnector
 , artifactoryConnector                   : ArtifactoryConnector
+, githubConnector                        : GithubConnector
 )(implicit ec: ExecutionContext
 ) {
 
@@ -77,12 +79,33 @@ class DependencyDataUpdatingService @Inject()(
     logger.debug(s"reloading current dependencies data for all repositories... (with force=$force)")
     for {
       currentDependencyEntries <- repositoryLibraryDependenciesRepository.getAllEntries
-      libraryDependencies      <- dependenciesDataSource.persistDependenciesForAllRepositories(
-                                      curatedDependencyConfig
-                                    , currentDependencyEntries
-                                    , force = force
-                                    )
+      repos                    <- teamsAndRepositoriesConnector.getAllRepositories
+      libraryDependencies      <- repos.toList.traverse { repo =>
+                                    buildMongoRepositoryDependencies(repo, curatedDependencyConfig, currentDependencyEntries, force)
+                                      .traverse(repositoryLibraryDependenciesRepository.update)
+                                  }.map(_.flatten)
     } yield libraryDependencies
+  }
+
+  def buildMongoRepositoryDependencies(
+      repo                   : RepositoryInfo
+    , curatedDependencyConfig: CuratedDependencyConfig
+    , currentDeps            : Seq[MongoRepositoryDependencies]
+    , force                  : Boolean
+    ): Option[MongoRepositoryDependencies] = {
+
+    val lastUpdated =
+      currentDeps.find(_.repositoryName == repo.name)
+        .map(_.updateDate)
+        .getOrElse(Instant.EPOCH)
+
+    if (force || !repo.lastUpdatedAt.isBefore(lastUpdated)) {
+      logger.info(s"building repo for ${repo.name}")
+      githubConnector.buildDependencies(repo, curatedDependencyConfig)
+    } else {
+      logger.debug(s"No changes for repository (${repo.name}). Skipping....")
+      None
+    }
   }
 
   private def toLibraryDependency(libraryReferences: Seq[MongoLibraryVersion])(d: MongoRepositoryDependency): Dependency = {
@@ -171,7 +194,7 @@ class DependencyDataUpdatingService @Inject()(
         )
       )
 
-  def getDependencyVersionsForAllRepositories(): Future[Seq[Dependencies]] =
+  def getDependencyVersionsForAllRepositories: Future[Seq[Dependencies]] =
     for {
       allDependencies     <- repositoryLibraryDependenciesRepository.getAllEntries
       libraryReferences   <- libraryVersionRepository.getAllEntries
@@ -187,7 +210,7 @@ class DependencyDataUpdatingService @Inject()(
         )
       )
 
-  def getAllRepositoriesDependencies(): Future[Seq[MongoRepositoryDependencies]] =
+  def getAllRepositoriesDependencies: Future[Seq[MongoRepositoryDependencies]] =
     repositoryLibraryDependenciesRepository.getAllEntries
 
   def dropCollection(collectionName: String) =

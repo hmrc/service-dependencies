@@ -43,7 +43,7 @@ class RepositoryDependenciesSourceSpec
       val repository2 = "repo2"
       val repository3 = "repo3-history"
 
-      when(teamsAndRepositoriesConnector.getTeamsWithRepositories()(any()))
+      when(teamsAndRepositoriesConnector.getTeamsWithRepositories(any()))
         .thenReturn(
           Future.successful(
             Seq(Team(
@@ -108,7 +108,7 @@ class RepositoryDependenciesSourceSpec
       private val teamA = "team A"
       private val teamB = "team B"
 
-      when(teamsAndRepositoriesConnector.getTeamsWithRepositories()(any()))
+      when(teamsAndRepositoriesConnector.getTeamsWithRepositories(any()))
         .thenReturn(
           Future.successful(
             Seq(

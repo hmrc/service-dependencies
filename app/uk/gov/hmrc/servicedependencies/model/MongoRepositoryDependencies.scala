@@ -56,7 +56,7 @@ object MongoRepositoryDependency {
 case class MongoRepositoryDependencies(
     repositoryName       : String
   , libraryDependencies  : Seq[MongoRepositoryDependency]
-  , sbtPluginDependencies: Seq[MongoRepositoryDependency] = Nil
+  , sbtPluginDependencies: Seq[MongoRepositoryDependency]
   , otherDependencies    : Seq[MongoRepositoryDependency]
   , updateDate           : Instant                        = Instant.now()
   )

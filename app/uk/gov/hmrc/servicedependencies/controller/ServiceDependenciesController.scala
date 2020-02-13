@@ -65,7 +65,7 @@ class ServiceDependenciesController @Inject()(
     Action.async { implicit request =>
       for {
         dependencies  <- dependencyDataUpdatingService
-                           .getDependencyVersionsForAllRepositories()
+                           .getDependencyVersionsForAllRepositories
         depsWithRules <- dependencies.toList
                           .traverse(serviceConfigsService.getDependenciesWithBobbyRules)
       } yield Ok(Json.toJson(depsWithRules))
