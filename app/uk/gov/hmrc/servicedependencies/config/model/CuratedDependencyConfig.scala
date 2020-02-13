@@ -59,18 +59,18 @@ object DependencyConfig {
 }
 
 case class CuratedDependencyConfig(
-    sbtPlugins       : List[DependencyConfig]
-  , libraries        : List[DependencyConfig]
-  , otherDependencies: List[DependencyConfig]
+    sbtPlugins: List[DependencyConfig]
+  , libraries : List[DependencyConfig]
+  , others    : List[DependencyConfig]
   )
 
 object CuratedDependencyConfig {
   val reads = {
     implicit val dcr = DependencyConfig.reads
     Json.reads[CuratedDependencyConfig]
-    ( (__ \ "sbtPlugins"       ).read[List[DependencyConfig]]
-    ~ (__ \ "libraries"        ).read[List[DependencyConfig]]
-    ~ (__ \ "otherDependencies").read[List[DependencyConfig]]
+    ( (__ \ "sbtPlugins").read[List[DependencyConfig]]
+    ~ (__ \ "libraries" ).read[List[DependencyConfig]]
+    ~ (__ \ "others"    ).read[List[DependencyConfig]]
     )(CuratedDependencyConfig.apply _)
   }
 }

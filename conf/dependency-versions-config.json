@@ -210,7 +210,7 @@
     { "group": "uk.gov.hmrc", "name": "xml-parser" },
     { "group": "uk.gov.hmrc", "name": "zap-automation" }
   ],
-  "otherDependencies": [
+  "others": [
     {
       "name": "sbt",
       "group": "org.scala-sbt",

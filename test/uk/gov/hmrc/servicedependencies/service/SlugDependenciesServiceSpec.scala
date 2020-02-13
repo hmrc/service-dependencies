@@ -269,8 +269,8 @@ private object SlugDependenciesServiceSpec {
 
   def aCuratedDependencyConfig(withLibraries: List[DependencyConfig]) =
     CuratedDependencyConfig(
-      sbtPlugins        = List.empty,
-      libraries         = withLibraries,
-      otherDependencies = List.empty
+      sbtPlugins = List.empty
+    , libraries  = withLibraries
+    , others     = List.empty
     )
 }

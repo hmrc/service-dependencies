@@ -48,7 +48,7 @@ class Github(releaseService: ReleaseService, contentsService: ExtendedContentsSe
         GithubSearchResults(
           sbtPlugins = searchPluginSbtFileForMultipleArtifacts(repoName, curatedDependencyConfig.sbtPlugins)
         , libraries  = searchBuildFilesForMultipleArtifacts(repoName, curatedDependencyConfig.libraries)
-        , others     = searchForOtherSpecifiedDependencies(repoName, curatedDependencyConfig.otherDependencies)
+        , others     = searchForOtherSpecifiedDependencies(repoName, curatedDependencyConfig.others)
         )
       )
     } catch {

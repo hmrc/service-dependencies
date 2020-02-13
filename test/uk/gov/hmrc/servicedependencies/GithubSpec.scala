@@ -45,12 +45,12 @@ class GithubSpec extends AnyWordSpec with Matchers with MockitoSugar with Option
         .findVersionsForMultipleArtifacts(
           repoName,
           CuratedDependencyConfig(
-            sbtPlugins        = List(
-                                  DependencyConfig(name = "sbt-plugin"    , group = "com.typesafe.play", latestVersion = None)
-                                , DependencyConfig(name = "sbt-auto-build", group = "uk.gov.hmrc"      , latestVersion = None)
-                                )
-          , libraries         = Nil
-          , otherDependencies = Nil
+            sbtPlugins = List(
+                           DependencyConfig(name = "sbt-plugin"    , group = "com.typesafe.play", latestVersion = None)
+                         , DependencyConfig(name = "sbt-auto-build", group = "uk.gov.hmrc"      , latestVersion = None)
+                         )
+          , libraries  = Nil
+          , others     = Nil
           )
         )
         .right
@@ -63,9 +63,9 @@ class GithubSpec extends AnyWordSpec with Matchers with MockitoSugar with Option
 
     "queries build.properties file(s) for sbt version" in new TestSetup {
       val curatedDependencyConfig = CuratedDependencyConfig(
-          sbtPlugins        = Nil
-        , libraries         = Nil
-        , otherDependencies = List(DependencyConfig(name = "sbt", group = "org.scala-sbt", latestVersion = Some(Version(1, 2, 3))))
+          sbtPlugins = Nil
+        , libraries  = Nil
+        , others     = List(DependencyConfig(name = "sbt", group = "org.scala-sbt", latestVersion = Some(Version(1, 2, 3))))
         )
       when(mockContentsService.getContents(any(), is(buildPropertiesFile)))
         .thenReturn(List(new RepositoryContents().setContent(loadFileAsBase64String("/github/build.properties"))).asJava)
@@ -77,9 +77,9 @@ class GithubSpec extends AnyWordSpec with Matchers with MockitoSugar with Option
 
     "parses build.properties file(s) containing other keys in addition to the sbt version" in new TestSetup {
       val curatedDependencyConfig = CuratedDependencyConfig(
-          sbtPlugins        = Nil
-        , libraries         = Nil
-        , otherDependencies = List(DependencyConfig(name = "sbt", group = "org.scala-sbt", latestVersion = Some(Version(1, 2, 3))))
+          sbtPlugins = Nil
+        , libraries  = Nil
+        , others     = List(DependencyConfig(name = "sbt", group = "org.scala-sbt", latestVersion = Some(Version(1, 2, 3))))
         )
       when(mockContentsService.getContents(any(), is(buildPropertiesFile)))
         .thenReturn(List(new RepositoryContents().setContent(loadFileAsBase64String("/github/multiplekey_build.properties"))).asJava)
@@ -105,15 +105,15 @@ class GithubSpec extends AnyWordSpec with Matchers with MockitoSugar with Option
       val results = github.findVersionsForMultipleArtifacts(
         repoName,
         CuratedDependencyConfig(
-            sbtPlugins        = List(
-                                  DependencyConfig(name = "sbt-plugin"    , group = "com.typesafe.play", latestVersion = None)
-                                , DependencyConfig(name = "sbt-auto-build", group = "uk.gov.hmrc"      , latestVersion = None)
-                                )
-          , libraries         = List(
-                                  DependencyConfig(name = "play-ui"    , group = "uk.gov.hmrc", latestVersion = None)
-                                , DependencyConfig(name = "play-health", group = "uk.gov.hmrc", latestVersion = None)
-                                )
-          , otherDependencies = Nil
+            sbtPlugins = List(
+                           DependencyConfig(name = "sbt-plugin"    , group = "com.typesafe.play", latestVersion = None)
+                         , DependencyConfig(name = "sbt-auto-build", group = "uk.gov.hmrc"      , latestVersion = None)
+                         )
+          , libraries  = List(
+                           DependencyConfig(name = "play-ui"    , group = "uk.gov.hmrc", latestVersion = None)
+                         , DependencyConfig(name = "play-health", group = "uk.gov.hmrc", latestVersion = None)
+                         )
+          , others     = Nil
           )
       )
 
@@ -140,13 +140,13 @@ class GithubSpec extends AnyWordSpec with Matchers with MockitoSugar with Option
         .findVersionsForMultipleArtifacts(
           repoName,
           CuratedDependencyConfig(
-            sbtPlugins        = Nil
-          , libraries         = List(
-                                  DependencyConfig(name = "play-frontend", group = "uk.gov.hmrc", latestVersion = None)
-                                , DependencyConfig(name = "play-ui"      , group = "uk.gov.hmrc", latestVersion = None)
-                                , DependencyConfig(name = "play-health"  , group = "uk.gov.hmrc", latestVersion = None)
-                                )
-          , otherDependencies = Nil
+            sbtPlugins = Nil
+          , libraries  = List(
+                           DependencyConfig(name = "play-frontend", group = "uk.gov.hmrc", latestVersion = None)
+                         , DependencyConfig(name = "play-ui"      , group = "uk.gov.hmrc", latestVersion = None)
+                         , DependencyConfig(name = "play-health"  , group = "uk.gov.hmrc", latestVersion = None)
+                         )
+          , others     = Nil
           )
          )
         .right
@@ -172,13 +172,13 @@ class GithubSpec extends AnyWordSpec with Matchers with MockitoSugar with Option
         .findVersionsForMultipleArtifacts(
           repoName,
           CuratedDependencyConfig(
-            sbtPlugins        = Nil
-          , libraries         = List(
-                                  DependencyConfig(name = "play-frontend", group = "uk.gov.hmrc", latestVersion = None)
-                                , DependencyConfig(name = "play-ui"      , group = "uk.gov.hmrc", latestVersion = None)
-                                , DependencyConfig(name = "play-health"  , group = "uk.gov.hmrc", latestVersion = None)
-                                )
-          , otherDependencies = Nil
+            sbtPlugins = Nil
+          , libraries  = List(
+                           DependencyConfig(name = "play-frontend", group = "uk.gov.hmrc", latestVersion = None)
+                         , DependencyConfig(name = "play-ui"      , group = "uk.gov.hmrc", latestVersion = None)
+                         , DependencyConfig(name = "play-health"  , group = "uk.gov.hmrc", latestVersion = None)
+                         )
+          , others     = Nil
           )
         )
         .left
@@ -196,13 +196,13 @@ class GithubSpec extends AnyWordSpec with Matchers with MockitoSugar with Option
         .findVersionsForMultipleArtifacts(
           repoName,
           CuratedDependencyConfig(
-             sbtPlugins       = Nil
-           , libraries        = List(
-                                  DependencyConfig(name = "play-frontend", group = "uk.gov.hmrc", latestVersion = None)
-                                , DependencyConfig(name = "play-ui"      , group = "uk.gov.hmrc", latestVersion = None)
-                                , DependencyConfig(name = "play-health"  , group = "uk.gov.hmrc", latestVersion = None)
-                                )
-          , otherDependencies = Nil
+             sbtPlugins = Nil
+           , libraries  = List(
+                            DependencyConfig(name = "play-frontend", group = "uk.gov.hmrc", latestVersion = None)
+                          , DependencyConfig(name = "play-ui"      , group = "uk.gov.hmrc", latestVersion = None)
+                          , DependencyConfig(name = "play-health"  , group = "uk.gov.hmrc", latestVersion = None)
+                          )
+          , others      = Nil
           )
         )
         .right
@@ -233,13 +233,13 @@ class GithubSpec extends AnyWordSpec with Matchers with MockitoSugar with Option
         .findVersionsForMultipleArtifacts(
           repoName,
           CuratedDependencyConfig(
-            sbtPlugins       = Nil
-          , libraries        = List(
-                                 DependencyConfig(name = "play-frontend", group = "uk.gov.hmrc", latestVersion = None)
-                               , DependencyConfig(name = "play-ui"      , group = "uk.gov.hmrc", latestVersion = None)
-                               , DependencyConfig(name = "play-health"  , group = "uk.gov.hmrc", latestVersion = None)
-                               )
-          , otherDependencies = Nil
+            sbtPlugins = Nil
+          , libraries  = List(
+                           DependencyConfig(name = "play-frontend", group = "uk.gov.hmrc", latestVersion = None)
+                         , DependencyConfig(name = "play-ui"      , group = "uk.gov.hmrc", latestVersion = None)
+                         , DependencyConfig(name = "play-health"  , group = "uk.gov.hmrc", latestVersion = None)
+                         )
+          , others     = Nil
           )
         )
         .right
@@ -267,13 +267,13 @@ class GithubSpec extends AnyWordSpec with Matchers with MockitoSugar with Option
         .findVersionsForMultipleArtifacts(
           repoName,
           CuratedDependencyConfig(
-            sbtPlugins        = Nil
-          , libraries         = List(
-                                  DependencyConfig(name = "play-frontend", group = "uk.gov.hmrc", latestVersion = None)
-                                , DependencyConfig(name = "play-ui"      , group = "uk.gov.hmrc", latestVersion = None)
-                                , DependencyConfig(name = "play-health"  , group = "uk.gov.hmrc", latestVersion = None)
-                                )
-          , otherDependencies = Nil
+            sbtPlugins = Nil
+          , libraries  = List(
+                           DependencyConfig(name = "play-frontend", group = "uk.gov.hmrc", latestVersion = None)
+                         , DependencyConfig(name = "play-ui"      , group = "uk.gov.hmrc", latestVersion = None)
+                         , DependencyConfig(name = "play-health"  , group = "uk.gov.hmrc", latestVersion = None)
+                         )
+          , others     = Nil
           )
         )
         .right
@@ -301,13 +301,13 @@ class GithubSpec extends AnyWordSpec with Matchers with MockitoSugar with Option
         .findVersionsForMultipleArtifacts(
           repoName,
           CuratedDependencyConfig(
-            sbtPlugins        = Nil
-          , libraries         = List(
-                                  DependencyConfig(name = "play-frontend", group = "uk.gov.hmrc", latestVersion = None)
-                                , DependencyConfig(name = "play-ui"      , group = "uk.gov.hmrc", latestVersion = None)
-                                , DependencyConfig(name = "play-health"  , group = "uk.gov.hmrc", latestVersion = None)
-                                )
-          , otherDependencies = Nil
+            sbtPlugins = Nil
+          , libraries  = List(
+                           DependencyConfig(name = "play-frontend", group = "uk.gov.hmrc", latestVersion = None)
+                         , DependencyConfig(name = "play-ui"      , group = "uk.gov.hmrc", latestVersion = None)
+                         , DependencyConfig(name = "play-health"  , group = "uk.gov.hmrc", latestVersion = None)
+                         )
+          , others     = Nil
           )
         )
         .right
@@ -332,13 +332,13 @@ class GithubSpec extends AnyWordSpec with Matchers with MockitoSugar with Option
         .findVersionsForMultipleArtifacts(
           repoName,
           CuratedDependencyConfig(
-            sbtPlugins        = Nil
-          , libraries         = List(
-                                  DependencyConfig(name = "play-frontend", group = "uk.gov.hmrc", latestVersion = None)
-                                , DependencyConfig(name = "play-ui"      , group = "uk.gov.hmrc", latestVersion = None)
-                                , DependencyConfig(name = "play-health"  , group = "uk.gov.hmrc", latestVersion = None)
-                                )
-          , otherDependencies = Nil
+            sbtPlugins = Nil
+          , libraries  = List(
+                           DependencyConfig(name = "play-frontend", group = "uk.gov.hmrc", latestVersion = None)
+                         , DependencyConfig(name = "play-ui"      , group = "uk.gov.hmrc", latestVersion = None)
+                         , DependencyConfig(name = "play-health"  , group = "uk.gov.hmrc", latestVersion = None)
+                         )
+          , others     = Nil
           )
         )
         .right
@@ -363,12 +363,12 @@ class GithubSpec extends AnyWordSpec with Matchers with MockitoSugar with Option
         .findVersionsForMultipleArtifacts(
             repoName
           , CuratedDependencyConfig(
-            sbtPlugins        = Nil
-          , libraries         = List(
-                                  DependencyConfig(name = "play-ui"     , group = "uk.gov.hmrc", latestVersion = None)
-                                , DependencyConfig(name = "non-existing", group = "uk.gov.hmrc", latestVersion = None)
-                                )
-          , otherDependencies = Nil
+            sbtPlugins = Nil
+          , libraries  = List(
+                           DependencyConfig(name = "play-ui"     , group = "uk.gov.hmrc", latestVersion = None)
+                         , DependencyConfig(name = "non-existing", group = "uk.gov.hmrc", latestVersion = None)
+                         )
+          , others     = Nil
           )
         )
         .right

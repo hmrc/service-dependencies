@@ -7,7 +7,7 @@
     { "group": "uk.gov.hmrc", "name": "lib1" },
     { "group": "uk.gov.hmrc", "name": "lib2" }
   ],
-  "otherDependencies": [
+  "others": [
     { "name": "sbt", "group": "org.scala-sbt", "latestVersion": "0.13.11" }
   ]
 }

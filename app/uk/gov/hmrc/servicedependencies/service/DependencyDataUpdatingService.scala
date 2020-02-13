@@ -150,7 +150,7 @@ class DependencyDataUpdatingService @Inject()(
 
   private def toOtherDependency(d: MongoRepositoryDependency): Dependency = {
     val optConfig =
-      curatedDependencyConfig.otherDependencies
+      curatedDependencyConfig.others
         .find(ref => ref.name  == d.name &&
                      ref.group == d.group
              )
