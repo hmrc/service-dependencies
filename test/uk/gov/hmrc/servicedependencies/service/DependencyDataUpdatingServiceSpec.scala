@@ -268,14 +268,6 @@ class DependencyDataUpdatingServiceSpec
     }
 
     it("should return the current and latest external sbt plugin dependency versions for a repository") {
-      val curatedDependencyConfig = CuratedDependencyConfig(
-        sbtPlugins = List(
-          SbtPluginConfig(name = "internal-plugin", group = "uk.gov.hmrc", latestVersion = None),
-          SbtPluginConfig(name = "external-plugin", group = "uk.edu"     , latestVersion = Some(Version(11, 22, 33)))),
-        libraries         = Nil,
-        otherDependencies = Nil
-      )
-
       val boot = new Boot(curatedDependencyConfig)
 
       val sbtPluginDependencies = Seq(
@@ -289,8 +281,8 @@ class DependencyDataUpdatingServiceSpec
           Some(MongoRepositoryDependencies(repositoryName, Nil, sbtPluginDependencies, Nil, timeForTest))))
 
       val referenceSbtPluginVersions = Seq(
-        MongoSbtPluginVersion(name = "internal-plugin", group = "uk.gov.hmrc", version = Some(Version(3, 1, 0))),
-        MongoSbtPluginVersion(name = "external-plugin", group = "uk.edu"     , version = None)
+        MongoSbtPluginVersion(name = "internal-plugin", group = "uk.gov.hmrc", version = Some(Version(3, 1, 0)))
+      , MongoSbtPluginVersion(name = "external-plugin", group = "uk.edu"     , version = Some(Version(11, 22, 33)))
       )
 
       when(boot.mockSbtPluginVersionRepository.getAllEntries)
@@ -299,21 +291,21 @@ class DependencyDataUpdatingServiceSpec
       when(boot.mockLibraryVersionRepository.getAllEntries)
         .thenReturn(Future.successful(Nil))
 
-      val maybeDependencies =
+      val optDependencies =
         boot.dependencyUpdatingService.getDependencyVersionsForRepository(repositoryName).futureValue
 
-      verify(boot.mockRepositoryLibraryDependenciesRepository, times(1)).getForRepository(repositoryName)
-
-      maybeDependencies.value shouldBe Dependencies(
+      optDependencies shouldBe Some(Dependencies(
         repositoryName         = repositoryName,
         libraryDependencies    = Nil,
         sbtPluginsDependencies = Seq(
-          Dependency(name = "internal-plugin", group = "uk.gov.hmrc", currentVersion = Version(1, 0, 0), latestVersion = Some(Version(3, 1, 0))   , bobbyRuleViolations = List.empty),
-          Dependency(name = "external-plugin", group = "uk.edu"     , currentVersion = Version(2, 0, 0), latestVersion = Some(Version(11, 22, 33)), bobbyRuleViolations = List.empty)
+          Dependency(name = "internal-plugin", group = "uk.gov.hmrc", currentVersion = Version(1, 0, 0), latestVersion = Some(Version(3, 1, 0))   , bobbyRuleViolations = List.empty)
+        , Dependency(name = "external-plugin", group = "uk.edu"     , currentVersion = Version(2, 0, 0), latestVersion = Some(Version(11, 22, 33)), bobbyRuleViolations = List.empty)
         ),
         otherDependencies = Nil,
         timeForTest
-      )
+      ))
+
+      verify(boot.mockRepositoryLibraryDependenciesRepository, times(1)).getForRepository(repositoryName)
     }
 
     it("test for none") {

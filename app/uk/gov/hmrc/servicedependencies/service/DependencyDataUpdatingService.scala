@@ -51,12 +51,15 @@ class DependencyDataUpdatingService @Inject()(
   lazy val curatedDependencyConfig =
     curatedDependencyConfigProvider.curatedDependencyConfig
 
-  // TODO skip if config.optVersion is defined? (it will be ignored later?)
-  // or store the config.optVersion, then don't need to consult it later?
   def reloadLatestSbtPluginVersions(): Future[List[MongoSbtPluginVersion]] =
     curatedDependencyConfig.sbtPlugins.traverse { config =>
       for {
-        optVersion <- artifactoryConnector.findLatestVersion(config.group, config.name)
+        optVersion <- config.latestVersion
+                        .fold(
+                            artifactoryConnector.findLatestVersion(config.group, config.name)
+                          )(v =>
+                            Future.successful(Some(v))
+                          )
         version    =  MongoSbtPluginVersion(name = config.name, group = config.group, version = optVersion, now)
         _          <- sbtPluginVersionRepository.update(version)
       } yield version
@@ -66,7 +69,12 @@ class DependencyDataUpdatingService @Inject()(
   def reloadLatestLibraryVersions(): Future[Seq[MongoLibraryVersion]] =
     curatedDependencyConfig.libraries.traverse { config =>
       for {
-        optVersion <- artifactoryConnector.findLatestVersion(config.group, config.name)
+        optVersion <- config.latestVersion
+                        .fold(
+                            artifactoryConnector.findLatestVersion(config.group, config.name)
+                          )(v =>
+                            Future.successful(Some(v))
+                          )
         version    =  MongoLibraryVersion(name = config.name, group = config.group, version = optVersion, now)
         _          <- libraryVersionRepository.update(version)
       } yield version
@@ -109,71 +117,49 @@ class DependencyDataUpdatingService @Inject()(
   }
 
   private def toLibraryDependency(libraryReferences: Seq[MongoLibraryVersion])(d: MongoRepositoryDependency): Dependency = {
-    val optConfig =
-      curatedDependencyConfig.libraries
-        .find(pluginConfig => pluginConfig.name  == d.name  &&
-                              pluginConfig.group == d.group
-             )
-
     val optRef =
       libraryReferences
-        .find(libraryRef => libraryRef.name  == d.name &&
-                            libraryRef.group == d.group
+        .find(ref => ref.name  == d.name &&
+                     ref.group == d.group
              )
-
-    val latestVersion = optConfig.flatMap(_.latestVersion)
-      .orElse(optRef.flatMap(_.version))
 
     Dependency(
       name                = d.name
     , group               = d.group
     , currentVersion      = d.currentVersion
-    , latestVersion       = latestVersion
+    , latestVersion       = optRef.flatMap(_.version)
     , bobbyRuleViolations = List.empty
     )
   }
 
   private def toSbtPluginDependency(sbtPluginReferences: Seq[MongoSbtPluginVersion])(d: MongoRepositoryDependency): Dependency = {
-    val optConfig =
-      curatedDependencyConfig.sbtPlugins
-        .find(pluginConfig => pluginConfig.name  == d.name  &&
-                              pluginConfig.group == d.group
-             )
-
-    lazy val optRef =
+    val optRef =
       sbtPluginReferences
-        .find(sbtPluginRef => sbtPluginRef.name  == d.name &&
-                              sbtPluginRef.group == d.group
+        .find(ref => ref.name  == d.name &&
+                     ref.group == d.group
              )
-
-    val latestVersion = optConfig.flatMap(_.latestVersion)
-      .orElse(optRef.flatMap(_.version))
 
     Dependency(
       name                = d.name
     , group               = d.group
     , currentVersion      = d.currentVersion
-    , latestVersion       = latestVersion
+    , latestVersion       = optRef.flatMap(_.version)
     , bobbyRuleViolations = List.empty
     )
   }
 
   private def toOtherDependency(d: MongoRepositoryDependency): Dependency = {
-
     val optConfig =
       curatedDependencyConfig.otherDependencies
-        .find(otherRef => otherRef.name  == d.name &&
-                          otherRef.group == d.group
+        .find(ref => ref.name  == d.name &&
+                     ref.group == d.group
              )
-
-
-    val latestVersion = optConfig.flatMap(_.latestVersion)
 
     Dependency(
       name                = d.name
     , group               = d.group
     , currentVersion      = d.currentVersion
-    , latestVersion       = latestVersion
+    , latestVersion       = optConfig.flatMap(_.latestVersion)
     , bobbyRuleViolations = List.empty
     )
   }
