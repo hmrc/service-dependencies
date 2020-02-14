@@ -175,9 +175,7 @@ trait MongoSlugInfoFormats {
       { uri              : { bsonType: "string" }
       , created          : { bsonType: "string" }
       , name             : { bsonType: "string" }
-      , version          : { bsonType: "string"
-                           , pattern: "^((\\d+)\\.(\\d+)\\.(\\d+)(.*)|(\\d+)\\.(\\d+)(.*)|(\\d+)(.*))$"
-                           }
+      , version          : { bsonType: "string" }
       , runnerVersion    : { bsonType: "string" }
       , classpath        : { bsonType: "string" }
       , java             : { bsonType: "object"
@@ -193,9 +191,7 @@ trait MongoSlugInfoFormats {
                                        , required: [ "path", "version", "group", "artifact" ]
                                        , properties:
                                          { path    : { bsonType: "string" }
-                                         , version : { bsonType: "string"
-                                                   , pattern: "^((\\d+)\\.(\\d+)\\.(\\d+)(.*)|(\\d+)\\.(\\d+)(.*)|(\\d+)(.*))$"
-                                                   }
+                                         , version : { bsonType: "string" }
                                          , group   : { bsonType: "string" }
                                          , artifact: { bsonType: "string" }
                                          , meta    : { bsonType: "string" }
