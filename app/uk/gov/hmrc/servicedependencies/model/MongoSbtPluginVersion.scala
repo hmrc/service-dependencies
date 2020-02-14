@@ -47,10 +47,8 @@ object MongoSbtPluginVersion {
     , properties:
       { sbtPluginName: { bsonType: "string" }
       , group        : { bsonType: "string" }
-      , version      : { bsonType: "string"
-                       , pattern: "^((\\d+)\\.(\\d+)\\.(\\d+)(.*)|(\\d+)\\.(\\d+)(.*)|(\\d+)(.*))$"
-                       }
-      , updateDate   : { bsonType: "date" }
+      , version      : { bsonType: "string" }
+      , updateDate   : { bsonType: "date"   }
       }
     }
     """

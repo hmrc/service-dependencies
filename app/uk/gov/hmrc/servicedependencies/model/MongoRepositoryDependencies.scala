@@ -81,9 +81,7 @@ object MongoRepositoryDependencies {
       , properties:
         { libraryName   : { bsonType: "string" }
         , group         : { bsonType: "string" }
-        , currentVersion: { bsonType: "string"
-                          , pattern: "^((\\d+)\\.(\\d+)\\.(\\d+)(.*)|(\\d+)\\.(\\d+)(.*)|(\\d+)(.*))$"
-                          }
+        , currentVersion: { bsonType: "string" }
         }
       }
       """
