@@ -49,9 +49,6 @@ class ServiceDependenciesConfig @Inject()(
   lazy val teamsAndRepositoriesCacheExpiration =
     getDuration(configuration, "microservice.services.teams-and-repositories.cache.expiration")
 
-  lazy val artifactoryBase: String =
-    configuration.get[String]("artifactory.url")
-
-  lazy val artifactoryApiKey: Option[String] =
-    configuration.getOptional[String]("artifactory.apikey")
+  lazy val artifactoryBase: String          = configuration.get[String]("artifactory.url")
+  lazy val artifactoryToken: Option[String] = configuration.getOptional[String]("artifactory.token")
 }

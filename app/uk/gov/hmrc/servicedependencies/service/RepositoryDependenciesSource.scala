@@ -47,10 +47,8 @@ class RepositoryDependenciesSource @Inject()(
       dependencies <- repositoryLibraryDependenciesRepository.getAllEntries
                        .map(_
                           .filterNot(_.repositoryName.endsWith("-history"))
-                          .map(repoDependencies =>
-                            repoDependencies.repositoryName -> (repoDependencies.libraryDependencies ++
-                                                                repoDependencies.sbtPluginDependencies ++
-                                                                repoDependencies.otherDependencies)))
+                          .map(repoDependencies => repoDependencies.repositoryName -> repoDependencies.dependencies)
+                       )
     } yield
       teamsWithRepositories.map { team =>
         TeamRepos(

@@ -23,6 +23,7 @@ import uk.gov.hmrc.servicedependencies.config.model.CuratedDependencyConfig
 import uk.gov.hmrc.servicedependencies.controller.model.Dependency
 import uk.gov.hmrc.servicedependencies.model.{SlugDependency, SlugInfo, SlugInfoFlag, Version}
 import uk.gov.hmrc.servicedependencies.persistence.DependencyVersionRepository
+import uk.gov.hmrc.servicedependencies.util.Max
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -59,10 +60,14 @@ class SlugDependenciesService @Inject()(
                                  )
       enrichedDependencies  <- serviceConfigsService.getDependenciesWithBobbyRules(curatedDependencies
                                   .map { slugDependency =>
+                                      // we currently don't have the scalaVersion in slugInfo, so
+                                      // for now pick the latest version for any scalaVersion
                                       val latestVersion =
-                                        latestVersions
-                                          .find(v => v.group == slugDependency.group && v.name == slugDependency.artifact)
-                                          .flatMap(_.version)
+                                        Max.maxOf(
+                                          latestVersions
+                                            .filter(v => v.group == slugDependency.group && v.name == slugDependency.artifact)
+                                            .map(_.version)
+                                        )
                                       Dependency(
                                           name                = slugDependency.artifact
                                         , group               = slugDependency.group

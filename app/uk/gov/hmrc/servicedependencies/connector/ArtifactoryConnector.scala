@@ -16,13 +16,16 @@
 
 package uk.gov.hmrc.servicedependencies.connector
 
+import java.util.concurrent.Executors
+
 import cats.implicits._
 import javax.inject.{Inject, Singleton}
 import play.api.libs.json.Json
 import uk.gov.hmrc.play.bootstrap.http.HttpClient
 import uk.gov.hmrc.http.{HeaderCarrier, HttpResponse}
+import uk.gov.hmrc.http.logging.Authorization
 import uk.gov.hmrc.servicedependencies.config.ServiceDependenciesConfig
-import uk.gov.hmrc.servicedependencies.model.Version
+import uk.gov.hmrc.servicedependencies.model.{ScalaVersion, Version}
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -30,36 +33,41 @@ import scala.concurrent.{ExecutionContext, Future}
 class ArtifactoryConnector @Inject()(
   http  : HttpClient
 , config: ServiceDependenciesConfig
-)(implicit ec: ExecutionContext
 ){
-  private val headers: List[(String, String)] =
-    config.artifactoryApiKey
-      .map(key => List(("X-JFrog-Art-Api", key)))
-      .getOrElse(List.empty)
+
+  implicit val ec: ExecutionContext =
+    ExecutionContext.fromExecutorService(Executors.newFixedThreadPool(1))
+
+  private lazy val authorization : Option[Authorization] =
+    for {
+      token <- config.artifactoryToken
+    } yield Authorization(s"Bearer $token")
 
   def findLatestVersion(
     group       : String
   , artefact    : String
-  , scalaVersion: Option[String]
+  , scalaVersion: ScalaVersion
   ): Future[Option[Version]] = {
-    implicit val hc = HeaderCarrier().withExtraHeaders(headers: _*)
+    implicit val hc = HeaderCarrier(authorization = authorization)
     http.GET[Option[HttpResponse]](
         url         = s"${config.artifactoryBase}/api/search/latestVersion"
       , queryParams = Map( "g" -> group
-                         , "a" -> (artefact + scalaVersion.map("_" + _).getOrElse(""))
+                         , "a" -> s"$artefact${scalaVersion.asClassifier}"
                          ).toSeq
       )
       .map(_.map(_.body).flatMap(Version.parse))
   }
 
-  def findLatestVersion(
+  def findLatestVersions(
     group       : String
   , artefact    : String
-  ): Future[Option[Version]] =
-    // We currently don't know the scalaVersion, so try without, then "2.11", "2.12"...
-    List(None, Some("2.11"), Some("2.12"))
-      .foldLeftM(None: Option[Version]) {
-        case (None, scalaVersion) => findLatestVersion(group, artefact, scalaVersion)
-        case (res , _           ) => Future.successful(res)
+  ): Future[Map[ScalaVersion, Version]] =
+    ScalaVersion.values
+      .foldLeftM(Map.empty[ScalaVersion, Version]) {
+        case (acc, scalaVersion) => findLatestVersion(group, artefact, scalaVersion)
+                                       .map {
+                                         case Some(v) => acc + (scalaVersion -> v)
+                                         case None    => acc
+                                       }
       }
 }

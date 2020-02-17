@@ -59,7 +59,10 @@ case class MongoRepositoryDependencies(
   , sbtPluginDependencies: Seq[MongoRepositoryDependency]
   , otherDependencies    : Seq[MongoRepositoryDependency]
   , updateDate           : Instant                        = Instant.now()
-  )
+  ) {
+    lazy val dependencies =
+      libraryDependencies ++ sbtPluginDependencies ++ otherDependencies
+  }
 
 object MongoRepositoryDependencies {
 

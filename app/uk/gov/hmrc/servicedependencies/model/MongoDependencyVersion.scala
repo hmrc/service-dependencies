@@ -23,32 +23,36 @@ import play.api.libs.functional.syntax._
 import uk.gov.hmrc.mongo.play.json.formats.MongoJavatimeFormats
 
 case class MongoDependencyVersion(
-    name       : String
-  , group      : String
-  , version    : Option[Version]
-  , updateDate : Instant = Instant.now()
+    name        : String
+  , group       : String
+  , scalaVersion: Option[ScalaVersion]
+  , version     : Version
+  , updateDate  : Instant = Instant.now()
   )
 
 object MongoDependencyVersion {
   implicit val format = {
-    implicit val iF = MongoJavatimeFormats.instantFormats
-    implicit val vf = Version.mongoFormat
-    ( (__ \ "name"       ).format[String]
-    ~ (__ \ "group"      ).format[String]
-    ~ (__ \ "version"    ).formatNullable[Version]
-    ~ (__ \ "updateDate" ).format[Instant]
+    implicit val iF  = MongoJavatimeFormats.instantFormats
+    implicit val svf = ScalaVersion.format
+    implicit val vf  = Version.mongoFormat
+    ( (__ \ "name"        ).format[String]
+    ~ (__ \ "group"       ).format[String]
+    ~ (__ \ "scalaVersion").formatNullable[ScalaVersion]
+    ~ (__ \ "version"     ).format[Version]
+    ~ (__ \ "updateDate"  ).format[Instant]
     )(MongoDependencyVersion.apply, unlift(MongoDependencyVersion.unapply))
   }
 
   val schema =
     """
     { bsonType: "object"
-    , required: [ "name", "group", "updateDate" ]
+    , required: [ "name", "group", "version", "updateDate" ]
     , properties:
-      { name       : { bsonType: "string" }
-      , group      : { bsonType: "string" }
-      , version    : { bsonType: "string" }
-      , updateDate : { bsonType: "date"   }
+      { name         : { bsonType: "string" }
+      , group        : { bsonType: "string" }
+      , scalaVersion : { bsonType: "string" }
+      , version      : { bsonType: "string" }
+      , updateDate   : { bsonType: "date" }
       }
     }
     """

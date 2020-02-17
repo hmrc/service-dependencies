@@ -27,8 +27,9 @@ import uk.gov.hmrc.servicedependencies.config.CuratedDependencyConfigProvider
 import uk.gov.hmrc.servicedependencies.config.model.{CuratedDependencyConfig, DependencyConfig}
 import uk.gov.hmrc.servicedependencies.connector.model.RepositoryInfo
 import uk.gov.hmrc.servicedependencies.controller.model.{Dependencies, Dependency}
-import uk.gov.hmrc.servicedependencies.model.{MongoRepositoryDependencies, MongoRepositoryDependency, MongoDependencyVersion}
+import uk.gov.hmrc.servicedependencies.model.{MongoRepositoryDependencies, MongoRepositoryDependency, MongoDependencyVersion, ScalaVersion, Version}
 import uk.gov.hmrc.servicedependencies.persistence.{DependencyVersionRepository, RepositoryLibraryDependenciesRepository}
+import uk.gov.hmrc.servicedependencies.util.Max
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -50,19 +51,31 @@ class DependencyDataUpdatingService @Inject()(
   lazy val curatedDependencyConfig =
     curatedDependencyConfigProvider.curatedDependencyConfig
 
-  def reloadLatestDependencyVersions: Future[List[MongoDependencyVersion]] =
-    curatedDependencyConfig.allDependencies.traverse { config =>
-      for {
-        optVersion <- config.latestVersion
-                        .fold(
-                            artifactoryConnector.findLatestVersion(config.group, config.name)
-                          )(v =>
-                            Future.successful(Some(v))
-                          )
-        version    =  MongoDependencyVersion(name = config.name, group = config.group, version = optVersion, now)
-        _          <- dependencyVersionRepository.update(version)
-      } yield version
-    }
+  def reloadLatestDependencyVersions(implicit hc: HeaderCarrier): Future[List[MongoDependencyVersion]] =
+    for {
+      res <- curatedDependencyConfig.allDependencies.traverse { config =>
+               for {
+                 versions   <- config.latestVersion
+                                 .fold(
+                                    artifactoryConnector.findLatestVersions(config.group, config.name)
+                                      .map(_
+                                        .toList
+                                        .map { case (sv, v) => (Some(sv): Option[ScalaVersion]) -> v }
+                                      )
+                                  )(v =>
+                                    Future.successful(List[(Option[ScalaVersion], Version)](None -> v))
+                                  )
+                 dbVersions <- versions.traverse { case (sv, v) =>
+                                 val dbVersion = MongoDependencyVersion(name = config.name, group = config.group, scalaVersion = sv, version = v, now)
+                                 dependencyVersionRepository.update(dbVersion)
+                                   .map(_ => dbVersion)
+                               }
+               } yield dbVersions
+             }
+    } yield res.flatten
+
+
+
 
   def reloadCurrentDependenciesDataForAllRepositories(
       force: Boolean = false
@@ -101,17 +114,22 @@ class DependencyDataUpdatingService @Inject()(
   }
 
   private def toDependency(references: Seq[MongoDependencyVersion])(d: MongoRepositoryDependency): Dependency = {
-    val optRef =
-      references
-        .find(ref => ref.name  == d.name &&
-                     ref.group == d.group
-             )
+    val optLatestVersion =
+      // we don't know the scalaVersion of MongoRepositoryDependency yet
+      // just set the latest version to the latest of any scalaVersion
+      Max.maxOf(
+        references
+          .filter(ref => ref.name  == d.name &&
+                         ref.group == d.group
+                 )
+          .map(_.version)
+      )
 
     Dependency(
       name                = d.name
     , group               = d.group
     , currentVersion      = d.currentVersion
-    , latestVersion       = optRef.flatMap(_.version)
+    , latestVersion       = optLatestVersion
     , bobbyRuleViolations = List.empty
     )
   }

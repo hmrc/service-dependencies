@@ -37,7 +37,10 @@ class IntegrationTestController @Inject()(
 
   implicit val dtf                    = MongoJavatimeFormats.localDateFormats
   implicit val vf                     = Version.apiFormat
-  implicit val dependencyVersionReads = Json.using[Json.WithDefaultValues].reads[MongoDependencyVersion]
+  implicit val dependencyVersionReads = {
+                                          implicit val sbf = ScalaVersion.format
+                                          Json.using[Json.WithDefaultValues].reads[MongoDependencyVersion]
+                                        }
   implicit val dependenciesReads      = Json.using[Json.WithDefaultValues].reads[MongoRepositoryDependencies]
 
   implicit val sluginfoReads          = { implicit val sdr = Json.using[Json.WithDefaultValues].reads[SlugDependency]

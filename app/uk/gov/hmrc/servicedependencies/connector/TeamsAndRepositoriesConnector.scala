@@ -65,7 +65,6 @@ class TeamsAndRepositoriesConnector @Inject()(
   def getTeam(team: String)(implicit hc: HeaderCarrier): Future[Option[Map[String, Seq[String]]]] =
     httpClient.GET[Option[Map[String, Seq[String]]]](s"$teamsAndRepositoriesApiBase/api/teams/$team")
 
-  def getTeamDetails(team: String)(implicit hc: HeaderCarrier): Future[Team] = {
+  def getTeamDetails(team: String)(implicit hc: HeaderCarrier): Future[Team] =
     httpClient.GET[Team](s"$teamsAndRepositoriesApiBase/api/teams_with_details/$team")
-  }
 }
