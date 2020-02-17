@@ -40,7 +40,7 @@ class DependencyVersionRepository @Inject()(
   , mongoComponent = mongoComponent
   , domainFormat   = MongoDependencyVersion.format
   , indexes        = Seq(
-                       IndexModel(Indexes.ascending("name", "group", "scalaVersion"), IndexOptions().unique(true))
+                       IndexModel(Indexes.ascending("name", "group"), IndexOptions().unique(true))
                      )
   , optSchema      = Some(BsonDocument(MongoDependencyVersion.schema))
   ) with WithThrottling {
@@ -55,7 +55,6 @@ class DependencyVersionRepository @Inject()(
           .replaceOne(
               filter      = and( equal("name"        , dependencyVersion.name)
                                , equal("group"       , dependencyVersion.group)
-                               , equal("scalaVersion", dependencyVersion.scalaVersion)
                                )
             , replacement = dependencyVersion
             , options     = ReplaceOptions().upsert(true)

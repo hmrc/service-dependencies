@@ -55,22 +55,19 @@ class DependencyDataUpdatingService @Inject()(
     for {
       res <- curatedDependencyConfig.allDependencies.traverse { config =>
                for {
-                 versions   <- config.latestVersion
-                                 .fold(
-                                    artifactoryConnector.findLatestVersions(config.group, config.name)
-                                      .map(_
-                                        .toList
-                                        .map { case (sv, v) => (Some(sv): Option[ScalaVersion]) -> v }
-                                      )
-                                  )(v =>
-                                    Future.successful(List[(Option[ScalaVersion], Version)](None -> v))
-                                  )
-                 dbVersions <- versions.traverse { case (sv, v) =>
-                                 val dbVersion = MongoDependencyVersion(name = config.name, group = config.group, scalaVersion = sv, version = v, now)
-                                 dependencyVersionRepository.update(dbVersion)
-                                   .map(_ => dbVersion)
-                               }
-               } yield dbVersions
+                 optVersion   <- config.latestVersion
+                                   .fold(
+                                      artifactoryConnector.findLatestVersion(config.group, config.name)
+                                        .map(vs => Max.maxOf(vs.values))
+                                    )(v =>
+                                      Future.successful(Some(v))
+                                    )
+                 optDbVersion <- optVersion.traverse { version =>
+                                   val dbVersion  = MongoDependencyVersion(name = config.name, group = config.group, version = version, now)
+                                   dependencyVersionRepository.update(dbVersion)
+                                     .map(_ => dbVersion)
+                                 }
+               } yield optDbVersion
              }
     } yield res.flatten
 
@@ -115,15 +112,11 @@ class DependencyDataUpdatingService @Inject()(
 
   private def toDependency(references: Seq[MongoDependencyVersion])(d: MongoRepositoryDependency): Dependency = {
     val optLatestVersion =
-      // we don't know the scalaVersion of MongoRepositoryDependency yet
-      // just set the latest version to the latest of any scalaVersion
-      Max.maxOf(
-        references
-          .filter(ref => ref.name  == d.name &&
-                         ref.group == d.group
-                 )
-          .map(_.version)
-      )
+      references
+        .find(ref => ref.name  == d.name &&
+                     ref.group == d.group
+             )
+        .map(_.version)
 
     Dependency(
       name                = d.name

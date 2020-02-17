@@ -58,7 +58,7 @@ class ArtifactoryConnector @Inject()(
       .map(_.map(_.body).flatMap(Version.parse))
   }
 
-  def findLatestVersions(
+  def findLatestVersion(
     group       : String
   , artefact    : String
   ): Future[Map[ScalaVersion, Version]] =

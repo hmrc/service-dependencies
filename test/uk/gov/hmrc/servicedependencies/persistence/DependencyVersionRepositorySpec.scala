@@ -44,7 +44,7 @@ class DependencyVersionRepositorySpec
   val dependencyVersion = MongoDependencyVersion(
       name       = "some-library"
     , group      = "uk.gov.hmrc"
-    , version    = Some(Version(1, 0, 2))
+    , version    = Version(1, 0, 2)
     , updateDate = Instant.now()
     )
 
@@ -55,7 +55,7 @@ class DependencyVersionRepositorySpec
     }
 
     "updates correctly (based on name and group)" in {
-      val newLibraryVersion = dependencyVersion.copy(version = Some(Version(1, 0, 5)))
+      val newLibraryVersion = dependencyVersion.copy(version = Version(1, 0, 5))
 
       repository.update(dependencyVersion).futureValue
       repository.update(newLibraryVersion).futureValue

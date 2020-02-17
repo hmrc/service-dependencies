@@ -25,7 +25,6 @@ import uk.gov.hmrc.mongo.play.json.formats.MongoJavatimeFormats
 case class MongoDependencyVersion(
     name        : String
   , group       : String
-  , scalaVersion: Option[ScalaVersion]
   , version     : Version
   , updateDate  : Instant = Instant.now()
   )
@@ -37,7 +36,6 @@ object MongoDependencyVersion {
     implicit val vf  = Version.mongoFormat
     ( (__ \ "name"        ).format[String]
     ~ (__ \ "group"       ).format[String]
-    ~ (__ \ "scalaVersion").formatNullable[ScalaVersion]
     ~ (__ \ "version"     ).format[Version]
     ~ (__ \ "updateDate"  ).format[Instant]
     )(MongoDependencyVersion.apply, unlift(MongoDependencyVersion.unapply))
@@ -50,7 +48,6 @@ object MongoDependencyVersion {
     , properties:
       { name         : { bsonType: "string" }
       , group        : { bsonType: "string" }
-      , scalaVersion : { bsonType: "string" }
       , version      : { bsonType: "string" }
       , updateDate   : { bsonType: "date" }
       }

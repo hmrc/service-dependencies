@@ -60,14 +60,10 @@ class SlugDependenciesService @Inject()(
                                  )
       enrichedDependencies  <- serviceConfigsService.getDependenciesWithBobbyRules(curatedDependencies
                                   .map { slugDependency =>
-                                      // we currently don't have the scalaVersion in slugInfo, so
-                                      // for now pick the latest version for any scalaVersion
                                       val latestVersion =
-                                        Max.maxOf(
-                                          latestVersions
-                                            .filter(v => v.group == slugDependency.group && v.name == slugDependency.artifact)
-                                            .map(_.version)
-                                        )
+                                        latestVersions
+                                          .find(v => v.group == slugDependency.group && v.name == slugDependency.artifact)
+                                          .map(_.version)
                                       Dependency(
                                           name                = slugDependency.artifact
                                         , group               = slugDependency.group
