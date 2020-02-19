@@ -36,14 +36,6 @@ class ServiceConfigsService @Inject()(serviceConfigsConnector: ServiceConfigsCon
       , otherDependencies      = dependencies.otherDependencies.map(enrichWithBobbyRuleViolations(bobbyRules))
       )
     }
-
-  /*
-   * For consistency with above - but would prefer to simply return a mapping of dependency to violations.
-   */
-  def getDependenciesWithBobbyRules(dependencies: List[Dependency]): Future[List[Dependency]] =
-    serviceConfigsConnector.getBobbyRules.map { bobbyRules =>
-      dependencies.map(enrichWithBobbyRuleViolations(bobbyRules))
-    }
 }
 
 private object ServiceConfigsService {
