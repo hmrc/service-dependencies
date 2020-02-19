@@ -27,9 +27,9 @@ import play.api.libs.json.Json
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
 import uk.gov.hmrc.servicedependencies.config.ServiceDependenciesConfig
-import uk.gov.hmrc.servicedependencies.connector.TeamsAndRepositoriesConnector
+import uk.gov.hmrc.servicedependencies.connector.{TeamsAndRepositoriesConnector, ServiceConfigsConnector}
 import uk.gov.hmrc.servicedependencies.controller.model.{Dependencies, Dependency, DependencyBobbyRule}
-import uk.gov.hmrc.servicedependencies.model.{BobbyVersionRange, SlugInfoFlag, Version}
+import uk.gov.hmrc.servicedependencies.model.{BobbyRules, BobbyVersionRange, SlugInfoFlag, Version}
 import uk.gov.hmrc.servicedependencies.service._
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -56,8 +56,8 @@ class ServiceDependenciesControllerSpec
       when(boot.mockedDependencyDataUpdatingService.getDependencyVersionsForRepository(any()))
         .thenReturn(Future.successful(Some(repositoryDependencies)))
 
-      when(boot.mockServiceConfigsService.getDependenciesWithBobbyRules(repositoryDependencies))
-        .thenReturn(Future.successful(repositoryDependencies))
+      when(boot.mockServiceConfigsConnector.getBobbyRules)
+        .thenReturn(Future.successful(BobbyRules(Map.empty)))
 
       val result = boot.controller
         .getDependencyVersionsForRepository(repoName)
@@ -81,14 +81,8 @@ class ServiceDependenciesControllerSpec
       when(boot.mockedDependencyDataUpdatingService.getDependencyVersionsForAllRepositories)
         .thenReturn(Future.successful(libraryDependencies))
 
-      when(boot.mockServiceConfigsService.getDependenciesWithBobbyRules(repo1))
-        .thenReturn(Future.successful(repo1))
-
-      when(boot.mockServiceConfigsService.getDependenciesWithBobbyRules(repo2))
-        .thenReturn(Future.successful(repo2))
-
-      when(boot.mockServiceConfigsService.getDependenciesWithBobbyRules(repo3))
-        .thenReturn(Future.successful(repo3))
+      when(boot.mockServiceConfigsConnector.getBobbyRules)
+        .thenReturn(Future.successful(BobbyRules(Map.empty)))
 
       val result = boot.controller.dependencies().apply(FakeRequest())
 
@@ -138,12 +132,13 @@ class ServiceDependenciesControllerSpec
   }
 
   case class Boot(
-    mockedDependencyDataUpdatingService: DependencyDataUpdatingService,
-    mockedTeamsAndRepositoriesConnector: TeamsAndRepositoriesConnector,
-    mockedSlugInfoService: SlugInfoService,
-    mockedSlugDependenciesService: SlugDependenciesService,
-    mockServiceConfigsService: ServiceConfigsService,
-    controller: ServiceDependenciesController)
+      mockedDependencyDataUpdatingService: DependencyDataUpdatingService
+    , mockedTeamsAndRepositoriesConnector: TeamsAndRepositoriesConnector
+    , mockedSlugInfoService              : SlugInfoService
+    , mockedSlugDependenciesService      : SlugDependenciesService
+    , mockServiceConfigsConnector        : ServiceConfigsConnector
+    , controller                         : ServiceDependenciesController
+    )
 
   object Boot {
     def init: Boot = {
@@ -151,7 +146,7 @@ class ServiceDependenciesControllerSpec
       val mockedTeamsAndRepositoriesConnector = mock[TeamsAndRepositoriesConnector]
       val mockedSlugInfoService               = mock[SlugInfoService]
       val mockedSlugDependenciesService       = mock[SlugDependenciesService]
-      val mockServiceConfigsService           = mock[ServiceConfigsService]
+      val mockServiceConfigsConnector         = mock[ServiceConfigsConnector]
       val mockTeamDependencyService           = mock[TeamDependencyService]
       val controller = new ServiceDependenciesController(
         Configuration(),
@@ -160,17 +155,18 @@ class ServiceDependenciesControllerSpec
         mockedSlugInfoService,
         mockedSlugDependenciesService,
         mock[ServiceDependenciesConfig],
-        mockServiceConfigsService,
+        mockServiceConfigsConnector,
         mockTeamDependencyService,
         stubControllerComponents()
       )
       Boot(
-        mockedDependencyDataUpdatingService,
-        mockedTeamsAndRepositoriesConnector,
-        mockedSlugInfoService,
-        mockedSlugDependenciesService,
-        mockServiceConfigsService,
-        controller)
+          mockedDependencyDataUpdatingService
+        , mockedTeamsAndRepositoriesConnector
+        , mockedSlugInfoService
+        , mockedSlugDependenciesService
+        , mockServiceConfigsConnector
+        , controller
+        )
     }
   }
 

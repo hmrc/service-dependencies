@@ -14,30 +14,27 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.servicedependencies.service
+package uk.gov.hmrc.servicedependencies.model
+
 import java.time.{Instant, LocalDate}
 
 import org.mockito.MockitoSugar
 import org.scalatest.concurrent.{IntegrationPatience, ScalaFutures}
-import uk.gov.hmrc.servicedependencies.connector.ServiceConfigsConnector
-import uk.gov.hmrc.servicedependencies.controller.model.{Dependencies, Dependency}
-import uk.gov.hmrc.servicedependencies.model.{BobbyRule, BobbyRules, BobbyVersionRange, Version}
-
-import scala.concurrent.Future
 import org.scalatest.flatspec.AsyncFlatSpec
 import org.scalatest.matchers.should.Matchers
+import uk.gov.hmrc.servicedependencies.connector.ServiceConfigsConnector
+import uk.gov.hmrc.servicedependencies.controller.model.{Dependencies, Dependency}
 
-class ServiceConfigsServiceSpec
+import scala.concurrent.Future
+
+class DependenciesSpec
     extends AsyncFlatSpec
     with Matchers
     with ScalaFutures
     with MockitoSugar
     with IntegrationPatience {
 
-  private val serviceConfigsConnector = mock[ServiceConfigsConnector]
-  private val service                 = new ServiceConfigsService(serviceConfigsConnector)
-
-  behavior of "getDependenciesWithBobbyRules"
+  behavior of "Dependencies.enrichWithBobbyRuleViolations"
 
   it should "keep dependencies the same when no bobby rules for that dependency exist" in {
 
@@ -45,17 +42,10 @@ class ServiceConfigsServiceSpec
       ("uk.gov.hmrc", "name") -> List(buildRule("(,2.5.19)"))
     ))
 
-    when(serviceConfigsConnector.getBobbyRules)
-      .thenReturn(Future.successful(bobbyRules))
-
-    val dependency = buildDependency("unmatched-name", "2.5.18")
-
+    val dependency   = buildDependency("unmatched-name", "2.5.18")
     val dependencies = Dependencies("repo", Seq(dependency), Seq(dependency), Seq(dependency), Instant.now())
-    val result       = service.getDependenciesWithBobbyRules(dependencies)
 
-    result.map { result =>
-      result shouldBe dependencies
-    }
+    dependencies.enrichWithBobbyRuleViolations(bobbyRules) shouldBe dependencies
   }
 
   it should "keep dependencies the same when the version is not in a bobby rule range" in {
@@ -63,17 +53,10 @@ class ServiceConfigsServiceSpec
       ("uk.gov.hmrc", "name") -> List(buildRule("(,2.5.19)"))
     ))
 
-    when(serviceConfigsConnector.getBobbyRules)
-      .thenReturn(Future.successful(bobbyRules))
-
-    val dependency = buildDependency("name", "2.5.19")
-
+    val dependency   = buildDependency("name", "2.5.19")
     val dependencies = Dependencies("repo", Seq(dependency), Seq(dependency), Seq(dependency), Instant.now())
-    val result       = service.getDependenciesWithBobbyRules(dependencies)
 
-    result.map { result =>
-      result shouldBe dependencies
-    }
+    dependencies.enrichWithBobbyRuleViolations(bobbyRules) shouldBe dependencies
   }
 
   it should "add a violation when a rule matches the dependency" in {
@@ -86,20 +69,15 @@ class ServiceConfigsServiceSpec
     val dependency   = buildDependency("name", "2.5.18")
     val dependencies = Dependencies("repo", Seq(dependency), Seq(dependency), Seq(dependency), Instant.now())
 
-    when(serviceConfigsConnector.getBobbyRules)
-      .thenReturn(Future.successful(bobbyRules))
-
-    val result = service.getDependenciesWithBobbyRules(dependencies)
+    val result = dependencies.enrichWithBobbyRuleViolations(bobbyRules)
 
     val expected = dependency.copy(bobbyRuleViolations = List(bobbyRule1.asDependencyBobbyRule))
 
-    result.map { result =>
-      result.repositoryName         shouldBe dependencies.repositoryName
-      result.libraryDependencies    shouldBe Seq(expected)
-      result.sbtPluginsDependencies shouldBe Seq(expected)
-      result.otherDependencies      shouldBe Seq(expected)
-      result.lastUpdated            shouldBe dependencies.lastUpdated
-    }
+    result.repositoryName         shouldBe dependencies.repositoryName
+    result.libraryDependencies    shouldBe Seq(expected)
+    result.sbtPluginsDependencies shouldBe Seq(expected)
+    result.otherDependencies      shouldBe Seq(expected)
+    result.lastUpdated            shouldBe dependencies.lastUpdated
   }
 
   it should "add multiple violation when multiple rules matches the dependency" in {
@@ -112,10 +90,7 @@ class ServiceConfigsServiceSpec
     val dependency   = buildDependency("name", "2.5.16")
     val dependencies = Dependencies("repo", Seq(dependency), Seq(dependency), Seq(dependency), Instant.now())
 
-    when(serviceConfigsConnector.getBobbyRules)
-      .thenReturn(Future.successful(bobbyRules))
-
-    val result = service.getDependenciesWithBobbyRules(dependencies)
+    val result = dependencies.enrichWithBobbyRuleViolations(bobbyRules)
 
     val expected = dependency.copy(
       bobbyRuleViolations = List(
@@ -123,14 +98,11 @@ class ServiceConfigsServiceSpec
         bobbyRule2.asDependencyBobbyRule
       ))
 
-    result.map { result =>
-      result.repositoryName         shouldBe dependencies.repositoryName
-      result.libraryDependencies    shouldBe Seq(expected)
-      result.sbtPluginsDependencies shouldBe Seq(expected)
-      result.otherDependencies      shouldBe Seq(expected)
-      result.lastUpdated            shouldBe dependencies.lastUpdated
-    }
-
+    result.repositoryName         shouldBe dependencies.repositoryName
+    result.libraryDependencies    shouldBe Seq(expected)
+    result.sbtPluginsDependencies shouldBe Seq(expected)
+    result.otherDependencies      shouldBe Seq(expected)
+    result.lastUpdated            shouldBe dependencies.lastUpdated
   }
 
   it should "handle multiple dependencies and bobby rules" in {
@@ -149,52 +121,19 @@ class ServiceConfigsServiceSpec
     val pluginDependency  = buildDependency("another-name", "2.3")
     val dependencies      = Dependencies("repo", Seq(libraryDependency), Seq(pluginDependency), Seq(), Instant.now())
 
-    when(serviceConfigsConnector.getBobbyRules)
-      .thenReturn(Future.successful(bobbyRules))
-
-    val result = service.getDependenciesWithBobbyRules(dependencies)
+    val result = dependencies.enrichWithBobbyRuleViolations(bobbyRules)
 
     val expectedLibraryDependency =
       libraryDependency.copy(bobbyRuleViolations = List(bobbyRule1.asDependencyBobbyRule))
 
     val expectedPluginDependency = pluginDependency.copy(bobbyRuleViolations = List(bobbyRule3.asDependencyBobbyRule))
 
-    result.map { result =>
-      result.repositoryName         shouldBe dependencies.repositoryName
-      result.libraryDependencies    shouldBe Seq(expectedLibraryDependency)
-      result.sbtPluginsDependencies shouldBe Seq(expectedPluginDependency)
-      result.otherDependencies      shouldBe Seq()
-      result.lastUpdated            shouldBe dependencies.lastUpdated
-    }
-
+    result.repositoryName         shouldBe dependencies.repositoryName
+    result.libraryDependencies    shouldBe Seq(expectedLibraryDependency)
+    result.sbtPluginsDependencies shouldBe Seq(expectedPluginDependency)
+    result.otherDependencies      shouldBe Seq()
+    result.lastUpdated            shouldBe dependencies.lastUpdated
   }
-
-  it should "handle a list containing multiple dependencies" in {
-    val bobbyRule1 = buildRule("(,2.5.19)")
-    val bobbyRule2 = buildRule("(,2.5.17)")
-    val bobbyRule3 = buildRule("(,2.4.0)")
-    val bobbyRules = BobbyRules(Map(
-      ("uk.gov.hmrc", "name"        ) -> List(bobbyRule1, bobbyRule2),
-      ("uk.gov.hmrc", "another-name") -> List(bobbyRule3)
-    ))
-    val dependencyViolatingRule1   = buildDependency(name = "name"        , version = "2.5.18")
-    val dependencyWithNoViolations = buildDependency(name = "another-name", version = "2.5"   )
-    val dependencyWithNoRules      = buildDependency(name = "unmatched"   , version = "4.5.6" )
-
-    when(serviceConfigsConnector.getBobbyRules)
-      .thenReturn(Future.successful(bobbyRules))
-
-    val result = service.getDependenciesWithBobbyRules(List(dependencyViolatingRule1, dependencyWithNoViolations, dependencyWithNoRules))
-
-    result.map { enrichedDependencies =>
-      enrichedDependencies should contain theSameElementsAs Seq(
-        dependencyViolatingRule1.copy(bobbyRuleViolations = List(bobbyRule1.asDependencyBobbyRule)),
-        dependencyWithNoViolations,
-        dependencyWithNoRules
-      )
-    }
-  }
-
 
   private def buildRule(range: String) =
     BobbyRule(

@@ -25,26 +25,26 @@ import play.api.libs.json.{Json, OWrites, Writes}
 import play.api.mvc._
 import uk.gov.hmrc.play.bootstrap.controller.BackendController
 import uk.gov.hmrc.servicedependencies.config.ServiceDependenciesConfig
-import uk.gov.hmrc.servicedependencies.connector.TeamsAndRepositoriesConnector
+import uk.gov.hmrc.servicedependencies.connector.{ServiceConfigsConnector, TeamsAndRepositoriesConnector}
 import uk.gov.hmrc.servicedependencies.controller.model.{Dependencies, Dependency}
 import uk.gov.hmrc.servicedependencies.model._
-import uk.gov.hmrc.servicedependencies.service.{DependencyDataUpdatingService, ServiceConfigsService, SlugDependenciesService, SlugInfoService, TeamDependencyService}
+import uk.gov.hmrc.servicedependencies.service.{DependencyDataUpdatingService, SlugDependenciesService, SlugInfoService, TeamDependencyService}
 
 import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
 class ServiceDependenciesController @Inject()(
-  configuration                : Configuration,
-  dependencyDataUpdatingService: DependencyDataUpdatingService,
-  teamsAndRepositoriesConnector: TeamsAndRepositoriesConnector,
-  slugInfoService              : SlugInfoService,
-  slugDependenciesService      : SlugDependenciesService,
-  config                       : ServiceDependenciesConfig,
-  serviceConfigsService        : ServiceConfigsService,
-  teamDependencyService        : TeamDependencyService,
-  cc                           : ControllerComponents
-)(implicit ec: ExecutionContext)
-    extends BackendController(cc) {
+  configuration                : Configuration
+, dependencyDataUpdatingService: DependencyDataUpdatingService
+, teamsAndRepositoriesConnector: TeamsAndRepositoriesConnector
+, slugInfoService              : SlugInfoService
+, slugDependenciesService      : SlugDependenciesService
+, config                       : ServiceDependenciesConfig
+, serviceConfigsConnector      : ServiceConfigsConnector
+, teamDependencyService        : TeamDependencyService
+, cc                           : ControllerComponents
+)(implicit ec: ExecutionContext
+) extends BackendController(cc) {
 
   implicit val dw: OWrites[Dependencies] = Dependencies.writes
 
@@ -55,7 +55,8 @@ class ServiceDependenciesController @Inject()(
                            dependencyDataUpdatingService
                              .getDependencyVersionsForRepository(repositoryName),
                            NotFound(s"$repositoryName not found"))
-         depsWithRules <- EitherT.right[Result](serviceConfigsService.getDependenciesWithBobbyRules(dependency))
+         bobbyRules    <- EitherT.right[Result](serviceConfigsConnector.getBobbyRules)
+         depsWithRules =  dependency.enrichWithBobbyRuleViolations(bobbyRules)
          res           =  Ok(Json.toJson(depsWithRules))
        } yield res
       ).merge
@@ -66,8 +67,8 @@ class ServiceDependenciesController @Inject()(
       for {
         dependencies  <- dependencyDataUpdatingService
                            .getDependencyVersionsForAllRepositories
-        depsWithRules <- dependencies.toList
-                          .traverse(serviceConfigsService.getDependenciesWithBobbyRules)
+        bobbyRules    <- serviceConfigsConnector.getBobbyRules
+        depsWithRules =  dependencies.map(_.enrichWithBobbyRuleViolations(bobbyRules))
       } yield Ok(Json.toJson(depsWithRules))
     }
 

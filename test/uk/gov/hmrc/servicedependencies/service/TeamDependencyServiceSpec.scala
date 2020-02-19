@@ -36,9 +36,8 @@ class TeamDependencyServiceSpec extends AnyWordSpec with Matchers with MockitoSu
   val slugInfoRepository      = mock[SlugInfoRepository]
   val githubDepLookup         = mock[DependencyDataUpdatingService]
   val serviceConfigsConnector = mock[ServiceConfigsConnector]
-  val serviceConfigsService   = new ServiceConfigsService(serviceConfigsConnector)
   val slugDependenciesService = mock[SlugDependenciesService]
-  val tds = new TeamDependencyService(teamsAndReposConnector, slugInfoRepository, githubDepLookup, serviceConfigsService, slugDependenciesService)
+  val tds = new TeamDependencyService(teamsAndReposConnector, slugInfoRepository, githubDepLookup, serviceConfigsConnector, slugDependenciesService)
 
   "replaceServiceDeps" should {
     "replace library section with slug data" in {

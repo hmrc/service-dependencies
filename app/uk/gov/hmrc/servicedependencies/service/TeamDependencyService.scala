@@ -19,7 +19,7 @@ package uk.gov.hmrc.servicedependencies.service
 import cats.implicits._
 import javax.inject.{Inject, Singleton}
 import uk.gov.hmrc.http.HeaderCarrier
-import uk.gov.hmrc.servicedependencies.connector.TeamsAndRepositoriesConnector
+import uk.gov.hmrc.servicedependencies.connector.{ServiceConfigsConnector, TeamsAndRepositoriesConnector}
 import uk.gov.hmrc.servicedependencies.controller.model.{Dependency, Dependencies}
 import uk.gov.hmrc.servicedependencies.model.SlugInfoFlag
 import uk.gov.hmrc.servicedependencies.persistence.SlugInfoRepository
@@ -27,21 +27,24 @@ import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
 class TeamDependencyService @Inject()(
-  teamsAndReposConnector  : TeamsAndRepositoriesConnector,
-  slugInfoRepository      : SlugInfoRepository,
-  githubDepLookup         : DependencyDataUpdatingService,
-  serviceConfigsService   : ServiceConfigsService,
-  slugDependenciesService : SlugDependenciesService)(implicit ec: ExecutionContext)  {
+  teamsAndReposConnector  : TeamsAndRepositoriesConnector
+, slugInfoRepository      : SlugInfoRepository
+, githubDepLookup         : DependencyDataUpdatingService
+, serviceConfigsConnector : ServiceConfigsConnector
+, slugDependenciesService : SlugDependenciesService
+)(implicit ec: ExecutionContext
+) {
 
   def findAllDepsForTeam(team: String)(implicit hc: HeaderCarrier): Future[Seq[Dependencies]] =
     for {
       (teamDetails, githubDeps) <- ( teamsAndReposConnector.getTeamDetails(team)
                                    , githubDepLookup.getDependencyVersionsForAllRepositories
                                    ).mapN { case (td, gh) => (td, gh) }
-      libs                      =  teamDetails.libraries.map(l => githubDeps.find(_.repositoryName == l))
+      libs                      =  teamDetails.libraries.flatMap(l => githubDeps.find(_.repositoryName == l))
       services                  =  teamDetails.services.flatMap(s => githubDeps.find(_.repositoryName == s))
       updatedServices           <- services.toList.traverse(replaceServiceDeps)
-      libsWithRules             <- libs.flatten.toList.traverse(serviceConfigsService.getDependenciesWithBobbyRules)
+      bobbyRules                <- serviceConfigsConnector.getBobbyRules
+      libsWithRules             =  libs.map(_.enrichWithBobbyRuleViolations(bobbyRules))
     } yield libsWithRules ++ updatedServices
 
   protected[service] def replaceServiceDeps(dep: Dependencies): Future[Dependencies] =
