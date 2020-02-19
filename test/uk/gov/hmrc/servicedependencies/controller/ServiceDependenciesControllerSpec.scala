@@ -78,7 +78,7 @@ class ServiceDependenciesControllerSpec
       val repo3               = Dependencies("repo3", Seq(), Seq(), Seq(), now)
       val libraryDependencies = Seq(repo1, repo2, repo3)
 
-      when(boot.mockedDependencyDataUpdatingService.getDependencyVersionsForAllRepositories())
+      when(boot.mockedDependencyDataUpdatingService.getDependencyVersionsForAllRepositories)
         .thenReturn(Future.successful(libraryDependencies))
 
       when(boot.mockServiceConfigsService.getDependenciesWithBobbyRules(repo1))

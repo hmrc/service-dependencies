@@ -31,11 +31,11 @@ trait SchedulerUtils {
     )(f: => Future[Unit]
     )(implicit actorSystem: ActorSystem, applicationLifecycle: ApplicationLifecycle, ec: ExecutionContext) =
       if (schedulerConfig.enabled) {
-        val initialDelay = schedulerConfig.initialDelay()
-        val frequency    = schedulerConfig.frequency()
-        Logger.info(s"Enabling $label scheduler, running every $frequency (after initial delay $initialDelay)")
+        val initialDelay = schedulerConfig.initialDelay
+        val interval     = schedulerConfig.interval
+        Logger.info(s"Enabling $label scheduler, running every $interval (after initial delay $initialDelay)")
         val cancellable =
-          actorSystem.scheduler.schedule(initialDelay, frequency) {
+          actorSystem.scheduler.schedule(initialDelay, interval) {
             val start = System.currentTimeMillis
             Logger.info(s"Scheduler $label started")
             f.map { res =>

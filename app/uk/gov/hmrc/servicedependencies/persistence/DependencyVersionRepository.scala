@@ -19,10 +19,8 @@ package uk.gov.hmrc.servicedependencies.persistence
 import com.google.inject.{Inject, Singleton}
 import org.mongodb.scala.bson.BsonDocument
 import org.mongodb.scala.model.Filters.{and, equal}
-import org.mongodb.scala.model.Indexes.hashed
-import org.mongodb.scala.model.{IndexModel, IndexOptions, ReplaceOptions}
+import org.mongodb.scala.model.{Indexes, IndexModel, IndexOptions, ReplaceOptions}
 import play.api.Logger
-import play.api.libs.json.Json
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.play.json.PlayMongoRepository
 import uk.gov.hmrc.mongo.throttle.{ThrottleConfig, WithThrottling}
@@ -32,45 +30,44 @@ import uk.gov.hmrc.servicedependencies.util.FutureHelpers
 import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
-class SbtPluginVersionRepository @Inject()(
+class DependencyVersionRepository @Inject()(
     mongoComponent    : MongoComponent
   , futureHelpers     : FutureHelpers
   , val throttleConfig: ThrottleConfig
   )(implicit ec: ExecutionContext
-  ) extends PlayMongoRepository[MongoSbtPluginVersion](
-    collectionName = "sbtPluginVersions"
+  ) extends PlayMongoRepository[MongoDependencyVersion](
+    collectionName = "dependencyVersions"
   , mongoComponent = mongoComponent
-  , domainFormat   = MongoSbtPluginVersion.format
+  , domainFormat   = MongoDependencyVersion.format
   , indexes        = Seq(
-                       IndexModel(hashed("sbtPluginName"), IndexOptions().name("sbtPluginNameIdx").background(true))
+                       IndexModel(Indexes.ascending("name", "group"), IndexOptions().unique(true))
                      )
-  , optSchema      = Some(BsonDocument(MongoSbtPluginVersion.schema))
+  , optSchema      = Some(BsonDocument(MongoDependencyVersion.schema))
   ) with WithThrottling {
 
   val logger: Logger = Logger(this.getClass)
 
-  def update(sbtPluginVersion: MongoSbtPluginVersion): Future[MongoSbtPluginVersion] = {
-    logger.debug(s"writing $sbtPluginVersion")
+  def update(dependencyVersion: MongoDependencyVersion): Future[Unit] = {
+    logger.debug(s"writing $dependencyVersion")
     futureHelpers
       .withTimerAndCounter("mongo.update") {
         collection
           .replaceOne(
-              filter      = and( equal("sbtPluginName", sbtPluginVersion.name)
-                               , equal("group"        , sbtPluginVersion.group)
+              filter      = and( equal("name"        , dependencyVersion.name)
+                               , equal("group"       , dependencyVersion.group)
                                )
-            , replacement = sbtPluginVersion
+            , replacement = dependencyVersion
             , options     = ReplaceOptions().upsert(true)
             )
           .toThrottledFuture
-          .map(_ => sbtPluginVersion)
-      }
-      .recover {
-        case e =>
-          throw new RuntimeException(s"failed to persist SbtPluginVersion $sbtPluginVersion: ${e.getMessage}", e)
-      }
+          .map(_ => ())
+    } recover {
+      case e =>
+        throw new RuntimeException(s"failed to persist dependency version $dependencyVersion: ${e.getMessage}", e)
+    }
   }
 
-  def getAllEntries: Future[Seq[MongoSbtPluginVersion]] =
+  def getAllEntries: Future[Seq[MongoDependencyVersion]] =
     collection.find()
       .toThrottledFuture
 

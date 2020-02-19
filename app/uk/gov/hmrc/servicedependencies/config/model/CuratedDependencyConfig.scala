@@ -20,37 +20,13 @@ import play.api.libs.functional.syntax._
 import play.api.libs.json.{__, Json, JsError, Reads}
 import uk.gov.hmrc.servicedependencies.model.Version
 
-trait DependencyConfig {
-  def name         : String
-  def group        : String
-  def latestVersion: Option[Version]
-}
-
-case class SbtPluginConfig(
+case class DependencyConfig(
     name         : String
   , group        : String
   , latestVersion: Option[Version]
-  ) extends DependencyConfig
+  )
 
-case class LibraryConfig(
-    name         : String
-  , group        : String
-  , latestVersion: Option[Version]
-  ) extends DependencyConfig
-
-case class OtherDependencyConfig(
-    name         : String
-  , group        : String
-  , latestVersion: Option[Version]
-  ) extends DependencyConfig
-
-case class CuratedDependencyConfig(
-  sbtPlugins       : Seq[SbtPluginConfig],
-  libraries        : Seq[LibraryConfig],
-  otherDependencies: Seq[OtherDependencyConfig])
-
-object CuratedDependencyConfig {
-
+object DependencyConfig {
   // Reads.failed not available in play-json 2.6
   private def failed[A](msg: String): Reads[A] =
     Reads[A] { _ => JsError(msg) }
@@ -74,31 +50,30 @@ object CuratedDependencyConfig {
       case _              => Reads.pure(c)
     }
 
-  val otherReader: Reads[OtherDependencyConfig] =
+  val reads: Reads[DependencyConfig] =
     ( (__ \ "name"         ).read[String]
     ~ (__ \ "group"        ).read[String]
     ~ (__ \ "latestVersion").readNullable[String].flatMap(optOptionalReads(Version.parse, "invalid version"))
-    )(OtherDependencyConfig.apply _)
+    )(DependencyConfig.apply _)
       .flatMap(validateLatestVersion)
+}
 
-  val libraryReader: Reads[LibraryConfig] =
-    ( (__ \ "name"         ).read[String]
-    ~ (__ \ "group"        ).read[String]
-    ~ (__ \ "latestVersion").readNullable[String].flatMap(optOptionalReads(Version.parse, "invalid version"))
-    )(LibraryConfig.apply _)
-      .flatMap(validateLatestVersion)
+case class CuratedDependencyConfig(
+    sbtPlugins: List[DependencyConfig]
+  , libraries : List[DependencyConfig]
+  , others    : List[DependencyConfig]
+  ) {
+    val allDependencies =
+      sbtPlugins ++ libraries ++ others
+  }
 
-  val sbtPluginReader: Reads[SbtPluginConfig] =
-    ( (__ \ "name"         ).read[String]
-    ~ (__ \ "group"        ).read[String]
-    ~ (__ \ "latestVersion").readNullable[String].flatMap(optOptionalReads(Version.parse, "invalid version"))
-    )(SbtPluginConfig.apply _)
-      .flatMap(validateLatestVersion)
-
-  implicit val configReader = {
-    implicit val or = otherReader
-    implicit val lr = libraryReader
-    implicit val pr = sbtPluginReader
+object CuratedDependencyConfig {
+  val reads = {
+    implicit val dcr = DependencyConfig.reads
     Json.reads[CuratedDependencyConfig]
+    ( (__ \ "sbtPlugins").read[List[DependencyConfig]]
+    ~ (__ \ "libraries" ).read[List[DependencyConfig]]
+    ~ (__ \ "others"    ).read[List[DependencyConfig]]
+    )(CuratedDependencyConfig.apply _)
   }
 }

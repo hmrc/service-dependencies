@@ -19,23 +19,25 @@ package uk.gov.hmrc.servicedependencies.service
 import cats.implicits._
 import javax.inject.{Inject, Singleton}
 import uk.gov.hmrc.servicedependencies.config.CuratedDependencyConfigProvider
-import uk.gov.hmrc.servicedependencies.config.model.LibraryConfig
+import uk.gov.hmrc.servicedependencies.config.model.CuratedDependencyConfig
 import uk.gov.hmrc.servicedependencies.controller.model.Dependency
-import uk.gov.hmrc.servicedependencies.model.{MongoLibraryVersion, SlugDependency, SlugInfo, SlugInfoFlag, Version}
-import uk.gov.hmrc.servicedependencies.persistence.LibraryVersionRepository
+import uk.gov.hmrc.servicedependencies.model.{SlugDependency, SlugInfo, SlugInfoFlag, Version}
+import uk.gov.hmrc.servicedependencies.persistence.DependencyVersionRepository
+import uk.gov.hmrc.servicedependencies.util.Max
 
-import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
 class SlugDependenciesService @Inject()(
-  slugInfoService                : SlugInfoService,
-  curatedDependencyConfigProvider: CuratedDependencyConfigProvider,
-  libraryVersionRepository       : LibraryVersionRepository,
-  serviceConfigsService          : ServiceConfigsService) {
+  slugInfoService                : SlugInfoService
+, curatedDependencyConfigProvider: CuratedDependencyConfigProvider
+, dependencyVersionRepository    : DependencyVersionRepository
+, serviceConfigsService          : ServiceConfigsService
+)(implicit ec: ExecutionContext
+) {
 
-  private lazy val curatedLibraries: Set[LibraryConfig] =
-    curatedDependencyConfigProvider.curatedDependencyConfig.libraries.toSet
+  private lazy val curatedDependencyConfig: CuratedDependencyConfig =
+    curatedDependencyConfigProvider.curatedDependencyConfig
 
   /*
    * We may want to evolve the model - but for this initial version we reuse the existing Dependency definition.
@@ -48,19 +50,20 @@ class SlugDependenciesService @Inject()(
 
   private def curatedLibrariesOfSlugInfo(slugInfo: SlugInfo): Future[List[Dependency]] =
     for {
-      latestVersions        <- libraryVersionRepository.getAllEntries
+      latestVersions        <- dependencyVersionRepository.getAllEntries
       curatedDependencies   =  slugInfo.dependencies
                                  .filter(slugDependency =>
-                                   curatedLibraries.exists(lib => lib.name  == slugDependency.artifact &&
-                                                                  lib.group == slugDependency.group
-                                                          )
+                                   curatedDependencyConfig.libraries.exists(lib =>
+                                     lib.name  == slugDependency.artifact &&
+                                     lib.group == slugDependency.group
+                                   )
                                  )
       enrichedDependencies  <- serviceConfigsService.getDependenciesWithBobbyRules(curatedDependencies
                                   .map { slugDependency =>
                                       val latestVersion =
                                         latestVersions
                                           .find(v => v.group == slugDependency.group && v.name == slugDependency.artifact)
-                                          .flatMap(_.version)
+                                          .map(_.version)
                                       Dependency(
                                           name                = slugDependency.artifact
                                         , group               = slugDependency.group

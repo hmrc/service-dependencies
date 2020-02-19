@@ -36,7 +36,7 @@ class TeamDependencyService @Inject()(
   def findAllDepsForTeam(team: String)(implicit hc: HeaderCarrier): Future[Seq[Dependencies]] =
     for {
       (teamDetails, githubDeps) <- ( teamsAndReposConnector.getTeamDetails(team)
-                                   , githubDepLookup.getDependencyVersionsForAllRepositories()
+                                   , githubDepLookup.getDependencyVersionsForAllRepositories
                                    ).mapN { case (td, gh) => (td, gh) }
       libs                      =  teamDetails.libraries.map(l => githubDeps.find(_.repositoryName == l))
       services                  =  teamDetails.services.flatMap(s => githubDeps.find(_.repositoryName == s))
@@ -52,7 +52,7 @@ class TeamDependencyService @Inject()(
 
   def dependenciesOfSlugForTeam(team: String, flag: SlugInfoFlag): Future[Map[String, Seq[Dependency]]] =
     for {
-      githubDeps <- githubDepLookup.getDependencyVersionsForAllRepositories()
+      githubDeps <- githubDepLookup.getDependencyVersionsForAllRepositories
       res        <- githubDeps.toList.traverse { githubDep =>
                       slugDependenciesService.curatedLibrariesOfSlug(githubDep.repositoryName, flag)
                         .map(_.map(githubDep.repositoryName -> _))

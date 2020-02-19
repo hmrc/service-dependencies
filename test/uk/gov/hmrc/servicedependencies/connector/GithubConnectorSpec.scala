@@ -37,28 +37,10 @@ class GithubConnectorSpec extends AnyWordSpec with Matchers with MockitoSugar {
 
   val githubConnector = new GithubConnector(mockGithub)
 
-  "toMongoRepositoryDependencies" should {
-
-    "return a list of sbt dependencies" in {
-      val sbtPlugins = Map( ("sbt-auto-build" , "uk.gov.hmrc") -> Some(Version(1,2,3))
-                          , ("sbt-artifactory", "uk.gov.hmrc") -> Some(Version(0,13,3))
-                          )
-
-      val result = githubConnector.toMongoRepositoryDependencies(sbtPlugins)
-      result.length mustBe 2
-      result(0) mustBe MongoRepositoryDependency(name = "sbt-auto-build" , group = "uk.gov.hmrc", currentVersion = Version(1,2,3))
-      result(1) mustBe MongoRepositoryDependency(name = "sbt-artifactory", group = "uk.gov.hmrc", currentVersion = Version(0,13,3))
-    }
-
-    "return an empty list when no sbt dependencies are present" in {
-      githubConnector.toMongoRepositoryDependencies(Map.empty) mustBe Nil
-    }
-  }
-
   "buildDependencies" should {
 
     val repoInfo = RepositoryInfo("test-repo", Instant.now(), Instant.now(), "Java")
-    val depConfig = new CuratedDependencyConfig(Seq(), Seq(), Seq())
+    val depConfig = new CuratedDependencyConfig(Nil, Nil, Nil)
 
     "return None when repo is not found in github" in {
 
@@ -86,13 +68,13 @@ class GithubConnectorSpec extends AnyWordSpec with Matchers with MockitoSugar {
 
       val result = githubConnector.buildDependencies(repoInfo, depConfig)
       result.isDefined mustBe true
-      result.get.sbtPluginDependencies mustBe Seq( MongoRepositoryDependency(name = "sbt-auto-build" , group = "uk.gov.hmrc"  , currentVersion = Version(1,2,3))
-                                                 , MongoRepositoryDependency(name = "sbt-artifactory", group = "uk.gov.hmrc"  , currentVersion = Version(0,13,3))
-                                                 )
-      result.get.libraryDependencies   mustBe Seq( MongoRepositoryDependency(name = "bootstrap-play" , group = "uk.gov.hmrc"  , currentVersion = Version(7,0,0))
-                                                 , MongoRepositoryDependency(name = "mongo-lock"     , group = "uk.gov.hmrc"  , currentVersion = Version(1,4,1))
-                                                 )
-      result.get.otherDependencies     mustBe Seq(MongoRepositoryDependency(name = "sbt"             , group = "org.scala-sbt", currentVersion = Version(0,13,1)))
+      result.get.sbtPluginDependencies mustBe List( MongoRepositoryDependency(name = "sbt-auto-build" , group = "uk.gov.hmrc"  , currentVersion = Version(1,2,3))
+                                                  , MongoRepositoryDependency(name = "sbt-artifactory", group = "uk.gov.hmrc"  , currentVersion = Version(0,13,3))
+                                                  )
+      result.get.libraryDependencies   mustBe List( MongoRepositoryDependency(name = "bootstrap-play" , group = "uk.gov.hmrc"  , currentVersion = Version(7,0,0))
+                                                  , MongoRepositoryDependency(name = "mongo-lock"     , group = "uk.gov.hmrc"  , currentVersion = Version(1,4,1))
+                                                  )
+      result.get.otherDependencies     mustBe List( MongoRepositoryDependency(name = "sbt"             , group = "org.scala-sbt", currentVersion = Version(0,13,1)))
     }
   }
 }

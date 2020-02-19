@@ -78,7 +78,7 @@ class TeamDependencyServiceSpec extends AnyWordSpec with Matchers with MockitoSu
         lastUpdated = Instant.now()
       )
 
-      when(githubDepLookup.getDependencyVersionsForAllRepositories())
+      when(githubDepLookup.getDependencyVersionsForAllRepositories)
         .thenReturn(Future.successful(Seq(fooDependencies)))
 
       when(slugDependenciesService.curatedLibrariesOfSlug("foo-service", SlugInfoFlag.Latest))

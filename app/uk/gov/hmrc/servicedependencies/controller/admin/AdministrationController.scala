@@ -37,31 +37,19 @@ class AdministrationController @Inject()(
   def reloadLibraryDependenciesForAllRepositories(force: Option[Boolean] = None) = Action { implicit request =>
     dependencyDataUpdatingService
       .reloadCurrentDependenciesDataForAllRepositories(force = force.getOrElse(false))
-      .map(_ => Logger.debug(s"""${">" * 10} done ${"<" * 10}"""))
       .onFailure {
         case ex => throw new RuntimeException("reload of dependencies failed", ex)
       }
-    Ok("Done")
+    Accepted("reload started")
   }
 
-  def reloadLibraryVersions() = Action { implicit request =>
+  def reloadDependencyVersions = Action { implicit request =>
     dependencyDataUpdatingService
-      .reloadLatestLibraryVersions()
-      .map(_ => Logger.debug(s"""${">" * 10} done ${"<" * 10}"""))
+      .reloadLatestDependencyVersions
       .onFailure {
-        case ex => throw new RuntimeException("reload of libraries failed", ex)
+        case ex => throw new RuntimeException("reload of dependency versions failed", ex)
       }
-    Ok("Done")
-  }
-
-  def reloadSbtPluginVersions() = Action { implicit request =>
-    dependencyDataUpdatingService
-      .reloadLatestSbtPluginVersions()
-      .map(_ => Logger.debug(s"""${">" * 10} done ${"<" * 10}"""))
-      .onFailure {
-        case ex => throw new RuntimeException("reload of sbt plugins failed", ex)
-      }
-    Ok("Done")
+    Accepted("reload started")
   }
 
   def dropCollection(collection: String) = Action.async { implicit request =>

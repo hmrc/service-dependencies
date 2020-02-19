@@ -24,19 +24,20 @@ import uk.gov.hmrc.githubclient.GitApiConfig
 import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
 
 @Singleton
-class ServiceDependenciesConfig @Inject()(configuration: Configuration,
-                                          serviceConfig: ServicesConfig)
-  extends ConfigUtils {
+class ServiceDependenciesConfig @Inject()(
+    configuration: Configuration
+  , serviceConfig: ServicesConfig
+  ) extends ConfigUtils {
 
-  private val githubOpenConfigKey     = "github.open.api"
+  lazy val teamsAndRepositoriesServiceUrl: String =
+    serviceConfig.baseUrl("teams-and-repositories")
 
-  lazy val teamsAndRepositoriesServiceUrl: String = serviceConfig.baseUrl("teams-and-repositories")
+  private def gitPath(gitFolder: String): String =
+    s"${System.getProperty("user.home")}/.github/$gitFolder"
 
-  private def gitPath(gitFolder: String): String = s"${System.getProperty("user.home")}/.github/$gitFolder"
-
-  val host = configuration.getOptional[String](s"$githubOpenConfigKey.host")
-  val user = configuration.getOptional[String](s"$githubOpenConfigKey.user")
-  val key  = configuration.getOptional[String](s"$githubOpenConfigKey.key")
+  val host = configuration.getOptional[String]("github.open.api.host")
+  val user = configuration.getOptional[String]("github.open.api.user")
+  val key  = configuration.getOptional[String]("github.open.api.key")
 
   val githubApiOpenConfig: GitApiConfig =
     (user, key, host) match {
@@ -45,5 +46,9 @@ class ServiceDependenciesConfig @Inject()(configuration: Configuration,
       case _ => GitApiConfig("user_not_set", "key_not_set", "https://hostnotset.com")
     }
 
-  lazy val teamsAndRepositoriesCacheExpiration = getDuration(configuration, "microservice.services.teams-and-repositories.cache.expiration")
+  lazy val teamsAndRepositoriesCacheExpiration =
+    getDuration(configuration, "microservice.services.teams-and-repositories.cache.expiration")
+
+  lazy val artifactoryBase: String          = configuration.get[String]("artifactory.url")
+  lazy val artifactoryToken: Option[String] = configuration.getOptional[String]("artifactory.token")
 }

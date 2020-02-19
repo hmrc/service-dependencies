@@ -27,8 +27,7 @@ import uk.gov.hmrc.servicedependencies.persistence._
 import scala.concurrent.{ExecutionContext, Future}
 
 class IntegrationTestController @Inject()(
-    libraryRepo                            : LibraryVersionRepository
-  , sbtPluginVersionRepository             : SbtPluginVersionRepository
+    dependencyVersionRepository            : DependencyVersionRepository
   , repositoryLibraryDependenciesRepository: RepositoryLibraryDependenciesRepository
   , sluginfoRepo                           : SlugInfoRepository
   , bobbyRulesSummaryRepo                  : BobbyRulesSummaryRepository
@@ -36,16 +35,18 @@ class IntegrationTestController @Inject()(
   )(implicit ec: ExecutionContext
   ) extends BackendController(cc) {
 
-  implicit val dtf                   = MongoJavatimeFormats.localDateFormats
-  implicit val vf                    = Version.apiFormat
-  implicit val libraryVersionReads   = Json.using[Json.WithDefaultValues].reads[MongoLibraryVersion]
-  implicit val sbtVersionReads       = Json.using[Json.WithDefaultValues].reads[MongoSbtPluginVersion]
-  implicit val dependenciesReads     = Json.using[Json.WithDefaultValues].reads[MongoRepositoryDependencies]
+  implicit val dtf                    = MongoJavatimeFormats.localDateFormats
+  implicit val vf                     = Version.apiFormat
+  implicit val dependencyVersionReads = {
+                                          implicit val sbf = ScalaVersion.format
+                                          Json.using[Json.WithDefaultValues].reads[MongoDependencyVersion]
+                                        }
+  implicit val dependenciesReads      = Json.using[Json.WithDefaultValues].reads[MongoRepositoryDependencies]
 
-  implicit val sluginfoReads         = { implicit val sdr = Json.using[Json.WithDefaultValues].reads[SlugDependency]
-                                         implicit val javaInfoReads = Json.using[Json.WithDefaultValues].reads[JavaInfo]
-                                         Json.using[Json.WithDefaultValues].reads[SlugInfo]
-                                       }
+  implicit val sluginfoReads          = { implicit val sdr = Json.using[Json.WithDefaultValues].reads[SlugDependency]
+                                          implicit val javaInfoReads = Json.using[Json.WithDefaultValues].reads[JavaInfo]
+                                          Json.using[Json.WithDefaultValues].reads[SlugInfo]
+                                        }
   implicit val bobbyRulesSummaryReads = BobbyRulesSummary.apiFormat
 
   private def validateJson[A : Reads] =
@@ -53,15 +54,9 @@ class IntegrationTestController @Inject()(
       _.validate[A].asEither.left.map(e => BadRequest(JsError.toJson(e)))
     )
 
-  def addLibraryVersion =
-    Action.async(validateJson[Seq[MongoLibraryVersion]]) { implicit request =>
-      Future.sequence(request.body.map(libraryRepo.update))
-        .map(_ => NoContent)
-    }
-
-  def addSbtVersions =
-    Action.async(validateJson[Seq[MongoSbtPluginVersion]]) { implicit request =>
-      Future.sequence(request.body.map(sbtPluginVersionRepository.update))
+  def addDependencyVersions =
+    Action.async(validateJson[Seq[MongoDependencyVersion]]) { implicit request =>
+      Future.sequence(request.body.map(dependencyVersionRepository.update))
         .map(_ => NoContent)
     }
 
@@ -83,15 +78,9 @@ class IntegrationTestController @Inject()(
         .map(_ => NoContent)
     }
 
-  def deleteLibraryVersions =
+  def deleteDependencyVersions =
     Action.async { implicit request =>
-      libraryRepo.clearAllData
-        .map(_ => NoContent)
-    }
-
-  def deleteSbtVersions =
-    Action.async { implicit request =>
-      sbtPluginVersionRepository.clearAllData
+      dependencyVersionRepository.clearAllData
         .map(_ => NoContent)
     }
 
@@ -116,9 +105,8 @@ class IntegrationTestController @Inject()(
   def deleteAll =
     Action.async { implicit request =>
       Future.sequence(List(
-          sbtPluginVersionRepository.clearAllData
+          dependencyVersionRepository.clearAllData
         , repositoryLibraryDependenciesRepository.clearAllData
-        , libraryRepo.clearAllData
         , sluginfoRepo.clearAllData
         , bobbyRulesSummaryRepo.clearAllData
         )).map(_ => NoContent)

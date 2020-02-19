@@ -22,50 +22,41 @@ import play.api.libs.json.{Format, Json, __}
 import play.api.libs.functional.syntax._
 import uk.gov.hmrc.mongo.play.json.formats.MongoJavatimeFormats
 
-case class MongoSbtPluginVersion(
-    name         : String
-  , group        : String
-  , version      : Option[Version]
-  , updateDate   : Instant = Instant.now()
+case class MongoDependencyVersion(
+    name        : String
+  , group       : String
+  , version     : Version
+  , updateDate  : Instant = Instant.now()
   )
 
-object MongoSbtPluginVersion {
+object MongoDependencyVersion {
   implicit val format = {
-    implicit val iF = MongoJavatimeFormats.instantFormats
-    implicit val vf = Version.mongoFormat
-    ( (__ \ "sbtPluginName").format[String]
-    ~ (__ \ "group"        ).format[String]
-    ~ (__ \ "version"      ).formatNullable[Version]
-    ~ (__ \ "updateDate"   ).format[Instant]
-    )(MongoSbtPluginVersion.apply, unlift(MongoSbtPluginVersion.unapply))
+    implicit val iF  = MongoJavatimeFormats.instantFormats
+    implicit val svf = ScalaVersion.format
+    implicit val vf  = Version.mongoFormat
+    ( (__ \ "name"        ).format[String]
+    ~ (__ \ "group"       ).format[String]
+    ~ (__ \ "version"     ).format[Version]
+    ~ (__ \ "updateDate"  ).format[Instant]
+    )(MongoDependencyVersion.apply, unlift(MongoDependencyVersion.unapply))
   }
 
   val schema =
     """
     { bsonType: "object"
-    , required: [ "sbtPluginName", "group", "updateDate" ]
+    , required: [ "name", "group", "version", "updateDate" ]
     , properties:
-      { sbtPluginName: { bsonType: "string" }
+      { name         : { bsonType: "string" }
       , group        : { bsonType: "string" }
       , version      : { bsonType: "string" }
-      , updateDate   : { bsonType: "date"   }
+      , updateDate   : { bsonType: "date" }
       }
     }
     """
 }
 
-case class SbtPluginVersion(
+case class DependencyVersion(
     name   : String
   , group  : String
   , version: Option[Version]
   )
-
-object SbtPluginVersion {
-  implicit val format: Format[SbtPluginVersion] = {
-    implicit val vd = Version.apiFormat
-    ( (__ \ "sbtPluginName").format[String]
-    ~ (__ \ "group"        ).format[String]
-    ~ (__ \ "version"      ).formatNullable[Version]
-    )(SbtPluginVersion.apply, unlift(SbtPluginVersion.unapply))
-  }
-}

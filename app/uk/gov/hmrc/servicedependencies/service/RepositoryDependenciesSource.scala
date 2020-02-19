@@ -43,15 +43,12 @@ class RepositoryDependenciesSource @Inject()(
 
   def getTeamsLibraries: Future[Seq[TeamRepos]] =
     for {
-      teamsWithRepositories <- teamsAndRepositoriesConnector.getTeamsWithRepositories()
+      teamsWithRepositories <- teamsAndRepositoriesConnector.getTeamsWithRepositories
       dependencies <- repositoryLibraryDependenciesRepository.getAllEntries
-                       .map(repos =>
-                         repos
-                           .filterNot(_.repositoryName.endsWith("-history"))
-                           .map(repoDependencies =>
-                             repoDependencies.repositoryName -> (repoDependencies.libraryDependencies ++
-                                                                 repoDependencies.sbtPluginDependencies ++
-                                                                 repoDependencies.otherDependencies)))
+                       .map(_
+                          .filterNot(_.repositoryName.endsWith("-history"))
+                          .map(repoDependencies => repoDependencies.repositoryName -> repoDependencies.dependencies)
+                       )
     } yield
       teamsWithRepositories.map { team =>
         TeamRepos(

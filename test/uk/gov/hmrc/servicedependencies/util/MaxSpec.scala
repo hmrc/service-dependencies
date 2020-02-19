@@ -27,27 +27,16 @@ class MaxSpec extends AnyFunSpec with Matchers {
     it("should find the maximum Version") {
       Max.maxOf(
         Seq(
-          Some(Version(1, 0, 0)),
-          Some(Version(1, 1, 0)),
-          Some(Version(1, 1, 1)),
-          Some(Version(1, 1, 10)),
-          Some(Version(1, 1, 2))
-        )) shouldBe Some(Version(1, 1, 10))
-    }
-
-    it("should be able to handle Nones") {
-      Max.maxOf(
-        Seq(
-          Some(Version(1, 1, 0)),
-          None,
-          Some(Version(1, 1, 10)),
-          Some(Version(1, 1, 2))
-        )) shouldBe Some(Version(1, 1, 10))
+            Version(1, 0, 0)
+          , Version(1, 1, 0)
+          , Version(1, 1, 1)
+          , Version(1, 1, 10)
+          , Version(1, 1, 2)
+          )) shouldBe Some(Version(1, 1, 10))
     }
 
     it("should be able to handle empty Seq") {
-      Max.maxOf(Seq.empty[Option[Version]]) shouldBe None
+      Max.maxOf(Seq.empty[Version]) shouldBe None
     }
   }
-
 }

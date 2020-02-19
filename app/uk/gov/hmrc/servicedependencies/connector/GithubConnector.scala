@@ -15,29 +15,27 @@
  */
 
 package uk.gov.hmrc.servicedependencies.connector
+
 import java.time.Instant
 
 import javax.inject.{Inject, Singleton}
 import org.slf4j.LoggerFactory
 import uk.gov.hmrc.servicedependencies.Github
-import uk.gov.hmrc.servicedependencies.config.model.{CuratedDependencyConfig, SbtPluginConfig}
+import uk.gov.hmrc.servicedependencies.config.model.CuratedDependencyConfig
 import uk.gov.hmrc.servicedependencies.connector.model.RepositoryInfo
-import uk.gov.hmrc.servicedependencies.model._
+import uk.gov.hmrc.servicedependencies.model.{MongoRepositoryDependencies, MongoRepositoryDependency, Version}
 
 @Singleton
-class GithubConnector @Inject() (github: Github) {
+class GithubConnector @Inject()(github: Github) {
 
   lazy val logger = LoggerFactory.getLogger(this.getClass)
 
-  def toMongoRepositoryDependencies(results: Map[(String, String), Option[Version]]): Seq[MongoRepositoryDependency] =
+  private def toMongoRepositoryDependencies(results: Map[(String, String), Option[Version]]): Seq[MongoRepositoryDependency] =
     results
       .collect { case ((name, group), Some(currentVersion)) =>
          MongoRepositoryDependency(name = name, group = group, currentVersion = currentVersion)
        }
       .toSeq
-
-  def findLatestVersion(repoName: String): Option[Version] =
-    github.findLatestVersion(repoName)
 
   def buildDependencies(repo: RepositoryInfo, curatedDeps: CuratedDependencyConfig): Option[MongoRepositoryDependencies] =
     github.findVersionsForMultipleArtifacts(repo.name, curatedDeps)

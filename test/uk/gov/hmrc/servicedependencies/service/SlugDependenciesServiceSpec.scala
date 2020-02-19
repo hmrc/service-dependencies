@@ -26,37 +26,43 @@ import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.should.Matchers
 import uk.gov.hmrc.servicedependencies.config.CuratedDependencyConfigProvider
-import uk.gov.hmrc.servicedependencies.config.model.{CuratedDependencyConfig, LibraryConfig}
+import uk.gov.hmrc.servicedependencies.config.model.{CuratedDependencyConfig, DependencyConfig}
 import uk.gov.hmrc.servicedependencies.controller.model.{Dependency, DependencyBobbyRule}
 import uk.gov.hmrc.servicedependencies.model._
-import uk.gov.hmrc.servicedependencies.persistence.LibraryVersionRepository
+import uk.gov.hmrc.servicedependencies.persistence.DependencyVersionRepository
 
 import scala.concurrent.Future
+
+import scala.concurrent.ExecutionContext.Implicits.global
 
 class SlugDependenciesServiceSpec extends AnyFreeSpec with MockitoSugar with Matchers with ScalaFutures with OptionValues {
 
   import SlugDependenciesServiceSpec._
 
   private trait Fixture {
-    val slugInfoService = mock[SlugInfoService]
-    val curatedDependencyConfigProvider = mock[CuratedDependencyConfigProvider]
-    val libraryVersionRepository = mock[LibraryVersionRepository]
-    val serviceConfigsService = mock[ServiceConfigsService]
+    val mockSlugInfoService                 = mock[SlugInfoService]
+    val mockCuratedDependencyConfigProvider = mock[CuratedDependencyConfigProvider]
+    val mockDependencyVersionRepository     = mock[DependencyVersionRepository]
+    val mockServiceConfigsService           = mock[ServiceConfigsService]
 
     val underTest =
       new SlugDependenciesService(
-        slugInfoService, curatedDependencyConfigProvider, libraryVersionRepository, serviceConfigsService)
+          mockSlugInfoService
+        , mockCuratedDependencyConfigProvider
+        , mockDependencyVersionRepository
+        , mockServiceConfigsService
+        )
 
-    def stubCuratedLibrariesOf(libraryNames: LibraryConfig*): Unit =
-      when(curatedDependencyConfigProvider.curatedDependencyConfig)
-        .thenReturn(aCuratedDependencyConfig(libraryNames))
+    def stubCuratedLibrariesOf(libraryNames: DependencyConfig*): Unit =
+      when(mockCuratedDependencyConfigProvider.curatedDependencyConfig)
+        .thenReturn(aCuratedDependencyConfig(libraryNames.toList))
 
     def stubLatestLibraryVersionLookupSuccessfullyReturns(versionsByName: Seq[(SlugDependency, Version)]): Unit =
-      when(libraryVersionRepository.getAllEntries)
+      when(mockDependencyVersionRepository.getAllEntries)
         .thenReturn(
           Future.successful(
             versionsByName.map { case (sd, v) =>
-              MongoLibraryVersion(name = sd.artifact, group = sd.group, version = Some(v))
+              MongoDependencyVersion(name = sd.artifact, group = sd.group, version = v)
             }
           )
         )
@@ -66,12 +72,12 @@ class SlugDependenciesServiceSpec extends AnyFreeSpec with MockitoSugar with Mat
         dependency.copy(bobbyRuleViolations = violations)
       }
 
-      when(serviceConfigsService.getDependenciesWithBobbyRules(dependencies))
+      when(mockServiceConfigsService.getDependenciesWithBobbyRules(dependencies))
         .thenReturn(Future.successful(enrichedDependencies))
     }
 
     def stubNoBobbyRulesViolations(): Unit =
-      when(serviceConfigsService.getDependenciesWithBobbyRules(any[List[Dependency]]))
+      when(mockServiceConfigsService.getDependenciesWithBobbyRules(any[List[Dependency]]))
         .thenAnswer { i: InvocationOnMock =>
           val dependencies = i.getArgument[List[Dependency]](0)
           Future.successful(dependencies)
@@ -83,7 +89,7 @@ class SlugDependenciesServiceSpec extends AnyFreeSpec with MockitoSugar with Mat
     }
 
     def stubSlugVersionIsUnrecognised(name: String, version: String): Unit =
-      when(slugInfoService.getSlugInfo(name, version))
+      when(mockSlugInfoService.getSlugInfo(name, version))
         .thenReturn(Future.successful(None))
   }
 
@@ -92,17 +98,20 @@ class SlugDependenciesServiceSpec extends AnyFreeSpec with MockitoSugar with Mat
 
     "returning only curated libraries when the slug is recognised" in new Fixture {
       stubCuratedLibrariesOf(
-          LibraryConfig(name = Dependency1.artifact, group = Dependency1.group, latestVersion = None)
-        , LibraryConfig(name = Dependency3.artifact, group = Dependency3.group, latestVersion = None)
+          DependencyConfig(name = Dependency1.artifact, group = Dependency1.group, latestVersion = None)
+        , DependencyConfig(name = Dependency3.artifact, group = Dependency3.group, latestVersion = None)
         )
       stubNoEnrichmentsForDependencies()
-      when(slugInfoService.getSlugInfo(SlugName, flag)).thenReturn(
-        Future.successful(
-          Some(slugInfo(withName = SlugName, withVersion = SlugVersion.toString, withDependencies = List(
-            Dependency1, Dependency2, Dependency3
-          )))
+      when(mockSlugInfoService.getSlugInfo(SlugName, flag))
+        .thenReturn(
+          Future.successful(
+            Some(slugInfo(
+                withName         = SlugName
+              , withVersion      = SlugVersion
+              , withDependencies = List(Dependency1, Dependency2, Dependency3))
+              )
+          )
         )
-      )
 
       underTest.curatedLibrariesOfSlug(SlugName, flag).futureValue.value should contain theSameElementsAs Seq(
         Dependency(name = Dependency1.artifact, group = Dependency1.group, currentVersion = Version(Dependency1.version), latestVersion = None, bobbyRuleViolations = Nil),
@@ -112,9 +121,8 @@ class SlugDependenciesServiceSpec extends AnyFreeSpec with MockitoSugar with Mat
 
     "returning None when the slug is not recognised" in new Fixture {
       stubLatestLibraryVersionLookupSuccessfullyReturns(Seq.empty)
-      when(slugInfoService.getSlugInfo(SlugName, flag)).thenReturn(
-        Future.successful(None)
-      )
+      when(mockSlugInfoService.getSlugInfo(SlugName, flag))
+        .thenReturn(Future.successful(None))
 
       underTest.curatedLibrariesOfSlug(SlugName, flag).futureValue shouldBe None
     }
@@ -122,9 +130,8 @@ class SlugDependenciesServiceSpec extends AnyFreeSpec with MockitoSugar with Mat
     "failing when slug retrieval encounters a failure" in new Fixture {
       stubLatestLibraryVersionLookupSuccessfullyReturns(Seq.empty)
       val failure = new RuntimeException("failed to retrieve slug info by flag")
-      when(slugInfoService.getSlugInfo(SlugName, flag)).thenReturn(
-        Future.failed(failure)
-      )
+      when(mockSlugInfoService.getSlugInfo(SlugName, flag))
+        .thenReturn(Future.failed(failure))
 
       underTest.curatedLibrariesOfSlug(SlugName, flag).failed.futureValue shouldBe failure
     }
@@ -133,21 +140,24 @@ class SlugDependenciesServiceSpec extends AnyFreeSpec with MockitoSugar with Mat
       "only adding the latest version when known" in new Fixture {
         stubNoBobbyRulesViolations()
         stubCuratedLibrariesOf(
-          LibraryConfig(name = Dependency1.artifact, group = Dependency1.group, latestVersion = None)
-        , LibraryConfig(name = Dependency2.artifact, group = Dependency2.group, latestVersion = None)
-        , LibraryConfig(name = Dependency3.artifact, group = Dependency3.group, latestVersion = None)
+          DependencyConfig(name = Dependency1.artifact, group = Dependency1.group, latestVersion = None)
+        , DependencyConfig(name = Dependency2.artifact, group = Dependency2.group, latestVersion = None)
+        , DependencyConfig(name = Dependency3.artifact, group = Dependency3.group, latestVersion = None)
         )
         stubLatestLibraryVersionLookupSuccessfullyReturns(Seq(
             Dependency1 -> LatestVersionOfDependency1
           , Dependency3 -> LatestVersionOfDependency3
           ))
-        when(slugInfoService.getSlugInfo(SlugName, flag)).thenReturn(
-          Future.successful(
-            Some(slugInfo(withName = SlugName, withVersion = SlugVersion.toString, withDependencies = List(
-              Dependency1, Dependency2, Dependency3
-            )))
+        when(mockSlugInfoService.getSlugInfo(SlugName, flag))
+          .thenReturn(
+            Future.successful(
+              Some(slugInfo(
+                  withName         = SlugName
+                , withVersion      = SlugVersion
+                , withDependencies = List(Dependency1, Dependency2, Dependency3)
+              ))
+            )
           )
-        )
 
         underTest.curatedLibrariesOfSlug(SlugName, flag).futureValue.value should contain theSameElementsAs Seq(
           Dependency(name = Dependency1.artifact, group = Dependency1.group, currentVersion = Version(Dependency1.version), latestVersion = Some(LatestVersionOfDependency1), bobbyRuleViolations = Nil),
@@ -160,13 +170,16 @@ class SlugDependenciesServiceSpec extends AnyFreeSpec with MockitoSugar with Mat
         stubSlugVersionIsUnrecognised(SlugName, SlugVersion.toString)
         val failure = new RuntimeException("failed to retrieve latest library versions")
 
-        when(slugInfoService.getSlugInfo(SlugName, flag)).thenReturn(
-          Future.successful(
-            Some(slugInfo(withName = SlugName, withVersion = SlugVersion.toString, withDependencies = List(
-             Dependency2
-            )))))
+        when(mockSlugInfoService.getSlugInfo(SlugName, flag))
+          .thenReturn(Future.successful(
+            Some(slugInfo(
+                withName         = SlugName
+              , withVersion      = SlugVersion
+              , withDependencies = List(Dependency2)
+              ))
+          ))
 
-        when(libraryVersionRepository.getAllEntries)
+        when(mockDependencyVersionRepository.getAllEntries)
           .thenReturn(Future.failed(failure))
 
         underTest.curatedLibrariesOfSlug(SlugName, flag).failed.futureValue shouldBe failure
@@ -176,9 +189,9 @@ class SlugDependenciesServiceSpec extends AnyFreeSpec with MockitoSugar with Mat
     "enriches dependencies with Bobby rule violations" - {
       "only adding rule violations when there are active violations" in new Fixture {
         stubCuratedLibrariesOf(
-            LibraryConfig(name = Dependency1.artifact, group = Dependency1.group, latestVersion = None)
-          , LibraryConfig(name = Dependency2.artifact, group = Dependency2.group, latestVersion = None)
-          , LibraryConfig(name = Dependency3.artifact, group = Dependency3.group, latestVersion = None)
+            DependencyConfig(name = Dependency1.artifact, group = Dependency1.group, latestVersion = None)
+          , DependencyConfig(name = Dependency2.artifact, group = Dependency2.group, latestVersion = None)
+          , DependencyConfig(name = Dependency3.artifact, group = Dependency3.group, latestVersion = None)
           )
         stubLatestLibraryVersionLookupSuccessfullyReturns(Seq.empty)
         val bobbyRuleViolation1 = DependencyBobbyRule(reason = "a reason"      , from = LocalDate.now(), range = BobbyVersionRange("(,6.6.6)"))
@@ -196,13 +209,16 @@ class SlugDependenciesServiceSpec extends AnyFreeSpec with MockitoSugar with Mat
           )
         )
 
-        when(slugInfoService.getSlugInfo(SlugName, flag)).thenReturn(
-          Future.successful(
-            Some(slugInfo(withName = SlugName, withVersion = SlugVersion.toString, withDependencies = List(
-              Dependency1, Dependency2, Dependency3
-            )))
+        when(mockSlugInfoService.getSlugInfo(SlugName, flag))
+          .thenReturn(
+            Future.successful(
+              Some(slugInfo(
+                  withName         = SlugName
+                , withVersion      = SlugVersion
+                , withDependencies = List(Dependency1, Dependency2, Dependency3)
+                ))
+            )
           )
-        )
 
         underTest.curatedLibrariesOfSlug(SlugName, flag).futureValue.value should contain theSameElementsAs Seq(
           Dependency(name = Dependency1.artifact, group = Dependency1.group, currentVersion = Version(Dependency1.version), latestVersion = None, bobbyRuleViolations = List(bobbyRuleViolation1)),
@@ -213,20 +229,23 @@ class SlugDependenciesServiceSpec extends AnyFreeSpec with MockitoSugar with Mat
 
       "failing when the retrieval or application of Bobby rules encounters a failure" in new Fixture {
         stubCuratedLibrariesOf(
-          LibraryConfig(name = Dependency1.artifact, group = Dependency1.group, latestVersion = None)
-        , LibraryConfig(name = Dependency2.artifact, group = Dependency2.group, latestVersion = None)
-        , LibraryConfig(name = Dependency3.artifact, group = Dependency3.group, latestVersion = None)
+          DependencyConfig(name = Dependency1.artifact, group = Dependency1.group, latestVersion = None)
+        , DependencyConfig(name = Dependency2.artifact, group = Dependency2.group, latestVersion = None)
+        , DependencyConfig(name = Dependency3.artifact, group = Dependency3.group, latestVersion = None)
         )
         stubLatestLibraryVersionLookupSuccessfullyReturns(Seq.empty)
-        when(slugInfoService.getSlugInfo(SlugName, flag)).thenReturn(
-          Future.successful(
-            Some(slugInfo(withName = SlugName, withVersion = SlugVersion.toString, withDependencies = List(
-              Dependency1, Dependency2, Dependency3
-            )))
+        when(mockSlugInfoService.getSlugInfo(SlugName, flag))
+          .thenReturn(
+            Future.successful(
+              Some(slugInfo(
+                  withName         = SlugName
+                , withVersion      = SlugVersion
+                , withDependencies = List(Dependency1, Dependency2, Dependency3)
+                ))
+            )
           )
-        )
         val failure = new RuntimeException("failed to apply bobby rules")
-        when(serviceConfigsService.getDependenciesWithBobbyRules(any[List[Dependency]])).thenReturn(
+        when(mockServiceConfigsService.getDependenciesWithBobbyRules(any[List[Dependency]])).thenReturn(
           Future.failed(failure)
         )
 
@@ -245,12 +264,12 @@ private object SlugDependenciesServiceSpec {
   val LatestVersionOfDependency1 = Version("1.2.0")
   val LatestVersionOfDependency3 = Version("3.4.0")
 
-  def slugInfo(withName: String, withVersion: String, withDependencies: List[SlugDependency]): SlugInfo =
+  def slugInfo(withName: String, withVersion: Version, withDependencies: List[SlugDependency]): SlugInfo =
     SlugInfo(
       uri               = "some-uri",
       created           = LocalDateTime.now(),
       name              = withName,
-      version           = Version(withVersion),
+      version           = withVersion,
       teams             = Nil,
       runnerVersion     = "some-runner-version",
       classpath         = "some-classpath",
@@ -267,10 +286,10 @@ private object SlugDependenciesServiceSpec {
       integration       = false
     )
 
-  def aCuratedDependencyConfig(withLibraries: Seq[LibraryConfig]) =
+  def aCuratedDependencyConfig(withLibraries: List[DependencyConfig]) =
     CuratedDependencyConfig(
-      sbtPlugins        = Seq.empty,
-      libraries         = withLibraries,
-      otherDependencies = Seq.empty
+      sbtPlugins = List.empty
+    , libraries  = withLibraries
+    , others     = List.empty
     )
 }

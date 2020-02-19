@@ -21,7 +21,13 @@ import java.time.Instant
 
 import play.api.libs.json._
 
-case class RepositoryInfo(name:String, createdAt: Instant, lastUpdatedAt:Instant, repoType:String= "Other", language:Option[String] = None)
+case class RepositoryInfo(
+    name         : String
+  , createdAt    : Instant
+  , lastUpdatedAt: Instant
+  , repoType     : String = "Other"
+  , language     : Option[String] = None
+  )
 
 object RepositoryInfo {
 

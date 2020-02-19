@@ -38,7 +38,7 @@ object MongoRepositoryDependency {
   }
 
   def toMongoRepositoryDependency(name: String, group: Option[String], currentVersion: Version): MongoRepositoryDependency = {
-    // Initially we didn't store this information - this is was the assumption at the time.
+    // Initially we didn't store this information - this was the assumption at the time.
     val inferredGroup = name match {
       case "sbt-plugin"    => "com.typesafe.play"
       case "reactivemongo" => "org.reactivemongo"
@@ -56,10 +56,13 @@ object MongoRepositoryDependency {
 case class MongoRepositoryDependencies(
     repositoryName       : String
   , libraryDependencies  : Seq[MongoRepositoryDependency]
-  , sbtPluginDependencies: Seq[MongoRepositoryDependency] = Nil
+  , sbtPluginDependencies: Seq[MongoRepositoryDependency]
   , otherDependencies    : Seq[MongoRepositoryDependency]
   , updateDate           : Instant                        = Instant.now()
-  )
+  ) {
+    lazy val dependencies =
+      libraryDependencies ++ sbtPluginDependencies ++ otherDependencies
+  }
 
 object MongoRepositoryDependencies {
 

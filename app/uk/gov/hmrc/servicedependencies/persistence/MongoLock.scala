@@ -23,10 +23,13 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 
 @Singleton
-class MongoLocks @Inject()(mongoLockRepository: MongoLockRepository)(
-  implicit ec: ExecutionContext) {
-  val dependencyReloadSchedulerLock   = mongoLockRepository.toService("dependency-reload-scheduler", 1.hour)
-  val libraryReloadSchedulerLock      = mongoLockRepository.toService("librarary-reload-scheduler", 1.hour)
-  val slugMetadataUpdateSchedulerLock = mongoLockRepository.toService("slug-job-scheduler", 1.hour)
-  val bobbyRulesSummarySchedulerLock  = mongoLockRepository.toService("bobby-rules-summary-scheduler", 1.hour)
+class MongoLocks @Inject()(
+  mongoLockRepository: MongoLockRepository
+)(
+  implicit ec: ExecutionContext
+) {
+  val dependencyReloadSchedulerLock         = mongoLockRepository.toService("dependency-reload-scheduler"        , 1.hour)
+  val dependencyVersionsReloadSchedulerLock = mongoLockRepository.toService("dependencyVersions-reload-scheduler", 1.hour)
+  val slugMetadataUpdateSchedulerLock       = mongoLockRepository.toService("slug-job-scheduler"                 , 1.hour)
+  val bobbyRulesSummarySchedulerLock        = mongoLockRepository.toService("bobby-rules-summary-scheduler"      , 1.hour)
 }

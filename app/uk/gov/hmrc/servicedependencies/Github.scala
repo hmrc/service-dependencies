@@ -25,7 +25,7 @@ import org.eclipse.egit.github.core.{IRepositoryIdProvider, RepositoryContents}
 import org.slf4j.LoggerFactory
 import uk.gov.hmrc.githubclient._
 import uk.gov.hmrc.servicedependencies.config.ServiceDependenciesConfig
-import uk.gov.hmrc.servicedependencies.config.model.{CuratedDependencyConfig, LibraryConfig, OtherDependencyConfig, SbtPluginConfig}
+import uk.gov.hmrc.servicedependencies.config.model.{CuratedDependencyConfig, DependencyConfig}
 import uk.gov.hmrc.servicedependencies.model.{GithubSearchResults, Version}
 import uk.gov.hmrc.servicedependencies.util.{Max, VersionParser}
 
@@ -48,7 +48,7 @@ class Github(releaseService: ReleaseService, contentsService: ExtendedContentsSe
         GithubSearchResults(
           sbtPlugins = searchPluginSbtFileForMultipleArtifacts(repoName, curatedDependencyConfig.sbtPlugins)
         , libraries  = searchBuildFilesForMultipleArtifacts(repoName, curatedDependencyConfig.libraries)
-        , others     = searchForOtherSpecifiedDependencies(repoName, curatedDependencyConfig.otherDependencies)
+        , others     = searchForOtherSpecifiedDependencies(repoName, curatedDependencyConfig.others)
         )
       )
     } catch {
@@ -58,23 +58,9 @@ class Github(releaseService: ReleaseService, contentsService: ExtendedContentsSe
         Left(GithubSearchError(s"Unable to find dependencies for $repoName. Reason: ${ex.getMessage}", ex))
     }
 
-
-  def findLatestVersion(repoName: String): Option[Version] = {
-
-    val allVersions = Try(releaseService.getTags(org, repoName).map(_.name))
-      .recover {
-        case ex: RequestException if ex.getStatus == 404 =>
-          logger.info(s"Repository for $repoName not found")
-          Nil
-      }.get
-
-    val maybeVersions: Seq[Option[Version]] = allVersions.map(VersionParser.parseReleaseVersion)
-    Max.maxOf(maybeVersions)
-  }
-
   private def searchBuildFilesForMultipleArtifacts(
     serviceName: String
-  , artifacts  : Seq[LibraryConfig]
+  , artifacts  : Seq[DependencyConfig]
   ): Map[(String, String), Option[Version]] = {
 
     @tailrec
@@ -104,7 +90,7 @@ class Github(releaseService: ReleaseService, contentsService: ExtendedContentsSe
 
   private def searchForOtherSpecifiedDependencies(
     serviceName      : String
-  , otherDependencies: Seq[OtherDependencyConfig]
+  , otherDependencies: Seq[DependencyConfig]
   ): Map[(String, String), Option[Version]] =
     otherDependencies
       .find(d => d.name == "sbt" && d.group == "org.scala-sbt")
@@ -112,7 +98,7 @@ class Github(releaseService: ReleaseService, contentsService: ExtendedContentsSe
 
   private def searchPluginSbtFileForMultipleArtifacts(
     serviceName     : String
-  , sbtPluginConfigs: Seq[SbtPluginConfig]
+  , sbtPluginConfigs: Seq[DependencyConfig]
   ): Map[(String, String), Option[Version]] =
     getContentsOrEmpty(serviceName, "project/plugins.sbt")
       .headOption
@@ -145,7 +131,6 @@ class Github(releaseService: ReleaseService, contentsService: ExtendedContentsSe
        case ex: RequestException if ex.getStatus == 404 => Nil
      }
   }
-
 }
 
 

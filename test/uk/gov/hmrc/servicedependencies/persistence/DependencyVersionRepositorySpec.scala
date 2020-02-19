@@ -18,52 +18,54 @@ package uk.gov.hmrc.servicedependencies.persistence
 
 import java.time.Instant
 
+import com.codahale.metrics.MetricRegistry
 import org.mockito.MockitoSugar
 import org.mongodb.scala.bson.BsonDocument
 import org.mongodb.scala.model.IndexModel
 import uk.gov.hmrc.mongo.test.DefaultPlayMongoRepositorySupport
-import uk.gov.hmrc.servicedependencies.model.{MongoSbtPluginVersion, Version}
+import uk.gov.hmrc.servicedependencies.model.{MongoDependencyVersion, Version}
 import uk.gov.hmrc.servicedependencies.util.{FutureHelpers, MockFutureHelpers}
-import uk.gov.hmrc.time.DateTimeUtils
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpecLike
 
-class SbtPluginVersionRepositorySpec
+class DependencyVersionRepositorySpec
     extends AnyWordSpecLike
     with Matchers
     with MockitoSugar
-    with DefaultPlayMongoRepositorySupport[MongoSbtPluginVersion] {
+    with DefaultPlayMongoRepositorySupport[MongoDependencyVersion] {
 
+  val metricsRegistry             = new MetricRegistry()
   val futureHelper: FutureHelpers = new MockFutureHelpers()
-  override protected lazy val repository = new SbtPluginVersionRepository(mongoComponent, futureHelper, throttleConfig)
 
-  val sbtPluginVersion = MongoSbtPluginVersion(
-      name       = "some-sbtPlugin"
+  override lazy val repository = new DependencyVersionRepository(mongoComponent, futureHelper, throttleConfig)
+
+  val dependencyVersion = MongoDependencyVersion(
+      name       = "some-library"
     , group      = "uk.gov.hmrc"
-    , version    = Some(Version(1, 0, 2))
+    , version    = Version(1, 0, 2)
     , updateDate = Instant.now()
     )
 
   "update" should {
     "inserts correctly" in {
-      repository.update(sbtPluginVersion).futureValue
-      repository.getAllEntries.futureValue shouldBe Seq(sbtPluginVersion)
+      repository.update(dependencyVersion).futureValue
+      repository.getAllEntries.futureValue shouldBe Seq(dependencyVersion)
     }
 
-    "updates correctly (based on sbtPlugin name)" in {
-      val newSbtPluginVersion = sbtPluginVersion.copy(version = Some(Version(1, 0, 5)))
+    "updates correctly (based on name and group)" in {
+      val newLibraryVersion = dependencyVersion.copy(version = Version(1, 0, 5))
 
-      repository.update(sbtPluginVersion).futureValue
-      repository.update(newSbtPluginVersion).futureValue
-      repository.getAllEntries.futureValue shouldBe Seq(newSbtPluginVersion)
+      repository.update(dependencyVersion).futureValue
+      repository.update(newLibraryVersion).futureValue
+      repository.getAllEntries.futureValue shouldBe Seq(newLibraryVersion)
     }
   }
 
   "clearAllDependencyEntries" should {
     "deletes everything" in {
-      repository.update(sbtPluginVersion).futureValue
+      repository.update(dependencyVersion).futureValue
       repository.getAllEntries.futureValue should have size 1
       repository.clearAllData.futureValue
       repository.getAllEntries.futureValue shouldBe Nil
