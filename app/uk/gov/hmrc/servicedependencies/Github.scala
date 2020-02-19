@@ -26,7 +26,7 @@ import org.slf4j.LoggerFactory
 import uk.gov.hmrc.githubclient._
 import uk.gov.hmrc.servicedependencies.config.ServiceDependenciesConfig
 import uk.gov.hmrc.servicedependencies.config.model.{CuratedDependencyConfig, DependencyConfig}
-import uk.gov.hmrc.servicedependencies.model.{GithubSearchResults, Version}
+import uk.gov.hmrc.servicedependencies.model.{GithubDependency, GithubSearchResults, Version}
 import uk.gov.hmrc.servicedependencies.util.{Max, VersionParser}
 
 import scala.annotation.tailrec
@@ -40,15 +40,13 @@ class Github(releaseService: ReleaseService, contentsService: ExtendedContentsSe
 
   private lazy val logger = LoggerFactory.getLogger(this.getClass)
 
-  def findVersionsForMultipleArtifacts(
-    repoName: String,
-    curatedDependencyConfig: CuratedDependencyConfig): Either[GithubSearchError, GithubSearchResults] =
+  def findVersionsForMultipleArtifacts(repoName: String): Either[GithubSearchError, GithubSearchResults] =
     try {
       Right(
         GithubSearchResults(
-          sbtPlugins = searchPluginSbtFileForMultipleArtifacts(repoName, curatedDependencyConfig.sbtPlugins)
-        , libraries  = searchBuildFilesForMultipleArtifacts(repoName, curatedDependencyConfig.libraries)
-        , others     = searchForOtherSpecifiedDependencies(repoName, curatedDependencyConfig.others)
+          sbtPlugins = searchPluginSbtFileForMultipleArtifacts(repoName)
+        , libraries  = searchBuildFilesForMultipleArtifacts(repoName)
+        , others     = searchForOtherSpecifiedDependencies(repoName)
         )
       )
     } catch {
@@ -58,21 +56,22 @@ class Github(releaseService: ReleaseService, contentsService: ExtendedContentsSe
         Left(GithubSearchError(s"Unable to find dependencies for $repoName. Reason: ${ex.getMessage}", ex))
     }
 
-  private def searchBuildFilesForMultipleArtifacts(serviceName: String): Map[(String, String), Option[Version]] = {
+  private def searchBuildFilesForMultipleArtifacts(serviceName: String): Seq[GithubDependency] = {
     val filesInProjectDir =
       getContentsOrEmpty(serviceName, "project")
         .map(_.getPath)
         .filter(_.endsWith(".scala"))
 
     (filesInProjectDir :+ "build.sbt")
-      .foldLeft(Map.empty[(String, String), Option[Version]]) { (acc, filePath) =>
+      .foldLeft(Seq.empty[GithubDependency]) { (acc, filePath) =>
         // if any results are found in file, assume all results are here, and terminate github scraping early
-        if (!acc.exists(_._2.isDefined)) // TODO change to Map[(String, String), Version] and just check if acc.isEmpty
+        if (acc.isEmpty)
           getContentsOrEmpty(serviceName, filePath)
             .headOption
-            .fold(Map.empty[(String, String), Option[Version]])(parseFileForMultipleArtifacts)
+            .fold(Seq.empty[GithubDependency])(parseFileForMultipleArtifacts)
         else acc
       }
+  }
 
   private def getCurrentSbtVersion(repositoryName: String): Option[Version] = {
     val version = getContentsOrEmpty(repositoryName, "project/build.properties")
@@ -80,32 +79,18 @@ class Github(releaseService: ReleaseService, contentsService: ExtendedContentsSe
     else VersionParser.parsePropertyFile(parseFileContents(version.head), "sbt.version")
   }
 
-  private def searchForOtherSpecifiedDependencies(
-    serviceName      : String
-  , otherDependencies: Seq[DependencyConfig]
-  ): Map[(String, String), Option[Version]] =
-    otherDependencies
-      .find(d => d.name == "sbt" && d.group == "org.scala-sbt")
-      .fold(Map.empty[(String, String), Option[Version]])(c => Map((c.name, c.group) -> getCurrentSbtVersion(serviceName)))
+  private def searchForOtherSpecifiedDependencies(serviceName: String): Seq[GithubDependency] =
+    getCurrentSbtVersion(serviceName)
+      .map(v => GithubDependency(group = "org.scala-sbt", name = "sbt", version = v))
+      .toSeq
 
-  private def searchPluginSbtFileForMultipleArtifacts(
-    serviceName     : String
-  , sbtPluginConfigs: Seq[DependencyConfig]
-  ): Map[(String, String), Option[Version]] =
-    getContentsOrEmpty(serviceName, "project/plugins.sbt")
+  private def searchPluginSbtFileForMultipleArtifacts(serviceName: String): Seq[GithubDependency] =
+    getContentsOrEmpty(serviceName, "project/plugins.sbt") // TODO what about other .sbt files?
       .headOption
-      .fold(Map.empty[(String, String), Option[Version]])(parseFileForMultipleArtifacts(_, sbtPluginConfigs.map(c => (c.name, c.group))))
+      .fold(Seq.empty[GithubDependency])(parseFileForMultipleArtifacts)
 
-  private def parseFileForMultipleArtifacts(
-    response : RepositoryContents
-  , artifacts: Seq[(String, String)]
-  ): Map[(String, String), Option[Version]] =
-    VersionParser.parse(parseFileContents(response), artifacts)
-
-  private def performProjectDirectorySearch(repoName: String): Seq[String] =
-    getContentsOrEmpty(repoName, "project")
-      .map(_.getPath)
-      .filter(_.endsWith(".scala"))
+  private def parseFileForMultipleArtifacts(response : RepositoryContents): Seq[GithubDependency] =
+    VersionParser.parse(parseFileContents(response))
 
   private def repositoryId(repoName: String, orgName: String): IRepositoryIdProvider =
     new IRepositoryIdProvider {

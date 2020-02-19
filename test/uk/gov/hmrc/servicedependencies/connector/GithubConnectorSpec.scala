@@ -15,6 +15,7 @@
  */
 
 package uk.gov.hmrc.servicedependencies.connector
+
 import java.time.Instant
 
 import com.kenshoo.play.metrics.DisabledMetrics
@@ -23,7 +24,7 @@ import org.mockito.MockitoSugar
 import uk.gov.hmrc.servicedependencies.config.ServiceDependenciesConfig
 import uk.gov.hmrc.servicedependencies.config.model.CuratedDependencyConfig
 import uk.gov.hmrc.servicedependencies.connector.model.RepositoryInfo
-import uk.gov.hmrc.servicedependencies.model.{GithubSearchResults, MongoRepositoryDependency, Version}
+import uk.gov.hmrc.servicedependencies.model.{GithubDependency, GithubSearchResults, MongoRepositoryDependency, Version}
 import uk.gov.hmrc.servicedependencies.{Github, GithubSearchError}
 import org.scalatest.matchers.must.Matchers
 import org.scalatest.wordspec.AnyWordSpec
@@ -38,35 +39,33 @@ class GithubConnectorSpec extends AnyWordSpec with Matchers with MockitoSugar {
   val githubConnector = new GithubConnector(mockGithub)
 
   "buildDependencies" should {
-
     val repoInfo = RepositoryInfo("test-repo", Instant.now(), Instant.now(), "Java")
-    val depConfig = new CuratedDependencyConfig(Nil, Nil, Nil)
 
     "return None when repo is not found in github" in {
-
-      when(mockGithub.findVersionsForMultipleArtifacts(any(), any()))
+      when(mockGithub.findVersionsForMultipleArtifacts(any()))
         .thenReturn(Left(GithubSearchError("mock error", new Exception("mock exception"))))
 
-      githubConnector.buildDependencies(repoInfo, depConfig) mustBe None
+      githubConnector.buildDependencies(repoInfo) mustBe None
     }
 
-    "return all the dependencies wehn repo is in github" in {
+    "return all the dependencies when repo is in github" in {
 
       val mockResult = GithubSearchResults(
-          sbtPlugins = Map( ("sbt-auto-build" , "uk.gov.hmrc"  ) -> Some(Version(1,2,3))
-                          , ("sbt-artifactory", "uk.gov.hmrc"  ) -> Some(Version(0,13,3))
+          sbtPlugins = Seq( GithubDependency(group = "uk.gov.hmrc"  , name = "sbt-auto-build" , version = Version("1.2.3"))
+                          , GithubDependency(group = "uk.gov.hmrc"  , name = "sbt-artifactory", version = Version("0.13.3"))
                           )
-        , libraries  = Map( ("bootstrap-play" , "uk.gov.hmrc"  ) -> Some(Version(7,0,0))
-                          , ("mongo-lock"     , "uk.gov.hmrc"  ) -> Some(Version(1,4,1))
+        , libraries  = Seq( GithubDependency(group = "uk.gov.hmrc"  , name = "bootstrap-play" , version = Version("7.0.0"))
+                          , GithubDependency(group = "uk.gov.hmrc"  , name = "mongo-lock"     , version = Version("1.4.1"))
                           )
-        , others     = Map( ("sbt"            , "org.scala-sbt") -> Some(Version(0,13,1)))
+        , others     = Seq( GithubDependency(group = "org.scala-sbt", name = "sbt"            , version = Version("0.13.1"))
+                          )
         )
 
 
-      when(mockGithub.findVersionsForMultipleArtifacts(any(), any()))
+      when(mockGithub.findVersionsForMultipleArtifacts(any()))
         .thenReturn(Right(mockResult))
 
-      val result = githubConnector.buildDependencies(repoInfo, depConfig)
+      val result = githubConnector.buildDependencies(repoInfo)
       result.isDefined mustBe true
       result.get.sbtPluginDependencies mustBe List( MongoRepositoryDependency(name = "sbt-auto-build" , group = "uk.gov.hmrc"  , currentVersion = Version(1,2,3))
                                                   , MongoRepositoryDependency(name = "sbt-artifactory", group = "uk.gov.hmrc"  , currentVersion = Version(0,13,3))

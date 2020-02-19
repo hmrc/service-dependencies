@@ -21,24 +21,20 @@ import java.time.Instant
 import javax.inject.{Inject, Singleton}
 import org.slf4j.LoggerFactory
 import uk.gov.hmrc.servicedependencies.Github
-import uk.gov.hmrc.servicedependencies.config.model.CuratedDependencyConfig
 import uk.gov.hmrc.servicedependencies.connector.model.RepositoryInfo
-import uk.gov.hmrc.servicedependencies.model.{MongoRepositoryDependencies, MongoRepositoryDependency, Version}
+import uk.gov.hmrc.servicedependencies.model.{GithubDependency, MongoRepositoryDependencies, MongoRepositoryDependency, Version}
 
 @Singleton
 class GithubConnector @Inject()(github: Github) {
 
   lazy val logger = LoggerFactory.getLogger(this.getClass)
 
-  private def toMongoRepositoryDependencies(results: Map[(String, String), Option[Version]]): Seq[MongoRepositoryDependency] =
+  private def toMongoRepositoryDependencies(results: Seq[GithubDependency]): Seq[MongoRepositoryDependency] =
     results
-      .collect { case ((name, group), Some(currentVersion)) =>
-         MongoRepositoryDependency(name = name, group = group, currentVersion = currentVersion)
-       }
-      .toSeq
+      .map(d => MongoRepositoryDependency(name = d.name, group = d.group, currentVersion = d.version))
 
-  def buildDependencies(repo: RepositoryInfo, curatedDeps: CuratedDependencyConfig): Option[MongoRepositoryDependencies] =
-    github.findVersionsForMultipleArtifacts(repo.name, curatedDeps)
+  def buildDependencies(repo: RepositoryInfo): Option[MongoRepositoryDependencies] =
+    github.findVersionsForMultipleArtifacts(repo.name)
       .right
       .map(searchResults =>
         MongoRepositoryDependencies(

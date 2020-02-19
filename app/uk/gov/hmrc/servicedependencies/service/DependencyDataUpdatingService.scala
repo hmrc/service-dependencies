@@ -72,8 +72,6 @@ class DependencyDataUpdatingService @Inject()(
     } yield res.flatten
 
 
-
-
   def reloadCurrentDependenciesDataForAllRepositories(
       force: Boolean = false
       )(implicit hc: HeaderCarrier
@@ -83,7 +81,7 @@ class DependencyDataUpdatingService @Inject()(
       currentDependencyEntries <- repositoryLibraryDependenciesRepository.getAllEntries
       repos                    <- teamsAndRepositoriesConnector.getAllRepositories
       libraryDependencies      <- repos.toList.traverse { repo =>
-                                    buildMongoRepositoryDependencies(repo, curatedDependencyConfig, currentDependencyEntries, force)
+                                    buildMongoRepositoryDependencies(repo, currentDependencyEntries, force)
                                       .traverse(repositoryLibraryDependenciesRepository.update)
                                   }.map(_.flatten)
     } yield libraryDependencies
@@ -91,7 +89,6 @@ class DependencyDataUpdatingService @Inject()(
 
   def buildMongoRepositoryDependencies(
       repo                   : RepositoryInfo
-    , curatedDependencyConfig: CuratedDependencyConfig
     , currentDeps            : Seq[MongoRepositoryDependencies]
     , force                  : Boolean
     ): Option[MongoRepositoryDependencies] = {
@@ -103,7 +100,7 @@ class DependencyDataUpdatingService @Inject()(
 
     if (force || !repo.lastUpdatedAt.isBefore(lastUpdated)) {
       logger.info(s"building repo for ${repo.name}")
-      githubConnector.buildDependencies(repo, curatedDependencyConfig)
+      githubConnector.buildDependencies(repo)
     } else {
       logger.debug(s"No changes for repository (${repo.name}). Skipping....")
       None
