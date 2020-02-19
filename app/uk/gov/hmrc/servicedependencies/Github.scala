@@ -58,29 +58,21 @@ class Github(releaseService: ReleaseService, contentsService: ExtendedContentsSe
         Left(GithubSearchError(s"Unable to find dependencies for $repoName. Reason: ${ex.getMessage}", ex))
     }
 
-  private def searchBuildFilesForMultipleArtifacts(
-    serviceName: String
-  , artifacts  : Seq[DependencyConfig]
-  ): Map[(String, String), Option[Version]] = {
+  private def searchBuildFilesForMultipleArtifacts(serviceName: String): Map[(String, String), Option[Version]] = {
+    val filesInProjectDir =
+      getContentsOrEmpty(serviceName, "project")
+        .map(_.getPath)
+        .filter(_.endsWith(".scala"))
 
-    @tailrec
-    def searchRemainingBuildFiles(remainingBuildFiles: Seq[String]): Map[(String, String), Option[Version]] =
-      remainingBuildFiles match {
-        case filePath :: xs =>
-          val versionsMap =
-            getContentsOrEmpty(serviceName, filePath)
-              .headOption
-              .fold(Map.empty[(String, String), Option[Version]])(parseFileForMultipleArtifacts(_, artifacts.map(a => (a.name, a.group))))
-          if (!versionsMap.exists(_._2.isDefined))
-            searchRemainingBuildFiles(xs)
-          else
-            versionsMap
-
-        case Nil => Map.empty
+    (filesInProjectDir :+ "build.sbt")
+      .foldLeft(Map.empty[(String, String), Option[Version]]) { (acc, filePath) =>
+        // if any results are found in file, assume all results are here, and terminate github scraping early
+        if (!acc.exists(_._2.isDefined)) // TODO change to Map[(String, String), Version] and just check if acc.isEmpty
+          getContentsOrEmpty(serviceName, filePath)
+            .headOption
+            .fold(Map.empty[(String, String), Option[Version]])(parseFileForMultipleArtifacts)
+        else acc
       }
-
-    searchRemainingBuildFiles(performProjectDirectorySearch(serviceName) :+ "build.sbt")
-  }
 
   private def getCurrentSbtVersion(repositoryName: String): Option[Version] = {
     val version = getContentsOrEmpty(repositoryName, "project/build.properties")

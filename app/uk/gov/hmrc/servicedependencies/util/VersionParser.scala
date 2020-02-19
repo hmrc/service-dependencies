@@ -34,14 +34,6 @@ object VersionParser {
        }
       .toMap
 
-  def parseReleaseVersion(tag: String): Option[Version] = {
-    val tagRegex = """^(?:release\/|v)(\d+\.\d+\.\d+)$""".r.unanchored
-    tag match {
-      case tagRegex(version) => Version.parse(version.replaceAll("\"", ""))
-      case _                 => None
-    }
-  }
-
   def parse(fileContent: String, name: String, group: String): Option[Version] = {
     val stringVersion   = ("\"" + group + "\"[\\s%]*\"" + name + "\"" + """\s*%\s*"(\d+\.\d+\.\d+-?\S*)"""").r.unanchored
     val variableVersion = ("\"" + group + "\"[\\s%]*\"" + name + "\"" + """\s*%\s*(\w*)""").r.unanchored
@@ -57,18 +49,6 @@ object VersionParser {
     file match {
       case variableRegex(value) => Version.parse(value)
       case _                    => None
-    }
-  }
-}
-
-object PluginsSbtFileVersionParser {
-
-  def parse(fileContent: String, artifact: String): Option[Version] = {
-    val stringVersion = (s""".*"$artifact""" + """"\s*%\s*"(\d+\.\d+\.\d+-?\S*)".*""").r.unanchored
-
-    fileContent match {
-      case stringVersion(version) => Version.parse(version)
-      case _                      => None
     }
   }
 }

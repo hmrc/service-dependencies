@@ -14,11 +14,11 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.servicedependencies.model
+package uk.gov.hmrc.servicedependencies.util
 
-import uk.gov.hmrc.servicedependencies.util.VersionParser
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.must.Matchers
+import uk.gov.hmrc.servicedependencies.model.Version
 
 class VersionParserSpec extends AnyFreeSpec with Matchers {
 
@@ -180,19 +180,11 @@ class VersionParserSpec extends AnyFreeSpec with Matchers {
       )
   }
 
-  "Parses PRIVATE release version correctly" in {
-    val tag = "release/1.0.1"
-    VersionParser.parseReleaseVersion(tag) mustBe Some(Version(1, 0, 1, "1.0.1"))
-  }
 
-  "Parses PUBLIC release version correctly" in {
-    val tag = "v1.0.1"
-    VersionParser.parseReleaseVersion(tag) mustBe Some(Version(1, 0, 1, "1.0.1"))
-  }
+  "Parses sbt-plugin version in line" in {
+    val fileContents = """addSbtPlugin("com.typesafe.play" % "sbt-plugin" % "2.3.10")}""".stripMargin
 
-  "Parsing an invalid release version returns None" in {
-    val tag = "sthElse/1.0.1"
-    VersionParser.parseReleaseVersion(tag) mustBe None
+    VersionParser.parse(fileContents, name = "sbt-plugin", group = "com.typesafe.play") mustBe Some(Version(2, 3, 10))
   }
 
   "Parsing a build.properties file containing only the sbt version returns the sbt version" in {
