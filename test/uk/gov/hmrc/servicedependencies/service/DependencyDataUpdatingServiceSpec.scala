@@ -30,7 +30,7 @@ import play.api.inject.guice.GuiceApplicationBuilder
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.mongo.CurrentTimestampSupport
 import uk.gov.hmrc.mongo.test.MongoSupport
-import uk.gov.hmrc.servicedependencies.config.CuratedDependencyConfigProvider
+import uk.gov.hmrc.servicedependencies.config.ServiceDependenciesConfig
 import uk.gov.hmrc.servicedependencies.config.model.{CuratedDependencyConfig, DependencyConfig}
 import uk.gov.hmrc.servicedependencies.connector.{ArtifactoryConnector, GithubConnector, GithubSearchResults, TeamsAndRepositoriesConnector}
 import uk.gov.hmrc.servicedependencies.connector.model.RepositoryInfo
@@ -408,8 +408,8 @@ class DependencyDataUpdatingServiceSpec
     dependencyConfig: CuratedDependencyConfig
   ) {
 
-    val mockCuratedDependencyConfigProvider = mock[CuratedDependencyConfigProvider]
-    when(mockCuratedDependencyConfigProvider.curatedDependencyConfig)
+    val mockServiceDependenciesConfig = mock[ServiceDependenciesConfig]
+    when(mockServiceDependenciesConfig.curatedDependencyConfig)
       .thenReturn(dependencyConfig)
 
     val mockRepositoryLibraryDependenciesRepository = mock[RepositoryLibraryDependenciesRepository]
@@ -419,7 +419,7 @@ class DependencyDataUpdatingServiceSpec
     val mockGithubConnector                         = mock[GithubConnector]
 
     val dependencyUpdatingService = new DependencyDataUpdatingService(
-        mockCuratedDependencyConfigProvider
+        mockServiceDependenciesConfig
       , mockRepositoryLibraryDependenciesRepository
       , mockDependencyVersionRepository
       , mockTeamsAndRepositoriesConnector

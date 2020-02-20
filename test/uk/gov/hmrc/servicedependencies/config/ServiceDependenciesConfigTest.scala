@@ -19,13 +19,14 @@ package uk.gov.hmrc.servicedependencies.config
 import org.mockito.ArgumentMatchers.any
 import org.mockito.MockitoSugar
 import org.scalatest.OptionValues
-import play.api.Configuration
-import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
 import org.scalatest.funspec.AnyFunSpec
 import org.scalatest.matchers.should.Matchers
+import play.api.Configuration
+import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
+import uk.gov.hmrc.servicedependencies.config.model.{CuratedDependencyConfig, DependencyConfig}
+import uk.gov.hmrc.servicedependencies.model.Version
 
 class ServiceDependenciesConfigTest extends AnyFunSpec with Matchers with MockitoSugar with OptionValues {
-
 
   describe("ServiceDependenciesConfig") {
 
@@ -46,6 +47,29 @@ class ServiceDependenciesConfigTest extends AnyFunSpec with Matchers with Mockit
       sdc.githubApiOpenConfig.apiUrl shouldBe "https://api.test.url"
     }
 
-  }
+    it("should load the curatedDependencyConfig") {
+      val config =
+        Configuration("curated.config.path" -> "/config/test-config.json")
 
+
+      val serviceConfig = mock[ServicesConfig]
+      when(serviceConfig.baseUrl(any())).thenReturn("")
+
+      val sdc = new ServiceDependenciesConfig(config, serviceConfig)
+
+      sdc.curatedDependencyConfig shouldBe CuratedDependencyConfig(
+          sbtPlugins = List(
+                         DependencyConfig(name = "internal-plugin", group = "uk.gov.hmrc"         , latestVersion = None)
+                       , DependencyConfig(name = "external-plugin", group = "com.example.external", latestVersion = Some(Version("1.4.0")))
+                       )
+        , libraries  = List(
+                         DependencyConfig(name = "lib1", group = "uk.gov.hmrc", latestVersion = None)
+                       , DependencyConfig(name = "lib2", group = "uk.gov.hmrc", latestVersion = None)
+                       )
+        , others     = List(
+                         DependencyConfig(name = "sbt", group = "org.scala-sbt", latestVersion = Some(Version("0.13.11")))
+                       )
+        )
+    }
+  }
 }

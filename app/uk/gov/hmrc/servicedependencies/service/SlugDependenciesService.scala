@@ -18,7 +18,7 @@ package uk.gov.hmrc.servicedependencies.service
 
 import cats.implicits._
 import javax.inject.{Inject, Singleton}
-import uk.gov.hmrc.servicedependencies.config.CuratedDependencyConfigProvider
+import uk.gov.hmrc.servicedependencies.config.ServiceDependenciesConfig
 import uk.gov.hmrc.servicedependencies.config.model.CuratedDependencyConfig
 import uk.gov.hmrc.servicedependencies.connector.ServiceConfigsConnector
 import uk.gov.hmrc.servicedependencies.controller.model.Dependency
@@ -30,15 +30,15 @@ import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
 class SlugDependenciesService @Inject()(
-  slugInfoService                : SlugInfoService
-, curatedDependencyConfigProvider: CuratedDependencyConfigProvider
-, dependencyVersionRepository    : DependencyVersionRepository
-, serviceConfigsConnector        : ServiceConfigsConnector
+  slugInfoService            : SlugInfoService
+, serviceDependenciesConfig  : ServiceDependenciesConfig
+, dependencyVersionRepository: DependencyVersionRepository
+, serviceConfigsConnector    : ServiceConfigsConnector
 )(implicit ec: ExecutionContext
 ) {
 
   private lazy val curatedDependencyConfig: CuratedDependencyConfig =
-    curatedDependencyConfigProvider.curatedDependencyConfig
+    serviceDependenciesConfig.curatedDependencyConfig
 
   /*
    * We may want to evolve the model - but for this initial version we reuse the existing Dependency definition.

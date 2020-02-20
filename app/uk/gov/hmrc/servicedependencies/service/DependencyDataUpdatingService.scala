@@ -23,7 +23,7 @@ import com.google.inject.{Inject, Singleton}
 import org.slf4j.LoggerFactory
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.servicedependencies.connector.{ArtifactoryConnector, GithubConnector, GithubDependency, GithubSearchResults, TeamsAndRepositoriesConnector}
-import uk.gov.hmrc.servicedependencies.config.CuratedDependencyConfigProvider
+import uk.gov.hmrc.servicedependencies.config.ServiceDependenciesConfig
 import uk.gov.hmrc.servicedependencies.config.model.{CuratedDependencyConfig, DependencyConfig}
 import uk.gov.hmrc.servicedependencies.connector.model.RepositoryInfo
 import uk.gov.hmrc.servicedependencies.controller.model.{Dependencies, Dependency}
@@ -35,7 +35,7 @@ import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
 class DependencyDataUpdatingService @Inject()(
-  curatedDependencyConfigProvider        : CuratedDependencyConfigProvider
+  serviceDependenciesConfig              : ServiceDependenciesConfig
 , repositoryLibraryDependenciesRepository: RepositoryLibraryDependenciesRepository
 , dependencyVersionRepository            : DependencyVersionRepository
 , teamsAndRepositoriesConnector          : TeamsAndRepositoriesConnector
@@ -49,7 +49,7 @@ class DependencyDataUpdatingService @Inject()(
   def now: Instant = Instant.now()
 
   lazy val curatedDependencyConfig =
-    curatedDependencyConfigProvider.curatedDependencyConfig
+    serviceDependenciesConfig.curatedDependencyConfig
 
   def reloadLatestDependencyVersions(implicit hc: HeaderCarrier): Future[List[MongoDependencyVersion]] =
     for {

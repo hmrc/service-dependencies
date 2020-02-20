@@ -25,7 +25,7 @@ import org.scalatest.OptionValues
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.should.Matchers
-import uk.gov.hmrc.servicedependencies.config.CuratedDependencyConfigProvider
+import uk.gov.hmrc.servicedependencies.config.ServiceDependenciesConfig
 import uk.gov.hmrc.servicedependencies.config.model.{CuratedDependencyConfig, DependencyConfig}
 import uk.gov.hmrc.servicedependencies.connector.ServiceConfigsConnector
 import uk.gov.hmrc.servicedependencies.controller.model.{Dependency, DependencyBobbyRule}
@@ -41,21 +41,21 @@ class SlugDependenciesServiceSpec extends AnyFreeSpec with MockitoSugar with Mat
   import SlugDependenciesServiceSpec._
 
   private trait Fixture {
-    val mockSlugInfoService                 = mock[SlugInfoService]
-    val mockCuratedDependencyConfigProvider = mock[CuratedDependencyConfigProvider]
-    val mockDependencyVersionRepository     = mock[DependencyVersionRepository]
-    val mockServiceConfigsConnector         = mock[ServiceConfigsConnector]
+    val mockSlugInfoService             = mock[SlugInfoService]
+    val mockServiceDependenciesConfig   = mock[ServiceDependenciesConfig]
+    val mockDependencyVersionRepository = mock[DependencyVersionRepository]
+    val mockServiceConfigsConnector     = mock[ServiceConfigsConnector]
 
     val underTest =
       new SlugDependenciesService(
           mockSlugInfoService
-        , mockCuratedDependencyConfigProvider
+        , mockServiceDependenciesConfig
         , mockDependencyVersionRepository
         , mockServiceConfigsConnector
         )
 
     def stubCuratedLibrariesOf(libraryNames: DependencyConfig*): Unit =
-      when(mockCuratedDependencyConfigProvider.curatedDependencyConfig)
+      when(mockServiceDependenciesConfig.curatedDependencyConfig)
         .thenReturn(aCuratedDependencyConfig(libraryNames.toList))
 
     def stubLatestLibraryVersionLookupSuccessfullyReturns(versionsByName: Seq[(SlugDependency, Version)]): Unit =
