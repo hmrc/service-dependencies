@@ -31,7 +31,7 @@ import uk.gov.hmrc.servicedependencies.model.Version
 
 import scala.collection.JavaConverters._
 
-class GithubSpec extends AnyWordSpec with Matchers with MockitoSugar with OptionValues {
+class GithubConnectorSpec extends AnyWordSpec with Matchers with MockitoSugar with OptionValues {
 
   "Finding multiple artifacts versions for a repository" should {
 
@@ -259,7 +259,7 @@ class GithubSpec extends AnyWordSpec with Matchers with MockitoSugar with Option
 
     val mockedReleaseService = mock[ReleaseService]
 
-    val github = new Github(mockedReleaseService, mockContentsService)
+    val github = new GithubConnector(mockedReleaseService, mockContentsService)
   }
 
   private def loadFileAsBase64String(filename: String): String = {

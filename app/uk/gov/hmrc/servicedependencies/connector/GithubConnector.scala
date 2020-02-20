@@ -46,7 +46,10 @@ case class GithubSearchResults(
 
 case class GithubSearchError(message: String, throwable: Throwable)
 
-class Github(releaseService: ReleaseService, contentsService: ExtendedContentsService) {
+class GithubConnector(
+  releaseService : ReleaseService
+, contentsService: ExtendedContentsService
+) {
 
   private val org = "HMRC"
 
@@ -123,7 +126,10 @@ class Github(releaseService: ReleaseService, contentsService: ExtendedContentsSe
 }
 
 
-class GithubProvider @Inject() (config: ServiceDependenciesConfig, metrics: Metrics) extends Provider[Github] {
+class GithubConnectorProvider @Inject()(
+  config : ServiceDependenciesConfig
+, metrics: Metrics
+) extends Provider[GithubConnector] {
 
   class GithubMetrics(override val metricName: String) extends GithubClientMetrics {
     lazy val registry = metrics.defaultRegistry
@@ -132,11 +138,17 @@ class GithubProvider @Inject() (config: ServiceDependenciesConfig, metrics: Metr
   }
 
   // Github client setup
-  private lazy val client: ExtendedGitHubClient = ExtendedGitHubClient(config.githubApiOpenConfig.apiUrl, new GithubMetrics("github.open"))
-    .setOAuth2Token(config.githubApiOpenConfig.key)
-    .asInstanceOf[ExtendedGitHubClient]
+  private lazy val client: ExtendedGitHubClient =
+    ExtendedGitHubClient(
+        config.githubApiOpenConfig.apiUrl
+      , new GithubMetrics("github.open")
+      )
+      .setOAuth2Token(config.githubApiOpenConfig.key)
+      .asInstanceOf[ExtendedGitHubClient]
 
-  override def get(): Github = {
-    new Github(new ReleaseService(client), new ExtendedContentsService(client))
-  }
+  override def get(): GithubConnector =
+    new GithubConnector(
+        new ReleaseService(client)
+      , new ExtendedContentsService(client)
+      )
 }

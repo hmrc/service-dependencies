@@ -32,7 +32,7 @@ import uk.gov.hmrc.mongo.CurrentTimestampSupport
 import uk.gov.hmrc.mongo.test.MongoSupport
 import uk.gov.hmrc.servicedependencies.config.CuratedDependencyConfigProvider
 import uk.gov.hmrc.servicedependencies.config.model.{CuratedDependencyConfig, DependencyConfig}
-import uk.gov.hmrc.servicedependencies.connector.{ArtifactoryConnector, Github, GithubSearchResults, TeamsAndRepositoriesConnector}
+import uk.gov.hmrc.servicedependencies.connector.{ArtifactoryConnector, GithubConnector, GithubSearchResults, TeamsAndRepositoriesConnector}
 import uk.gov.hmrc.servicedependencies.connector.model.RepositoryInfo
 import uk.gov.hmrc.servicedependencies.controller.model.{Dependencies, Dependency}
 import uk.gov.hmrc.servicedependencies.model._
@@ -122,7 +122,7 @@ class DependencyDataUpdatingServiceSpec
       when(boot.mockTeamsAndRepositoriesConnector.getAllRepositories(any()))
         .thenReturn(Future.successful(Seq(repositoryInfo)))
 
-      when(boot.mockGithub.findVersionsForMultipleArtifacts(any()))
+      when(boot.mockGithubConnector.findVersionsForMultipleArtifacts(any()))
         .thenReturn(Right(githubSearchResults))
 
       when(boot.mockRepositoryLibraryDependenciesRepository.update(any()))
@@ -416,7 +416,7 @@ class DependencyDataUpdatingServiceSpec
     val mockDependencyVersionRepository             = mock[DependencyVersionRepository]
     val mockTeamsAndRepositoriesConnector           = mock[TeamsAndRepositoriesConnector]
     val mockArtifactoryConnector                    = mock[ArtifactoryConnector]
-    val mockGithub                                  = mock[Github]
+    val mockGithubConnector                         = mock[GithubConnector]
 
     val dependencyUpdatingService = new DependencyDataUpdatingService(
         mockCuratedDependencyConfigProvider
@@ -424,7 +424,7 @@ class DependencyDataUpdatingServiceSpec
       , mockDependencyVersionRepository
       , mockTeamsAndRepositoriesConnector
       , mockArtifactoryConnector
-      , mockGithub
+      , mockGithubConnector
       ) {
         override def now: Instant = timeForTest
       }

@@ -22,7 +22,7 @@ import cats.implicits._
 import com.google.inject.{Inject, Singleton}
 import org.slf4j.LoggerFactory
 import uk.gov.hmrc.http.HeaderCarrier
-import uk.gov.hmrc.servicedependencies.connector.{ArtifactoryConnector, Github, GithubDependency, GithubSearchResults, TeamsAndRepositoriesConnector}
+import uk.gov.hmrc.servicedependencies.connector.{ArtifactoryConnector, GithubConnector, GithubDependency, GithubSearchResults, TeamsAndRepositoriesConnector}
 import uk.gov.hmrc.servicedependencies.config.CuratedDependencyConfigProvider
 import uk.gov.hmrc.servicedependencies.config.model.{CuratedDependencyConfig, DependencyConfig}
 import uk.gov.hmrc.servicedependencies.connector.model.RepositoryInfo
@@ -40,7 +40,7 @@ class DependencyDataUpdatingService @Inject()(
 , dependencyVersionRepository            : DependencyVersionRepository
 , teamsAndRepositoriesConnector          : TeamsAndRepositoriesConnector
 , artifactoryConnector                   : ArtifactoryConnector
-, github                                 : Github
+, githubConnector                        : GithubConnector
 )(implicit ec: ExecutionContext
 ) {
 
@@ -100,7 +100,7 @@ class DependencyDataUpdatingService @Inject()(
 
     if (force || !repo.lastUpdatedAt.isBefore(lastUpdated)) {
       logger.info(s"building repo for ${repo.name}")
-      github.findVersionsForMultipleArtifacts(repo.name) match {
+      githubConnector.findVersionsForMultipleArtifacts(repo.name) match {
         case Left(errorMessage) =>
           logger.error(s"Skipping dependencies update for ${repo.name}, reason: $errorMessage")
           None
