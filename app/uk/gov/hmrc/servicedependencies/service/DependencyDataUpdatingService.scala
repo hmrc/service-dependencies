@@ -73,25 +73,21 @@ class DependencyDataUpdatingService @Inject()(
     } yield res.flatten
 
 
-  def reloadCurrentDependenciesDataForAllRepositories(
-      force: Boolean = false
-      )(implicit hc: HeaderCarrier
-      ): Future[Seq[MongoRepositoryDependencies]] = {
-    logger.debug(s"reloading current dependencies data for all repositories... (with force=$force)")
+  def reloadCurrentDependenciesDataForAllRepositories(implicit hc: HeaderCarrier): Future[Seq[MongoRepositoryDependencies]] = {
+    logger.debug(s"reloading current dependencies data for all repositories...")
     for {
       currentDependencyEntries <- repositoryLibraryDependenciesRepository.getAllEntries
       repos                    <- teamsAndRepositoriesConnector.getAllRepositories
       libraryDependencies      <- repos.toList.traverse { repo =>
-                                    buildMongoRepositoryDependencies(repo, currentDependencyEntries, force)
+                                    buildMongoRepositoryDependencies(repo, currentDependencyEntries)
                                       .traverse(repositoryLibraryDependenciesRepository.update)
                                   }.map(_.flatten)
     } yield libraryDependencies
   }
 
   private def buildMongoRepositoryDependencies(
-      repo                   : RepositoryInfo
-    , currentDeps            : Seq[MongoRepositoryDependencies]
-    , force                  : Boolean
+      repo        : RepositoryInfo
+    , currentDeps : Seq[MongoRepositoryDependencies]
     ): Option[MongoRepositoryDependencies] = {
 
     val lastUpdated =
@@ -99,7 +95,7 @@ class DependencyDataUpdatingService @Inject()(
         .map(_.updateDate)
         .getOrElse(Instant.EPOCH)
 
-    if (force || !repo.lastUpdatedAt.isBefore(lastUpdated)) {
+    if (!repo.lastUpdatedAt.isBefore(lastUpdated)) {
       logger.info(s"building repo for ${repo.name}")
       githubConnector.findVersionsForMultipleArtifacts(repo.name) match {
         case Left(errorMessage) =>

@@ -83,8 +83,7 @@ class DependencyDataUpdatingServiceSpec
   describe("reloadMongoRepositoryDependencyDataForAllRepositories") {
 
     def testReloadCurrentDependenciesDataForAllRepositories(
-      force            : Boolean
-    , repoLastUpdatedAt: Instant
+      repoLastUpdatedAt: Instant
     , shouldUpdate     : Boolean
     ) = {
       val boot = new Boot(CuratedDependencyConfig(
@@ -125,7 +124,7 @@ class DependencyDataUpdatingServiceSpec
         .thenReturn(Future.successful(mongoRepositoryDependencies))
 
       val res = boot.dependencyUpdatingService
-        .reloadCurrentDependenciesDataForAllRepositories(force)(HeaderCarrier())
+        .reloadCurrentDependenciesDataForAllRepositories(HeaderCarrier())
         .futureValue
 
       if (shouldUpdate) {
@@ -141,25 +140,15 @@ class DependencyDataUpdatingServiceSpec
 
     it("should call the dependency update function to persist the dependencies if repo has been modified") {
       testReloadCurrentDependenciesDataForAllRepositories(
-        force             = false
-      , repoLastUpdatedAt = timeForTest
+        repoLastUpdatedAt = timeForTest
       , shouldUpdate      = true
       )
     }
 
     it("should not call the dependency update function to persist the dependencies if repo has not been modified") {
       testReloadCurrentDependenciesDataForAllRepositories(
-        force             = false
-      , repoLastUpdatedAt = Instant.EPOCH
+        repoLastUpdatedAt = Instant.EPOCH
       , shouldUpdate      = false
-      )
-    }
-
-    it("should call the dependency update function to persist the dependencies if repo has not been modified but force") {
-      testReloadCurrentDependenciesDataForAllRepositories(
-        force             = true
-      , repoLastUpdatedAt = Instant.EPOCH
-      , shouldUpdate      = true
       )
     }
   }

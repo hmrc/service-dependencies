@@ -41,41 +41,16 @@ class AdministrationControllerSpec
     with OptionValues {
 
   "reloadLibraryDependenciesForAllRepositories" - {
-
     "should call the reloadLibraryDependencyDataForAllRepositories on the service" in {
       val boot = Boot.init
 
-      when(boot.mockDependencyDataUpdatingService.reloadCurrentDependenciesDataForAllRepositories(any())(any()))
+      when(boot.mockDependencyDataUpdatingService.reloadCurrentDependenciesDataForAllRepositories(any()))
         .thenReturn(Future.successful(Seq.empty[MongoRepositoryDependencies]))
 
       boot.controller.reloadLibraryDependenciesForAllRepositories().apply(FakeRequest())
 
       verify(boot.mockDependencyDataUpdatingService)
-        .reloadCurrentDependenciesDataForAllRepositories(eqTo(false))(any())
-    }
-
-    "should accept an optional query parameter to force the dependencies to be reloaded" in {
-      val boot = Boot.init
-
-      when(boot.mockDependencyDataUpdatingService.reloadCurrentDependenciesDataForAllRepositories(any())(any()))
-        .thenReturn(Future.successful(Seq.empty[MongoRepositoryDependencies]))
-
-      boot.controller.reloadLibraryDependenciesForAllRepositories(Some(true)).apply(FakeRequest())
-
-      verify(boot.mockDependencyDataUpdatingService)
-        .reloadCurrentDependenciesDataForAllRepositories(eqTo(true))(any())
-    }
-
-    "should not force dependencies if the force query parameter is set to false" in {
-      val boot = Boot.init
-
-      when(boot.mockDependencyDataUpdatingService.reloadCurrentDependenciesDataForAllRepositories(any())(any()))
-        .thenReturn(Future.successful(Seq.empty[MongoRepositoryDependencies]))
-
-      boot.controller.reloadLibraryDependenciesForAllRepositories(Some(false)).apply(FakeRequest())
-
-      verify(boot.mockDependencyDataUpdatingService)
-        .reloadCurrentDependenciesDataForAllRepositories(eqTo(false))(any())
+        .reloadCurrentDependenciesDataForAllRepositories(any())
     }
   }
 

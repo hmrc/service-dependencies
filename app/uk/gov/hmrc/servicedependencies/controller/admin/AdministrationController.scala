@@ -36,10 +36,10 @@ class AdministrationController @Inject()(
   )(implicit ec: ExecutionContext
   ) extends BackendController(cc) {
 
-  def reloadLibraryDependenciesForAllRepositories(force: Option[Boolean] = None) =
+  def reloadLibraryDependenciesForAllRepositories =
     Action { implicit request =>
       dependencyDataUpdatingService
-        .reloadCurrentDependenciesDataForAllRepositories(force = force.getOrElse(false))
+        .reloadCurrentDependenciesDataForAllRepositories
         .onFailure {
           case ex => throw new RuntimeException("reload of dependencies failed", ex)
         }
