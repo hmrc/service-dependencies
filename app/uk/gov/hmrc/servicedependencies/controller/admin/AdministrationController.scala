@@ -74,6 +74,16 @@ class AdministrationController @Inject()(
         .map(rs => Ok(s"${rs.size} records updated"))
     }
 
+  def clearUpdateDatesForRepository(repositoryName: String) =
+    Action.async { implicit request =>
+      repositoryLibraryDependenciesRepository
+        .clearUpdateDatesForRepository(repositoryName)
+        .map {
+          case None    => NotFound("")
+          case Some(_) => Ok(s"record updated")
+        }
+    }
+
   def mongoLocks() =
     Action.async { implicit request =>
       locksRepository.getAllEntries.map(locks => Ok(Json.toJson(locks)))

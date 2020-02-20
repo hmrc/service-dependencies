@@ -243,8 +243,49 @@ class RepositoryLibraryDependenciesRepositorySpec
 
       repository.getAllEntries.futureValue
         .map(_.updateDate) should contain theSameElementsAs Seq(
-        Instant.EPOCH,
-        Instant.EPOCH)
+          Instant.EPOCH
+        , Instant.EPOCH
+        )
+    }
+  }
+
+  "clearUpdateDatesForRepository" should {
+    "reset the last update dates to January 1, 1970" in {
+
+      val t1 = Instant.now()
+      val t2 = Instant.now().plus(1, ChronoUnit.DAYS)
+      val repositoryLibraryDependencies1 =
+        MongoRepositoryDependencies(
+            repositoryName        = "some-repo"
+          , libraryDependencies   = Seq(MongoRepositoryDependency(name = "some-lib2", group = "uk.gov.hmrc", currentVersion = Version("1.0.2")))
+          , sbtPluginDependencies = Nil
+          , otherDependencies     = Nil
+          , updateDate            = t1
+          )
+      val repositoryLibraryDependencies2 =
+        MongoRepositoryDependencies(
+            repositoryName        = "some-other-repo"
+          , libraryDependencies   = Seq(MongoRepositoryDependency(name = "some-lib2", group = "uk.gov.hmrc", currentVersion = Version("1.0.2")))
+          , sbtPluginDependencies = Nil
+          , otherDependencies     = Nil
+          , updateDate            = t2
+          )
+
+      repository.update(repositoryLibraryDependencies1).futureValue
+      repository.update(repositoryLibraryDependencies2).futureValue
+
+      val mongoRepositoryDependencies = repository.getAllEntries.futureValue
+      mongoRepositoryDependencies                   should have size 2
+      mongoRepositoryDependencies.map(_.updateDate) should contain theSameElementsAs Seq(t1, t2)
+
+      repository.clearUpdateDatesForRepository(repositoryLibraryDependencies2.repositoryName).futureValue
+
+      repository.getForRepository(repositoryLibraryDependencies1.repositoryName).futureValue shouldBe Some(
+        repositoryLibraryDependencies1
+      )
+      repository.getForRepository(repositoryLibraryDependencies2.repositoryName).futureValue shouldBe Some(
+        repositoryLibraryDependencies2.copy(updateDate = Instant.EPOCH)
+      )
     }
   }
 }

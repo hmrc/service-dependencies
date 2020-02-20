@@ -18,6 +18,7 @@ package uk.gov.hmrc.servicedependencies.persistence
 
 import java.time.Instant
 
+import cats.implicits._
 import com.google.inject.{Inject, Singleton}
 import org.mongodb.scala.bson.BsonDocument
 import org.mongodb.scala.model.Filters.{equal, regex}
@@ -71,7 +72,7 @@ class RepositoryLibraryDependenciesRepository @Inject()(
   def getForRepository(repositoryName: String): Future[Option[MongoRepositoryDependencies]] =
     futureHelper.withTimerAndCounter("mongo.read") {
       // Note, the regex will not use the index.
-      // Mongdo 3.4 does support collated indices, allowing for case-insensitive searches: https://docs.mongodb.com/manual/core/index-case-insensitive/
+      // Mongo 3.4 does support collated indices, allowing for case-insensitive searches: https://docs.mongodb.com/manual/core/index-case-insensitive/
       //TODO: Explore using index for this query
       collection.find(regex("repositoryName", "^" + repositoryName + "$", "i"))
         .toThrottledFuture
@@ -97,6 +98,12 @@ class RepositoryLibraryDependenciesRepository @Inject()(
   def clearUpdateDates: Future[Seq[MongoRepositoryDependencies]] =
     for {
       entries <- getAllEntries
-      res     <- Future.traverse(entries)(mrd => update(mrd.copy(updateDate = Instant.EPOCH)))
+      res     <- entries.toList.traverse(mrd => update(mrd.copy(updateDate = Instant.EPOCH)))
+    } yield res
+
+  def clearUpdateDatesForRepository(repositoryName: String): Future[Option[MongoRepositoryDependencies]] =
+    for {
+      entries <- getForRepository(repositoryName)
+      res     <- entries.traverse(mrd => update(mrd.copy(updateDate = Instant.EPOCH)))
     } yield res
 }
