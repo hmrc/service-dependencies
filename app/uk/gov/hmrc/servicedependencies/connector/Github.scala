@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.servicedependencies
+package uk.gov.hmrc.servicedependencies.connector
 
 import com.google.inject.Provider
 import com.kenshoo.play.metrics.Metrics
@@ -26,11 +26,23 @@ import org.slf4j.LoggerFactory
 import uk.gov.hmrc.githubclient._
 import uk.gov.hmrc.servicedependencies.config.ServiceDependenciesConfig
 import uk.gov.hmrc.servicedependencies.config.model.{CuratedDependencyConfig, DependencyConfig}
-import uk.gov.hmrc.servicedependencies.model.{GithubDependency, GithubSearchResults, Version}
+import uk.gov.hmrc.servicedependencies.model.Version
 import uk.gov.hmrc.servicedependencies.util.{Max, VersionParser}
 
 import scala.annotation.tailrec
 import scala.util.Try
+
+case class GithubDependency(
+    group  : String
+  , name   : String
+  , version: Version
+  )
+
+case class GithubSearchResults(
+    sbtPlugins: Seq[GithubDependency]
+  , libraries : Seq[GithubDependency]
+  , others    : Seq[GithubDependency]
+  )
 
 case class GithubSearchError(message: String, throwable: Throwable)
 

@@ -28,7 +28,7 @@ class Module() extends AbstractModule {
     bind(classOf[scheduler.BobbyRulesSummaryScheduler ]).asEagerSingleton()
     bind(classOf[service.SlugInfoUpdatedHandler       ]).asEagerSingleton()
     bind(classOf[service.DeadLetterHandler            ]).asEagerSingleton()
-    bind(classOf[Github                               ]).toProvider(classOf[GithubProvider])
+    bind(classOf[connector.Github                     ]).toProvider(classOf[connector.GithubProvider])
     bind(classOf[Materializer                         ]).toProvider(classOf[MaterializerProvider])
   }
 }

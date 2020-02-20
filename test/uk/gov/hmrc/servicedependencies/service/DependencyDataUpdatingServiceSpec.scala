@@ -32,7 +32,7 @@ import uk.gov.hmrc.mongo.CurrentTimestampSupport
 import uk.gov.hmrc.mongo.test.MongoSupport
 import uk.gov.hmrc.servicedependencies.config.CuratedDependencyConfigProvider
 import uk.gov.hmrc.servicedependencies.config.model.{CuratedDependencyConfig, DependencyConfig}
-import uk.gov.hmrc.servicedependencies.connector.{ArtifactoryConnector, GithubConnector, TeamsAndRepositoriesConnector}
+import uk.gov.hmrc.servicedependencies.connector.{ArtifactoryConnector, Github, GithubSearchResults, TeamsAndRepositoriesConnector}
 import uk.gov.hmrc.servicedependencies.connector.model.RepositoryInfo
 import uk.gov.hmrc.servicedependencies.controller.model.{Dependencies, Dependency}
 import uk.gov.hmrc.servicedependencies.model._
@@ -102,6 +102,13 @@ class DependencyDataUpdatingServiceSpec
       val mongoRepositoryDependencies =
         MongoRepositoryDependencies(repositoryName, Nil, Nil, Nil, updateDate = timeForTest)
 
+      val githubSearchResults =
+        GithubSearchResults(
+            sbtPlugins = Nil
+          , libraries = Nil
+          , others    = Nil
+          )
+
       val repositoryInfo =
         RepositoryInfo(
           name          = repositoryName
@@ -115,8 +122,8 @@ class DependencyDataUpdatingServiceSpec
       when(boot.mockTeamsAndRepositoriesConnector.getAllRepositories(any()))
         .thenReturn(Future.successful(Seq(repositoryInfo)))
 
-      when(boot.mockGithubConnector.buildDependencies(any()))
-        .thenReturn(Some(mongoRepositoryDependencies))
+      when(boot.mockGithub.findVersionsForMultipleArtifacts(any()))
+        .thenReturn(Right(githubSearchResults))
 
       when(boot.mockRepositoryLibraryDependenciesRepository.update(any()))
         .thenReturn(Future.successful(mongoRepositoryDependencies))
@@ -409,7 +416,7 @@ class DependencyDataUpdatingServiceSpec
     val mockDependencyVersionRepository             = mock[DependencyVersionRepository]
     val mockTeamsAndRepositoriesConnector           = mock[TeamsAndRepositoriesConnector]
     val mockArtifactoryConnector                    = mock[ArtifactoryConnector]
-    val mockGithubConnector                         = mock[GithubConnector]
+    val mockGithub                                  = mock[Github]
 
     val dependencyUpdatingService = new DependencyDataUpdatingService(
         mockCuratedDependencyConfigProvider
@@ -417,7 +424,7 @@ class DependencyDataUpdatingServiceSpec
       , mockDependencyVersionRepository
       , mockTeamsAndRepositoriesConnector
       , mockArtifactoryConnector
-      , mockGithubConnector
+      , mockGithub
       ) {
         override def now: Instant = timeForTest
       }

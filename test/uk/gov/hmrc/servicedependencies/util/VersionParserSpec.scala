@@ -18,7 +18,8 @@ package uk.gov.hmrc.servicedependencies.util
 
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.must.Matchers
-import uk.gov.hmrc.servicedependencies.model.{GithubDependency, Version}
+import uk.gov.hmrc.servicedependencies.connector.GithubDependency
+import uk.gov.hmrc.servicedependencies.model.Version
 
 class VersionParserSpec extends AnyFreeSpec with Matchers {
 

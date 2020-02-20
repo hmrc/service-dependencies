@@ -16,7 +16,8 @@
 
 package uk.gov.hmrc.servicedependencies.util
 
-import uk.gov.hmrc.servicedependencies.model.{GithubDependency, Version}
+import uk.gov.hmrc.servicedependencies.model.Version
+import uk.gov.hmrc.servicedependencies.connector.GithubDependency
 
 object VersionParser {
   def parsePropertyFile(contents: String, key: String): Option[Version] = {

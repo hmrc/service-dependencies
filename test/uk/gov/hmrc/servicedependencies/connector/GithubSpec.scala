@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.servicedependencies
+package uk.gov.hmrc.servicedependencies.connector
 
 import java.util.Base64
 
@@ -27,7 +27,7 @@ import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 import uk.gov.hmrc.githubclient._
 import uk.gov.hmrc.servicedependencies.config.model.{CuratedDependencyConfig, DependencyConfig}
-import uk.gov.hmrc.servicedependencies.model.{GithubDependency, Version}
+import uk.gov.hmrc.servicedependencies.model.Version
 
 import scala.collection.JavaConverters._
 

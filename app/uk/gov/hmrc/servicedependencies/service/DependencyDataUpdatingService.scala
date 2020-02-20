@@ -22,7 +22,7 @@ import cats.implicits._
 import com.google.inject.{Inject, Singleton}
 import org.slf4j.LoggerFactory
 import uk.gov.hmrc.http.HeaderCarrier
-import uk.gov.hmrc.servicedependencies.connector.{ArtifactoryConnector, GithubConnector, TeamsAndRepositoriesConnector}
+import uk.gov.hmrc.servicedependencies.connector.{ArtifactoryConnector, Github, GithubDependency, GithubSearchResults, TeamsAndRepositoriesConnector}
 import uk.gov.hmrc.servicedependencies.config.CuratedDependencyConfigProvider
 import uk.gov.hmrc.servicedependencies.config.model.{CuratedDependencyConfig, DependencyConfig}
 import uk.gov.hmrc.servicedependencies.connector.model.RepositoryInfo
@@ -40,7 +40,7 @@ class DependencyDataUpdatingService @Inject()(
 , dependencyVersionRepository            : DependencyVersionRepository
 , teamsAndRepositoriesConnector          : TeamsAndRepositoriesConnector
 , artifactoryConnector                   : ArtifactoryConnector
-, githubConnector                        : GithubConnector
+, github                                 : Github
 )(implicit ec: ExecutionContext
 ) {
 
@@ -100,11 +100,36 @@ class DependencyDataUpdatingService @Inject()(
 
     if (force || !repo.lastUpdatedAt.isBefore(lastUpdated)) {
       logger.info(s"building repo for ${repo.name}")
-      githubConnector.buildDependencies(repo)
+      github.findVersionsForMultipleArtifacts(repo.name) match {
+        case Left(errorMessage) =>
+          logger.error(s"Skipping dependencies update for ${repo.name}, reason: $errorMessage")
+          None
+        case Right(githubSearchResults) =>
+          val results = toMongoRepositoryDependencies(repo, githubSearchResults)
+          logger.debug(s"Github search returned these results for ${repo.name}: $results")
+          Some(results)
+      }
     } else {
       logger.debug(s"No changes for repository (${repo.name}). Skipping....")
       None
     }
+  }
+
+  private def toMongoRepositoryDependencies(
+    repo               : RepositoryInfo
+  , githubSearchResults: GithubSearchResults
+  ): MongoRepositoryDependencies = {
+    def toMongoRepositoryDependencies(results: Seq[GithubDependency]): Seq[MongoRepositoryDependency] =
+      results
+        .map(d => MongoRepositoryDependency(name = d.name, group = d.group, currentVersion = d.version))
+
+    MongoRepositoryDependencies(
+      repositoryName        = repo.name
+    , libraryDependencies   = toMongoRepositoryDependencies(githubSearchResults.libraries)
+    , sbtPluginDependencies = toMongoRepositoryDependencies(githubSearchResults.sbtPlugins)
+    , otherDependencies     = toMongoRepositoryDependencies(githubSearchResults.others)
+    , updateDate            = now
+    )
   }
 
   private def toDependency(references: Seq[MongoDependencyVersion])(d: MongoRepositoryDependency): Dependency = {
