@@ -15,6 +15,7 @@
  */
 
 package uk.gov.hmrc.servicedependencies.controller
+
 import javax.inject.Inject
 import play.api.Configuration
 import play.api.libs.json.Json
@@ -23,7 +24,7 @@ import uk.gov.hmrc.servicedependencies.model.{BobbyRulesSummary, HistoricBobbyRu
 import uk.gov.hmrc.play.bootstrap.controller.BackendController
 import uk.gov.hmrc.servicedependencies.service.DependencyLookupService
 
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.ExecutionContext
 
 class BobbyRuleViolationController @Inject() (
   configuration   : Configuration,

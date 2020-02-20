@@ -16,10 +16,7 @@
 
 package uk.gov.hmrc.servicedependencies.model
 
-import java.time.Instant
-
 import play.api.libs.json.{Format, JsError, JsString, JsSuccess, JsValue, __}
-import play.api.libs.functional.syntax._
 
 sealed trait ScalaVersion { def asString: String; def asClassifier: String }
 case object ScalaVersion {

@@ -32,6 +32,7 @@ import uk.gov.hmrc.servicedependencies.model._
 import uk.gov.hmrc.servicedependencies.util.FutureHelpers
 
 import scala.concurrent.{ExecutionContext, Future}
+
 @Singleton
 class RepositoryLibraryDependenciesRepository @Inject()(
     mongoComponent    : MongoComponent

@@ -18,10 +18,8 @@ package uk.gov.hmrc.servicedependencies.controller
 
 import cats.data.EitherT
 import cats.instances.all._
-import cats.syntax.all._
 import com.google.inject.{Inject, Singleton}
-import play.api.Configuration
-import play.api.libs.json.{Json, OWrites, Writes}
+import play.api.libs.json.{Json, OWrites}
 import play.api.mvc._
 import uk.gov.hmrc.play.bootstrap.controller.BackendController
 import uk.gov.hmrc.servicedependencies.connector.ServiceConfigsConnector

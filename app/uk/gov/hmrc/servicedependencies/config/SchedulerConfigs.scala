@@ -19,7 +19,7 @@ package uk.gov.hmrc.servicedependencies.config
 import javax.inject.{Inject, Singleton}
 import play.api.Configuration
 
-import scala.concurrent.duration.{DurationInt, FiniteDuration}
+import scala.concurrent.duration.FiniteDuration
 
 case class SchedulerConfig(
     enabledKey  : String
@@ -29,8 +29,6 @@ case class SchedulerConfig(
   )
 
 object SchedulerConfig {
-  import ConfigUtils._
-
   def apply(
       configuration   : Configuration
     , schedulerKey    : String

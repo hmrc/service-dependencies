@@ -16,20 +16,13 @@
 
 package uk.gov.hmrc.servicedependencies.service
 
-import java.time.Instant
-
-import cats.implicits._
 import com.google.inject.{Inject, Singleton}
 import org.slf4j.LoggerFactory
-import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.servicedependencies.config.ServiceDependenciesConfig
-import uk.gov.hmrc.servicedependencies.config.model.{CuratedDependencyConfig, DependencyConfig}
-import uk.gov.hmrc.servicedependencies.connector.{ArtifactoryConnector, GithubConnector, GithubDependency, GithubSearchResults, ServiceConfigsConnector}
-import uk.gov.hmrc.servicedependencies.connector.model.RepositoryInfo
+import uk.gov.hmrc.servicedependencies.connector.ServiceConfigsConnector
 import uk.gov.hmrc.servicedependencies.controller.model.{Dependencies, Dependency}
-import uk.gov.hmrc.servicedependencies.model.{BobbyRules, MongoRepositoryDependencies, MongoRepositoryDependency, MongoDependencyVersion, ScalaVersion, Version}
+import uk.gov.hmrc.servicedependencies.model.{BobbyRules, MongoRepositoryDependency, MongoDependencyVersion}
 import uk.gov.hmrc.servicedependencies.persistence.{DependencyVersionRepository, RepositoryLibraryDependenciesRepository}
-import uk.gov.hmrc.servicedependencies.util.Max
 
 import scala.concurrent.{ExecutionContext, Future}
 

@@ -18,7 +18,7 @@ package uk.gov.hmrc.servicedependencies.model
 
 import java.time.Instant
 
-import play.api.libs.json.{Format, Json, __}
+import play.api.libs.json.__
 import play.api.libs.functional.syntax._
 import uk.gov.hmrc.mongo.play.json.formats.MongoJavatimeFormats
 

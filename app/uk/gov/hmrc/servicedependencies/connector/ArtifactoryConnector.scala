@@ -20,7 +20,6 @@ import java.util.concurrent.Executors
 
 import cats.implicits._
 import javax.inject.{Inject, Singleton}
-import play.api.libs.json.Json
 import uk.gov.hmrc.play.bootstrap.http.HttpClient
 import uk.gov.hmrc.http.{HeaderCarrier, HttpResponse}
 import uk.gov.hmrc.http.logging.Authorization

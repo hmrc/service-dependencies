@@ -16,15 +16,13 @@
 
 package uk.gov.hmrc.servicedependencies.service
 
-import cats.implicits._
 import javax.inject.{Inject, Singleton}
 import uk.gov.hmrc.servicedependencies.config.ServiceDependenciesConfig
 import uk.gov.hmrc.servicedependencies.config.model.CuratedDependencyConfig
 import uk.gov.hmrc.servicedependencies.connector.ServiceConfigsConnector
 import uk.gov.hmrc.servicedependencies.controller.model.Dependency
-import uk.gov.hmrc.servicedependencies.model.{SlugDependency, SlugInfo, SlugInfoFlag, Version}
+import uk.gov.hmrc.servicedependencies.model.{SlugInfo, SlugInfoFlag, Version}
 import uk.gov.hmrc.servicedependencies.persistence.DependencyVersionRepository
-import uk.gov.hmrc.servicedependencies.util.Max
 
 import scala.concurrent.{ExecutionContext, Future}
 

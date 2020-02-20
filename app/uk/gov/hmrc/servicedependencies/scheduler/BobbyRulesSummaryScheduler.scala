@@ -23,7 +23,6 @@ import play.api.inject.ApplicationLifecycle
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.servicedependencies.config.SchedulerConfigs
 import uk.gov.hmrc.servicedependencies.persistence.MongoLocks
-import uk.gov.hmrc.servicedependencies.service.SlugInfoService
 import uk.gov.hmrc.servicedependencies.util.SchedulerUtils
 import uk.gov.hmrc.servicedependencies.service.DependencyLookupService
 

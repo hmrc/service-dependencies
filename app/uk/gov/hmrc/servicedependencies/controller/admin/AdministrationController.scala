@@ -17,7 +17,6 @@
 package uk.gov.hmrc.servicedependencies.controller.admin
 
 import javax.inject.{Inject, Singleton}
-import play.api.Logger
 import play.api.libs.json.Json
 import play.api.mvc.ControllerComponents
 import uk.gov.hmrc.play.bootstrap.controller.BackendController

@@ -15,6 +15,7 @@
  */
 
 package uk.gov.hmrc.servicedependencies.model
+
 import play.api.libs.json.{__, OFormat}
 import play.api.libs.functional.syntax._
 

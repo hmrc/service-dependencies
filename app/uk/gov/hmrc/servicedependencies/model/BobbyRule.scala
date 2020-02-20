@@ -19,8 +19,7 @@ package uk.gov.hmrc.servicedependencies.model
 import java.time.LocalDate
 import play.api.data.format.Formats
 import play.api.libs.functional.syntax._
-import play.api.libs.json.{Reads, OFormat, Writes, __}
-import uk.gov.hmrc.http.controllers.RestFormats
+import play.api.libs.json.{OFormat, __}
 import uk.gov.hmrc.servicedependencies.controller.model.{Dependency, DependencyBobbyRule}
 
 
