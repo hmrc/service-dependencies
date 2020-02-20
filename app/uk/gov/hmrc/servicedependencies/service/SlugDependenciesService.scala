@@ -75,7 +75,7 @@ class SlugDependenciesService @Inject()(
                               }
                           }
       filtered       =  dependencies.filter(dependency =>
-                            curatedDependencyConfig.libraries.exists(lib =>
+                            curatedDependencyConfig.allDependencies.exists(lib =>
                               lib.name  == dependency.name &&
                               lib.group == dependency.group
                             ) ||

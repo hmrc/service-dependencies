@@ -22,12 +22,12 @@ import cats.implicits._
 import com.google.inject.{Inject, Singleton}
 import org.slf4j.LoggerFactory
 import uk.gov.hmrc.http.HeaderCarrier
-import uk.gov.hmrc.servicedependencies.connector.{ArtifactoryConnector, GithubConnector, GithubDependency, GithubSearchResults, TeamsAndRepositoriesConnector}
 import uk.gov.hmrc.servicedependencies.config.ServiceDependenciesConfig
 import uk.gov.hmrc.servicedependencies.config.model.{CuratedDependencyConfig, DependencyConfig}
+import uk.gov.hmrc.servicedependencies.connector.{ArtifactoryConnector, GithubConnector, GithubDependency, GithubSearchResults, ServiceConfigsConnector, TeamsAndRepositoriesConnector}
 import uk.gov.hmrc.servicedependencies.connector.model.RepositoryInfo
 import uk.gov.hmrc.servicedependencies.controller.model.{Dependencies, Dependency}
-import uk.gov.hmrc.servicedependencies.model.{MongoRepositoryDependencies, MongoRepositoryDependency, MongoDependencyVersion, ScalaVersion, Version}
+import uk.gov.hmrc.servicedependencies.model.{BobbyRules, MongoRepositoryDependencies, MongoRepositoryDependency, MongoDependencyVersion, ScalaVersion, Version}
 import uk.gov.hmrc.servicedependencies.persistence.{DependencyVersionRepository, RepositoryLibraryDependenciesRepository}
 import uk.gov.hmrc.servicedependencies.util.Max
 
@@ -41,6 +41,7 @@ class DependencyDataUpdatingService @Inject()(
 , teamsAndRepositoriesConnector          : TeamsAndRepositoriesConnector
 , artifactoryConnector                   : ArtifactoryConnector
 , githubConnector                        : GithubConnector
+, serviceConfigsConnector                : ServiceConfigsConnector
 )(implicit ec: ExecutionContext
 ) {
 
@@ -132,9 +133,13 @@ class DependencyDataUpdatingService @Inject()(
     )
   }
 
-  private def toDependency(references: Seq[MongoDependencyVersion])(d: MongoRepositoryDependency): Dependency = {
+  private def toDependency(
+    latestVersions: Seq[MongoDependencyVersion]
+  , bobbyRules    : BobbyRules
+  )(d: MongoRepositoryDependency
+  ): Dependency = {
     val optLatestVersion =
-      references
+      latestVersions
         .find(ref => ref.name  == d.name &&
                      ref.group == d.group
              )
@@ -145,42 +150,59 @@ class DependencyDataUpdatingService @Inject()(
     , group               = d.group
     , currentVersion      = d.currentVersion
     , latestVersion       = optLatestVersion
-    , bobbyRuleViolations = List.empty
+    , bobbyRuleViolations = bobbyRules.violationsFor(
+                              group   = d.group
+                            , name    = d.name
+                            , version = d.currentVersion
+                            )
     )
   }
 
+  private def toDependencies(
+    latestVersions: Seq[MongoDependencyVersion]
+  , bobbyRules    : BobbyRules
+  )(ds: Seq[MongoRepositoryDependency]
+  ): Seq[Dependency] =
+    ds.map(toDependency(latestVersions, bobbyRules))
+      .filter(dependency =>
+          curatedDependencyConfig.allDependencies.exists(lib =>
+            lib.name  == dependency.name &&
+            lib.group == dependency.group
+          ) ||
+          dependency.bobbyRuleViolations.nonEmpty
+        )
+
   def getDependencyVersionsForRepository(repositoryName: String): Future[Option[Dependencies]] =
     for {
-      dependencies       <- repositoryLibraryDependenciesRepository.getForRepository(repositoryName)
-      dependencyVersions <- dependencyVersionRepository.getAllEntries
+      dependencies   <- repositoryLibraryDependenciesRepository.getForRepository(repositoryName)
+      latestVersions <- dependencyVersionRepository.getAllEntries
+      bobbyRules     <- serviceConfigsConnector.getBobbyRules
     } yield
       dependencies.map(dep =>
         Dependencies(
           repositoryName         = dep.repositoryName
-        , libraryDependencies    = dep.libraryDependencies.map(toDependency(dependencyVersions))
-        , sbtPluginsDependencies = dep.sbtPluginDependencies.map(toDependency(dependencyVersions))
-        , otherDependencies      = dep.otherDependencies.map(toDependency(dependencyVersions))
+        , libraryDependencies    = toDependencies(latestVersions, bobbyRules)(dep.libraryDependencies)
+        , sbtPluginsDependencies = toDependencies(latestVersions, bobbyRules)(dep.sbtPluginDependencies)
+        , otherDependencies      = toDependencies(latestVersions, bobbyRules)(dep.otherDependencies)
         , lastUpdated            = dep.updateDate
         )
       )
 
   def getDependencyVersionsForAllRepositories: Future[Seq[Dependencies]] =
     for {
-      allDependencies    <- repositoryLibraryDependenciesRepository.getAllEntries
-      dependencyVersions <- dependencyVersionRepository.getAllEntries
+      allDependencies <- repositoryLibraryDependenciesRepository.getAllEntries
+      latestVersions  <- dependencyVersionRepository.getAllEntries
+      bobbyRules      <- serviceConfigsConnector.getBobbyRules
     } yield
       allDependencies.map(dep =>
         Dependencies(
           repositoryName         = dep.repositoryName
-        , libraryDependencies    = dep.libraryDependencies.map(toDependency(dependencyVersions))
-        , sbtPluginsDependencies = dep.sbtPluginDependencies.map(toDependency(dependencyVersions))
-        , otherDependencies      = dep.otherDependencies.map(toDependency(dependencyVersions))
+        , libraryDependencies    = toDependencies(latestVersions, bobbyRules)(dep.libraryDependencies)
+        , sbtPluginsDependencies = toDependencies(latestVersions, bobbyRules)(dep.sbtPluginDependencies)
+        , otherDependencies      = toDependencies(latestVersions, bobbyRules)(dep.otherDependencies)
         , lastUpdated            = dep.updateDate
         )
       )
-
-  def getAllRepositoriesDependencies: Future[Seq[MongoRepositoryDependencies]] =
-    repositoryLibraryDependenciesRepository.getAllEntries
 
   def dropCollection(collectionName: String) =
     collectionName match {

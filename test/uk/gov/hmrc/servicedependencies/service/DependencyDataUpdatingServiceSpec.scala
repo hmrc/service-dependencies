@@ -32,7 +32,7 @@ import uk.gov.hmrc.mongo.CurrentTimestampSupport
 import uk.gov.hmrc.mongo.test.MongoSupport
 import uk.gov.hmrc.servicedependencies.config.ServiceDependenciesConfig
 import uk.gov.hmrc.servicedependencies.config.model.{CuratedDependencyConfig, DependencyConfig}
-import uk.gov.hmrc.servicedependencies.connector.{ArtifactoryConnector, GithubConnector, GithubSearchResults, TeamsAndRepositoriesConnector}
+import uk.gov.hmrc.servicedependencies.connector.{ArtifactoryConnector, GithubConnector, GithubSearchResults, ServiceConfigsConnector, TeamsAndRepositoriesConnector}
 import uk.gov.hmrc.servicedependencies.connector.model.RepositoryInfo
 import uk.gov.hmrc.servicedependencies.controller.model.{Dependencies, Dependency}
 import uk.gov.hmrc.servicedependencies.model._
@@ -59,15 +59,19 @@ class DependencyDataUpdatingServiceSpec
   private val timeForTest = Instant.now()
 
   private val curatedDependencyConfig = CuratedDependencyConfig(
-    sbtPlugins = Nil
-  , libraries  = Nil
-  , others     = Nil
+    sbtPlugins = List( DependencyConfig(name = "plugin1", group = "uk.gov.hmrc" , latestVersion = None)
+                     , DependencyConfig(name = "plugin2", group = "uk.gov.hmrc" , latestVersion = None)
+                     )
+  , libraries  = List( DependencyConfig(name = "lib1"   , group= "uk.gov.hmrc"  , latestVersion = None)
+                     , DependencyConfig(name = "lib2"   , group= "uk.gov.hmrc"  , latestVersion = None)
+                     )
+  , others     = List( DependencyConfig(name = "sbt"    , group= "org.scala-sbt", latestVersion = None)
+                     )
   )
 
+
   describe("reloadDependencyVersions") {
-
     it("should call the dependency version update function on the repository") {
-
       val boot = new Boot(CuratedDependencyConfig(
         sbtPlugins = Nil
       , libraries  = List(DependencyConfig(name = "libYY", group= "uk.gov.hmrc", latestVersion = None))
@@ -75,7 +79,7 @@ class DependencyDataUpdatingServiceSpec
       ))
 
       when(boot.mockArtifactoryConnector.findLatestVersion(group = "uk.gov.hmrc", artefact = "libYY"))
-        .thenReturn(Future.successful(Map(ScalaVersion.SV_None -> Version(1, 1, 1))))
+        .thenReturn(Future.successful(Map(ScalaVersion.SV_None -> Version("1.1.1"))))
 
       when(boot.mockDependencyVersionRepository.update(any()))
         .thenReturn(Future.successful(mock[MongoDependencyVersion]))
@@ -83,7 +87,7 @@ class DependencyDataUpdatingServiceSpec
       boot.dependencyUpdatingService.reloadLatestDependencyVersions(HeaderCarrier()).futureValue
 
       verify(boot.mockDependencyVersionRepository, times(1))
-        .update(MongoDependencyVersion(name = "libYY", group = "uk.gov.hmrc", version = Version(1, 1, 1), updateDate = timeForTest))
+        .update(MongoDependencyVersion(name = "libYY", group = "uk.gov.hmrc", version = Version("1.1.1"), updateDate = timeForTest))
       verifyZeroInteractions(boot.mockRepositoryLibraryDependenciesRepository)
     }
   }
@@ -150,6 +154,7 @@ class DependencyDataUpdatingServiceSpec
       , shouldUpdate      = true
       )
     }
+
     it("should not call the dependency update function to persist the dependencies if repo has not been modified") {
       testReloadCurrentDependenciesDataForAllRepositories(
         force             = false
@@ -178,8 +183,8 @@ class DependencyDataUpdatingServiceSpec
           Some(MongoRepositoryDependencies(
             repositoryName        = "repoXYZ"
           , libraryDependencies   = Seq(
-                                      MongoRepositoryDependency(name = "lib1", group = "uk.gov.hmrc", currentVersion = Version(1, 0, 0))
-                                    , MongoRepositoryDependency(name = "lib2", group = "uk.gov.hmrc", currentVersion = Version(2, 0, 0))
+                                      MongoRepositoryDependency(name = "lib1", group = "uk.gov.hmrc", currentVersion = Version("1.0.0"))
+                                    , MongoRepositoryDependency(name = "lib2", group = "uk.gov.hmrc", currentVersion = Version("2.0.0"))
                                     )
           , sbtPluginDependencies = Nil
           , otherDependencies     = Nil
@@ -188,8 +193,8 @@ class DependencyDataUpdatingServiceSpec
         ))
 
       val referenceLibraryVersions = Seq(
-        MongoDependencyVersion(name = "lib1", group = "uk.gov.hmrc", version = Version(1, 1, 0))
-      , MongoDependencyVersion(name = "lib2", group = "uk.gov.hmrc", version = Version(2, 1, 0))
+        MongoDependencyVersion(name = "lib1", group = "uk.gov.hmrc", version = Version("1.1.0"))
+      , MongoDependencyVersion(name = "lib2", group = "uk.gov.hmrc", version = Version("2.1.0"))
       )
       when(boot.mockDependencyVersionRepository.getAllEntries)
         .thenReturn(Future.successful(referenceLibraryVersions))
@@ -202,8 +207,8 @@ class DependencyDataUpdatingServiceSpec
       optDependencies shouldBe Some(Dependencies(
           repositoryName         = "repoXYZ"
         , libraryDependencies    = Seq(
-                                     Dependency(name = "lib1", group = "uk.gov.hmrc", currentVersion = Version(1, 0, 0), latestVersion = Some(Version(1, 1, 0)), bobbyRuleViolations = Nil)
-                                   , Dependency(name = "lib2", group = "uk.gov.hmrc", currentVersion = Version(2, 0, 0), latestVersion = Some(Version(2, 1, 0)), bobbyRuleViolations = Nil)
+                                     Dependency(name = "lib1", group = "uk.gov.hmrc", currentVersion = Version("1.0.0"), latestVersion = Some(Version("1.1.0")), bobbyRuleViolations = Nil)
+                                   , Dependency(name = "lib2", group = "uk.gov.hmrc", currentVersion = Version("2.0.0"), latestVersion = Some(Version("2.1.0")), bobbyRuleViolations = Nil)
                                    )
         , sbtPluginsDependencies = Nil
         , otherDependencies      = Nil
@@ -232,8 +237,8 @@ class DependencyDataUpdatingServiceSpec
 
       when(boot.mockDependencyVersionRepository.getAllEntries)
         .thenReturn(Future.successful(Seq(
-            MongoDependencyVersion(name = "plugin1", group = "uk.gov.hmrc", version = Version(3, 1, 0))
-          , MongoDependencyVersion(name = "plugin2", group = "uk.gov.hmrc", version = Version(4, 1, 0))
+            MongoDependencyVersion(name = "plugin1", group = "uk.gov.hmrc", version = Version("3.1.0"))
+          , MongoDependencyVersion(name = "plugin2", group = "uk.gov.hmrc", version = Version("4.1.0"))
           )
         ))
 
@@ -246,8 +251,8 @@ class DependencyDataUpdatingServiceSpec
           repositoryName         = repositoryName
         , libraryDependencies    = Nil
         , sbtPluginsDependencies = Seq(
-                                     Dependency(name = "plugin1", group = "uk.gov.hmrc", currentVersion = Version(1, 0, 0), latestVersion = Some(Version(3, 1, 0)), bobbyRuleViolations = Nil)
-                                   , Dependency(name = "plugin2", group = "uk.gov.hmrc", currentVersion = Version(2, 0, 0), latestVersion = Some(Version(4, 1, 0)), bobbyRuleViolations = Nil)
+                                     Dependency(name = "plugin1", group = "uk.gov.hmrc", currentVersion = Version("1.0.0"), latestVersion = Some(Version("3.1.0")), bobbyRuleViolations = Nil)
+                                   , Dependency(name = "plugin2", group = "uk.gov.hmrc", currentVersion = Version("2.0.0"), latestVersion = Some(Version("4.1.0")), bobbyRuleViolations = Nil)
                                    )
         , otherDependencies      = Nil
         , lastUpdated            = timeForTest
@@ -255,7 +260,13 @@ class DependencyDataUpdatingServiceSpec
     }
 
     it("should return the current and latest external sbt plugin dependency versions for a repository") {
-      val boot = new Boot(curatedDependencyConfig)
+      val boot = new Boot(CuratedDependencyConfig(
+          sbtPlugins = List( DependencyConfig(name = "internal-plugin", group = "uk.gov.hmrc", latestVersion = None)
+                           , DependencyConfig(name = "external-plugin", group = "uk.edu"     , latestVersion = None)
+                           )
+        , libraries  = Nil
+        , others     = Nil
+        ))
 
       val repositoryName = "repoXYZ"
 
@@ -265,8 +276,8 @@ class DependencyDataUpdatingServiceSpec
               repositoryName        = repositoryName
             , libraryDependencies   = Nil
             , sbtPluginDependencies = Seq(
-                                        MongoRepositoryDependency(name = "internal-plugin", group = "uk.gov.hmrc", currentVersion = Version(1, 0, 0))
-                                      , MongoRepositoryDependency(name = "external-plugin", group = "uk.edu"     , currentVersion = Version(2, 0, 0))
+                                        MongoRepositoryDependency(name = "internal-plugin", group = "uk.gov.hmrc", currentVersion = Version("1.0.0"))
+                                      , MongoRepositoryDependency(name = "external-plugin", group = "uk.edu"     , currentVersion = Version("2.0.0"))
                                       )
             , otherDependencies     = Nil
             , updateDate            = timeForTest
@@ -276,8 +287,8 @@ class DependencyDataUpdatingServiceSpec
       when(boot.mockDependencyVersionRepository.getAllEntries)
         .thenReturn(
           Future.successful(Seq(
-              MongoDependencyVersion(name = "internal-plugin", group = "uk.gov.hmrc", version = Version(3, 1, 0))
-            , MongoDependencyVersion(name = "external-plugin", group = "uk.edu"     , version = Version(11, 22, 33))
+              MongoDependencyVersion(name = "internal-plugin", group = "uk.gov.hmrc", version = Version("3.1.0"))
+            , MongoDependencyVersion(name = "external-plugin", group = "uk.edu"     , version = Version("11.22.33"))
             ))
         )
 
@@ -288,8 +299,8 @@ class DependencyDataUpdatingServiceSpec
           repositoryName         = repositoryName
         , libraryDependencies    = Nil
         , sbtPluginsDependencies = Seq(
-                                     Dependency(name = "internal-plugin", group = "uk.gov.hmrc", currentVersion = Version(1, 0, 0), latestVersion = Some(Version(3, 1, 0))   , bobbyRuleViolations = Nil)
-                                   , Dependency(name = "external-plugin", group = "uk.edu"     , currentVersion = Version(2, 0, 0), latestVersion = Some(Version(11, 22, 33)), bobbyRuleViolations = Nil)
+                                     Dependency(name = "internal-plugin", group = "uk.gov.hmrc", currentVersion = Version("1.0.0"), latestVersion = Some(Version("3.1.0"))   , bobbyRuleViolations = Nil)
+                                   , Dependency(name = "external-plugin", group = "uk.edu"     , currentVersion = Version("2.0.0"), latestVersion = Some(Version("11.22.33")), bobbyRuleViolations = Nil)
                                    )
         , otherDependencies      = Nil
         , lastUpdated            = timeForTest
@@ -327,30 +338,30 @@ class DependencyDataUpdatingServiceSpec
             MongoRepositoryDependencies(
                 repositoryName        = "repo1"
               , libraryDependencies   = Seq(
-                                          MongoRepositoryDependency(name = "lib1", group = "uk.gov.hmrc", currentVersion = Version(1, 1, 0))
-                                        , MongoRepositoryDependency(name = "lib2", group = "uk.gov.hmrc", currentVersion = Version(1, 2, 0))
+                                          MongoRepositoryDependency(name = "lib1", group = "uk.gov.hmrc", currentVersion = Version("1.1.0"))
+                                        , MongoRepositoryDependency(name = "lib2", group = "uk.gov.hmrc", currentVersion = Version("1.2.0"))
                                         )
               , sbtPluginDependencies = Seq(
-                                          MongoRepositoryDependency(name = "plugin1", group = "uk.gov.hmrc", currentVersion = Version(10, 1, 0))
-                                        , MongoRepositoryDependency(name = "plugin2", group = "uk.gov.hmrc", currentVersion = Version(10, 2, 0))
+                                          MongoRepositoryDependency(name = "plugin1", group = "uk.gov.hmrc", currentVersion = Version("10.1.0"))
+                                        , MongoRepositoryDependency(name = "plugin2", group = "uk.gov.hmrc", currentVersion = Version("10.2.0"))
                                         )
               , otherDependencies     = Seq(
-                                          MongoRepositoryDependency(name = "sbt", group = "org.scala-sbt", currentVersion = Version(0, 13, 1))
+                                          MongoRepositoryDependency(name = "sbt", group = "org.scala-sbt", currentVersion = Version("0.13.1"))
                                         )
               , updateDate            = timeForTest
               )
           , MongoRepositoryDependencies(
               repositoryName        = "repo2"
             , libraryDependencies   = Seq(
-                                        MongoRepositoryDependency(name = "lib1", group = "uk.gov.hmrc", currentVersion = Version(2, 1, 0))
-                                      , MongoRepositoryDependency(name = "lib2", group = "uk.gov.hmrc", currentVersion = Version(2, 2, 0))
+                                        MongoRepositoryDependency(name = "lib1", group = "uk.gov.hmrc", currentVersion = Version("2.1.0"))
+                                      , MongoRepositoryDependency(name = "lib2", group = "uk.gov.hmrc", currentVersion = Version("2.2.0"))
                                       )
             , sbtPluginDependencies = Seq(
-                                        MongoRepositoryDependency(name = "plugin1", group = "uk.gov.hmrc", currentVersion = Version(20, 1, 0))
-                                      , MongoRepositoryDependency(name = "plugin2", group = "uk.gov.hmrc", currentVersion = Version(20, 2, 0))
+                                        MongoRepositoryDependency(name = "plugin1", group = "uk.gov.hmrc", currentVersion = Version("20.1.0"))
+                                      , MongoRepositoryDependency(name = "plugin2", group = "uk.gov.hmrc", currentVersion = Version("20.2.0"))
                                       )
             , otherDependencies     = Seq(
-                                        MongoRepositoryDependency(name = "sbt", group = "org.scala-sbt", currentVersion = Version(0, 13, 2))
+                                        MongoRepositoryDependency(name = "sbt", group = "org.scala-sbt", currentVersion = Version("0.13.2"))
                                       )
             , updateDate            = timeForTest
             )
@@ -358,11 +369,11 @@ class DependencyDataUpdatingServiceSpec
 
       when(boot.mockDependencyVersionRepository.getAllEntries)
         .thenReturn(Future.successful(Seq(
-            MongoDependencyVersion(name = "lib1"   , group = "uk.gov.hmrc"  , version = Version(3  , 0 , 0))
-          , MongoDependencyVersion(name = "lib2"   , group = "uk.gov.hmrc"  , version = Version(4  , 0 , 0))
-          , MongoDependencyVersion(name = "plugin1", group = "uk.gov.hmrc"  , version = Version(30 , 0 , 0))
-          , MongoDependencyVersion(name = "plugin2", group = "uk.gov.hmrc"  , version = Version(40 , 0 , 0))
-          , MongoDependencyVersion(name = "sbt"    , group = "org.scala-sbt", version = Version(100, 10, 1))
+            MongoDependencyVersion(name = "lib1"   , group = "uk.gov.hmrc"  , version = Version("3.0.0"))
+          , MongoDependencyVersion(name = "lib2"   , group = "uk.gov.hmrc"  , version = Version("4.0.0"))
+          , MongoDependencyVersion(name = "plugin1", group = "uk.gov.hmrc"  , version = Version("30.0.0"))
+          , MongoDependencyVersion(name = "plugin2", group = "uk.gov.hmrc"  , version = Version("40.0.0"))
+          , MongoDependencyVersion(name = "sbt"    , group = "org.scala-sbt", version = Version("100.10.1"))
           )))
 
       val maybeDependencies = boot.dependencyUpdatingService.getDependencyVersionsForAllRepositories.futureValue
@@ -373,30 +384,30 @@ class DependencyDataUpdatingServiceSpec
           Dependencies(
             repositoryName = "repo1"
           , libraryDependencies = Seq(
-              Dependency(name = "lib1", group = "uk.gov.hmrc", currentVersion = Version(1, 1, 0), latestVersion = Some(Version(3, 0, 0)), bobbyRuleViolations = Nil)
-            , Dependency(name = "lib2", group = "uk.gov.hmrc", currentVersion = Version(1, 2, 0), latestVersion = Some(Version(4, 0, 0)), bobbyRuleViolations = Nil)
+              Dependency(name = "lib1", group = "uk.gov.hmrc", currentVersion = Version("1.1.0"), latestVersion = Some(Version("3.0.0")), bobbyRuleViolations = Nil)
+            , Dependency(name = "lib2", group = "uk.gov.hmrc", currentVersion = Version("1.2.0"), latestVersion = Some(Version("4.0.0")), bobbyRuleViolations = Nil)
             )
           , sbtPluginsDependencies = Seq(
-              Dependency(name = "plugin1", group = "uk.gov.hmrc", currentVersion = Version(10, 1, 0), latestVersion = Some(Version(30, 0, 0)), bobbyRuleViolations = Nil)
-            , Dependency(name = "plugin2", group = "uk.gov.hmrc", currentVersion = Version(10, 2, 0), latestVersion = Some(Version(40, 0, 0)), bobbyRuleViolations = Nil)
+              Dependency(name = "plugin1", group = "uk.gov.hmrc", currentVersion = Version("10.1.0"), latestVersion = Some(Version("30.0.0")), bobbyRuleViolations = Nil)
+            , Dependency(name = "plugin2", group = "uk.gov.hmrc", currentVersion = Version("10.2.0"), latestVersion = Some(Version("40.0.0")), bobbyRuleViolations = Nil)
             )
           , otherDependencies = Seq(
-              Dependency(name = "sbt", group = "org.scala-sbt", currentVersion = Version(0, 13, 1), latestVersion = Some(Version(100, 10, 1)), bobbyRuleViolations = Nil)
+              Dependency(name = "sbt", group = "org.scala-sbt", currentVersion = Version("0.13.1"), latestVersion = Some(Version("100.10.1")), bobbyRuleViolations = Nil)
             )
           , timeForTest
           )
         , Dependencies(
             repositoryName = "repo2"
           , libraryDependencies = Seq(
-              Dependency(name = "lib1", group = "uk.gov.hmrc", currentVersion = Version(2, 1, 0), latestVersion = Some(Version(3, 0, 0)), bobbyRuleViolations = Nil),
-              Dependency(name = "lib2", group = "uk.gov.hmrc", currentVersion = Version(2, 2, 0), latestVersion = Some(Version(4, 0, 0)), bobbyRuleViolations = Nil)
+              Dependency(name = "lib1", group = "uk.gov.hmrc", currentVersion = Version("2.1.0"), latestVersion = Some(Version("3.0.0")), bobbyRuleViolations = Nil),
+              Dependency(name = "lib2", group = "uk.gov.hmrc", currentVersion = Version("2.2.0"), latestVersion = Some(Version("4.0.0")), bobbyRuleViolations = Nil)
             )
           , sbtPluginsDependencies = Seq(
-              Dependency(name = "plugin1", group = "uk.gov.hmrc", currentVersion = Version(20, 1, 0), latestVersion = Some(Version(30, 0, 0)), bobbyRuleViolations = Nil),
-              Dependency(name = "plugin2", group = "uk.gov.hmrc", currentVersion = Version(20, 2, 0), latestVersion = Some(Version(40, 0, 0)), bobbyRuleViolations = Nil)
+              Dependency(name = "plugin1", group = "uk.gov.hmrc", currentVersion = Version("20.1.0"), latestVersion = Some(Version("30.0.0")), bobbyRuleViolations = Nil),
+              Dependency(name = "plugin2", group = "uk.gov.hmrc", currentVersion = Version("20.2.0"), latestVersion = Some(Version("40.0.0")), bobbyRuleViolations = Nil)
             )
           , otherDependencies = Seq(
-              Dependency(name = "sbt", group = "org.scala-sbt", currentVersion = Version(0, 13, 2), latestVersion = Some(Version(100, 10, 1)), bobbyRuleViolations = Nil)
+              Dependency(name = "sbt", group = "org.scala-sbt", currentVersion = Version("0.13.2"), latestVersion = Some(Version("100.10.1")), bobbyRuleViolations = Nil)
             )
           , timeForTest
           )
@@ -404,19 +415,20 @@ class DependencyDataUpdatingServiceSpec
     }
   }
 
-  class Boot(
-    dependencyConfig: CuratedDependencyConfig
-  ) {
-
-    val mockServiceDependenciesConfig = mock[ServiceDependenciesConfig]
-    when(mockServiceDependenciesConfig.curatedDependencyConfig)
-      .thenReturn(dependencyConfig)
-
+  class Boot(dependencyConfig: CuratedDependencyConfig) {
+    val mockServiceDependenciesConfig               = mock[ServiceDependenciesConfig]
     val mockRepositoryLibraryDependenciesRepository = mock[RepositoryLibraryDependenciesRepository]
     val mockDependencyVersionRepository             = mock[DependencyVersionRepository]
     val mockTeamsAndRepositoriesConnector           = mock[TeamsAndRepositoriesConnector]
     val mockArtifactoryConnector                    = mock[ArtifactoryConnector]
     val mockGithubConnector                         = mock[GithubConnector]
+    val mockServiceConfigsConnector                 = mock[ServiceConfigsConnector]
+
+    when(mockServiceDependenciesConfig.curatedDependencyConfig)
+      .thenReturn(dependencyConfig)
+
+    when(mockServiceConfigsConnector.getBobbyRules)
+      .thenReturn(Future.successful(BobbyRules(Map.empty)))
 
     val dependencyUpdatingService = new DependencyDataUpdatingService(
         mockServiceDependenciesConfig
@@ -425,6 +437,7 @@ class DependencyDataUpdatingServiceSpec
       , mockTeamsAndRepositoriesConnector
       , mockArtifactoryConnector
       , mockGithubConnector
+      , mockServiceConfigsConnector
       ) {
         override def now: Instant = timeForTest
       }
