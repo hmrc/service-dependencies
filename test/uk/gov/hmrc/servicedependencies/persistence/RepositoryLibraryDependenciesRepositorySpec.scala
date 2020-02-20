@@ -141,7 +141,8 @@ class RepositoryLibraryDependenciesRepositorySpec
       repository.update(repositoryLibraryDependencies2).futureValue
 
       repository.getForRepository("some-repo1").futureValue shouldBe Some(
-        repositoryLibraryDependencies1)
+        repositoryLibraryDependencies1
+      )
     }
 
     "find the repository when the name is of different case" in {

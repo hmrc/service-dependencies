@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.servicedependencies.service
 
-import java.time.Instant
+import java.time.{Instant, LocalDate}
 
 import org.mockito.ArgumentMatchers.{any, eq => eqTo}
 import org.mockito.{Mockito, MockitoSugar}
@@ -304,7 +304,108 @@ class GetMasterDependenciesServiceSpec
           )
         )
     }
+
+    it("should add bobbyRule violations") {
+      val boot = new Boot(curatedDependencyConfig)
+
+      val bobbyRule1 = buildRule("(,1.1.0)")
+      val bobbyRule2 = buildRule("(,1.1.1)")
+      val bobbyRule3 = buildRule("(,1.1.2)")
+      val bobbyRules = BobbyRules(Map(
+        ("uk.gov.hmrc", "lib1") -> List(bobbyRule1, bobbyRule2, bobbyRule3)
+      ))
+
+      when(boot.mockServiceConfigsConnector.getBobbyRules)
+        .thenReturn(Future.successful(bobbyRules))
+
+      when(boot.mockRepositoryLibraryDependenciesRepository.getAllEntries)
+        .thenReturn(Future.successful(Seq(
+            MongoRepositoryDependencies(
+                repositoryName        = "repo1"
+              , libraryDependencies   = Seq(
+                                          MongoRepositoryDependency(name = "lib1", group = "uk.gov.hmrc", currentVersion = Version("1.1.0"))
+                                        , MongoRepositoryDependency(name = "lib2", group = "uk.gov.hmrc", currentVersion = Version("1.2.0"))
+                                        )
+              , sbtPluginDependencies = Seq(
+                                          MongoRepositoryDependency(name = "plugin1", group = "uk.gov.hmrc", currentVersion = Version("10.1.0"))
+                                        , MongoRepositoryDependency(name = "plugin2", group = "uk.gov.hmrc", currentVersion = Version("10.2.0"))
+                                        )
+              , otherDependencies     = Seq(
+                                          MongoRepositoryDependency(name = "sbt", group = "org.scala-sbt", currentVersion = Version("0.13.1"))
+                                        )
+              , updateDate            = timeForTest
+              )
+          , MongoRepositoryDependencies(
+              repositoryName        = "repo2"
+            , libraryDependencies   = Seq(
+                                        MongoRepositoryDependency(name = "lib1", group = "uk.gov.hmrc", currentVersion = Version("2.1.0"))
+                                      , MongoRepositoryDependency(name = "lib2", group = "uk.gov.hmrc", currentVersion = Version("2.2.0"))
+                                      )
+            , sbtPluginDependencies = Seq(
+                                        MongoRepositoryDependency(name = "plugin1", group = "uk.gov.hmrc", currentVersion = Version("20.1.0"))
+                                      , MongoRepositoryDependency(name = "plugin2", group = "uk.gov.hmrc", currentVersion = Version("20.2.0"))
+                                      )
+            , otherDependencies     = Seq(
+                                        MongoRepositoryDependency(name = "sbt", group = "org.scala-sbt", currentVersion = Version("0.13.2"))
+                                      )
+            , updateDate            = timeForTest
+            )
+        )))
+
+      when(boot.mockDependencyVersionRepository.getAllEntries)
+        .thenReturn(Future.successful(Seq(
+            MongoDependencyVersion(name = "lib1"   , group = "uk.gov.hmrc"  , version = Version("3.0.0"))
+          , MongoDependencyVersion(name = "lib2"   , group = "uk.gov.hmrc"  , version = Version("4.0.0"))
+          , MongoDependencyVersion(name = "plugin1", group = "uk.gov.hmrc"  , version = Version("30.0.0"))
+          , MongoDependencyVersion(name = "plugin2", group = "uk.gov.hmrc"  , version = Version("40.0.0"))
+          , MongoDependencyVersion(name = "sbt"    , group = "org.scala-sbt", version = Version("100.10.1"))
+          )))
+
+      val maybeDependencies = boot.dependencyUpdatingService.getDependencyVersionsForAllRepositories.futureValue
+
+      maybeDependencies should contain theSameElementsAs Seq(
+          Dependencies(
+            repositoryName = "repo1"
+          , libraryDependencies = Seq(
+              Dependency(name = "lib1", group = "uk.gov.hmrc", currentVersion = Version("1.1.0"), latestVersion = Some(Version("3.0.0")), bobbyRuleViolations = List(bobbyRule2.asDependencyBobbyRule, bobbyRule3.asDependencyBobbyRule))
+            , Dependency(name = "lib2", group = "uk.gov.hmrc", currentVersion = Version("1.2.0"), latestVersion = Some(Version("4.0.0")), bobbyRuleViolations = Nil)
+            )
+          , sbtPluginsDependencies = Seq(
+              Dependency(name = "plugin1", group = "uk.gov.hmrc", currentVersion = Version("10.1.0"), latestVersion = Some(Version("30.0.0")), bobbyRuleViolations = Nil)
+            , Dependency(name = "plugin2", group = "uk.gov.hmrc", currentVersion = Version("10.2.0"), latestVersion = Some(Version("40.0.0")), bobbyRuleViolations = Nil)
+            )
+          , otherDependencies = Seq(
+              Dependency(name = "sbt", group = "org.scala-sbt", currentVersion = Version("0.13.1"), latestVersion = Some(Version("100.10.1")), bobbyRuleViolations = Nil)
+            )
+          , timeForTest
+          )
+        , Dependencies(
+            repositoryName = "repo2"
+          , libraryDependencies = Seq(
+              Dependency(name = "lib1", group = "uk.gov.hmrc", currentVersion = Version("2.1.0"), latestVersion = Some(Version("3.0.0")), bobbyRuleViolations = Nil),
+              Dependency(name = "lib2", group = "uk.gov.hmrc", currentVersion = Version("2.2.0"), latestVersion = Some(Version("4.0.0")), bobbyRuleViolations = Nil)
+            )
+          , sbtPluginsDependencies = Seq(
+              Dependency(name = "plugin1", group = "uk.gov.hmrc", currentVersion = Version("20.1.0"), latestVersion = Some(Version("30.0.0")), bobbyRuleViolations = Nil),
+              Dependency(name = "plugin2", group = "uk.gov.hmrc", currentVersion = Version("20.2.0"), latestVersion = Some(Version("40.0.0")), bobbyRuleViolations = Nil)
+            )
+          , otherDependencies = Seq(
+              Dependency(name = "sbt", group = "org.scala-sbt", currentVersion = Version("0.13.2"), latestVersion = Some(Version("100.10.1")), bobbyRuleViolations = Nil)
+            )
+          , timeForTest
+          )
+        )
+    }
   }
+
+  private def buildRule(range: String) =
+    BobbyRule(
+      organisation = "hmrc"
+    , name         = "name"
+    , range        = BobbyVersionRange(range)
+    , reason       = "reason"
+    , from         = LocalDate.now()
+    )
 
   class Boot(dependencyConfig: CuratedDependencyConfig) {
     val mockServiceDependenciesConfig               = mock[ServiceDependenciesConfig]

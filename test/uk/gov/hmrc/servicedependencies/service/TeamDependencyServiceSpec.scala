@@ -55,7 +55,7 @@ class TeamDependencyServiceSpec extends AnyWordSpec with Matchers with MockitoSu
       when(mockSlugDependenciesService.curatedLibrariesOfSlug(dep.repositoryName, SlugInfoFlag.Latest))
         .thenReturn(Future.successful(Option(List(lib2))))
 
-      val res = tds.replaceServiceDeps(dep).futureValue
+      val res = tds.replaceServiceDependencies(dep).futureValue
 
       res.libraryDependencies shouldBe Seq(lib2)
       res.sbtPluginsDependencies shouldBe Nil

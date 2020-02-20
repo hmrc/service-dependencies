@@ -46,31 +46,27 @@ class ServiceDependenciesController @Inject()(
   def getDependencyVersionsForRepository(repositoryName: String): Action[AnyContent] =
     Action.async { implicit request =>
       (for {
-         dependency   <- EitherT.fromOptionF(
-                           getMasterDependenciesService
-                             .getDependencyVersionsForRepository(repositoryName),
-                           NotFound(s"$repositoryName not found"))
-         bobbyRules    <- EitherT.right[Result](serviceConfigsConnector.getBobbyRules)
-         depsWithRules =  dependency.enrichWithBobbyRuleViolations(bobbyRules)
-         res           =  Ok(Json.toJson(depsWithRules))
-       } yield res
+         dependencies  <- EitherT.fromOptionF(
+                            getMasterDependenciesService
+                             .getDependencyVersionsForRepository(repositoryName)
+                          , NotFound(s"$repositoryName not found")
+                          )
+       } yield Ok(Json.toJson(dependencies))
       ).merge
     }
 
   def dependencies(): Action[AnyContent] =
     Action.async { implicit request =>
       for {
-        dependencies  <- getMasterDependenciesService
-                           .getDependencyVersionsForAllRepositories
-        bobbyRules    <- serviceConfigsConnector.getBobbyRules
-        depsWithRules =  dependencies.map(_.enrichWithBobbyRuleViolations(bobbyRules))
-      } yield Ok(Json.toJson(depsWithRules))
+        dependencies <- getMasterDependenciesService
+                          .getDependencyVersionsForAllRepositories
+      } yield Ok(Json.toJson(dependencies))
     }
 
-  def dependenciesForTeam(team: String): Action[AnyContent] =
+  def dependenciesForTeam(teamName: String): Action[AnyContent] =
     Action.async { implicit request =>
       for {
-        depsWithRules <- teamDependencyService.findAllDepsForTeam(team)
+        depsWithRules <- teamDependencyService.findAllDepsForTeam(teamName)
       } yield Ok(Json.toJson(depsWithRules))
     }
 

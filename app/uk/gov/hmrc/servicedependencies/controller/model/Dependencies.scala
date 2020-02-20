@@ -28,18 +28,7 @@ case class Dependencies(
   , sbtPluginsDependencies: Seq[Dependency]
   , otherDependencies     : Seq[Dependency]
   , lastUpdated           : Instant
-  ) {
-    def enrichWithBobbyRuleViolations(bobbyRules: BobbyRules): Dependencies = {
-      def withBobbyRuleViolations(dependency: Dependency) =
-        dependency.copy(bobbyRuleViolations = bobbyRules.violationsFor(dependency))
-
-      this.copy(
-        libraryDependencies    = this.libraryDependencies   .map(withBobbyRuleViolations)
-      , sbtPluginsDependencies = this.sbtPluginsDependencies.map(withBobbyRuleViolations)
-      , otherDependencies      = this.otherDependencies     .map(withBobbyRuleViolations)
-      )
-    }
-  }
+  )
 
 object Dependencies {
 
