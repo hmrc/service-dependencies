@@ -53,7 +53,7 @@ class ServiceDependenciesControllerSpec
       val now                    = Instant.now()
       val repositoryDependencies = Dependencies(repoName, Seq(), Seq(), Seq(), now)
 
-      when(boot.mockedDependencyDataUpdatingService.getDependencyVersionsForRepository(any()))
+      when(boot.mockGetMasterDependenciesService.getDependencyVersionsForRepository(any()))
         .thenReturn(Future.successful(Some(repositoryDependencies)))
 
       when(boot.mockServiceConfigsConnector.getBobbyRules)
@@ -65,7 +65,9 @@ class ServiceDependenciesControllerSpec
 
       contentAsJson(result).toString shouldBe
         s"""{"repositoryName":"repo1","libraryDependencies":[],"sbtPluginsDependencies":[],"otherDependencies":[],"lastUpdated":"$now"}"""
-      Mockito.verify(boot.mockedDependencyDataUpdatingService).getDependencyVersionsForRepository(repoName)
+
+      Mockito.verify(boot.mockGetMasterDependenciesService)
+        .getDependencyVersionsForRepository(repoName)
     }
   }
 
@@ -78,7 +80,7 @@ class ServiceDependenciesControllerSpec
       val repo3               = Dependencies("repo3", Seq(), Seq(), Seq(), now)
       val libraryDependencies = Seq(repo1, repo2, repo3)
 
-      when(boot.mockedDependencyDataUpdatingService.getDependencyVersionsForAllRepositories)
+      when(boot.mockGetMasterDependenciesService.getDependencyVersionsForAllRepositories)
         .thenReturn(Future.successful(libraryDependencies))
 
       when(boot.mockServiceConfigsConnector.getBobbyRules)
@@ -98,7 +100,7 @@ class ServiceDependenciesControllerSpec
 
     "should get dependencies for a SlugInfoFlag" in new GetDependenciesOfSlugFixture {
       val flag = SlugInfoFlag.Latest
-      when(boot.mockedSlugDependenciesService.curatedLibrariesOfSlug(slugName, flag)).thenReturn(
+      when(boot.mockSlugDependenciesService.curatedLibrariesOfSlug(slugName, flag)).thenReturn(
         Future.successful(
           Some(List(DependencyWithLatestVersionNoRuleViolations, DependencyWithRuleViolationsNoLatestVersion))
         )
@@ -113,7 +115,7 @@ class ServiceDependenciesControllerSpec
 
     "should return Not Found when the requested slug is not recognised" in new GetDependenciesOfSlugFixture {
       val flag = SlugInfoFlag.Latest
-      when(boot.mockedSlugDependenciesService.curatedLibrariesOfSlug(slugName, flag)).thenReturn(
+      when(boot.mockSlugDependenciesService.curatedLibrariesOfSlug(slugName, flag)).thenReturn(
         Future.successful(None)
       )
 
@@ -132,39 +134,39 @@ class ServiceDependenciesControllerSpec
   }
 
   case class Boot(
-      mockedDependencyDataUpdatingService: DependencyDataUpdatingService
-    , mockedTeamsAndRepositoriesConnector: TeamsAndRepositoriesConnector
-    , mockedSlugInfoService              : SlugInfoService
-    , mockedSlugDependenciesService      : SlugDependenciesService
-    , mockServiceConfigsConnector        : ServiceConfigsConnector
-    , controller                         : ServiceDependenciesController
+      mockDependencyDataUpdatingService: DependencyDataUpdatingService
+    , mockSlugInfoService              : SlugInfoService
+    , mockSlugDependenciesService      : SlugDependenciesService
+    , mockServiceConfigsConnector      : ServiceConfigsConnector
+    , mockTeamDependencyService        : TeamDependencyService
+    , mockGetMasterDependenciesService : GetMasterDependenciesService
+    , controller                       : ServiceDependenciesController
     )
 
   object Boot {
     def init: Boot = {
-      val mockedDependencyDataUpdatingService = mock[DependencyDataUpdatingService]
-      val mockedTeamsAndRepositoriesConnector = mock[TeamsAndRepositoriesConnector]
-      val mockedSlugInfoService               = mock[SlugInfoService]
-      val mockedSlugDependenciesService       = mock[SlugDependenciesService]
-      val mockServiceConfigsConnector         = mock[ServiceConfigsConnector]
-      val mockTeamDependencyService           = mock[TeamDependencyService]
+      val mockDependencyDataUpdatingService = mock[DependencyDataUpdatingService]
+      val mockSlugInfoService               = mock[SlugInfoService]
+      val mockSlugDependenciesService       = mock[SlugDependenciesService]
+      val mockServiceConfigsConnector       = mock[ServiceConfigsConnector]
+      val mockTeamDependencyService         = mock[TeamDependencyService]
+      val mockGetMasterDependenciesService  = mock[GetMasterDependenciesService]
       val controller = new ServiceDependenciesController(
-        Configuration(),
-        mockedDependencyDataUpdatingService,
-        mockedTeamsAndRepositoriesConnector,
-        mockedSlugInfoService,
-        mockedSlugDependenciesService,
-        mock[ServiceDependenciesConfig],
-        mockServiceConfigsConnector,
-        mockTeamDependencyService,
-        stubControllerComponents()
-      )
-      Boot(
-          mockedDependencyDataUpdatingService
-        , mockedTeamsAndRepositoriesConnector
-        , mockedSlugInfoService
-        , mockedSlugDependenciesService
+          mockDependencyDataUpdatingService
+        , mockSlugInfoService
+        , mockSlugDependenciesService
         , mockServiceConfigsConnector
+        , mockTeamDependencyService
+        , mockGetMasterDependenciesService
+        , stubControllerComponents()
+        )
+      Boot(
+          mockDependencyDataUpdatingService
+        , mockSlugInfoService
+        , mockSlugDependenciesService
+        , mockServiceConfigsConnector
+        , mockTeamDependencyService
+        , mockGetMasterDependenciesService
         , controller
         )
     }

@@ -64,7 +64,7 @@ class DependencyVersionRepositorySpec
   }
 
   "clearAllDependencyEntries" should {
-    "deletes everything" in {
+    "delete everything" in {
       repository.update(dependencyVersion).futureValue
       repository.getAllEntries.futureValue should have size 1
       repository.clearAllData.futureValue

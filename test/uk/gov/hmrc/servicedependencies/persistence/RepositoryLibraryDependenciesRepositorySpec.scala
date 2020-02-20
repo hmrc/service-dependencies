@@ -46,8 +46,7 @@ class RepositoryLibraryDependenciesRepositorySpec
   override implicit val patienceConfig = PatienceConfig(timeout = 30.seconds, interval = 100.millis)
 
   "update" should {
-    "inserts correctly" in {
-
+    "insert correctly" in {
       val repositoryLibraryDependencies = MongoRepositoryDependencies(
           repositoryName        = "some-repo"
         , libraryDependencies   = Seq(MongoRepositoryDependency(name = "some-lib", group = "uk.gov.hmrc", currentVersion = Version("1.0.2")))
@@ -61,8 +60,7 @@ class RepositoryLibraryDependenciesRepositorySpec
       repository.getAllEntries.futureValue shouldBe Seq(repositoryLibraryDependencies)
     }
 
-    "inserts correctly with suffix" in {
-
+    "insert correctly with suffix" in {
       val repositoryLibraryDependencies = MongoRepositoryDependencies(
           repositoryName        = "some-repo"
         , libraryDependencies   = Seq(MongoRepositoryDependency(name = "some-lib", group = "uk.gov.hmrc", currentVersion = Version("1.0.2-play-26")))
@@ -75,10 +73,7 @@ class RepositoryLibraryDependenciesRepositorySpec
       repository.getAllEntries.futureValue shouldBe Seq(repositoryLibraryDependencies)
     }
 
-
-
-    "updates correctly (based on repository name)" in {
-
+    "update correctly (based on repository name)" in {
       val repositoryLibraryDependencies = MongoRepositoryDependencies(
           repositoryName        = "some-repo"
         , libraryDependencies   = Seq(MongoRepositoryDependency(name = "some-lib", group = "uk.gov.hmrc", currentVersion = Version("1.0.2")))
@@ -101,8 +96,7 @@ class RepositoryLibraryDependenciesRepositorySpec
       repository.getAllEntries.futureValue shouldBe Seq(newRepositoryLibraryDependencies)
     }
 
-    "updates correctly (based on repository name) with suffix" in {
-
+    "update correctly (based on repository name) with suffix" in {
       val repositoryLibraryDependencies = MongoRepositoryDependencies(
           repositoryName        = "some-repo"
         , libraryDependencies   = Seq(MongoRepositoryDependency(name = "some-lib", group = "uk.gov.hmrc", currentVersion = Version("1.0.2")))
@@ -150,7 +144,7 @@ class RepositoryLibraryDependenciesRepositorySpec
         repositoryLibraryDependencies1)
     }
 
-    "finds the repository when the name is of different case" in {
+    "find the repository when the name is of different case" in {
       val repositoryLibraryDependencies1 = MongoRepositoryDependencies(
           repositoryName        = "some-repo1"
         , libraryDependencies   = Seq(MongoRepositoryDependency(name = "some-lib1", group = "uk.gov.hmrc", currentVersion = Version("1.0.2")))
@@ -196,7 +190,7 @@ class RepositoryLibraryDependenciesRepositorySpec
   }
 
   "clearAllDependencyEntries" should {
-    "deletes everything" in {
+    "delete everything" in {
 
       val repositoryLibraryDependencies = MongoRepositoryDependencies(
           repositoryName        = "some-repo"
@@ -217,7 +211,7 @@ class RepositoryLibraryDependenciesRepositorySpec
   }
 
   "clearUpdateDates" should {
-    "resets the last update dates to January 1, 1970" in {
+    "reset the last update dates to January 1, 1970" in {
 
       val t1 = Instant.now()
       val t2 = Instant.now().plus(1, ChronoUnit.DAYS)

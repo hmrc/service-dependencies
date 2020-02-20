@@ -24,24 +24,21 @@ import play.api.Configuration
 import play.api.libs.json.{Json, OWrites, Writes}
 import play.api.mvc._
 import uk.gov.hmrc.play.bootstrap.controller.BackendController
-import uk.gov.hmrc.servicedependencies.config.ServiceDependenciesConfig
-import uk.gov.hmrc.servicedependencies.connector.{ServiceConfigsConnector, TeamsAndRepositoriesConnector}
+import uk.gov.hmrc.servicedependencies.connector.ServiceConfigsConnector
 import uk.gov.hmrc.servicedependencies.controller.model.{Dependencies, Dependency}
 import uk.gov.hmrc.servicedependencies.model._
-import uk.gov.hmrc.servicedependencies.service.{DependencyDataUpdatingService, SlugDependenciesService, SlugInfoService, TeamDependencyService}
+import uk.gov.hmrc.servicedependencies.service.{DependencyDataUpdatingService, GetMasterDependenciesService, SlugDependenciesService, SlugInfoService, TeamDependencyService}
 
 import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
 class ServiceDependenciesController @Inject()(
-  configuration                : Configuration
-, dependencyDataUpdatingService: DependencyDataUpdatingService
-, teamsAndRepositoriesConnector: TeamsAndRepositoriesConnector
+  dependencyDataUpdatingService: DependencyDataUpdatingService
 , slugInfoService              : SlugInfoService
 , slugDependenciesService      : SlugDependenciesService
-, config                       : ServiceDependenciesConfig
 , serviceConfigsConnector      : ServiceConfigsConnector
 , teamDependencyService        : TeamDependencyService
+, getMasterDependenciesService : GetMasterDependenciesService
 , cc                           : ControllerComponents
 )(implicit ec: ExecutionContext
 ) extends BackendController(cc) {
@@ -52,7 +49,7 @@ class ServiceDependenciesController @Inject()(
     Action.async { implicit request =>
       (for {
          dependency   <- EitherT.fromOptionF(
-                           dependencyDataUpdatingService
+                           getMasterDependenciesService
                              .getDependencyVersionsForRepository(repositoryName),
                            NotFound(s"$repositoryName not found"))
          bobbyRules    <- EitherT.right[Result](serviceConfigsConnector.getBobbyRules)
@@ -65,7 +62,7 @@ class ServiceDependenciesController @Inject()(
   def dependencies(): Action[AnyContent] =
     Action.async { implicit request =>
       for {
-        dependencies  <- dependencyDataUpdatingService
+        dependencies  <- getMasterDependenciesService
                            .getDependencyVersionsForAllRepositories
         bobbyRules    <- serviceConfigsConnector.getBobbyRules
         depsWithRules =  dependencies.map(_.enrichWithBobbyRuleViolations(bobbyRules))

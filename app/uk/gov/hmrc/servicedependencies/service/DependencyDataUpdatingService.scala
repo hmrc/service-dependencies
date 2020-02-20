@@ -88,7 +88,7 @@ class DependencyDataUpdatingService @Inject()(
     } yield libraryDependencies
   }
 
-  def buildMongoRepositoryDependencies(
+  private def buildMongoRepositoryDependencies(
       repo                   : RepositoryInfo
     , currentDeps            : Seq[MongoRepositoryDependencies]
     , force                  : Boolean
@@ -132,85 +132,4 @@ class DependencyDataUpdatingService @Inject()(
     , updateDate            = now
     )
   }
-
-  private def toDependency(
-    latestVersions: Seq[MongoDependencyVersion]
-  , bobbyRules    : BobbyRules
-  )(d: MongoRepositoryDependency
-  ): Dependency = {
-    val optLatestVersion =
-      latestVersions
-        .find(ref => ref.name  == d.name &&
-                     ref.group == d.group
-             )
-        .map(_.version)
-
-    Dependency(
-      name                = d.name
-    , group               = d.group
-    , currentVersion      = d.currentVersion
-    , latestVersion       = optLatestVersion
-    , bobbyRuleViolations = bobbyRules.violationsFor(
-                              group   = d.group
-                            , name    = d.name
-                            , version = d.currentVersion
-                            )
-    )
-  }
-
-  private def toDependencies(
-    latestVersions: Seq[MongoDependencyVersion]
-  , bobbyRules    : BobbyRules
-  )(ds: Seq[MongoRepositoryDependency]
-  ): Seq[Dependency] =
-    ds.map(toDependency(latestVersions, bobbyRules))
-      .filter(dependency =>
-          curatedDependencyConfig.allDependencies.exists(lib =>
-            lib.name  == dependency.name &&
-            lib.group == dependency.group
-          ) ||
-          dependency.bobbyRuleViolations.nonEmpty
-        )
-
-  def getDependencyVersionsForRepository(repositoryName: String): Future[Option[Dependencies]] =
-    for {
-      dependencies   <- repositoryLibraryDependenciesRepository.getForRepository(repositoryName)
-      latestVersions <- dependencyVersionRepository.getAllEntries
-      bobbyRules     <- serviceConfigsConnector.getBobbyRules
-    } yield
-      dependencies.map(dep =>
-        Dependencies(
-          repositoryName         = dep.repositoryName
-        , libraryDependencies    = toDependencies(latestVersions, bobbyRules)(dep.libraryDependencies)
-        , sbtPluginsDependencies = toDependencies(latestVersions, bobbyRules)(dep.sbtPluginDependencies)
-        , otherDependencies      = toDependencies(latestVersions, bobbyRules)(dep.otherDependencies)
-        , lastUpdated            = dep.updateDate
-        )
-      )
-
-  def getDependencyVersionsForAllRepositories: Future[Seq[Dependencies]] =
-    for {
-      allDependencies <- repositoryLibraryDependenciesRepository.getAllEntries
-      latestVersions  <- dependencyVersionRepository.getAllEntries
-      bobbyRules      <- serviceConfigsConnector.getBobbyRules
-    } yield
-      allDependencies.map(dep =>
-        Dependencies(
-          repositoryName         = dep.repositoryName
-        , libraryDependencies    = toDependencies(latestVersions, bobbyRules)(dep.libraryDependencies)
-        , sbtPluginsDependencies = toDependencies(latestVersions, bobbyRules)(dep.sbtPluginDependencies)
-        , otherDependencies      = toDependencies(latestVersions, bobbyRules)(dep.otherDependencies)
-        , lastUpdated            = dep.updateDate
-        )
-      )
-
-  def dropCollection(collectionName: String) =
-    collectionName match {
-      case "repositoryLibraryDependencies" => repositoryLibraryDependenciesRepository.clearAllData
-      case "dependencyVersions"            => dependencyVersionRepository.clearAllData
-      case other                           => sys.error(s"dropping $other collection is not supported")
-    }
-
-  def clearUpdateDates =
-    repositoryLibraryDependenciesRepository.clearUpdateDates
 }
