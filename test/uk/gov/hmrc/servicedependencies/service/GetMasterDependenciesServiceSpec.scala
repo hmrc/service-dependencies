@@ -24,7 +24,6 @@ import org.scalatest.OptionValues
 import org.scalatest.concurrent.IntegrationPatience
 import org.scalatest.funspec.AnyFunSpec
 import org.scalatest.matchers.should.Matchers
-import org.scalatestplus.play.guice.GuiceOneAppPerTest
 import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
 import uk.gov.hmrc.http.HeaderCarrier
@@ -46,15 +45,9 @@ class GetMasterDependenciesServiceSpec
   extends AnyFunSpec
      with MockitoSugar
      with Matchers
-     with GuiceOneAppPerTest
      with OptionValues
      with MongoSupport
      with IntegrationPatience {
-
-  override def fakeApplication(): Application =
-    new GuiceApplicationBuilder()
-      .configure("metrics.jvm" -> false)
-      .build()
 
   private val timeForTest = Instant.now()
 

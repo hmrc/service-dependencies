@@ -163,7 +163,9 @@ class RepositoryLibraryDependenciesRepositorySpec
       repository.update(repositoryLibraryDependencies1).futureValue
       repository.update(repositoryLibraryDependencies2).futureValue
 
-      repository.getForRepository("SOME-REPO1").futureValue shouldBe defined
+      repository.getForRepository("SOME-REPO1").futureValue shouldBe Some(
+        repositoryLibraryDependencies1
+      )
     }
 
     "not find a repository with partial name" in {
