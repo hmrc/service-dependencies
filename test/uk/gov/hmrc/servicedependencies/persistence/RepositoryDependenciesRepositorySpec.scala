@@ -32,7 +32,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpecLike
 
-class RepositoryLibraryDependenciesRepositorySpec
+class RepositoryDependenciesRepositorySpec
     extends AnyWordSpecLike
       with Matchers
       with MockitoSugar
@@ -41,7 +41,7 @@ class RepositoryLibraryDependenciesRepositorySpec
       with CleanMongoCollectionSupport {
 
   val futureHelper: FutureHelpers = new MockFutureHelpers()
-  override lazy val repository = new RepositoryLibraryDependenciesRepository(mongoComponent, futureHelper, throttleConfig)
+  override lazy val repository = new RepositoryDependenciesRepository(mongoComponent, futureHelper, throttleConfig)
 
   override implicit val patienceConfig = PatienceConfig(timeout = 30.seconds, interval = 100.millis)
 

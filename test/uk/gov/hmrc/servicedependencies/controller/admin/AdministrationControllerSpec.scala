@@ -23,7 +23,7 @@ import org.scalatest.{BeforeAndAfterEach, OptionValues}
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
 import uk.gov.hmrc.servicedependencies.model.MongoRepositoryDependencies
-import uk.gov.hmrc.servicedependencies.persistence.{DependencyVersionRepository, LocksRepository, RepositoryLibraryDependenciesRepository}
+import uk.gov.hmrc.servicedependencies.persistence.{LatestVersionRepository, LocksRepository, RepositoryDependenciesRepository}
 import uk.gov.hmrc.servicedependencies.service.DependencyDataUpdatingService
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -61,16 +61,16 @@ class AdministrationControllerSpec
 
   object Boot {
     def init: Boot = {
-      val mockDependencyDataUpdatingService           = mock[DependencyDataUpdatingService]
-      val mockLocksRepository                         = mock[LocksRepository]
-      val mockRepositoryLibraryDependenciesRepository = mock[RepositoryLibraryDependenciesRepository]
-      val mockDependencyVersionRepository             = mock[DependencyVersionRepository]
+      val mockDependencyDataUpdatingService    = mock[DependencyDataUpdatingService]
+      val mockLocksRepository                  = mock[LocksRepository]
+      val mockRepositoryDependenciesRepository = mock[RepositoryDependenciesRepository]
+      val mockLatestVersionRepository          = mock[LatestVersionRepository]
 
       val controller = new AdministrationController(
           mockDependencyDataUpdatingService
         , mockLocksRepository
-        , mockRepositoryLibraryDependenciesRepository
-        , mockDependencyVersionRepository
+        , mockRepositoryDependenciesRepository
+        , mockLatestVersionRepository
         , stubControllerComponents()
         )
 

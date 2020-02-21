@@ -22,16 +22,16 @@ import uk.gov.hmrc.servicedependencies.config.model.CuratedDependencyConfig
 import uk.gov.hmrc.servicedependencies.connector.ServiceConfigsConnector
 import uk.gov.hmrc.servicedependencies.controller.model.Dependency
 import uk.gov.hmrc.servicedependencies.model.{SlugInfo, SlugInfoFlag, Version}
-import uk.gov.hmrc.servicedependencies.persistence.DependencyVersionRepository
+import uk.gov.hmrc.servicedependencies.persistence.LatestVersionRepository
 
 import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
 class SlugDependenciesService @Inject()(
-  slugInfoService            : SlugInfoService
-, serviceDependenciesConfig  : ServiceDependenciesConfig
-, dependencyVersionRepository: DependencyVersionRepository
-, serviceConfigsConnector    : ServiceConfigsConnector
+  slugInfoService          : SlugInfoService
+, serviceDependenciesConfig: ServiceDependenciesConfig
+, latestVersionRepository  : LatestVersionRepository
+, serviceConfigsConnector  : ServiceConfigsConnector
 )(implicit ec: ExecutionContext
 ) {
 
@@ -49,7 +49,7 @@ class SlugDependenciesService @Inject()(
 
   private def curatedLibrariesOfSlugInfo(slugInfo: SlugInfo): Future[List[Dependency]] =
     for {
-      latestVersions <- dependencyVersionRepository.getAllEntries
+      latestVersions <- latestVersionRepository.getAllEntries
       bobbyRules     <- serviceConfigsConnector.getBobbyRules
       dependencies   =  slugInfo
                           .dependencies

@@ -19,7 +19,7 @@ The service gathers the following information:
   * Includes all runtime dependencies used by service, including transitive
   * Shows dependencies across different releases of slug, not just latest
 
-* The latest version for a whitelist of dependencies
+* The Latest version found for any of the whitelisted dependencies
   * This is looked up periodically from Artifactory
   * It will be included in the dependencies returned for a Slug or Github repository. Identifying if the repositories dependencies are out of date.
 
@@ -54,7 +54,7 @@ repositoryDependencies.metricsGauges.interval  # how often stats are uploaded
 #### Admin endpoints
 
 As well as the configured scheduler, a refresh of the latest version for whitelisted dependencies can be initiated with:
-  `POST    /reload-dependency-versions`
+  `POST    /reload-latest-versions`
 
 Similarly, a refresh of dependencies from Github, for all modified repositories, can be initiated with:
   `POST    /reload-dependencies`

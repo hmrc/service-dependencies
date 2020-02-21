@@ -41,7 +41,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}
 
-class GetMasterDependenciesServiceSpec
+class RepositoryDependenciesServiceSpec
   extends AnyFunSpec
      with MockitoSugar
      with Matchers
@@ -69,7 +69,7 @@ class GetMasterDependenciesServiceSpec
 
       val repositoryName = "repoXYZ"
 
-      when(boot.mockRepositoryLibraryDependenciesRepository.getForRepository(any()))
+      when(boot.mockRepositoryDependenciesRepository.getForRepository(any()))
         .thenReturn(Future.successful(
           Some(MongoRepositoryDependencies(
             repositoryName        = "repoXYZ"
@@ -84,16 +84,16 @@ class GetMasterDependenciesServiceSpec
         ))
 
       val referenceLibraryVersions = Seq(
-        MongoDependencyVersion(name = "lib1", group = "uk.gov.hmrc", version = Version("1.1.0"))
-      , MongoDependencyVersion(name = "lib2", group = "uk.gov.hmrc", version = Version("2.1.0"))
+        MongoLatestVersion(name = "lib1", group = "uk.gov.hmrc", version = Version("1.1.0"))
+      , MongoLatestVersion(name = "lib2", group = "uk.gov.hmrc", version = Version("2.1.0"))
       )
-      when(boot.mockDependencyVersionRepository.getAllEntries)
+      when(boot.mockLatestVersionRepository.getAllEntries)
         .thenReturn(Future.successful(referenceLibraryVersions))
 
       val optDependencies =
         boot.dependencyUpdatingService.getDependencyVersionsForRepository(repositoryName).futureValue
 
-      verify(boot.mockRepositoryLibraryDependenciesRepository, times(1)).getForRepository(repositoryName)
+      verify(boot.mockRepositoryDependenciesRepository, times(1)).getForRepository(repositoryName)
 
       optDependencies shouldBe Some(Dependencies(
           repositoryName         = "repoXYZ"
@@ -112,7 +112,7 @@ class GetMasterDependenciesServiceSpec
 
       val repositoryName = "repoXYZ"
 
-      when(boot.mockRepositoryLibraryDependenciesRepository.getForRepository(any()))
+      when(boot.mockRepositoryDependenciesRepository.getForRepository(any()))
         .thenReturn(Future.successful(
           Some(MongoRepositoryDependencies(
               repositoryName        = repositoryName
@@ -126,17 +126,17 @@ class GetMasterDependenciesServiceSpec
             ))
         ))
 
-      when(boot.mockDependencyVersionRepository.getAllEntries)
+      when(boot.mockLatestVersionRepository.getAllEntries)
         .thenReturn(Future.successful(Seq(
-            MongoDependencyVersion(name = "plugin1", group = "uk.gov.hmrc", version = Version("3.1.0"))
-          , MongoDependencyVersion(name = "plugin2", group = "uk.gov.hmrc", version = Version("4.1.0"))
+            MongoLatestVersion(name = "plugin1", group = "uk.gov.hmrc", version = Version("3.1.0"))
+          , MongoLatestVersion(name = "plugin2", group = "uk.gov.hmrc", version = Version("4.1.0"))
           )
         ))
 
       val optDependencies =
         boot.dependencyUpdatingService.getDependencyVersionsForRepository(repositoryName).futureValue
 
-      verify(boot.mockRepositoryLibraryDependenciesRepository, times(1)).getForRepository(repositoryName)
+      verify(boot.mockRepositoryDependenciesRepository, times(1)).getForRepository(repositoryName)
 
       optDependencies shouldBe Some(Dependencies(
           repositoryName         = repositoryName
@@ -161,7 +161,7 @@ class GetMasterDependenciesServiceSpec
 
       val repositoryName = "repoXYZ"
 
-      when(boot.mockRepositoryLibraryDependenciesRepository.getForRepository(any()))
+      when(boot.mockRepositoryDependenciesRepository.getForRepository(any()))
         .thenReturn(Future.successful(
           Some(MongoRepositoryDependencies(
               repositoryName        = repositoryName
@@ -175,11 +175,11 @@ class GetMasterDependenciesServiceSpec
             ))
         ))
 
-      when(boot.mockDependencyVersionRepository.getAllEntries)
+      when(boot.mockLatestVersionRepository.getAllEntries)
         .thenReturn(
           Future.successful(Seq(
-              MongoDependencyVersion(name = "internal-plugin", group = "uk.gov.hmrc", version = Version("3.1.0"))
-            , MongoDependencyVersion(name = "external-plugin", group = "uk.edu"     , version = Version("11.22.33"))
+              MongoLatestVersion(name = "internal-plugin", group = "uk.gov.hmrc", version = Version("3.1.0"))
+            , MongoLatestVersion(name = "external-plugin", group = "uk.edu"     , version = Version("11.22.33"))
             ))
         )
 
@@ -197,7 +197,7 @@ class GetMasterDependenciesServiceSpec
         , lastUpdated            = timeForTest
         ))
 
-      verify(boot.mockRepositoryLibraryDependenciesRepository, times(1)).getForRepository(repositoryName)
+      verify(boot.mockRepositoryDependenciesRepository, times(1)).getForRepository(repositoryName)
     }
 
     it("test for none") {
@@ -205,16 +205,16 @@ class GetMasterDependenciesServiceSpec
 
       val repositoryName = "repoXYZ"
 
-      when(boot.mockRepositoryLibraryDependenciesRepository.getForRepository(any()))
+      when(boot.mockRepositoryDependenciesRepository.getForRepository(any()))
         .thenReturn(Future.successful(None))
 
-      when(boot.mockDependencyVersionRepository.getAllEntries)
+      when(boot.mockLatestVersionRepository.getAllEntries)
         .thenReturn(Future.successful(Nil))
 
       val maybeDependencies =
         boot.dependencyUpdatingService.getDependencyVersionsForRepository(repositoryName).futureValue
 
-      verify(boot.mockRepositoryLibraryDependenciesRepository, times(1)).getForRepository(repositoryName)
+      verify(boot.mockRepositoryDependenciesRepository, times(1)).getForRepository(repositoryName)
 
       maybeDependencies shouldBe None
     }
@@ -224,7 +224,7 @@ class GetMasterDependenciesServiceSpec
     it("should return the current and latest library, sbt plugin and other dependency versions for all repositories") {
       val boot = new Boot(curatedDependencyConfig)
 
-      when(boot.mockRepositoryLibraryDependenciesRepository.getAllEntries)
+      when(boot.mockRepositoryDependenciesRepository.getAllEntries)
         .thenReturn(Future.successful(Seq(
             MongoRepositoryDependencies(
                 repositoryName        = "repo1"
@@ -258,18 +258,18 @@ class GetMasterDependenciesServiceSpec
             )
         )))
 
-      when(boot.mockDependencyVersionRepository.getAllEntries)
+      when(boot.mockLatestVersionRepository.getAllEntries)
         .thenReturn(Future.successful(Seq(
-            MongoDependencyVersion(name = "lib1"   , group = "uk.gov.hmrc"  , version = Version("3.0.0"))
-          , MongoDependencyVersion(name = "lib2"   , group = "uk.gov.hmrc"  , version = Version("4.0.0"))
-          , MongoDependencyVersion(name = "plugin1", group = "uk.gov.hmrc"  , version = Version("30.0.0"))
-          , MongoDependencyVersion(name = "plugin2", group = "uk.gov.hmrc"  , version = Version("40.0.0"))
-          , MongoDependencyVersion(name = "sbt"    , group = "org.scala-sbt", version = Version("100.10.1"))
+            MongoLatestVersion(name = "lib1"   , group = "uk.gov.hmrc"  , version = Version("3.0.0"))
+          , MongoLatestVersion(name = "lib2"   , group = "uk.gov.hmrc"  , version = Version("4.0.0"))
+          , MongoLatestVersion(name = "plugin1", group = "uk.gov.hmrc"  , version = Version("30.0.0"))
+          , MongoLatestVersion(name = "plugin2", group = "uk.gov.hmrc"  , version = Version("40.0.0"))
+          , MongoLatestVersion(name = "sbt"    , group = "org.scala-sbt", version = Version("100.10.1"))
           )))
 
       val maybeDependencies = boot.dependencyUpdatingService.getDependencyVersionsForAllRepositories.futureValue
 
-      verify(boot.mockRepositoryLibraryDependenciesRepository, times(1)).getAllEntries
+      verify(boot.mockRepositoryDependenciesRepository, times(1)).getAllEntries
 
       maybeDependencies should contain theSameElementsAs Seq(
           Dependencies(
@@ -318,7 +318,7 @@ class GetMasterDependenciesServiceSpec
       when(boot.mockServiceConfigsConnector.getBobbyRules)
         .thenReturn(Future.successful(bobbyRules))
 
-      when(boot.mockRepositoryLibraryDependenciesRepository.getAllEntries)
+      when(boot.mockRepositoryDependenciesRepository.getAllEntries)
         .thenReturn(Future.successful(Seq(
             MongoRepositoryDependencies(
                 repositoryName        = "repo1"
@@ -352,13 +352,13 @@ class GetMasterDependenciesServiceSpec
             )
         )))
 
-      when(boot.mockDependencyVersionRepository.getAllEntries)
+      when(boot.mockLatestVersionRepository.getAllEntries)
         .thenReturn(Future.successful(Seq(
-            MongoDependencyVersion(name = "lib1"   , group = "uk.gov.hmrc"  , version = Version("3.0.0"))
-          , MongoDependencyVersion(name = "lib2"   , group = "uk.gov.hmrc"  , version = Version("4.0.0"))
-          , MongoDependencyVersion(name = "plugin1", group = "uk.gov.hmrc"  , version = Version("30.0.0"))
-          , MongoDependencyVersion(name = "plugin2", group = "uk.gov.hmrc"  , version = Version("40.0.0"))
-          , MongoDependencyVersion(name = "sbt"    , group = "org.scala-sbt", version = Version("100.10.1"))
+            MongoLatestVersion(name = "lib1"   , group = "uk.gov.hmrc"  , version = Version("3.0.0"))
+          , MongoLatestVersion(name = "lib2"   , group = "uk.gov.hmrc"  , version = Version("4.0.0"))
+          , MongoLatestVersion(name = "plugin1", group = "uk.gov.hmrc"  , version = Version("30.0.0"))
+          , MongoLatestVersion(name = "plugin2", group = "uk.gov.hmrc"  , version = Version("40.0.0"))
+          , MongoLatestVersion(name = "sbt"    , group = "org.scala-sbt", version = Version("100.10.1"))
           )))
 
       val maybeDependencies = boot.dependencyUpdatingService.getDependencyVersionsForAllRepositories.futureValue
@@ -408,10 +408,10 @@ class GetMasterDependenciesServiceSpec
     )
 
   class Boot(dependencyConfig: CuratedDependencyConfig) {
-    val mockServiceDependenciesConfig               = mock[ServiceDependenciesConfig]
-    val mockRepositoryLibraryDependenciesRepository = mock[RepositoryLibraryDependenciesRepository]
-    val mockDependencyVersionRepository             = mock[DependencyVersionRepository]
-    val mockServiceConfigsConnector                 = mock[ServiceConfigsConnector]
+    val mockServiceDependenciesConfig        = mock[ServiceDependenciesConfig]
+    val mockRepositoryDependenciesRepository = mock[RepositoryDependenciesRepository]
+    val mockLatestVersionRepository          = mock[LatestVersionRepository]
+    val mockServiceConfigsConnector          = mock[ServiceConfigsConnector]
 
     when(mockServiceDependenciesConfig.curatedDependencyConfig)
       .thenReturn(dependencyConfig)
@@ -419,10 +419,10 @@ class GetMasterDependenciesServiceSpec
     when(mockServiceConfigsConnector.getBobbyRules)
       .thenReturn(Future.successful(BobbyRules(Map.empty)))
 
-    val dependencyUpdatingService = new GetMasterDependenciesService(
+    val dependencyUpdatingService = new RepositoryDependenciesService(
         mockServiceDependenciesConfig
-      , mockRepositoryLibraryDependenciesRepository
-      , mockDependencyVersionRepository
+      , mockRepositoryDependenciesRepository
+      , mockLatestVersionRepository
       , mockServiceConfigsConnector
       )
   }

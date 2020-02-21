@@ -21,17 +21,17 @@ import org.slf4j.LoggerFactory
 import uk.gov.hmrc.servicedependencies.config.ServiceDependenciesConfig
 import uk.gov.hmrc.servicedependencies.connector.ServiceConfigsConnector
 import uk.gov.hmrc.servicedependencies.controller.model.{Dependencies, Dependency}
-import uk.gov.hmrc.servicedependencies.model.{BobbyRules, MongoRepositoryDependency, MongoDependencyVersion}
-import uk.gov.hmrc.servicedependencies.persistence.{DependencyVersionRepository, RepositoryLibraryDependenciesRepository}
+import uk.gov.hmrc.servicedependencies.model.{BobbyRules, MongoRepositoryDependency, MongoLatestVersion}
+import uk.gov.hmrc.servicedependencies.persistence.{LatestVersionRepository, RepositoryDependenciesRepository}
 
 import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
-class GetMasterDependenciesService @Inject()(
-  serviceDependenciesConfig              : ServiceDependenciesConfig
-, repositoryLibraryDependenciesRepository: RepositoryLibraryDependenciesRepository
-, dependencyVersionRepository            : DependencyVersionRepository
-, serviceConfigsConnector                : ServiceConfigsConnector
+class RepositoryDependenciesService @Inject()(
+  serviceDependenciesConfig       : ServiceDependenciesConfig
+, repositoryDependenciesRepository: RepositoryDependenciesRepository
+, latestVersionRepository         : LatestVersionRepository
+, serviceConfigsConnector         : ServiceConfigsConnector
 )(implicit ec: ExecutionContext
 ) {
 
@@ -41,7 +41,7 @@ class GetMasterDependenciesService @Inject()(
     serviceDependenciesConfig.curatedDependencyConfig
 
   private def toDependency(
-    latestVersions: Seq[MongoDependencyVersion]
+    latestVersions: Seq[MongoLatestVersion]
   , bobbyRules    : BobbyRules
   )(d: MongoRepositoryDependency
   ): Dependency = {
@@ -66,7 +66,7 @@ class GetMasterDependenciesService @Inject()(
   }
 
   private def toDependencies(
-    latestVersions: Seq[MongoDependencyVersion]
+    latestVersions: Seq[MongoLatestVersion]
   , bobbyRules    : BobbyRules
   )(ds: Seq[MongoRepositoryDependency]
   ): Seq[Dependency] =
@@ -81,8 +81,8 @@ class GetMasterDependenciesService @Inject()(
 
   def getDependencyVersionsForRepository(repositoryName: String): Future[Option[Dependencies]] =
     for {
-      dependencies   <- repositoryLibraryDependenciesRepository.getForRepository(repositoryName)
-      latestVersions <- dependencyVersionRepository.getAllEntries
+      dependencies   <- repositoryDependenciesRepository.getForRepository(repositoryName)
+      latestVersions <- latestVersionRepository.getAllEntries
       bobbyRules     <- serviceConfigsConnector.getBobbyRules
     } yield
       dependencies.map(dep =>
@@ -97,8 +97,8 @@ class GetMasterDependenciesService @Inject()(
 
   def getDependencyVersionsForAllRepositories: Future[Seq[Dependencies]] =
     for {
-      allDependencies <- repositoryLibraryDependenciesRepository.getAllEntries
-      latestVersions  <- dependencyVersionRepository.getAllEntries
+      allDependencies <- repositoryDependenciesRepository.getAllEntries
+      latestVersions  <- latestVersionRepository.getAllEntries
       bobbyRules      <- serviceConfigsConnector.getBobbyRules
     } yield
       allDependencies.map(dep =>

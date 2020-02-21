@@ -20,18 +20,18 @@ import javax.inject.{Inject, Singleton}
 import play.api.libs.json.Json
 import play.api.mvc.ControllerComponents
 import uk.gov.hmrc.play.bootstrap.controller.BackendController
-import uk.gov.hmrc.servicedependencies.persistence.{DependencyVersionRepository, LocksRepository, RepositoryLibraryDependenciesRepository}
+import uk.gov.hmrc.servicedependencies.persistence.{LatestVersionRepository, LocksRepository, RepositoryDependenciesRepository}
 import uk.gov.hmrc.servicedependencies.service.DependencyDataUpdatingService
 
 import scala.concurrent.ExecutionContext
 
 @Singleton
 class AdministrationController @Inject()(
-    dependencyDataUpdatingService          : DependencyDataUpdatingService
-  , locksRepository                        : LocksRepository
-  , repositoryLibraryDependenciesRepository: RepositoryLibraryDependenciesRepository
-  , dependencyVersionRepository            : DependencyVersionRepository
-  , cc                                     : ControllerComponents
+    dependencyDataUpdatingService   : DependencyDataUpdatingService
+  , locksRepository                 : LocksRepository
+  , repositoryDependenciesRepository: RepositoryDependenciesRepository
+  , latestVersionRepository         : LatestVersionRepository
+  , cc                              : ControllerComponents
   )(implicit ec: ExecutionContext
   ) extends BackendController(cc) {
 
@@ -45,10 +45,10 @@ class AdministrationController @Inject()(
       Accepted("reload started")
     }
 
-  def reloadDependencyVersions =
+  def reloadLatestVersions =
     Action { implicit request =>
       dependencyDataUpdatingService
-        .reloadLatestDependencyVersions
+        .reloadLatestVersions
         .onFailure {
           case ex => throw new RuntimeException("reload of dependency versions failed", ex)
         }
@@ -59,8 +59,8 @@ class AdministrationController @Inject()(
     Action.async { implicit request =>
       (collection match {
          case "locks"                         => locksRepository.clearAllData
-         case "repositoryLibraryDependencies" => repositoryLibraryDependenciesRepository.clearAllData
-         case "dependencyVersions"            => dependencyVersionRepository.clearAllData
+         case "repositoryLibraryDependencies" => repositoryDependenciesRepository.clearAllData
+         case "dependencyVersions"            => latestVersionRepository.clearAllData
          case other                           => sys.error(s"dropping $other collection is not supported")
        }
       ).map(_ => Ok(s"$collection dropped"))
@@ -68,14 +68,14 @@ class AdministrationController @Inject()(
 
   def clearUpdateDates =
     Action.async { implicit request =>
-      repositoryLibraryDependenciesRepository
+      repositoryDependenciesRepository
         .clearUpdateDates
         .map(rs => Ok(s"${rs.size} records updated"))
     }
 
   def clearUpdateDatesForRepository(repositoryName: String) =
     Action.async { implicit request =>
-      repositoryLibraryDependenciesRepository
+      repositoryDependenciesRepository
         .clearUpdateDatesForRepository(repositoryName)
         .map {
           case None    => NotFound("")

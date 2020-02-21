@@ -52,11 +52,11 @@ class DataReloadScheduler @Inject()(
   }
 
   scheduleWithLock(
-    label           = "dependencyVersionsReloader"
-  , schedulerConfig = schedulerConfigs.dependencyVersionsReload
-  , lock            = mongoLocks.dependencyVersionsReloadSchedulerLock
+    label           = "latestVersionsReloader"
+  , schedulerConfig = schedulerConfigs.latestVersionsReload
+  , lock            = mongoLocks.latestVersionsReloadSchedulerLock
   ){
-    dependencyDataUpdatingService.reloadLatestDependencyVersions
+    dependencyDataUpdatingService.reloadLatestVersions
       .map(_ => ())
   }
 }

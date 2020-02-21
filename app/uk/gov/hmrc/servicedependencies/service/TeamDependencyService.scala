@@ -27,18 +27,18 @@ import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
 class TeamDependencyService @Inject()(
-  teamsAndReposConnector      : TeamsAndRepositoriesConnector
-, slugInfoRepository          : SlugInfoRepository
-, getMasterDependenciesService: GetMasterDependenciesService
-, serviceConfigsConnector     : ServiceConfigsConnector
-, slugDependenciesService     : SlugDependenciesService
+  teamsAndReposConnector       : TeamsAndRepositoriesConnector
+, slugInfoRepository           : SlugInfoRepository
+, repositoryDependenciesService: RepositoryDependenciesService
+, serviceConfigsConnector      : ServiceConfigsConnector
+, slugDependenciesService      : SlugDependenciesService
 )(implicit ec: ExecutionContext
 ) {
 
   def findAllDepsForTeam(teamName: String)(implicit hc: HeaderCarrier): Future[Seq[Dependencies]] =
     for {
       (teamDetails, githubDeps) <- ( teamsAndReposConnector.getTeamDetails(teamName)
-                                   , getMasterDependenciesService.getDependencyVersionsForAllRepositories
+                                   , repositoryDependenciesService.getDependencyVersionsForAllRepositories
                                    ).mapN { case (td, gh) => (td, gh) }
       libs                      =  teamDetails.libraries.flatMap(l => githubDeps.find(_.repositoryName == l))
       services                  =  teamDetails.services.flatMap(s => githubDeps.find(_.repositoryName == s))

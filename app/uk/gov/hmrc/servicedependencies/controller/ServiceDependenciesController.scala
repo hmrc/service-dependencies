@@ -25,7 +25,7 @@ import uk.gov.hmrc.play.bootstrap.controller.BackendController
 import uk.gov.hmrc.servicedependencies.connector.ServiceConfigsConnector
 import uk.gov.hmrc.servicedependencies.controller.model.{Dependencies, Dependency}
 import uk.gov.hmrc.servicedependencies.model._
-import uk.gov.hmrc.servicedependencies.service.{DependencyDataUpdatingService, GetMasterDependenciesService, SlugDependenciesService, SlugInfoService, TeamDependencyService}
+import uk.gov.hmrc.servicedependencies.service.{DependencyDataUpdatingService, RepositoryDependenciesService, SlugDependenciesService, SlugInfoService, TeamDependencyService}
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -36,7 +36,7 @@ class ServiceDependenciesController @Inject()(
 , slugDependenciesService      : SlugDependenciesService
 , serviceConfigsConnector      : ServiceConfigsConnector
 , teamDependencyService        : TeamDependencyService
-, getMasterDependenciesService : GetMasterDependenciesService
+, repositoryDependenciesService: RepositoryDependenciesService
 , cc                           : ControllerComponents
 )(implicit ec: ExecutionContext
 ) extends BackendController(cc) {
@@ -47,7 +47,7 @@ class ServiceDependenciesController @Inject()(
     Action.async { implicit request =>
       (for {
          dependencies  <- EitherT.fromOptionF(
-                            getMasterDependenciesService
+                            repositoryDependenciesService
                              .getDependencyVersionsForRepository(repositoryName)
                           , NotFound(s"$repositoryName not found")
                           )
@@ -58,7 +58,7 @@ class ServiceDependenciesController @Inject()(
   def dependencies(): Action[AnyContent] =
     Action.async { implicit request =>
       for {
-        dependencies <- getMasterDependenciesService
+        dependencies <- repositoryDependenciesService
                           .getDependencyVersionsForAllRepositories
       } yield Ok(Json.toJson(dependencies))
     }

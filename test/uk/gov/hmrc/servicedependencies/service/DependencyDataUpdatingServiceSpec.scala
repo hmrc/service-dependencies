@@ -51,7 +51,7 @@ class DependencyDataUpdatingServiceSpec
 
   private val timeForTest = Instant.now()
 
-  describe("reloadDependencyVersions") {
+  describe("reloadLatestVersions") {
     it("should call the dependency version update function on the repository") {
       val boot = new Boot(CuratedDependencyConfig(
         sbtPlugins = Nil
@@ -62,14 +62,14 @@ class DependencyDataUpdatingServiceSpec
       when(boot.mockArtifactoryConnector.findLatestVersion(group = "uk.gov.hmrc", artefact = "libYY"))
         .thenReturn(Future.successful(Map(ScalaVersion.SV_None -> Version("1.1.1"))))
 
-      when(boot.mockDependencyVersionRepository.update(any()))
-        .thenReturn(Future.successful(mock[MongoDependencyVersion]))
+      when(boot.mockLatestVersionRepository.update(any()))
+        .thenReturn(Future.successful(mock[MongoLatestVersion]))
 
-      boot.dependencyUpdatingService.reloadLatestDependencyVersions(HeaderCarrier()).futureValue
+      boot.dependencyUpdatingService.reloadLatestVersions(HeaderCarrier()).futureValue
 
-      verify(boot.mockDependencyVersionRepository, times(1))
-        .update(MongoDependencyVersion(name = "libYY", group = "uk.gov.hmrc", version = Version("1.1.1"), updateDate = timeForTest))
-      verifyZeroInteractions(boot.mockRepositoryLibraryDependenciesRepository)
+      verify(boot.mockLatestVersionRepository, times(1))
+        .update(MongoLatestVersion(name = "libYY", group = "uk.gov.hmrc", version = Version("1.1.1"), updateDate = timeForTest))
+      verifyZeroInteractions(boot.mockRepositoryDependenciesRepository)
     }
   }
 
@@ -104,7 +104,7 @@ class DependencyDataUpdatingServiceSpec
         , lastUpdatedAt = repoLastUpdatedAt
         )
 
-      when(boot.mockRepositoryLibraryDependenciesRepository.getAllEntries)
+      when(boot.mockRepositoryDependenciesRepository.getAllEntries)
         .thenReturn(Future.successful(Seq(mongoRepositoryDependencies)))
 
       when(boot.mockTeamsAndRepositoriesConnector.getAllRepositories(any()))
@@ -113,7 +113,7 @@ class DependencyDataUpdatingServiceSpec
       when(boot.mockGithubConnector.findVersionsForMultipleArtifacts(any()))
         .thenReturn(Right(githubSearchResults))
 
-      when(boot.mockRepositoryLibraryDependenciesRepository.update(any()))
+      when(boot.mockRepositoryDependenciesRepository.update(any()))
         .thenReturn(Future.successful(mongoRepositoryDependencies))
 
       val res = boot.dependencyUpdatingService
@@ -122,11 +122,11 @@ class DependencyDataUpdatingServiceSpec
 
       if (shouldUpdate) {
         res shouldBe Seq(mongoRepositoryDependencies)
-        verify(boot.mockRepositoryLibraryDependenciesRepository, times(1))
+        verify(boot.mockRepositoryDependenciesRepository, times(1))
           .update(eqTo(mongoRepositoryDependencies))
       } else {
         res shouldBe Nil
-        verify(boot.mockRepositoryLibraryDependenciesRepository, Mockito.never())
+        verify(boot.mockRepositoryDependenciesRepository, Mockito.never())
           .update(any())
       }
     }
@@ -147,13 +147,13 @@ class DependencyDataUpdatingServiceSpec
   }
 
   class Boot(dependencyConfig: CuratedDependencyConfig) {
-    val mockServiceDependenciesConfig               = mock[ServiceDependenciesConfig]
-    val mockRepositoryLibraryDependenciesRepository = mock[RepositoryLibraryDependenciesRepository]
-    val mockDependencyVersionRepository             = mock[DependencyVersionRepository]
-    val mockTeamsAndRepositoriesConnector           = mock[TeamsAndRepositoriesConnector]
-    val mockArtifactoryConnector                    = mock[ArtifactoryConnector]
-    val mockGithubConnector                         = mock[GithubConnector]
-    val mockServiceConfigsConnector                 = mock[ServiceConfigsConnector]
+    val mockServiceDependenciesConfig        = mock[ServiceDependenciesConfig]
+    val mockRepositoryDependenciesRepository = mock[RepositoryDependenciesRepository]
+    val mockLatestVersionRepository          = mock[LatestVersionRepository]
+    val mockTeamsAndRepositoriesConnector    = mock[TeamsAndRepositoriesConnector]
+    val mockArtifactoryConnector             = mock[ArtifactoryConnector]
+    val mockGithubConnector                  = mock[GithubConnector]
+    val mockServiceConfigsConnector          = mock[ServiceConfigsConnector]
 
     when(mockServiceDependenciesConfig.curatedDependencyConfig)
       .thenReturn(dependencyConfig)
@@ -163,8 +163,8 @@ class DependencyDataUpdatingServiceSpec
 
     val dependencyUpdatingService = new DependencyDataUpdatingService(
         mockServiceDependenciesConfig
-      , mockRepositoryLibraryDependenciesRepository
-      , mockDependencyVersionRepository
+      , mockRepositoryDependenciesRepository
+      , mockLatestVersionRepository
       , mockTeamsAndRepositoriesConnector
       , mockArtifactoryConnector
       , mockGithubConnector

@@ -27,26 +27,26 @@ import uk.gov.hmrc.servicedependencies.persistence._
 import scala.concurrent.{ExecutionContext, Future}
 
 class IntegrationTestController @Inject()(
-    dependencyVersionRepository            : DependencyVersionRepository
-  , repositoryLibraryDependenciesRepository: RepositoryLibraryDependenciesRepository
-  , sluginfoRepo                           : SlugInfoRepository
-  , bobbyRulesSummaryRepo                  : BobbyRulesSummaryRepository
-  , cc                                     : ControllerComponents
+    latestVersionRepository         : LatestVersionRepository
+  , repositoryDependenciesRepository: RepositoryDependenciesRepository
+  , sluginfoRepo                    : SlugInfoRepository
+  , bobbyRulesSummaryRepo           : BobbyRulesSummaryRepository
+  , cc                              : ControllerComponents
   )(implicit ec: ExecutionContext
   ) extends BackendController(cc) {
 
-  implicit val dtf                    = MongoJavatimeFormats.localDateFormats
-  implicit val vf                     = Version.apiFormat
-  implicit val dependencyVersionReads = {
-                                          implicit val sbf = ScalaVersion.format
-                                          Json.using[Json.WithDefaultValues].reads[MongoDependencyVersion]
-                                        }
-  implicit val dependenciesReads      = Json.using[Json.WithDefaultValues].reads[MongoRepositoryDependencies]
+  implicit val dtf                = MongoJavatimeFormats.localDateFormats
+  implicit val vf                 = Version.apiFormat
+  implicit val latestVersionReads = {
+                                      implicit val sbf = ScalaVersion.format
+                                      Json.using[Json.WithDefaultValues].reads[MongoLatestVersion]
+                                    }
+  implicit val dependenciesReads  = Json.using[Json.WithDefaultValues].reads[MongoRepositoryDependencies]
 
-  implicit val sluginfoReads          = { implicit val sdr = Json.using[Json.WithDefaultValues].reads[SlugDependency]
-                                          implicit val javaInfoReads = Json.using[Json.WithDefaultValues].reads[JavaInfo]
-                                          Json.using[Json.WithDefaultValues].reads[SlugInfo]
-                                        }
+  implicit val sluginfoReads      = { implicit val sdr = Json.using[Json.WithDefaultValues].reads[SlugDependency]
+                                      implicit val javaInfoReads = Json.using[Json.WithDefaultValues].reads[JavaInfo]
+                                      Json.using[Json.WithDefaultValues].reads[SlugInfo]
+                                    }
   implicit val bobbyRulesSummaryReads = BobbyRulesSummary.apiFormat
 
   private def validateJson[A : Reads] =
@@ -54,15 +54,15 @@ class IntegrationTestController @Inject()(
       _.validate[A].asEither.left.map(e => BadRequest(JsError.toJson(e)))
     )
 
-  def addDependencyVersions =
-    Action.async(validateJson[Seq[MongoDependencyVersion]]) { implicit request =>
-      Future.sequence(request.body.map(dependencyVersionRepository.update))
+  def addLatestVersions =
+    Action.async(validateJson[Seq[MongoLatestVersion]]) { implicit request =>
+      Future.sequence(request.body.map(latestVersionRepository.update))
         .map(_ => NoContent)
     }
 
   def addDependencies =
     Action.async(validateJson[Seq[MongoRepositoryDependencies]]) { implicit request =>
-      Future.sequence(request.body.map(repositoryLibraryDependenciesRepository.update))
+      Future.sequence(request.body.map(repositoryDependenciesRepository.update))
         .map(_ => NoContent)
     }
 
@@ -78,15 +78,15 @@ class IntegrationTestController @Inject()(
         .map(_ => NoContent)
     }
 
-  def deleteDependencyVersions =
+  def deleteLatestVersions =
     Action.async { implicit request =>
-      dependencyVersionRepository.clearAllData
+      latestVersionRepository.clearAllData
         .map(_ => NoContent)
     }
 
   def deleteDependencies =
     Action.async { implicit request =>
-      repositoryLibraryDependenciesRepository.clearAllData
+      repositoryDependenciesRepository.clearAllData
         .map(_ => NoContent)
     }
 
@@ -105,8 +105,8 @@ class IntegrationTestController @Inject()(
   def deleteAll =
     Action.async { implicit request =>
       Future.sequence(List(
-          dependencyVersionRepository.clearAllData
-        , repositoryLibraryDependenciesRepository.clearAllData
+          latestVersionRepository.clearAllData
+        , repositoryDependenciesRepository.clearAllData
         , sluginfoRepo.clearAllData
         , bobbyRulesSummaryRepo.clearAllData
         )).map(_ => NoContent)

@@ -21,7 +21,7 @@ import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.mongo.metrix.MetricSource
 import uk.gov.hmrc.servicedependencies.connector.TeamsAndRepositoriesConnector
 import uk.gov.hmrc.servicedependencies.model.{MongoRepositoryDependency, Team, Version}
-import uk.gov.hmrc.servicedependencies.persistence.RepositoryLibraryDependenciesRepository
+import uk.gov.hmrc.servicedependencies.persistence.RepositoryDependenciesRepository
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -31,8 +31,8 @@ case class TeamRepos(
 
 @Singleton
 class RepositoryDependenciesSource @Inject()(
-  teamsAndRepositoriesConnector          : TeamsAndRepositoriesConnector,
-  repositoryLibraryDependenciesRepository: RepositoryLibraryDependenciesRepository
+  teamsAndRepositoriesConnector   : TeamsAndRepositoriesConnector,
+  repositoryDependenciesRepository: RepositoryDependenciesRepository
 )(implicit ec: ExecutionContext
 ) extends MetricSource {
 
@@ -44,7 +44,7 @@ class RepositoryDependenciesSource @Inject()(
   def getTeamsLibraries: Future[Seq[TeamRepos]] =
     for {
       teamsWithRepositories <- teamsAndRepositoriesConnector.getTeamsWithRepositories
-      dependencies <- repositoryLibraryDependenciesRepository.getAllEntries
+      dependencies <- repositoryDependenciesRepository.getAllEntries
                        .map(_
                           .filterNot(_.repositoryName.endsWith("-history"))
                           .map(repoDependencies => repoDependencies.repositoryName -> repoDependencies.dependencies)

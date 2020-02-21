@@ -30,44 +30,44 @@ import uk.gov.hmrc.servicedependencies.util.FutureHelpers
 import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
-class DependencyVersionRepository @Inject()(
+class LatestVersionRepository @Inject()(
     mongoComponent    : MongoComponent
   , futureHelpers     : FutureHelpers
   , val throttleConfig: ThrottleConfig
   )(implicit ec: ExecutionContext
-  ) extends PlayMongoRepository[MongoDependencyVersion](
+  ) extends PlayMongoRepository[MongoLatestVersion](
     collectionName = "dependencyVersions"
   , mongoComponent = mongoComponent
-  , domainFormat   = MongoDependencyVersion.format
+  , domainFormat   = MongoLatestVersion.format
   , indexes        = Seq(
                        IndexModel(Indexes.ascending("name", "group"), IndexOptions().unique(true))
                      )
-  , optSchema      = Some(BsonDocument(MongoDependencyVersion.schema))
+  , optSchema      = Some(BsonDocument(MongoLatestVersion.schema))
   ) with WithThrottling {
 
   val logger: Logger = Logger(this.getClass)
 
-  def update(dependencyVersion: MongoDependencyVersion): Future[Unit] = {
-    logger.debug(s"writing $dependencyVersion")
+  def update(latestVersion: MongoLatestVersion): Future[Unit] = {
+    logger.debug(s"writing $latestVersion")
     futureHelpers
       .withTimerAndCounter("mongo.update") {
         collection
           .replaceOne(
-              filter      = and( equal("name"        , dependencyVersion.name)
-                               , equal("group"       , dependencyVersion.group)
+              filter      = and( equal("name" , latestVersion.name)
+                               , equal("group", latestVersion.group)
                                )
-            , replacement = dependencyVersion
+            , replacement = latestVersion
             , options     = ReplaceOptions().upsert(true)
             )
           .toThrottledFuture
           .map(_ => ())
     } recover {
       case e =>
-        throw new RuntimeException(s"failed to persist dependency version $dependencyVersion: ${e.getMessage}", e)
+        throw new RuntimeException(s"failed to persist latest version $latestVersion: ${e.getMessage}", e)
     }
   }
 
-  def getAllEntries: Future[Seq[MongoDependencyVersion]] =
+  def getAllEntries: Future[Seq[MongoLatestVersion]] =
     collection.find()
       .toThrottledFuture
 

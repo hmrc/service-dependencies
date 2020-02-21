@@ -32,15 +32,15 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
 class TeamDependencyServiceSpec extends AnyWordSpec with Matchers with MockitoSugar with ScalaFutures with ArgumentMatchersSugar {
-  val mockTeamsAndReposConnector       = mock[TeamsAndRepositoriesConnector]
-  val mockSlugInfoRepository           = mock[SlugInfoRepository]
-  val mockGetMasterDependenciesService = mock[GetMasterDependenciesService]
-  val mockServiceConfigsConnector      = mock[ServiceConfigsConnector]
-  val mockSlugDependenciesService      = mock[SlugDependenciesService]
+  val mockTeamsAndReposConnector        = mock[TeamsAndRepositoriesConnector]
+  val mockSlugInfoRepository            = mock[SlugInfoRepository]
+  val mockRepositoryDependenciesService = mock[RepositoryDependenciesService]
+  val mockServiceConfigsConnector       = mock[ServiceConfigsConnector]
+  val mockSlugDependenciesService       = mock[SlugDependenciesService]
   val tds = new TeamDependencyService(
       mockTeamsAndReposConnector
     , mockSlugInfoRepository
-    , mockGetMasterDependenciesService
+    , mockRepositoryDependenciesService
     , mockServiceConfigsConnector
     , mockSlugDependenciesService
     )
@@ -84,7 +84,7 @@ class TeamDependencyServiceSpec extends AnyWordSpec with Matchers with MockitoSu
         , lastUpdated            = Instant.now()
         )
 
-      when(mockGetMasterDependenciesService.getDependencyVersionsForAllRepositories)
+      when(mockRepositoryDependenciesService.getDependencyVersionsForAllRepositories)
         .thenReturn(Future.successful(Seq(fooDependencies)))
 
       when(mockSlugDependenciesService.curatedLibrariesOfSlug("foo-service", SlugInfoFlag.Latest))

@@ -33,10 +33,10 @@ import uk.gov.hmrc.servicedependencies.util.FutureHelpers
 
 import scala.concurrent.{ExecutionContext, Future}
 
-import RepositoryLibraryDependenciesRepository.caseInsensitiveCollation
+import RepositoryDependenciesRepository.caseInsensitiveCollation
 
 @Singleton
-class RepositoryLibraryDependenciesRepository @Inject()(
+class RepositoryDependenciesRepository @Inject()(
     mongoComponent    : MongoComponent
   , futureHelper      : FutureHelpers
   , val throttleConfig: ThrottleConfig
@@ -116,7 +116,7 @@ class RepositoryLibraryDependenciesRepository @Inject()(
     } yield res
 }
 
-object RepositoryLibraryDependenciesRepository {
+object RepositoryDependenciesRepository {
   val caseInsensitiveCollation: Collation =
     Collation.builder
       .locale("en")

@@ -27,21 +27,21 @@ import uk.gov.hmrc.servicedependencies.config.model.{CuratedDependencyConfig, De
 import uk.gov.hmrc.servicedependencies.connector.{ArtifactoryConnector, GithubConnector, GithubDependency, GithubSearchResults, ServiceConfigsConnector, TeamsAndRepositoriesConnector}
 import uk.gov.hmrc.servicedependencies.connector.model.RepositoryInfo
 import uk.gov.hmrc.servicedependencies.controller.model.{Dependencies, Dependency}
-import uk.gov.hmrc.servicedependencies.model.{BobbyRules, MongoRepositoryDependencies, MongoRepositoryDependency, MongoDependencyVersion, ScalaVersion, Version}
-import uk.gov.hmrc.servicedependencies.persistence.{DependencyVersionRepository, RepositoryLibraryDependenciesRepository}
+import uk.gov.hmrc.servicedependencies.model.{BobbyRules, MongoRepositoryDependencies, MongoRepositoryDependency, MongoLatestVersion, ScalaVersion, Version}
+import uk.gov.hmrc.servicedependencies.persistence.{LatestVersionRepository, RepositoryDependenciesRepository}
 import uk.gov.hmrc.servicedependencies.util.Max
 
 import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
 class DependencyDataUpdatingService @Inject()(
-  serviceDependenciesConfig              : ServiceDependenciesConfig
-, repositoryLibraryDependenciesRepository: RepositoryLibraryDependenciesRepository
-, dependencyVersionRepository            : DependencyVersionRepository
-, teamsAndRepositoriesConnector          : TeamsAndRepositoriesConnector
-, artifactoryConnector                   : ArtifactoryConnector
-, githubConnector                        : GithubConnector
-, serviceConfigsConnector                : ServiceConfigsConnector
+  serviceDependenciesConfig       : ServiceDependenciesConfig
+, repositoryDependenciesRepository: RepositoryDependenciesRepository
+, latestVersionRepository         : LatestVersionRepository
+, teamsAndRepositoriesConnector   : TeamsAndRepositoriesConnector
+, artifactoryConnector            : ArtifactoryConnector
+, githubConnector                 : GithubConnector
+, serviceConfigsConnector         : ServiceConfigsConnector
 )(implicit ec: ExecutionContext
 ) {
 
@@ -52,7 +52,7 @@ class DependencyDataUpdatingService @Inject()(
   lazy val curatedDependencyConfig =
     serviceDependenciesConfig.curatedDependencyConfig
 
-  def reloadLatestDependencyVersions(implicit hc: HeaderCarrier): Future[List[MongoDependencyVersion]] =
+  def reloadLatestVersions(implicit hc: HeaderCarrier): Future[List[MongoLatestVersion]] =
     for {
       res <- curatedDependencyConfig.allDependencies.traverse { config =>
                for {
@@ -64,8 +64,8 @@ class DependencyDataUpdatingService @Inject()(
                                       Future.successful(Some(v))
                                     )
                  optDbVersion <- optVersion.traverse { version =>
-                                   val dbVersion  = MongoDependencyVersion(name = config.name, group = config.group, version = version, now)
-                                   dependencyVersionRepository.update(dbVersion)
+                                   val dbVersion  = MongoLatestVersion(name = config.name, group = config.group, version = version, now)
+                                   latestVersionRepository.update(dbVersion)
                                      .map(_ => dbVersion)
                                  }
                } yield optDbVersion
@@ -76,11 +76,11 @@ class DependencyDataUpdatingService @Inject()(
   def reloadCurrentDependenciesDataForAllRepositories(implicit hc: HeaderCarrier): Future[Seq[MongoRepositoryDependencies]] = {
     logger.debug(s"reloading current dependencies data for all repositories...")
     for {
-      currentDependencyEntries <- repositoryLibraryDependenciesRepository.getAllEntries
+      currentDependencyEntries <- repositoryDependenciesRepository.getAllEntries
       repos                    <- teamsAndRepositoriesConnector.getAllRepositories
       libraryDependencies      <- repos.toList.traverse { repo =>
                                     buildMongoRepositoryDependencies(repo, currentDependencyEntries)
-                                      .traverse(repositoryLibraryDependenciesRepository.update)
+                                      .traverse(repositoryDependenciesRepository.update)
                                   }.map(_.flatten)
     } yield libraryDependencies
   }

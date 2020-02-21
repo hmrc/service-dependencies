@@ -30,7 +30,7 @@ import uk.gov.hmrc.servicedependencies.config.model.{CuratedDependencyConfig, De
 import uk.gov.hmrc.servicedependencies.connector.ServiceConfigsConnector
 import uk.gov.hmrc.servicedependencies.controller.model.{Dependency, DependencyBobbyRule}
 import uk.gov.hmrc.servicedependencies.model._
-import uk.gov.hmrc.servicedependencies.persistence.DependencyVersionRepository
+import uk.gov.hmrc.servicedependencies.persistence.LatestVersionRepository
 
 import scala.concurrent.Future
 
@@ -41,16 +41,16 @@ class SlugDependenciesServiceSpec extends AnyFreeSpec with MockitoSugar with Mat
   import SlugDependenciesServiceSpec._
 
   private trait Fixture {
-    val mockSlugInfoService             = mock[SlugInfoService]
-    val mockServiceDependenciesConfig   = mock[ServiceDependenciesConfig]
-    val mockDependencyVersionRepository = mock[DependencyVersionRepository]
-    val mockServiceConfigsConnector     = mock[ServiceConfigsConnector]
+    val mockSlugInfoService           = mock[SlugInfoService]
+    val mockServiceDependenciesConfig = mock[ServiceDependenciesConfig]
+    val mockLatestVersionRepository   = mock[LatestVersionRepository]
+    val mockServiceConfigsConnector   = mock[ServiceConfigsConnector]
 
     val underTest =
       new SlugDependenciesService(
           mockSlugInfoService
         , mockServiceDependenciesConfig
-        , mockDependencyVersionRepository
+        , mockLatestVersionRepository
         , mockServiceConfigsConnector
         )
 
@@ -59,11 +59,11 @@ class SlugDependenciesServiceSpec extends AnyFreeSpec with MockitoSugar with Mat
         .thenReturn(aCuratedDependencyConfig(libraryNames.toList))
 
     def stubLatestLibraryVersionLookupSuccessfullyReturns(versionsByName: Seq[(SlugDependency, Version)]): Unit =
-      when(mockDependencyVersionRepository.getAllEntries)
+      when(mockLatestVersionRepository.getAllEntries)
         .thenReturn(
           Future.successful(
             versionsByName.map { case (sd, v) =>
-              MongoDependencyVersion(name = sd.artifact, group = sd.group, version = v)
+              MongoLatestVersion(name = sd.artifact, group = sd.group, version = v)
             }
           )
         )
@@ -175,7 +175,7 @@ class SlugDependenciesServiceSpec extends AnyFreeSpec with MockitoSugar with Mat
               ))
           ))
 
-        when(mockDependencyVersionRepository.getAllEntries)
+        when(mockLatestVersionRepository.getAllEntries)
           .thenReturn(Future.failed(failure))
 
         underTest.curatedLibrariesOfSlug(SlugName, flag).failed.futureValue shouldBe failure
