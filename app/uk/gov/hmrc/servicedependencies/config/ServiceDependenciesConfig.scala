@@ -20,8 +20,10 @@ import java.io.File
 
 import com.google.inject.{Inject, Singleton}
 import play.api.Configuration
+import play.api.libs.json.Json
 import uk.gov.hmrc.githubclient.GitApiConfig
 import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
+import uk.gov.hmrc.servicedependencies.config.model.CuratedDependencyConfig
 
 @Singleton
 class ServiceDependenciesConfig @Inject()(
@@ -51,4 +53,19 @@ class ServiceDependenciesConfig @Inject()(
 
   lazy val artifactoryBase: String          = configuration.get[String]("artifactory.url")
   lazy val artifactoryToken: Option[String] = configuration.getOptional[String]("artifactory.token")
+
+  lazy val curatedDependencyConfig: CuratedDependencyConfig = {
+    implicit val cdcr = CuratedDependencyConfig.reads
+    val configFilePath =
+      configuration.getOptional[String]("curated.config.path")
+        .getOrElse(sys.error("config value not found: curated.config.path"))
+
+    val stream = getClass.getResourceAsStream(configFilePath)
+    val json = try {
+      Json.parse(stream)
+    } finally {
+      stream.close()
+    }
+    json.as[CuratedDependencyConfig]
+  }
 }

@@ -16,44 +16,139 @@
 
 package uk.gov.hmrc.servicedependencies.connector
 
-import java.time.Instant
-
-import javax.inject.{Inject, Singleton}
+import com.google.inject.Provider
+import com.kenshoo.play.metrics.Metrics
+import javax.inject.Inject
+import org.apache.commons.codec.binary.Base64
+import org.eclipse.egit.github.core.client.RequestException
+import org.eclipse.egit.github.core.{IRepositoryIdProvider, RepositoryContents}
 import org.slf4j.LoggerFactory
-import uk.gov.hmrc.servicedependencies.Github
-import uk.gov.hmrc.servicedependencies.config.model.CuratedDependencyConfig
-import uk.gov.hmrc.servicedependencies.connector.model.RepositoryInfo
-import uk.gov.hmrc.servicedependencies.model.{MongoRepositoryDependencies, MongoRepositoryDependency, Version}
+import uk.gov.hmrc.githubclient._
+import uk.gov.hmrc.servicedependencies.config.ServiceDependenciesConfig
+import uk.gov.hmrc.servicedependencies.config.model.{CuratedDependencyConfig, DependencyConfig}
+import uk.gov.hmrc.servicedependencies.model.Version
+import uk.gov.hmrc.servicedependencies.util.{Max, VersionParser}
 
-@Singleton
-class GithubConnector @Inject()(github: Github) {
+import scala.annotation.tailrec
+import scala.util.Try
 
-  lazy val logger = LoggerFactory.getLogger(this.getClass)
+case class GithubDependency(
+    group  : String
+  , name   : String
+  , version: Version
+  )
 
-  private def toMongoRepositoryDependencies(results: Map[(String, String), Option[Version]]): Seq[MongoRepositoryDependency] =
-    results
-      .collect { case ((name, group), Some(currentVersion)) =>
-         MongoRepositoryDependency(name = name, group = group, currentVersion = currentVersion)
-       }
+case class GithubSearchResults(
+    sbtPlugins: Seq[GithubDependency]
+  , libraries : Seq[GithubDependency]
+  , others    : Seq[GithubDependency]
+  )
+
+case class GithubSearchError(message: String, throwable: Throwable)
+
+class GithubConnector(
+  releaseService : ReleaseService
+, contentsService: ExtendedContentsService
+) {
+
+  private val org = "HMRC"
+
+  private lazy val logger = LoggerFactory.getLogger(this.getClass)
+
+  def findVersionsForMultipleArtifacts(repoName: String): Either[GithubSearchError, GithubSearchResults] =
+    try {
+      Right(
+        GithubSearchResults(
+          sbtPlugins = searchPluginSbtFileForMultipleArtifacts(repoName)
+        , libraries  = searchBuildFilesForMultipleArtifacts(repoName)
+        , others     = searchForOtherSpecifiedDependencies(repoName)
+        )
+      )
+    } catch {
+      case ex: Throwable if ex.getMessage.toLowerCase.contains("api rate limit exceeded") =>
+        throw APIRateLimitExceededException(ex)
+      case ex: Throwable =>
+        Left(GithubSearchError(s"Unable to find dependencies for $repoName. Reason: ${ex.getMessage}", ex))
+    }
+
+  private def searchBuildFilesForMultipleArtifacts(serviceName: String): Seq[GithubDependency] = {
+    val filesInProjectDir =
+      getContentsOrEmpty(serviceName, "project")
+        .map(_.getPath)
+        .filter(_.endsWith(".scala"))
+
+    (filesInProjectDir :+ "build.sbt")
+      .foldLeft(Seq.empty[GithubDependency]) { (acc, filePath) =>
+        // if any results are found in file, assume all results are here, and terminate github scraping early
+        if (acc.isEmpty)
+          getContentsOrEmpty(serviceName, filePath)
+            .headOption
+            .fold(Seq.empty[GithubDependency])(parseFileForMultipleArtifacts)
+        else acc
+      }
+  }
+
+  private def getCurrentSbtVersion(repositoryName: String): Option[Version] = {
+    val version = getContentsOrEmpty(repositoryName, "project/build.properties")
+    if (version.isEmpty) None
+    else VersionParser.parsePropertyFile(parseFileContents(version.head), "sbt.version")
+  }
+
+  private def searchForOtherSpecifiedDependencies(serviceName: String): Seq[GithubDependency] =
+    getCurrentSbtVersion(serviceName)
+      .map(v => GithubDependency(group = "org.scala-sbt", name = "sbt", version = v))
       .toSeq
 
-  def buildDependencies(repo: RepositoryInfo, curatedDeps: CuratedDependencyConfig): Option[MongoRepositoryDependencies] =
-    github.findVersionsForMultipleArtifacts(repo.name, curatedDeps)
-      .right
-      .map(searchResults =>
-        MongoRepositoryDependencies(
-          repositoryName        = repo.name
-        , libraryDependencies   = toMongoRepositoryDependencies(searchResults.libraries)
-        , sbtPluginDependencies = toMongoRepositoryDependencies(searchResults.sbtPlugins)
-        , otherDependencies     = toMongoRepositoryDependencies(searchResults.others)
-        , updateDate            = Instant.now()
-        )
-      ) match {
-        case Left(errorMessage) =>
-          logger.error(s"Skipping dependencies update for ${repo.name}, reason: $errorMessage")
-          None
-        case Right(results) =>
-          logger.debug(s"Github search returned these results for ${repo.name}: $results")
-          Some(results)
+  private def searchPluginSbtFileForMultipleArtifacts(serviceName: String): Seq[GithubDependency] =
+    getContentsOrEmpty(serviceName, "project/plugins.sbt") // TODO what about other .sbt files?
+      .headOption
+      .fold(Seq.empty[GithubDependency])(parseFileForMultipleArtifacts)
+
+  private def parseFileForMultipleArtifacts(response : RepositoryContents): Seq[GithubDependency] =
+    VersionParser.parse(parseFileContents(response))
+
+  private def repositoryId(repoName: String, orgName: String): IRepositoryIdProvider =
+    new IRepositoryIdProvider {
+      val generateId: String = orgName + "/" + repoName
     }
+
+  private def parseFileContents(response: RepositoryContents): String =
+    new String(Base64.decodeBase64(response.getContent.replaceAll("\n", "")))
+
+  private def getContentsOrEmpty(repoName: String, path: String): List[RepositoryContents] = {
+    import scala.collection.JavaConverters._
+    try {
+      contentsService.getContents(repositoryId(repoName, org), path).asScala.toList
+     } catch {
+       case ex: RequestException if ex.getStatus == 404 => Nil
+     }
+  }
+}
+
+
+class GithubConnectorProvider @Inject()(
+  config : ServiceDependenciesConfig
+, metrics: Metrics
+) extends Provider[GithubConnector] {
+
+  class GithubMetrics(override val metricName: String) extends GithubClientMetrics {
+    lazy val registry = metrics.defaultRegistry
+    override def increment(name: String): Unit =
+      registry.counter(name).inc()
+  }
+
+  // Github client setup
+  private lazy val client: ExtendedGitHubClient =
+    ExtendedGitHubClient(
+        config.githubApiOpenConfig.apiUrl
+      , new GithubMetrics("github.open")
+      )
+      .setOAuth2Token(config.githubApiOpenConfig.key)
+      .asInstanceOf[ExtendedGitHubClient]
+
+  override def get(): GithubConnector =
+    new GithubConnector(
+        new ReleaseService(client)
+      , new ExtendedContentsService(client)
+      )
 }

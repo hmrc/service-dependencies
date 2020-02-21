@@ -18,63 +18,55 @@ package uk.gov.hmrc.servicedependencies.controller
 
 import cats.data.EitherT
 import cats.instances.all._
-import cats.syntax.all._
 import com.google.inject.{Inject, Singleton}
-import play.api.Configuration
-import play.api.libs.json.{Json, OWrites, Writes}
+import play.api.libs.json.{Json, OWrites}
 import play.api.mvc._
 import uk.gov.hmrc.play.bootstrap.controller.BackendController
-import uk.gov.hmrc.servicedependencies.config.ServiceDependenciesConfig
-import uk.gov.hmrc.servicedependencies.connector.TeamsAndRepositoriesConnector
+import uk.gov.hmrc.servicedependencies.connector.ServiceConfigsConnector
 import uk.gov.hmrc.servicedependencies.controller.model.{Dependencies, Dependency}
 import uk.gov.hmrc.servicedependencies.model._
-import uk.gov.hmrc.servicedependencies.service.{DependencyDataUpdatingService, ServiceConfigsService, SlugDependenciesService, SlugInfoService, TeamDependencyService}
+import uk.gov.hmrc.servicedependencies.service.{DependencyDataUpdatingService, RepositoryDependenciesService, SlugDependenciesService, SlugInfoService, TeamDependencyService}
 
 import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
 class ServiceDependenciesController @Inject()(
-  configuration                : Configuration,
-  dependencyDataUpdatingService: DependencyDataUpdatingService,
-  teamsAndRepositoriesConnector: TeamsAndRepositoriesConnector,
-  slugInfoService              : SlugInfoService,
-  slugDependenciesService      : SlugDependenciesService,
-  config                       : ServiceDependenciesConfig,
-  serviceConfigsService        : ServiceConfigsService,
-  teamDependencyService        : TeamDependencyService,
-  cc                           : ControllerComponents
-)(implicit ec: ExecutionContext)
-    extends BackendController(cc) {
+  dependencyDataUpdatingService: DependencyDataUpdatingService
+, slugInfoService              : SlugInfoService
+, slugDependenciesService      : SlugDependenciesService
+, serviceConfigsConnector      : ServiceConfigsConnector
+, teamDependencyService        : TeamDependencyService
+, repositoryDependenciesService: RepositoryDependenciesService
+, cc                           : ControllerComponents
+)(implicit ec: ExecutionContext
+) extends BackendController(cc) {
 
   implicit val dw: OWrites[Dependencies] = Dependencies.writes
 
   def getDependencyVersionsForRepository(repositoryName: String): Action[AnyContent] =
     Action.async { implicit request =>
       (for {
-         dependency   <- EitherT.fromOptionF(
-                           dependencyDataUpdatingService
-                             .getDependencyVersionsForRepository(repositoryName),
-                           NotFound(s"$repositoryName not found"))
-         depsWithRules <- EitherT.right[Result](serviceConfigsService.getDependenciesWithBobbyRules(dependency))
-         res           =  Ok(Json.toJson(depsWithRules))
-       } yield res
+         dependencies  <- EitherT.fromOptionF(
+                            repositoryDependenciesService
+                             .getDependencyVersionsForRepository(repositoryName)
+                          , NotFound(s"$repositoryName not found")
+                          )
+       } yield Ok(Json.toJson(dependencies))
       ).merge
     }
 
   def dependencies(): Action[AnyContent] =
     Action.async { implicit request =>
       for {
-        dependencies  <- dependencyDataUpdatingService
-                           .getDependencyVersionsForAllRepositories
-        depsWithRules <- dependencies.toList
-                          .traverse(serviceConfigsService.getDependenciesWithBobbyRules)
-      } yield Ok(Json.toJson(depsWithRules))
+        dependencies <- repositoryDependenciesService
+                          .getDependencyVersionsForAllRepositories
+      } yield Ok(Json.toJson(dependencies))
     }
 
-  def dependenciesForTeam(team: String): Action[AnyContent] =
+  def dependenciesForTeam(teamName: String): Action[AnyContent] =
     Action.async { implicit request =>
       for {
-        depsWithRules <- teamDependencyService.findAllDepsForTeam(team)
+        depsWithRules <- teamDependencyService.findAllDepsForTeam(teamName)
       } yield Ok(Json.toJson(depsWithRules))
     }
 

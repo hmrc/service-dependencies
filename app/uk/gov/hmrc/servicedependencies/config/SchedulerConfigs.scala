@@ -19,7 +19,7 @@ package uk.gov.hmrc.servicedependencies.config
 import javax.inject.{Inject, Singleton}
 import play.api.Configuration
 
-import scala.concurrent.duration.{DurationInt, FiniteDuration}
+import scala.concurrent.duration.FiniteDuration
 
 case class SchedulerConfig(
     enabledKey  : String
@@ -29,8 +29,6 @@ case class SchedulerConfig(
   )
 
 object SchedulerConfig {
-  import ConfigUtils._
-
   def apply(
       configuration   : Configuration
     , schedulerKey    : String
@@ -49,9 +47,9 @@ object SchedulerConfig {
 
 @Singleton
 class SchedulerConfigs @Inject()(configuration: Configuration) extends ConfigUtils {
-  val slugMetadataUpdate       = SchedulerConfig(configuration, "repositoryDependencies.slugJob"                   )
-  val bobbyRulesSummary        = SchedulerConfig(configuration, "repositoryDependencies.bobbyRulesSummaryScheduler")
-  val metrics                  = SchedulerConfig(configuration, "repositoryDependencies.metricsGauges"             )
-  val dependencyReload         = SchedulerConfig(configuration, "dependencyReload.scheduler"                       )
-  val dependencyVersionsReload = SchedulerConfig(configuration, "dependencyVersionsReload.scheduler"               )
+  val slugMetadataUpdate   = SchedulerConfig(configuration, "repositoryDependencies.slugJob"                   )
+  val bobbyRulesSummary    = SchedulerConfig(configuration, "repositoryDependencies.bobbyRulesSummaryScheduler")
+  val metrics              = SchedulerConfig(configuration, "repositoryDependencies.metricsGauges"             )
+  val dependencyReload     = SchedulerConfig(configuration, "dependencyReload.scheduler"                       )
+  val latestVersionsReload = SchedulerConfig(configuration, "dependencyVersionsReload.scheduler"               )
 }

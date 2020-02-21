@@ -25,11 +25,12 @@ import org.scalatest.OptionValues
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.should.Matchers
-import uk.gov.hmrc.servicedependencies.config.CuratedDependencyConfigProvider
+import uk.gov.hmrc.servicedependencies.config.ServiceDependenciesConfig
 import uk.gov.hmrc.servicedependencies.config.model.{CuratedDependencyConfig, DependencyConfig}
+import uk.gov.hmrc.servicedependencies.connector.ServiceConfigsConnector
 import uk.gov.hmrc.servicedependencies.controller.model.{Dependency, DependencyBobbyRule}
 import uk.gov.hmrc.servicedependencies.model._
-import uk.gov.hmrc.servicedependencies.persistence.DependencyVersionRepository
+import uk.gov.hmrc.servicedependencies.persistence.LatestVersionRepository
 
 import scala.concurrent.Future
 
@@ -40,52 +41,47 @@ class SlugDependenciesServiceSpec extends AnyFreeSpec with MockitoSugar with Mat
   import SlugDependenciesServiceSpec._
 
   private trait Fixture {
-    val mockSlugInfoService                 = mock[SlugInfoService]
-    val mockCuratedDependencyConfigProvider = mock[CuratedDependencyConfigProvider]
-    val mockDependencyVersionRepository     = mock[DependencyVersionRepository]
-    val mockServiceConfigsService           = mock[ServiceConfigsService]
+    val mockSlugInfoService           = mock[SlugInfoService]
+    val mockServiceDependenciesConfig = mock[ServiceDependenciesConfig]
+    val mockLatestVersionRepository   = mock[LatestVersionRepository]
+    val mockServiceConfigsConnector   = mock[ServiceConfigsConnector]
 
     val underTest =
       new SlugDependenciesService(
           mockSlugInfoService
-        , mockCuratedDependencyConfigProvider
-        , mockDependencyVersionRepository
-        , mockServiceConfigsService
+        , mockServiceDependenciesConfig
+        , mockLatestVersionRepository
+        , mockServiceConfigsConnector
         )
 
     def stubCuratedLibrariesOf(libraryNames: DependencyConfig*): Unit =
-      when(mockCuratedDependencyConfigProvider.curatedDependencyConfig)
+      when(mockServiceDependenciesConfig.curatedDependencyConfig)
         .thenReturn(aCuratedDependencyConfig(libraryNames.toList))
 
     def stubLatestLibraryVersionLookupSuccessfullyReturns(versionsByName: Seq[(SlugDependency, Version)]): Unit =
-      when(mockDependencyVersionRepository.getAllEntries)
+      when(mockLatestVersionRepository.getAllEntries)
         .thenReturn(
           Future.successful(
             versionsByName.map { case (sd, v) =>
-              MongoDependencyVersion(name = sd.artifact, group = sd.group, version = v)
+              MongoLatestVersion(name = sd.artifact, group = sd.group, version = v)
             }
           )
         )
 
-    def stubBobbyRulesViolations(dependencies: List[Dependency], violations: List[List[DependencyBobbyRule]]): Unit = {
-      val enrichedDependencies = dependencies.zip(violations).map { case (dependency, violations) =>
-        dependency.copy(bobbyRuleViolations = violations)
-      }
-
-      when(mockServiceConfigsService.getDependenciesWithBobbyRules(dependencies))
-        .thenReturn(Future.successful(enrichedDependencies))
+    def stubBobbyRulesViolations(bobbyRules: Map[(String, String), List[DependencyBobbyRule]]): Unit = {
+      val bobbyRules2 = BobbyRules(
+        bobbyRules.map { case ((g, a), rs) =>
+          ((g, a), rs.map(r => BobbyRule(organisation = g, name = a, range = r.range, reason = r.reason, from = r.from)))
+        }
+      )
+      when(mockServiceConfigsConnector.getBobbyRules)
+        .thenReturn(Future.successful(bobbyRules2))
     }
 
-    def stubNoBobbyRulesViolations(): Unit =
-      when(mockServiceConfigsService.getDependenciesWithBobbyRules(any[List[Dependency]]))
-        .thenAnswer { i: InvocationOnMock =>
-          val dependencies = i.getArgument[List[Dependency]](0)
-          Future.successful(dependencies)
-        }
 
     def stubNoEnrichmentsForDependencies(): Unit = {
       stubLatestLibraryVersionLookupSuccessfullyReturns(Seq.empty)
-      stubNoBobbyRulesViolations()
+      stubBobbyRulesViolations(Map.empty)
     }
 
     def stubSlugVersionIsUnrecognised(name: String, version: String): Unit =
@@ -138,7 +134,7 @@ class SlugDependenciesServiceSpec extends AnyFreeSpec with MockitoSugar with Mat
 
     "enriches dependencies with latest version information" - {
       "only adding the latest version when known" in new Fixture {
-        stubNoBobbyRulesViolations()
+        stubBobbyRulesViolations(Map.empty)
         stubCuratedLibrariesOf(
           DependencyConfig(name = Dependency1.artifact, group = Dependency1.group, latestVersion = None)
         , DependencyConfig(name = Dependency2.artifact, group = Dependency2.group, latestVersion = None)
@@ -179,7 +175,7 @@ class SlugDependenciesServiceSpec extends AnyFreeSpec with MockitoSugar with Mat
               ))
           ))
 
-        when(mockDependencyVersionRepository.getAllEntries)
+        when(mockLatestVersionRepository.getAllEntries)
           .thenReturn(Future.failed(failure))
 
         underTest.curatedLibrariesOfSlug(SlugName, flag).failed.futureValue shouldBe failure
@@ -196,18 +192,10 @@ class SlugDependenciesServiceSpec extends AnyFreeSpec with MockitoSugar with Mat
         stubLatestLibraryVersionLookupSuccessfullyReturns(Seq.empty)
         val bobbyRuleViolation1 = DependencyBobbyRule(reason = "a reason"      , from = LocalDate.now(), range = BobbyVersionRange("(,6.6.6)"))
         val bobbyRuleViolation2 = DependencyBobbyRule(reason = "another reason", from = LocalDate.now(), range = BobbyVersionRange("(,9.9.9)"))
-        stubBobbyRulesViolations(
-          dependencies = List(
-            Dependency(name = Dependency1.artifact, group = Dependency1.group, currentVersion = Version(Dependency1.version), latestVersion = None, bobbyRuleViolations = Nil),
-            Dependency(name = Dependency2.artifact, group = Dependency2.group, currentVersion = Version(Dependency2.version), latestVersion = None, bobbyRuleViolations = Nil),
-            Dependency(name = Dependency3.artifact, group = Dependency3.group, currentVersion = Version(Dependency3.version), latestVersion = None, bobbyRuleViolations = Nil)
-          ),
-          violations = List(
-            List(bobbyRuleViolation1),
-            Nil,
-            List(bobbyRuleViolation1, bobbyRuleViolation2)
-          )
-        )
+        stubBobbyRulesViolations(Map(
+          (Dependency1.group, Dependency1.artifact) -> List(bobbyRuleViolation1)
+        , (Dependency3.group, Dependency3.artifact) -> List(bobbyRuleViolation1, bobbyRuleViolation2)
+        ))
 
         when(mockSlugInfoService.getSlugInfo(SlugName, flag))
           .thenReturn(
@@ -225,31 +213,6 @@ class SlugDependenciesServiceSpec extends AnyFreeSpec with MockitoSugar with Mat
           Dependency(name = Dependency2.artifact, group = Dependency2.group, currentVersion = Version(Dependency2.version), latestVersion = None, bobbyRuleViolations = Nil),
           Dependency(name = Dependency3.artifact, group = Dependency3.group, currentVersion = Version(Dependency3.version), latestVersion = None, bobbyRuleViolations = List(bobbyRuleViolation1, bobbyRuleViolation2))
         )
-      }
-
-      "failing when the retrieval or application of Bobby rules encounters a failure" in new Fixture {
-        stubCuratedLibrariesOf(
-          DependencyConfig(name = Dependency1.artifact, group = Dependency1.group, latestVersion = None)
-        , DependencyConfig(name = Dependency2.artifact, group = Dependency2.group, latestVersion = None)
-        , DependencyConfig(name = Dependency3.artifact, group = Dependency3.group, latestVersion = None)
-        )
-        stubLatestLibraryVersionLookupSuccessfullyReturns(Seq.empty)
-        when(mockSlugInfoService.getSlugInfo(SlugName, flag))
-          .thenReturn(
-            Future.successful(
-              Some(slugInfo(
-                  withName         = SlugName
-                , withVersion      = SlugVersion
-                , withDependencies = List(Dependency1, Dependency2, Dependency3)
-                ))
-            )
-          )
-        val failure = new RuntimeException("failed to apply bobby rules")
-        when(mockServiceConfigsService.getDependenciesWithBobbyRules(any[List[Dependency]])).thenReturn(
-          Future.failed(failure)
-        )
-
-        underTest.curatedLibrariesOfSlug(SlugName, flag).failed.futureValue shouldBe failure
       }
     }
   }

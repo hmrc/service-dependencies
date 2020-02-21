@@ -23,7 +23,7 @@ import org.scalatest.{BeforeAndAfterEach, OptionValues}
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
 import uk.gov.hmrc.servicedependencies.model.MongoRepositoryDependencies
-import uk.gov.hmrc.servicedependencies.persistence.LocksRepository
+import uk.gov.hmrc.servicedependencies.persistence.{LatestVersionRepository, LocksRepository, RepositoryDependenciesRepository}
 import uk.gov.hmrc.servicedependencies.service.DependencyDataUpdatingService
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -41,60 +41,43 @@ class AdministrationControllerSpec
     with OptionValues {
 
   "reloadLibraryDependenciesForAllRepositories" - {
-
     "should call the reloadLibraryDependencyDataForAllRepositories on the service" in {
       val boot = Boot.init
 
-      when(boot.mockedDependencyDataUpdatingService.reloadCurrentDependenciesDataForAllRepositories(any())(any()))
+      when(boot.mockDependencyDataUpdatingService.reloadCurrentDependenciesDataForAllRepositories(any()))
         .thenReturn(Future.successful(Seq.empty[MongoRepositoryDependencies]))
 
       boot.controller.reloadLibraryDependenciesForAllRepositories().apply(FakeRequest())
 
-      verify(boot.mockedDependencyDataUpdatingService)
-        .reloadCurrentDependenciesDataForAllRepositories(eqTo(false))(any())
-    }
-
-    "should accept an optional query parameter to force the dependencies to be reloaded" in {
-      val boot = Boot.init
-
-      when(boot.mockedDependencyDataUpdatingService.reloadCurrentDependenciesDataForAllRepositories(any())(any()))
-        .thenReturn(Future.successful(Seq.empty[MongoRepositoryDependencies]))
-
-      boot.controller.reloadLibraryDependenciesForAllRepositories(Some(true)).apply(FakeRequest())
-
-      verify(boot.mockedDependencyDataUpdatingService)
-        .reloadCurrentDependenciesDataForAllRepositories(eqTo(true))(any())
-    }
-
-    "should not force dependencies if the force query parameter is set to false" in {
-      val boot = Boot.init
-
-      when(boot.mockedDependencyDataUpdatingService.reloadCurrentDependenciesDataForAllRepositories(any())(any()))
-        .thenReturn(Future.successful(Seq.empty[MongoRepositoryDependencies]))
-
-      boot.controller.reloadLibraryDependenciesForAllRepositories(Some(false)).apply(FakeRequest())
-
-      verify(boot.mockedDependencyDataUpdatingService)
-        .reloadCurrentDependenciesDataForAllRepositories(eqTo(false))(any())
+      verify(boot.mockDependencyDataUpdatingService)
+        .reloadCurrentDependenciesDataForAllRepositories(any())
     }
   }
 
   case class Boot(
-    mockedDependencyDataUpdatingService: DependencyDataUpdatingService,
-    controller: AdministrationController)
+    mockDependencyDataUpdatingService: DependencyDataUpdatingService
+  , controller                       : AdministrationController
+  )
 
   object Boot {
     def init: Boot = {
-      val mockedDependencyDataUpdatingService = mock[DependencyDataUpdatingService]
-      val locksRepository = mock[LocksRepository]
+      val mockDependencyDataUpdatingService    = mock[DependencyDataUpdatingService]
+      val mockLocksRepository                  = mock[LocksRepository]
+      val mockRepositoryDependenciesRepository = mock[RepositoryDependenciesRepository]
+      val mockLatestVersionRepository          = mock[LatestVersionRepository]
+
       val controller = new AdministrationController(
-        mockedDependencyDataUpdatingService,
-        locksRepository,
-        stubControllerComponents()
-      )
+          mockDependencyDataUpdatingService
+        , mockLocksRepository
+        , mockRepositoryDependenciesRepository
+        , mockLatestVersionRepository
+        , stubControllerComponents()
+        )
+
       Boot(
-        mockedDependencyDataUpdatingService,
-        controller)
+          mockDependencyDataUpdatingService
+        , controller
+        )
     }
   }
 }

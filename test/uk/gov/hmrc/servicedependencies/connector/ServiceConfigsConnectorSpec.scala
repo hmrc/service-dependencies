@@ -62,12 +62,11 @@ class ServiceConfigsConnectorSpec
       )
       .build()
 
-  private val services = app.injector.instanceOf[ServiceConfigsConnector]
+  private val connector = app.injector.instanceOf[ServiceConfigsConnector]
 
   "Retrieving bobby rules" - {
     "correctly parse json response" in {
-
-      val deprecatedDependencies = services.getBobbyRules.futureValue
+      val deprecatedDependencies = connector.getBobbyRules.futureValue
 
       val playFrontend = BobbyRule(
         organisation = "uk.gov.hmrc",
@@ -101,5 +100,4 @@ class ServiceConfigsConnectorSpec
           aResponse()
             .withStatus(200)
             .withBody(loadFileAsString(s"/service-configs/bobby-rules.json"))))
-
 }

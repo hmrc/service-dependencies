@@ -32,7 +32,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpecLike
 
-class RepositoryLibraryDependenciesRepositorySpec
+class RepositoryDependenciesRepositorySpec
     extends AnyWordSpecLike
       with Matchers
       with MockitoSugar
@@ -41,13 +41,12 @@ class RepositoryLibraryDependenciesRepositorySpec
       with CleanMongoCollectionSupport {
 
   val futureHelper: FutureHelpers = new MockFutureHelpers()
-  override lazy val repository = new RepositoryLibraryDependenciesRepository(mongoComponent, futureHelper, throttleConfig)
+  override lazy val repository = new RepositoryDependenciesRepository(mongoComponent, futureHelper, throttleConfig)
 
   override implicit val patienceConfig = PatienceConfig(timeout = 30.seconds, interval = 100.millis)
 
   "update" should {
-    "inserts correctly" in {
-
+    "insert correctly" in {
       val repositoryLibraryDependencies = MongoRepositoryDependencies(
           repositoryName        = "some-repo"
         , libraryDependencies   = Seq(MongoRepositoryDependency(name = "some-lib", group = "uk.gov.hmrc", currentVersion = Version("1.0.2")))
@@ -61,8 +60,7 @@ class RepositoryLibraryDependenciesRepositorySpec
       repository.getAllEntries.futureValue shouldBe Seq(repositoryLibraryDependencies)
     }
 
-    "inserts correctly with suffix" in {
-
+    "insert correctly with suffix" in {
       val repositoryLibraryDependencies = MongoRepositoryDependencies(
           repositoryName        = "some-repo"
         , libraryDependencies   = Seq(MongoRepositoryDependency(name = "some-lib", group = "uk.gov.hmrc", currentVersion = Version("1.0.2-play-26")))
@@ -75,10 +73,7 @@ class RepositoryLibraryDependenciesRepositorySpec
       repository.getAllEntries.futureValue shouldBe Seq(repositoryLibraryDependencies)
     }
 
-
-
-    "updates correctly (based on repository name)" in {
-
+    "update correctly (based on repository name)" in {
       val repositoryLibraryDependencies = MongoRepositoryDependencies(
           repositoryName        = "some-repo"
         , libraryDependencies   = Seq(MongoRepositoryDependency(name = "some-lib", group = "uk.gov.hmrc", currentVersion = Version("1.0.2")))
@@ -101,8 +96,7 @@ class RepositoryLibraryDependenciesRepositorySpec
       repository.getAllEntries.futureValue shouldBe Seq(newRepositoryLibraryDependencies)
     }
 
-    "updates correctly (based on repository name) with suffix" in {
-
+    "update correctly (based on repository name) with suffix" in {
       val repositoryLibraryDependencies = MongoRepositoryDependencies(
           repositoryName        = "some-repo"
         , libraryDependencies   = Seq(MongoRepositoryDependency(name = "some-lib", group = "uk.gov.hmrc", currentVersion = Version("1.0.2")))
@@ -147,10 +141,11 @@ class RepositoryLibraryDependenciesRepositorySpec
       repository.update(repositoryLibraryDependencies2).futureValue
 
       repository.getForRepository("some-repo1").futureValue shouldBe Some(
-        repositoryLibraryDependencies1)
+        repositoryLibraryDependencies1
+      )
     }
 
-    "finds the repository when the name is of different case" in {
+    "find the repository when the name is of different case" in {
       val repositoryLibraryDependencies1 = MongoRepositoryDependencies(
           repositoryName        = "some-repo1"
         , libraryDependencies   = Seq(MongoRepositoryDependency(name = "some-lib1", group = "uk.gov.hmrc", currentVersion = Version("1.0.2")))
@@ -169,7 +164,9 @@ class RepositoryLibraryDependenciesRepositorySpec
       repository.update(repositoryLibraryDependencies1).futureValue
       repository.update(repositoryLibraryDependencies2).futureValue
 
-      repository.getForRepository("SOME-REPO1").futureValue shouldBe defined
+      repository.getForRepository("SOME-REPO1").futureValue shouldBe Some(
+        repositoryLibraryDependencies1
+      )
     }
 
     "not find a repository with partial name" in {
@@ -196,7 +193,7 @@ class RepositoryLibraryDependenciesRepositorySpec
   }
 
   "clearAllDependencyEntries" should {
-    "deletes everything" in {
+    "delete everything" in {
 
       val repositoryLibraryDependencies = MongoRepositoryDependencies(
           repositoryName        = "some-repo"
@@ -217,7 +214,7 @@ class RepositoryLibraryDependenciesRepositorySpec
   }
 
   "clearUpdateDates" should {
-    "resets the last update dates to January 1, 1970" in {
+    "reset the last update dates to January 1, 1970" in {
 
       val t1 = Instant.now()
       val t2 = Instant.now().plus(1, ChronoUnit.DAYS)
@@ -249,8 +246,49 @@ class RepositoryLibraryDependenciesRepositorySpec
 
       repository.getAllEntries.futureValue
         .map(_.updateDate) should contain theSameElementsAs Seq(
-        Instant.EPOCH,
-        Instant.EPOCH)
+          Instant.EPOCH
+        , Instant.EPOCH
+        )
+    }
+  }
+
+  "clearUpdateDatesForRepository" should {
+    "reset the last update dates to January 1, 1970" in {
+
+      val t1 = Instant.now()
+      val t2 = Instant.now().plus(1, ChronoUnit.DAYS)
+      val repositoryLibraryDependencies1 =
+        MongoRepositoryDependencies(
+            repositoryName        = "some-repo"
+          , libraryDependencies   = Seq(MongoRepositoryDependency(name = "some-lib2", group = "uk.gov.hmrc", currentVersion = Version("1.0.2")))
+          , sbtPluginDependencies = Nil
+          , otherDependencies     = Nil
+          , updateDate            = t1
+          )
+      val repositoryLibraryDependencies2 =
+        MongoRepositoryDependencies(
+            repositoryName        = "some-other-repo"
+          , libraryDependencies   = Seq(MongoRepositoryDependency(name = "some-lib2", group = "uk.gov.hmrc", currentVersion = Version("1.0.2")))
+          , sbtPluginDependencies = Nil
+          , otherDependencies     = Nil
+          , updateDate            = t2
+          )
+
+      repository.update(repositoryLibraryDependencies1).futureValue
+      repository.update(repositoryLibraryDependencies2).futureValue
+
+      val mongoRepositoryDependencies = repository.getAllEntries.futureValue
+      mongoRepositoryDependencies                   should have size 2
+      mongoRepositoryDependencies.map(_.updateDate) should contain theSameElementsAs Seq(t1, t2)
+
+      repository.clearUpdateDatesForRepository(repositoryLibraryDependencies2.repositoryName).futureValue
+
+      repository.getForRepository(repositoryLibraryDependencies1.repositoryName).futureValue shouldBe Some(
+        repositoryLibraryDependencies1
+      )
+      repository.getForRepository(repositoryLibraryDependencies2.repositoryName).futureValue shouldBe Some(
+        repositoryLibraryDependencies2.copy(updateDate = Instant.EPOCH)
+      )
     }
   }
 }

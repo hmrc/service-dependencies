@@ -23,7 +23,7 @@ import org.scalatest.concurrent.{IntegrationPatience, ScalaFutures}
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.servicedependencies.connector.TeamsAndRepositoriesConnector
 import uk.gov.hmrc.servicedependencies.model.{MongoRepositoryDependency, _}
-import uk.gov.hmrc.servicedependencies.persistence.RepositoryLibraryDependenciesRepository
+import uk.gov.hmrc.servicedependencies.persistence.RepositoryDependenciesRepository
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
@@ -43,7 +43,7 @@ class RepositoryDependenciesSourceSpec
       val repository2 = "repo2"
       val repository3 = "repo3-history"
 
-      when(teamsAndRepositoriesConnector.getTeamsWithRepositories(any()))
+      when(mockTeamsAndRepositoriesConnector.getTeamsWithRepositories(any()))
         .thenReturn(
           Future.successful(
             Seq(Team(
@@ -69,7 +69,7 @@ class RepositoryDependenciesSourceSpec
         MongoRepositoryDependency(name = "plugin2", group = "uk.gov.hmrc", currentVersion = Version(20, 2, 0))
       )
 
-      when(repositoryLibraryDependenciesRepository.getAllEntries)
+      when(mockRepositoryDependenciesRepository.getAllEntries)
         .thenReturn(
           Future.successful(Seq(
             MongoRepositoryDependencies(repository1, libraryDependencies1, sbtPluginDependencies1, Nil, timeForTest),
@@ -108,7 +108,7 @@ class RepositoryDependenciesSourceSpec
       private val teamA = "team A"
       private val teamB = "team B"
 
-      when(teamsAndRepositoriesConnector.getTeamsWithRepositories(any()))
+      when(mockTeamsAndRepositoriesConnector.getTeamsWithRepositories(any()))
         .thenReturn(
           Future.successful(
             Seq(
@@ -136,7 +136,7 @@ class RepositoryDependenciesSourceSpec
         MongoRepositoryDependency(name = "plugin2", group = "uk.gov.hmrc", currentVersion = Version(20, 2, 0))
       )
 
-      when(repositoryLibraryDependenciesRepository.getAllEntries)
+      when(mockRepositoryDependenciesRepository.getAllEntries)
         .thenReturn(
           Future.successful(Seq(
             MongoRepositoryDependencies(repository1, libraryDependencies1, sbtPluginDependencies1, Nil, timeForTest),
@@ -162,11 +162,14 @@ class RepositoryDependenciesSourceSpec
   }
 
   trait Setup {
-    implicit val hc                             = HeaderCarrier()
-    val teamsAndRepositoriesConnector           = mock[TeamsAndRepositoriesConnector]
-    val repositoryLibraryDependenciesRepository = mock[RepositoryLibraryDependenciesRepository]
+    implicit val hc                          = HeaderCarrier()
+    val mockTeamsAndRepositoriesConnector    = mock[TeamsAndRepositoriesConnector]
+    val mockRepositoryDependenciesRepository = mock[RepositoryDependenciesRepository]
     lazy val libraryDependenciesSource =
-      new RepositoryDependenciesSource(teamsAndRepositoriesConnector, repositoryLibraryDependenciesRepository)
+      new RepositoryDependenciesSource(
+        mockTeamsAndRepositoriesConnector
+      , mockRepositoryDependenciesRepository
+      )
 
     val timeForTest = Instant.now()
   }

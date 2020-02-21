@@ -16,28 +16,27 @@
 
 package uk.gov.hmrc.servicedependencies.service
 
-import cats.implicits._
 import javax.inject.{Inject, Singleton}
-import uk.gov.hmrc.servicedependencies.config.CuratedDependencyConfigProvider
+import uk.gov.hmrc.servicedependencies.config.ServiceDependenciesConfig
 import uk.gov.hmrc.servicedependencies.config.model.CuratedDependencyConfig
+import uk.gov.hmrc.servicedependencies.connector.ServiceConfigsConnector
 import uk.gov.hmrc.servicedependencies.controller.model.Dependency
-import uk.gov.hmrc.servicedependencies.model.{SlugDependency, SlugInfo, SlugInfoFlag, Version}
-import uk.gov.hmrc.servicedependencies.persistence.DependencyVersionRepository
-import uk.gov.hmrc.servicedependencies.util.Max
+import uk.gov.hmrc.servicedependencies.model.{SlugInfo, SlugInfoFlag, Version}
+import uk.gov.hmrc.servicedependencies.persistence.LatestVersionRepository
 
 import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
 class SlugDependenciesService @Inject()(
-  slugInfoService                : SlugInfoService
-, curatedDependencyConfigProvider: CuratedDependencyConfigProvider
-, dependencyVersionRepository    : DependencyVersionRepository
-, serviceConfigsService          : ServiceConfigsService
+  slugInfoService          : SlugInfoService
+, serviceDependenciesConfig: ServiceDependenciesConfig
+, latestVersionRepository  : LatestVersionRepository
+, serviceConfigsConnector  : ServiceConfigsConnector
 )(implicit ec: ExecutionContext
 ) {
 
   private lazy val curatedDependencyConfig: CuratedDependencyConfig =
-    curatedDependencyConfigProvider.curatedDependencyConfig
+    serviceDependenciesConfig.curatedDependencyConfig
 
   /*
    * We may want to evolve the model - but for this initial version we reuse the existing Dependency definition.
@@ -50,28 +49,35 @@ class SlugDependenciesService @Inject()(
 
   private def curatedLibrariesOfSlugInfo(slugInfo: SlugInfo): Future[List[Dependency]] =
     for {
-      latestVersions        <- dependencyVersionRepository.getAllEntries
-      curatedDependencies   =  slugInfo.dependencies
-                                 .filter(slugDependency =>
-                                   curatedDependencyConfig.libraries.exists(lib =>
-                                     lib.name  == slugDependency.artifact &&
-                                     lib.group == slugDependency.group
-                                   )
-                                 )
-      enrichedDependencies  <- serviceConfigsService.getDependenciesWithBobbyRules(curatedDependencies
-                                  .map { slugDependency =>
-                                      val latestVersion =
-                                        latestVersions
-                                          .find(v => v.group == slugDependency.group && v.name == slugDependency.artifact)
-                                          .map(_.version)
-                                      Dependency(
-                                          name                = slugDependency.artifact
-                                        , group               = slugDependency.group
-                                        , currentVersion      = Version(slugDependency.version)  // TODO this is unsafe
-                                        , latestVersion       = latestVersion
-                                        , bobbyRuleViolations = Nil
-                                        )
-                                     }
-                                   )
-    } yield enrichedDependencies
+      latestVersions <- latestVersionRepository.getAllEntries
+      bobbyRules     <- serviceConfigsConnector.getBobbyRules
+      dependencies   =  slugInfo
+                          .dependencies
+                          .flatMap { slugDependency =>
+                              val latestVersion =
+                                latestVersions
+                                  .find(v => v.group == slugDependency.group && v.name == slugDependency.artifact)
+                                  .map(_.version)
+                              Version.parse(slugDependency.version).map { currentVersion =>
+                                Dependency(
+                                    name                = slugDependency.artifact
+                                  , group               = slugDependency.group
+                                  , currentVersion      = currentVersion
+                                  , latestVersion       = latestVersion
+                                  , bobbyRuleViolations = bobbyRules.violationsFor(
+                                                              group   = slugDependency.group
+                                                            , name    = slugDependency.artifact
+                                                            , version = currentVersion
+                                                            )
+                                  )
+                              }
+                          }
+      filtered       =  dependencies.filter(dependency =>
+                            curatedDependencyConfig.allDependencies.exists(lib =>
+                              lib.name  == dependency.name &&
+                              lib.group == dependency.group
+                            ) ||
+                            dependency.bobbyRuleViolations.nonEmpty
+                          )
+    } yield filtered
 }

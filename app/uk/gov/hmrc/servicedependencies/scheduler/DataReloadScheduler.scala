@@ -42,14 +42,21 @@ class DataReloadScheduler @Inject()(
 
   implicit val hc: HeaderCarrier = HeaderCarrier()
 
-  scheduleWithLock("dependencyDataReloader", schedulerConfigs.dependencyReload, mongoLocks.dependencyReloadSchedulerLock){
-    dependencyDataUpdatingService.reloadCurrentDependenciesDataForAllRepositories()
+  scheduleWithLock(
+    label           = "dependencyDataReloader"
+  , schedulerConfig = schedulerConfigs.dependencyReload
+  , lock            = mongoLocks.dependencyReloadSchedulerLock
+  ){
+    dependencyDataUpdatingService.reloadCurrentDependenciesDataForAllRepositories
       .map(_ => ())
   }
 
-  scheduleWithLock("dependencyVersionsReloader", schedulerConfigs.dependencyVersionsReload, mongoLocks.dependencyVersionsReloadSchedulerLock){
-    for {
-      _ <- dependencyDataUpdatingService.reloadLatestDependencyVersions
-    } yield ()
+  scheduleWithLock(
+    label           = "latestVersionsReloader"
+  , schedulerConfig = schedulerConfigs.latestVersionsReload
+  , lock            = mongoLocks.latestVersionsReloadSchedulerLock
+  ){
+    dependencyDataUpdatingService.reloadLatestVersions
+      .map(_ => ())
   }
 }

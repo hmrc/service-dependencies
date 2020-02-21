@@ -18,18 +18,18 @@ package uk.gov.hmrc.servicedependencies.model
 
 import java.time.Instant
 
-import play.api.libs.json.{Format, Json, __}
+import play.api.libs.json.__
 import play.api.libs.functional.syntax._
 import uk.gov.hmrc.mongo.play.json.formats.MongoJavatimeFormats
 
-case class MongoDependencyVersion(
+case class MongoLatestVersion(
     name        : String
   , group       : String
   , version     : Version
   , updateDate  : Instant = Instant.now()
   )
 
-object MongoDependencyVersion {
+object MongoLatestVersion {
   implicit val format = {
     implicit val iF  = MongoJavatimeFormats.instantFormats
     implicit val svf = ScalaVersion.format
@@ -38,7 +38,7 @@ object MongoDependencyVersion {
     ~ (__ \ "group"       ).format[String]
     ~ (__ \ "version"     ).format[Version]
     ~ (__ \ "updateDate"  ).format[Instant]
-    )(MongoDependencyVersion.apply, unlift(MongoDependencyVersion.unapply))
+    )(MongoLatestVersion.apply, unlift(MongoLatestVersion.unapply))
   }
 
   val schema =

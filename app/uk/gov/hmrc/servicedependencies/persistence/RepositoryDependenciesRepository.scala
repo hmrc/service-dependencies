@@ -18,11 +18,12 @@ package uk.gov.hmrc.servicedependencies.persistence
 
 import java.time.Instant
 
+import cats.implicits._
 import com.google.inject.{Inject, Singleton}
 import org.mongodb.scala.bson.BsonDocument
 import org.mongodb.scala.model.Filters.{equal, regex}
 import org.mongodb.scala.model.Indexes.hashed
-import org.mongodb.scala.model.{IndexModel, IndexOptions, ReplaceOptions}
+import org.mongodb.scala.model.{Collation, CollationStrength, IndexModel, IndexOptions, ReplaceOptions}
 import play.api.Logger
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.play.json.PlayMongoRepository
@@ -31,8 +32,11 @@ import uk.gov.hmrc.servicedependencies.model._
 import uk.gov.hmrc.servicedependencies.util.FutureHelpers
 
 import scala.concurrent.{ExecutionContext, Future}
+
+import RepositoryDependenciesRepository.caseInsensitiveCollation
+
 @Singleton
-class RepositoryLibraryDependenciesRepository @Inject()(
+class RepositoryDependenciesRepository @Inject()(
     mongoComponent    : MongoComponent
   , futureHelper      : FutureHelpers
   , val throttleConfig: ThrottleConfig
@@ -42,7 +46,13 @@ class RepositoryLibraryDependenciesRepository @Inject()(
   , mongoComponent = mongoComponent
   , domainFormat   = MongoRepositoryDependencies.format
   , indexes        = Seq(
-                       IndexModel(hashed("repositoryName"), IndexOptions().name("RepositoryNameIdx").background(true))
+                         IndexModel(
+                           hashed("repositoryName")
+                         , IndexOptions()
+                           .name("RepositoryNameIdx")
+                           .collation(caseInsensitiveCollation)
+                           .background(true)
+                         )
                      )
   , optSchema      = Some(BsonDocument(MongoRepositoryDependencies.schema))
   ) with WithThrottling {
@@ -70,10 +80,9 @@ class RepositoryLibraryDependenciesRepository @Inject()(
 
   def getForRepository(repositoryName: String): Future[Option[MongoRepositoryDependencies]] =
     futureHelper.withTimerAndCounter("mongo.read") {
-      // Note, the regex will not use the index.
-      // Mongdo 3.4 does support collated indices, allowing for case-insensitive searches: https://docs.mongodb.com/manual/core/index-case-insensitive/
-      //TODO: Explore using index for this query
-      collection.find(regex("repositoryName", "^" + repositoryName + "$", "i"))
+      collection
+        .find(equal("repositoryName", repositoryName))
+        .collation(caseInsensitiveCollation)
         .toThrottledFuture
         .map {
           case data if data.size > 1 =>
@@ -97,6 +106,20 @@ class RepositoryLibraryDependenciesRepository @Inject()(
   def clearUpdateDates: Future[Seq[MongoRepositoryDependencies]] =
     for {
       entries <- getAllEntries
-      res     <- Future.traverse(entries)(mrd => update(mrd.copy(updateDate = Instant.EPOCH)))
+      res     <- entries.toList.traverse(mrd => update(mrd.copy(updateDate = Instant.EPOCH)))
     } yield res
+
+  def clearUpdateDatesForRepository(repositoryName: String): Future[Option[MongoRepositoryDependencies]] =
+    for {
+      entries <- getForRepository(repositoryName)
+      res     <- entries.traverse(mrd => update(mrd.copy(updateDate = Instant.EPOCH)))
+    } yield res
+}
+
+object RepositoryDependenciesRepository {
+  val caseInsensitiveCollation: Collation =
+    Collation.builder
+      .locale("en")
+      .collationStrength(CollationStrength.SECONDARY)
+      .build
 }

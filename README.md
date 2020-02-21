@@ -7,18 +7,21 @@ This service provides information about scala library dependencies across the pl
 Used by the catalogue-frontend service deployments page.
 
 #### How it works
-The service gathers dependency information from two sources:
+The service gathers the following information:
 
-* SBT build files read from github
+* Dependencies from SBT build files read from github
   * Covers all HMRC repos, including services, libraries, prototypes
-  * Limited to a whitelist of dependencies, doesnt cover transitive
-  * Only shows the latest dependencies from master branch
-  * Shows if dependencies are out of date
+  * Limited to a whitelist of dependencies, doesn't cover transitive
+  * Only shows the dependencies from master branch
 
-* Library data from a slug
+* Dependencies included in a Slug
   * Covers all services that generate a slug
-  * Includes all dependencies used by service, including transitive
+  * Includes all runtime dependencies used by service, including transitive
   * Shows dependencies across different releases of slug, not just latest
+
+* The Latest version found for any of the whitelisted dependencies
+  * This is looked up periodically from Artifactory
+  * It will be included in the dependencies returned for a Slug or Github repository. Identifying if the repositories dependencies are out of date.
 
 #### Configuration
 
@@ -29,12 +32,16 @@ repositoryDependencies.slugJob.enabled           # enable polling of service dep
 repositoryDependencies.slugJob.interval          # delay between polling service deployments
 ````
 
+The latest version parser is configured:
+````
+dependencyVersionsReload.scheduler.enabled      # disable refreshing the latest version for the whitelisted dependencies
+dependencyVersionsReload.scheduler.interval     # delay between refresh
+````
+
 The github/sbt dependency parser is configured:
 ````
-scheduler.enabled                  # disable all github/sbt parsers
-dependency.reload.intervalminutes  # how often the github repo/sbt parser will run
-library.reload.intervalminutes     # how often the library version parser will run
-sbtPlugin.reload.intervalminutes   # how often the sbt plugin version parser will run
+dependencyReload.scheduler.enabled   # disable the refresh of dependencies from the github projects
+dependencyReload.scheduler.interval  # delay between refresh
 ````
 
 The metrics reporter is configured:
@@ -43,6 +50,20 @@ The metrics reporter is configured:
 repositoryDependencies.metricsGauges.enabled   # enable the metrics reporter
 repositoryDependencies.metricsGauges.interval  # how often stats are uploaded
 ````
+
+#### Admin endpoints
+
+As well as the configured scheduler, a refresh of the latest version for whitelisted dependencies can be initiated with:
+  `POST    /reload-latest-versions`
+
+Similarly, a refresh of dependencies from Github, for all modified repositories, can be initiated with:
+  `POST    /reload-dependencies`
+
+Note, that this refresh will only include repositories which have been modified in Github since the last run. To force a reload of all repositories, the last modified date can be cleared prior to reloading the dependencies with:
+  `POST    /api/admin/dependencies/clear-update-dates`
+
+The last modified date for a single repository can also be cleared with:
+  `POST    /api/admin/dependencies/:repository/clear-update-dates`
 
 ### License
 

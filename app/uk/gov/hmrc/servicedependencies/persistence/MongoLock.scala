@@ -28,8 +28,8 @@ class MongoLocks @Inject()(
 )(
   implicit ec: ExecutionContext
 ) {
-  val dependencyReloadSchedulerLock         = mongoLockRepository.toService("dependency-reload-scheduler"        , 1.hour)
-  val dependencyVersionsReloadSchedulerLock = mongoLockRepository.toService("dependencyVersions-reload-scheduler", 1.hour)
-  val slugMetadataUpdateSchedulerLock       = mongoLockRepository.toService("slug-job-scheduler"                 , 1.hour)
-  val bobbyRulesSummarySchedulerLock        = mongoLockRepository.toService("bobby-rules-summary-scheduler"      , 1.hour)
+  val dependencyReloadSchedulerLock     = mongoLockRepository.toService("dependency-reload-scheduler"        , 1.hour)
+  val latestVersionsReloadSchedulerLock = mongoLockRepository.toService("dependencyVersions-reload-scheduler", 1.hour)
+  val slugMetadataUpdateSchedulerLock   = mongoLockRepository.toService("slug-job-scheduler"                 , 1.hour)
+  val bobbyRulesSummarySchedulerLock    = mongoLockRepository.toService("bobby-rules-summary-scheduler"      , 1.hour)
 }

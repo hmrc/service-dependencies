@@ -67,34 +67,31 @@ class TeamsAndRepositoriesConnectorSpec
         "metrics.jvm" -> false
       ).build()
 
-  private val services = app.injector.instanceOf[TeamsAndRepositoriesConnector]
+  private val connector = app.injector.instanceOf[TeamsAndRepositoriesConnector]
 
 
   "Retrieving a repository" - {
     "correctly parse json response" in {
-
-      val repository = services.getRepository("test-repo").futureValue
+      val repository = connector.getRepository("test-repo").futureValue
       repository.get.teamNames mustBe Seq("PlatOps", "Webops")
     }
 
     "handle 404 - repository not found" in {
-
-      val repository = services.getRepository("non-existing-test-repo").futureValue
+      val repository = connector.getRepository("non-existing-test-repo").futureValue
       repository mustBe None
     }
   }
 
   "Retrieving a list of teams for all services" - {
     "correctly parse json response" in {
-
-      val teams = services.getTeamsForServices.futureValue
+      val teams = connector.getTeamsForServices.futureValue
       teams mustBe TeamsForServices(Map("test-repo" -> Seq("PlatOps", "WebOps"), "another-repo" -> Seq("PlatOps")))
     }
   }
 
   "Retrieving a list of all repositories" - {
     "correctly parse json response" in {
-      val repositories = services.getAllRepositories.futureValue
+      val repositories = connector.getAllRepositories.futureValue
       repositories mustBe List(
         RepositoryInfo("test-repo", Instant.parse("2015-09-15T16:27:38.000Z"), Instant.parse("2017-05-19T11:00:51.000Z"),"Prototype",None),
         RepositoryInfo("another-repo", Instant.parse("2016-05-12T10:18:53.000Z"), Instant.parse("2016-05-12T15:43:32.000Z"),"Prototype",None))
@@ -103,8 +100,7 @@ class TeamsAndRepositoriesConnectorSpec
 
   "Retrieving a list of all teams with repositories" - {
     "correctly parse json response" in {
-
-      val teamsWithRepositories = services.getTeamsWithRepositories.futureValue
+      val teamsWithRepositories = connector.getTeamsWithRepositories.futureValue
       teamsWithRepositories mustBe Seq(
         Team("team A", Map("Service" -> Seq("service A", "service B"), "Library" -> Seq("library A")))
       )

@@ -17,6 +17,7 @@
 package uk.gov.hmrc.servicedependencies.util
 
 import uk.gov.hmrc.servicedependencies.model.Version
+import uk.gov.hmrc.servicedependencies.connector.GithubDependency
 
 object VersionParser {
   def parsePropertyFile(contents: String, key: String): Option[Version] = {
@@ -27,29 +28,23 @@ object VersionParser {
     }
   }
 
-  def parse(fileContent: String, artifacts: Seq[(String, String)]): Map[(String, String), Option[Version]] =
-    artifacts
-      .map { case (name, group) =>
-        (name, group) -> parse(fileContent = fileContent, name = name, group = group)
-       }
-      .toMap
+  def parse(fileContent: String): Seq[GithubDependency] = {
+    val stringVersion   = (""""([^"]+)"[\s%]*"([^"]+)"\s*%\s*"([^"]*)"""").r.unanchored
+    val variableVersion = (""""([^"]+)"[\s%]*"([^"]+)"\s*%\s*(\w+)""").r.unanchored
 
-  def parseReleaseVersion(tag: String): Option[Version] = {
-    val tagRegex = """^(?:release\/|v)(\d+\.\d+\.\d+)$""".r.unanchored
-    tag match {
-      case tagRegex(version) => Version.parse(version.replaceAll("\"", ""))
-      case _                 => None
-    }
-  }
+    val stringMatches = stringVersion.findAllMatchIn(fileContent).map { m =>
+      Version.parse(m.group(3)).map { v =>
+        GithubDependency(group = m.group(1), name = m.group(2), version = v)
+      }
+    }.flatten.toSeq
 
-  def parse(fileContent: String, name: String, group: String): Option[Version] = {
-    val stringVersion   = ("\"" + group + "\"[\\s%]*\"" + name + "\"" + """\s*%\s*"(\d+\.\d+\.\d+-?\S*)"""").r.unanchored
-    val variableVersion = ("\"" + group + "\"[\\s%]*\"" + name + "\"" + """\s*%\s*(\w*)""").r.unanchored
-    fileContent match {
-      case stringVersion(version)    => Version.parse(version)
-      case variableVersion(variable) => extractVersionInVariable(fileContent, variable)
-      case _                         => None
-    }
+    val variableMatches = variableVersion.findAllMatchIn(fileContent).map { m =>
+      extractVersionInVariable(fileContent, m.group(3)).map { v =>
+        GithubDependency(group = m.group(1), name = m.group(2), version = v)
+      }
+    }.flatten.toSeq
+
+    stringMatches ++ variableMatches
   }
 
   private def extractVersionInVariable(file: String, variable: String): Option[Version] = {
@@ -57,18 +52,6 @@ object VersionParser {
     file match {
       case variableRegex(value) => Version.parse(value)
       case _                    => None
-    }
-  }
-}
-
-object PluginsSbtFileVersionParser {
-
-  def parse(fileContent: String, artifact: String): Option[Version] = {
-    val stringVersion = (s""".*"$artifact""" + """"\s*%\s*"(\d+\.\d+\.\d+-?\S*)".*""").r.unanchored
-
-    fileContent match {
-      case stringVersion(version) => Version.parse(version)
-      case _                      => None
     }
   }
 }

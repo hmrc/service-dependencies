@@ -17,54 +17,74 @@
 package uk.gov.hmrc.servicedependencies.controller.admin
 
 import javax.inject.{Inject, Singleton}
-import play.api.Logger
 import play.api.libs.json.Json
 import play.api.mvc.ControllerComponents
 import uk.gov.hmrc.play.bootstrap.controller.BackendController
-import uk.gov.hmrc.servicedependencies.persistence.LocksRepository
+import uk.gov.hmrc.servicedependencies.persistence.{LatestVersionRepository, LocksRepository, RepositoryDependenciesRepository}
 import uk.gov.hmrc.servicedependencies.service.DependencyDataUpdatingService
 
 import scala.concurrent.ExecutionContext
 
 @Singleton
 class AdministrationController @Inject()(
-    dependencyDataUpdatingService: DependencyDataUpdatingService
-  , locksRepository              : LocksRepository
-  , cc                           : ControllerComponents
+    dependencyDataUpdatingService   : DependencyDataUpdatingService
+  , locksRepository                 : LocksRepository
+  , repositoryDependenciesRepository: RepositoryDependenciesRepository
+  , latestVersionRepository         : LatestVersionRepository
+  , cc                              : ControllerComponents
   )(implicit ec: ExecutionContext
   ) extends BackendController(cc) {
 
-  def reloadLibraryDependenciesForAllRepositories(force: Option[Boolean] = None) = Action { implicit request =>
-    dependencyDataUpdatingService
-      .reloadCurrentDependenciesDataForAllRepositories(force = force.getOrElse(false))
-      .onFailure {
-        case ex => throw new RuntimeException("reload of dependencies failed", ex)
-      }
-    Accepted("reload started")
-  }
+  def reloadLibraryDependenciesForAllRepositories =
+    Action { implicit request =>
+      dependencyDataUpdatingService
+        .reloadCurrentDependenciesDataForAllRepositories
+        .onFailure {
+          case ex => throw new RuntimeException("reload of dependencies failed", ex)
+        }
+      Accepted("reload started")
+    }
 
-  def reloadDependencyVersions = Action { implicit request =>
-    dependencyDataUpdatingService
-      .reloadLatestDependencyVersions
-      .onFailure {
-        case ex => throw new RuntimeException("reload of dependency versions failed", ex)
-      }
-    Accepted("reload started")
-  }
+  def reloadLatestVersions =
+    Action { implicit request =>
+      dependencyDataUpdatingService
+        .reloadLatestVersions
+        .onFailure {
+          case ex => throw new RuntimeException("reload of dependency versions failed", ex)
+        }
+      Accepted("reload started")
+    }
 
-  def dropCollection(collection: String) = Action.async { implicit request =>
-    (collection match {
-       case "locks"    => locksRepository.clearAllData
-       case collection => dependencyDataUpdatingService.dropCollection(collection)
-     }
-    ).map(_ => Ok(s"$collection dropped"))
-  }
+  def dropCollection(collection: String) =
+    Action.async { implicit request =>
+      (collection match {
+         case "locks"                         => locksRepository.clearAllData
+         case "repositoryLibraryDependencies" => repositoryDependenciesRepository.clearAllData
+         case "dependencyVersions"            => latestVersionRepository.clearAllData
+         case other                           => sys.error(s"dropping $other collection is not supported")
+       }
+      ).map(_ => Ok(s"$collection dropped"))
+    }
 
-  def clearUpdateDates = Action.async { implicit request =>
-    dependencyDataUpdatingService.clearUpdateDates.map(rs => Ok(s"${rs.size} records updated"))
-  }
+  def clearUpdateDates =
+    Action.async { implicit request =>
+      repositoryDependenciesRepository
+        .clearUpdateDates
+        .map(rs => Ok(s"${rs.size} records updated"))
+    }
 
-  def mongoLocks() = Action.async { implicit request =>
-    locksRepository.getAllEntries.map(locks => Ok(Json.toJson(locks)))
-  }
+  def clearUpdateDatesForRepository(repositoryName: String) =
+    Action.async { implicit request =>
+      repositoryDependenciesRepository
+        .clearUpdateDatesForRepository(repositoryName)
+        .map {
+          case None    => NotFound("")
+          case Some(_) => Ok(s"record updated")
+        }
+    }
+
+  def mongoLocks() =
+    Action.async { implicit request =>
+      locksRepository.getAllEntries.map(locks => Ok(Json.toJson(locks)))
+    }
 }

@@ -31,7 +31,6 @@ import uk.gov.hmrc.servicedependencies.service.RepositoryDependenciesSource
 import uk.gov.hmrc.servicedependencies.util.SchedulerUtils
 
 import scala.concurrent.ExecutionContext
-import scala.concurrent.duration.Duration
 
 class MetricsScheduler @Inject()(
     schedulerConfigs            : SchedulerConfigs,

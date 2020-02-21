@@ -20,13 +20,12 @@ import javax.inject.{Inject, Singleton}
 import play.api.libs.json._
 import play.api.libs.functional.syntax._
 import play.api.Logger
-import uk.gov.hmrc.http.{HeaderCarrier, HttpResponse, NotFoundException}
+import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
 import uk.gov.hmrc.play.bootstrap.http.HttpClient
 import uk.gov.hmrc.servicedependencies.model.Version
 
 import scala.concurrent.{ExecutionContext, Future}
-import scala.util.{Success, Try}
 
 
 @Singleton

@@ -19,8 +19,7 @@ package uk.gov.hmrc.servicedependencies.model
 import java.time.LocalDate
 import play.api.data.format.Formats
 import play.api.libs.functional.syntax._
-import play.api.libs.json.{Reads, OFormat, Writes, __}
-import uk.gov.hmrc.http.controllers.RestFormats
+import play.api.libs.json.{OFormat, __}
 import uk.gov.hmrc.servicedependencies.controller.model.{Dependency, DependencyBobbyRule}
 
 
@@ -61,8 +60,11 @@ object BobbyRule {
 
 case class BobbyRules(asMap: Map[(String, String), List[BobbyRule]]) {
   def violationsFor(dependency: Dependency): List[DependencyBobbyRule] =
+    violationsFor(dependency.group, dependency.name, dependency.currentVersion)
+
+  def violationsFor(group: String, name: String, version: Version): List[DependencyBobbyRule] =
     asMap
-      .getOrElse((dependency.group, dependency.name), Nil)
-      .filter(_.range.includes(dependency.currentVersion))
+      .getOrElse((group, name), Nil)
+      .filter(_.range.includes(version))
       .map(_.asDependencyBobbyRule)
 }

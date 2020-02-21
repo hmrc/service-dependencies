@@ -27,9 +27,9 @@ import play.api.libs.json.Json
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
 import uk.gov.hmrc.servicedependencies.config.ServiceDependenciesConfig
-import uk.gov.hmrc.servicedependencies.connector.TeamsAndRepositoriesConnector
+import uk.gov.hmrc.servicedependencies.connector.{TeamsAndRepositoriesConnector, ServiceConfigsConnector}
 import uk.gov.hmrc.servicedependencies.controller.model.{Dependencies, Dependency, DependencyBobbyRule}
-import uk.gov.hmrc.servicedependencies.model.{BobbyVersionRange, SlugInfoFlag, Version}
+import uk.gov.hmrc.servicedependencies.model.{BobbyRules, BobbyVersionRange, SlugInfoFlag, Version}
 import uk.gov.hmrc.servicedependencies.service._
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -53,11 +53,11 @@ class ServiceDependenciesControllerSpec
       val now                    = Instant.now()
       val repositoryDependencies = Dependencies(repoName, Seq(), Seq(), Seq(), now)
 
-      when(boot.mockedDependencyDataUpdatingService.getDependencyVersionsForRepository(any()))
+      when(boot.mockRepositoryDependenciesService.getDependencyVersionsForRepository(any()))
         .thenReturn(Future.successful(Some(repositoryDependencies)))
 
-      when(boot.mockServiceConfigsService.getDependenciesWithBobbyRules(repositoryDependencies))
-        .thenReturn(Future.successful(repositoryDependencies))
+      when(boot.mockServiceConfigsConnector.getBobbyRules)
+        .thenReturn(Future.successful(BobbyRules(Map.empty)))
 
       val result = boot.controller
         .getDependencyVersionsForRepository(repoName)
@@ -65,7 +65,9 @@ class ServiceDependenciesControllerSpec
 
       contentAsJson(result).toString shouldBe
         s"""{"repositoryName":"repo1","libraryDependencies":[],"sbtPluginsDependencies":[],"otherDependencies":[],"lastUpdated":"$now"}"""
-      Mockito.verify(boot.mockedDependencyDataUpdatingService).getDependencyVersionsForRepository(repoName)
+
+      Mockito.verify(boot.mockRepositoryDependenciesService)
+        .getDependencyVersionsForRepository(repoName)
     }
   }
 
@@ -78,17 +80,11 @@ class ServiceDependenciesControllerSpec
       val repo3               = Dependencies("repo3", Seq(), Seq(), Seq(), now)
       val libraryDependencies = Seq(repo1, repo2, repo3)
 
-      when(boot.mockedDependencyDataUpdatingService.getDependencyVersionsForAllRepositories)
+      when(boot.mockRepositoryDependenciesService.getDependencyVersionsForAllRepositories)
         .thenReturn(Future.successful(libraryDependencies))
 
-      when(boot.mockServiceConfigsService.getDependenciesWithBobbyRules(repo1))
-        .thenReturn(Future.successful(repo1))
-
-      when(boot.mockServiceConfigsService.getDependenciesWithBobbyRules(repo2))
-        .thenReturn(Future.successful(repo2))
-
-      when(boot.mockServiceConfigsService.getDependenciesWithBobbyRules(repo3))
-        .thenReturn(Future.successful(repo3))
+      when(boot.mockServiceConfigsConnector.getBobbyRules)
+        .thenReturn(Future.successful(BobbyRules(Map.empty)))
 
       val result = boot.controller.dependencies().apply(FakeRequest())
 
@@ -104,7 +100,7 @@ class ServiceDependenciesControllerSpec
 
     "should get dependencies for a SlugInfoFlag" in new GetDependenciesOfSlugFixture {
       val flag = SlugInfoFlag.Latest
-      when(boot.mockedSlugDependenciesService.curatedLibrariesOfSlug(slugName, flag)).thenReturn(
+      when(boot.mockSlugDependenciesService.curatedLibrariesOfSlug(slugName, flag)).thenReturn(
         Future.successful(
           Some(List(DependencyWithLatestVersionNoRuleViolations, DependencyWithRuleViolationsNoLatestVersion))
         )
@@ -119,7 +115,7 @@ class ServiceDependenciesControllerSpec
 
     "should return Not Found when the requested slug is not recognised" in new GetDependenciesOfSlugFixture {
       val flag = SlugInfoFlag.Latest
-      when(boot.mockedSlugDependenciesService.curatedLibrariesOfSlug(slugName, flag)).thenReturn(
+      when(boot.mockSlugDependenciesService.curatedLibrariesOfSlug(slugName, flag)).thenReturn(
         Future.successful(None)
       )
 
@@ -138,39 +134,41 @@ class ServiceDependenciesControllerSpec
   }
 
   case class Boot(
-    mockedDependencyDataUpdatingService: DependencyDataUpdatingService,
-    mockedTeamsAndRepositoriesConnector: TeamsAndRepositoriesConnector,
-    mockedSlugInfoService: SlugInfoService,
-    mockedSlugDependenciesService: SlugDependenciesService,
-    mockServiceConfigsService: ServiceConfigsService,
-    controller: ServiceDependenciesController)
+      mockDependencyDataUpdatingService: DependencyDataUpdatingService
+    , mockSlugInfoService              : SlugInfoService
+    , mockSlugDependenciesService      : SlugDependenciesService
+    , mockServiceConfigsConnector      : ServiceConfigsConnector
+    , mockTeamDependencyService        : TeamDependencyService
+    , mockRepositoryDependenciesService: RepositoryDependenciesService
+    , controller                       : ServiceDependenciesController
+    )
 
   object Boot {
     def init: Boot = {
-      val mockedDependencyDataUpdatingService = mock[DependencyDataUpdatingService]
-      val mockedTeamsAndRepositoriesConnector = mock[TeamsAndRepositoriesConnector]
-      val mockedSlugInfoService               = mock[SlugInfoService]
-      val mockedSlugDependenciesService       = mock[SlugDependenciesService]
-      val mockServiceConfigsService           = mock[ServiceConfigsService]
-      val mockTeamDependencyService           = mock[TeamDependencyService]
+      val mockDependencyDataUpdatingService = mock[DependencyDataUpdatingService]
+      val mockSlugInfoService               = mock[SlugInfoService]
+      val mockSlugDependenciesService       = mock[SlugDependenciesService]
+      val mockServiceConfigsConnector       = mock[ServiceConfigsConnector]
+      val mockTeamDependencyService         = mock[TeamDependencyService]
+      val mockRepositoryDependenciesService = mock[RepositoryDependenciesService]
       val controller = new ServiceDependenciesController(
-        Configuration(),
-        mockedDependencyDataUpdatingService,
-        mockedTeamsAndRepositoriesConnector,
-        mockedSlugInfoService,
-        mockedSlugDependenciesService,
-        mock[ServiceDependenciesConfig],
-        mockServiceConfigsService,
-        mockTeamDependencyService,
-        stubControllerComponents()
-      )
+          mockDependencyDataUpdatingService
+        , mockSlugInfoService
+        , mockSlugDependenciesService
+        , mockServiceConfigsConnector
+        , mockTeamDependencyService
+        , mockRepositoryDependenciesService
+        , stubControllerComponents()
+        )
       Boot(
-        mockedDependencyDataUpdatingService,
-        mockedTeamsAndRepositoriesConnector,
-        mockedSlugInfoService,
-        mockedSlugDependenciesService,
-        mockServiceConfigsService,
-        controller)
+          mockDependencyDataUpdatingService
+        , mockSlugInfoService
+        , mockSlugDependenciesService
+        , mockServiceConfigsConnector
+        , mockTeamDependencyService
+        , mockRepositoryDependenciesService
+        , controller
+        )
     }
   }
 

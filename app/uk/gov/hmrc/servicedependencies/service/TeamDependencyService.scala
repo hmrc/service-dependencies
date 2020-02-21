@@ -19,7 +19,7 @@ package uk.gov.hmrc.servicedependencies.service
 import cats.implicits._
 import javax.inject.{Inject, Singleton}
 import uk.gov.hmrc.http.HeaderCarrier
-import uk.gov.hmrc.servicedependencies.connector.TeamsAndRepositoriesConnector
+import uk.gov.hmrc.servicedependencies.connector.{ServiceConfigsConnector, TeamsAndRepositoriesConnector}
 import uk.gov.hmrc.servicedependencies.controller.model.{Dependency, Dependencies}
 import uk.gov.hmrc.servicedependencies.model.SlugInfoFlag
 import uk.gov.hmrc.servicedependencies.persistence.SlugInfoRepository
@@ -27,35 +27,40 @@ import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
 class TeamDependencyService @Inject()(
-  teamsAndReposConnector  : TeamsAndRepositoriesConnector,
-  slugInfoRepository      : SlugInfoRepository,
-  githubDepLookup         : DependencyDataUpdatingService,
-  serviceConfigsService   : ServiceConfigsService,
-  slugDependenciesService : SlugDependenciesService)(implicit ec: ExecutionContext)  {
+  teamsAndReposConnector       : TeamsAndRepositoriesConnector
+, slugInfoRepository           : SlugInfoRepository
+, repositoryDependenciesService: RepositoryDependenciesService
+, serviceConfigsConnector      : ServiceConfigsConnector
+, slugDependenciesService      : SlugDependenciesService
+)(implicit ec: ExecutionContext
+) {
 
-  def findAllDepsForTeam(team: String)(implicit hc: HeaderCarrier): Future[Seq[Dependencies]] =
+  def findAllDepsForTeam(teamName: String)(implicit hc: HeaderCarrier): Future[Seq[Dependencies]] =
     for {
-      (teamDetails, githubDeps) <- ( teamsAndReposConnector.getTeamDetails(team)
-                                   , githubDepLookup.getDependencyVersionsForAllRepositories
+      (teamDetails, githubDeps) <- ( teamsAndReposConnector.getTeamDetails(teamName)
+                                   , repositoryDependenciesService.getDependencyVersionsForAllRepositories
                                    ).mapN { case (td, gh) => (td, gh) }
-      libs                      =  teamDetails.libraries.map(l => githubDeps.find(_.repositoryName == l))
+      libs                      =  teamDetails.libraries.flatMap(l => githubDeps.find(_.repositoryName == l))
       services                  =  teamDetails.services.flatMap(s => githubDeps.find(_.repositoryName == s))
-      updatedServices           <- services.toList.traverse(replaceServiceDeps)
-      libsWithRules             <- libs.flatten.toList.traverse(serviceConfigsService.getDependenciesWithBobbyRules)
-    } yield libsWithRules ++ updatedServices
+      updatedServices           <- services.toList.traverse(replaceServiceDependencies)
+    } yield libs ++ updatedServices
 
-  protected[service] def replaceServiceDeps(dep: Dependencies): Future[Dependencies] =
+  protected[service] def replaceServiceDependencies(dependencies: Dependencies): Future[Dependencies] =
     for {
-      slugDeps <- slugDependenciesService.curatedLibrariesOfSlug(dep.repositoryName, SlugInfoFlag.Latest)
-      output   =  slugDeps.map(deps => dep.copy(libraryDependencies = deps)).getOrElse(dep)
+      optLibraryDependencies <- slugDependenciesService.curatedLibrariesOfSlug(dependencies.repositoryName, SlugInfoFlag.Latest)
+      output                 =  optLibraryDependencies.map(libraryDependencies => dependencies.copy(libraryDependencies = libraryDependencies)).getOrElse(dependencies)
     } yield output
 
-  def dependenciesOfSlugForTeam(team: String, flag: SlugInfoFlag): Future[Map[String, Seq[Dependency]]] =
+  def dependenciesOfSlugForTeam(
+    teamName: String
+  , flag    : SlugInfoFlag
+  )(implicit hc: HeaderCarrier
+  ): Future[Map[String, Seq[Dependency]]] =
     for {
-      githubDeps <- githubDepLookup.getDependencyVersionsForAllRepositories
-      res        <- githubDeps.toList.traverse { githubDep =>
-                      slugDependenciesService.curatedLibrariesOfSlug(githubDep.repositoryName, flag)
-                        .map(_.map(githubDep.repositoryName -> _))
-                    }
+      teamDetails <- teamsAndReposConnector.getTeamDetails(teamName)
+      res         <- teamDetails.services.toList.traverse { serviceName =>
+                       slugDependenciesService.curatedLibrariesOfSlug(serviceName, flag)
+                         .map(_.map(serviceName -> _))
+                     }
     } yield res.collect { case Some(kv) => kv }.toMap
 }
