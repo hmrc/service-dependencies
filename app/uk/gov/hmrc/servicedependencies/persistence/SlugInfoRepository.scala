@@ -44,21 +44,21 @@ class SlugInfoRepository @Inject()(
         , replacement = slugInfo
         , options   = ReplaceOptions().upsert(true)
         )
-      .toThrottledFuture
+      .toFuture
       .map(_.wasAcknowledged())
 
   def getAllEntries: Future[Seq[SlugInfo]] =
     collection.find()
-      .toThrottledFuture
+      .toFuture
 
   def clearAllData: Future[Boolean] =
     collection.deleteMany(BsonDocument())
-      .toThrottledFuture
+      .toFuture
       .map(_.wasAcknowledged())
 
   def getUniqueSlugNames: Future[Seq[String]] =
     collection.distinct[String]("name")
-      .toThrottledFuture
+      .toFuture
 
  def getSlugInfos(name: String, optVersion: Option[String]): Future[Seq[SlugInfo]] = {
     val filter =
@@ -69,19 +69,19 @@ class SlugInfoRepository @Inject()(
                                  )
       }
     collection.find(filter)
-      .toThrottledFuture
+      .toFuture
   }
 
   def getSlugInfo(name: String, flag: SlugInfoFlag): Future[Option[SlugInfo]] =
     collection
       .find(and(equal("name", name), equal(flag.asString, true)))
-      .toThrottledFuture
+      .toFuture
       .map(_.headOption)
 
   def getSlugsForEnv(flag: SlugInfoFlag): Future[Seq[SlugInfo]] =
     collection
       .find(equal(flag.asString, true))
-      .toThrottledFuture
+      .toFuture
 
   def clearFlag(flag: SlugInfoFlag, name: String): Future[Unit] = {
     logger.debug(s"clear ${flag.asString} flag on $name")
@@ -91,7 +91,7 @@ class SlugInfoRepository @Inject()(
           filter = equal("name", name)
         , update = set(flag.asString, false)
         )
-      .toThrottledFuture
+      .toFuture
       .map(_ => ())
   }
 
@@ -108,6 +108,6 @@ class SlugInfoRepository @Inject()(
                              , equal("version", version.original)
                              )
                , update = set(flag.asString, true))
-             .toThrottledFuture
+             .toFuture
     } yield ()
 }

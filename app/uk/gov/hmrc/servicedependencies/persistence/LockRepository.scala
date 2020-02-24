@@ -33,10 +33,10 @@ class LocksRepository @Inject()(
 
   def getAllEntries: Future[Seq[Lock]] =
     mongoLockRepository.collection.find()
-      .toThrottledFuture
+      .toFuture
 
   def clearAllData: Future[Boolean] =
     mongoLockRepository.collection.deleteMany(BsonDocument())
-      .toThrottledFuture
+      .toFuture
       .map(_.wasAcknowledged())
 }

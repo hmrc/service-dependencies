@@ -59,7 +59,7 @@ class LatestVersionRepository @Inject()(
             , replacement = latestVersion
             , options     = ReplaceOptions().upsert(true)
             )
-          .toThrottledFuture
+          .toFuture
           .map(_ => ())
     } recover {
       case e =>
@@ -69,10 +69,10 @@ class LatestVersionRepository @Inject()(
 
   def getAllEntries: Future[Seq[MongoLatestVersion]] =
     collection.find()
-      .toThrottledFuture
+      .toFuture
 
   def clearAllData: Future[Boolean] =
     collection.deleteMany(BsonDocument())
-      .toThrottledFuture
+      .toFuture
       .map(_.wasAcknowledged())
 }

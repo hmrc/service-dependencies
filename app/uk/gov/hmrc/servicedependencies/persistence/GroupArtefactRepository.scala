@@ -65,6 +65,6 @@ class GroupArtefactRepository @Inject()(
     )
 
     collection.aggregate(agg).allowDiskUse(true)
-      .toThrottledFuture
+      .toFuture
   }
 }
