@@ -11,7 +11,8 @@
     { "group": "uk.gov.hmrc", "name": "sbt-git-versioning" },
     { "group": "uk.gov.hmrc", "name": "sbt-play-cross-compilation" },
     { "group": "uk.gov.hmrc", "name": "sbt-service-manager"},
-    { "group": "uk.gov.hmrc", "name": "sbt-settings" }
+    { "group": "uk.gov.hmrc", "name": "sbt-settings" },
+    { "group": "uk.gov.hmrc", "name": "sbt-utils" }
   ],
   "libraries": [
     { "group": "org.reactivemongo", "name": "reactivemongo", "latestVersion": "0.20.3" },
@@ -54,6 +55,7 @@
     { "group": "uk.gov.hmrc", "name": "github-client" },
     { "group": "uk.gov.hmrc", "name": "government-gateway-domain" },
     { "group": "uk.gov.hmrc", "name": "government-gateway-test" },
+    { "group": "uk.gov.hmrc", "name": "govuk-template" },
     { "group": "uk.gov.hmrc", "name": "hmrc-stubs-core" },
     { "group": "uk.gov.hmrc", "name": "hmrctest" },
     { "group": "uk.gov.hmrc", "name": "htmlcheck" },
@@ -102,6 +104,7 @@
     { "group": "uk.gov.hmrc", "name": "play-hmrc-api" },
     { "group": "uk.gov.hmrc", "name": "play-json-logger" },
     { "group": "uk.gov.hmrc", "name": "play-json-union-formatter" },
+    { "group": "uk.gov.hmrc", "name": "play-language" },
     { "group": "uk.gov.hmrc", "name": "play-nunjucks" },
     { "group": "uk.gov.hmrc", "name": "play-nunjucks-viewmodel" },
     { "group": "uk.gov.hmrc", "name": "play-partials" },
@@ -120,6 +123,8 @@
     { "group": "uk.gov.hmrc", "name": "raml-tools" },
     { "group": "uk.gov.hmrc", "name": "reactive-circuit-breaker" },
     { "group": "uk.gov.hmrc", "name": "reactivemongo" },
+    { "group": "uk.gov.hmrc", "name": "reactivemongo-bson" },
+    { "group": "uk.gov.hmrc", "name": "reactivemongo-bson-macros" },
     { "group": "uk.gov.hmrc", "name": "reactivemongo-json" },
     { "group": "uk.gov.hmrc", "name": "reactivemongo-test" },
     { "group": "uk.gov.hmrc", "name": "reference-checker" },
@@ -146,7 +151,9 @@
     { "group": "uk.gov.hmrc", "name": "webdriver-factory" },
     { "group": "uk.gov.hmrc", "name": "work-item-repo" },
     { "group": "uk.gov.hmrc", "name": "worldpay-report-generator" },
-    { "group": "uk.gov.hmrc", "name": "zap-automation" }
+    { "group": "uk.gov.hmrc", "name": "zap-automation" },
+    { "group": "uk.gov.hmrc.rehoming", "name": "java-auth-filter" },
+    { "group": "uk.gov.hmrc.rehoming", "name": "java-spring-filters" }
   ],
   "others": [
     {
