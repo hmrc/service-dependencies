@@ -23,7 +23,6 @@ import com.kenshoo.play.metrics.Metrics
 import javax.inject.Inject
 import play.api.inject.ApplicationLifecycle
 import uk.gov.hmrc.mongo.MongoComponent
-import uk.gov.hmrc.mongo.throttle.ThrottleConfig
 import uk.gov.hmrc.mongo.lock.MongoLockRepository
 import uk.gov.hmrc.mongo.metrix.{MetricOrchestrator, MongoMetricRepository}
 import uk.gov.hmrc.servicedependencies.config.SchedulerConfigs
@@ -37,8 +36,7 @@ class MetricsScheduler @Inject()(
     metrics                     : Metrics,
     mongoComponent              : MongoComponent,
     repositoryDependenciesSource: RepositoryDependenciesSource,
-    mongoLockRepository         : MongoLockRepository,
-    throttleConfig              : ThrottleConfig
+    mongoLockRepository         : MongoLockRepository
   )(implicit
     actorSystem         : ActorSystem,
     applicationLifecycle: ApplicationLifecycle,
@@ -53,13 +51,13 @@ class MetricsScheduler @Inject()(
   val metricOrchestrator = new MetricOrchestrator(
     metricSources    = List(repositoryDependenciesSource),
     lockService      = lock,
-    metricRepository = new MongoMetricRepository(mongoComponent, throttleConfig),
+    metricRepository = new MongoMetricRepository(mongoComponent),
     metricRegistry   = metrics.defaultRegistry
   )
 
   schedule("Metrics", schedulerConfig) {
     metricOrchestrator
       .attemptMetricRefresh(resetToZeroFor = Some(_ => true))
-      .map(_.andLogTheResult())
+      .map(_.log())
   }
 }

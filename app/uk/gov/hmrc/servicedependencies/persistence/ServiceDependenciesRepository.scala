@@ -23,20 +23,18 @@ import org.mongodb.scala.model.Indexes.ascending
 import org.mongodb.scala.model.Projections._
 import org.mongodb.scala.model.Sorts._
 import uk.gov.hmrc.mongo.MongoComponent
-import uk.gov.hmrc.mongo.throttle.{ThrottleConfig, WithThrottling}
 import uk.gov.hmrc.servicedependencies.model._
 
 import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
 class ServiceDependenciesRepository @Inject()(
-    mongoComponent    : MongoComponent
-  , val throttleConfig: ThrottleConfig
+    mongoComponent: MongoComponent
   )(implicit ec: ExecutionContext
   ) extends SlugInfoRepositoryBase[ServiceDependency](
     mongoComponent
   , domainFormat   = MongoSlugInfoFormats.serviceDependencyFormat
-  ) with WithThrottling {
+  ) {
 
   def findServices(flag: SlugInfoFlag, group: String, artefact: String): Future[Seq[ServiceDependency]] = {
 

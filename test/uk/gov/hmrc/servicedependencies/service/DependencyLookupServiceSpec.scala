@@ -97,7 +97,7 @@ class DependencyLookupServiceSpec
     val configService         = mock[ServiceConfigsConnector]
     val slugInfoRepository    = mock[SlugInfoRepository]
 
-    val bobbyRulesSummaryRepo = new BobbyRulesSummaryRepository(mongoComponent, throttleConfig) {
+    val bobbyRulesSummaryRepo = new BobbyRulesSummaryRepository(mongoComponent) {
       import scala.compat.java8.FunctionConverters._
 
       private val store = new AtomicReference(List[BobbyRulesSummary]())
