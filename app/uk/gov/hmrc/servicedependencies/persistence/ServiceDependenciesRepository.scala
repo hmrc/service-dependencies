@@ -64,6 +64,6 @@ class ServiceDependenciesRepository @Inject()(
     )
 
     collection.aggregate(agg).allowDiskUse(true)
-      .toThrottledFuture
+      .toFuture
   }
 }

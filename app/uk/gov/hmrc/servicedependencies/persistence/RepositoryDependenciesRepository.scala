@@ -69,7 +69,7 @@ class RepositoryDependenciesRepository @Inject()(
             , replacement = repositoryLibraryDependencies
             , options     = ReplaceOptions().upsert(true)
             )
-          .toThrottledFuture
+          .toFuture
           .map(_ => repositoryLibraryDependencies)
       }
       .recover {
@@ -83,7 +83,7 @@ class RepositoryDependenciesRepository @Inject()(
       collection
         .find(equal("repositoryName", repositoryName))
         .collation(caseInsensitiveCollation)
-        .toThrottledFuture
+        .toFuture
         .map {
           case data if data.size > 1 =>
             throw new RuntimeException(
@@ -95,12 +95,12 @@ class RepositoryDependenciesRepository @Inject()(
   def getAllEntries: Future[Seq[MongoRepositoryDependencies]] = {
     logger.debug("retrieving getAll current dependencies")
     collection.find()
-      .toThrottledFuture
+      .toFuture
   }
 
   def clearAllData: Future[Boolean] =
     collection.deleteMany(BsonDocument())
-      .toThrottledFuture
+      .toFuture
       .map(_.wasAcknowledged())
 
   def clearUpdateDates: Future[Seq[MongoRepositoryDependencies]] =

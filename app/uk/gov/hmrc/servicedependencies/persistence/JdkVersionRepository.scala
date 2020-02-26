@@ -58,6 +58,6 @@ class JdkVersionRepository @Inject()(
         ))
     )
     collection.aggregate(agg)
-      .toThrottledFuture
+      .toFuture
   }
 }
