@@ -21,20 +21,18 @@ import org.mongodb.scala.model.Aggregates.{`match`, project}
 import org.mongodb.scala.model.Filters.{and, equal, nin, notEqual}
 import org.mongodb.scala.model.Projections.{computed, fields}
 import uk.gov.hmrc.mongo.MongoComponent
-import uk.gov.hmrc.mongo.throttle.{ThrottleConfig, WithThrottling}
 import uk.gov.hmrc.servicedependencies.model._
 
 import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
 class JdkVersionRepository @Inject()(
-    mongoComponent    : MongoComponent
-  , val throttleConfig: ThrottleConfig
+    mongoComponent: MongoComponent
   )(implicit ec: ExecutionContext
   ) extends SlugInfoRepositoryBase[JDKVersion](
     mongoComponent
   , domainFormat = MongoSlugInfoFormats.jdkVersionFormat
-  ) with WithThrottling {
+  ) {
 
   def findJDKUsage(flag: SlugInfoFlag): Future[Seq[JDKVersion]] = {
     val agg = List(

@@ -23,7 +23,6 @@ import org.mongodb.scala.model.{Indexes, IndexModel, IndexOptions, ReplaceOption
 import play.api.Logger
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.play.json.PlayMongoRepository
-import uk.gov.hmrc.mongo.throttle.{ThrottleConfig, WithThrottling}
 import uk.gov.hmrc.servicedependencies.model._
 import uk.gov.hmrc.servicedependencies.util.FutureHelpers
 
@@ -31,9 +30,8 @@ import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
 class LatestVersionRepository @Inject()(
-    mongoComponent    : MongoComponent
-  , futureHelpers     : FutureHelpers
-  , val throttleConfig: ThrottleConfig
+    mongoComponent: MongoComponent
+  , futureHelpers : FutureHelpers
   )(implicit ec: ExecutionContext
   ) extends PlayMongoRepository[MongoLatestVersion](
     collectionName = "dependencyVersions"
@@ -43,7 +41,7 @@ class LatestVersionRepository @Inject()(
                        IndexModel(Indexes.ascending("name", "group"), IndexOptions().unique(true))
                      )
   , optSchema      = Some(BsonDocument(MongoLatestVersion.schema))
-  ) with WithThrottling {
+  ) {
 
   val logger: Logger = Logger(this.getClass)
 

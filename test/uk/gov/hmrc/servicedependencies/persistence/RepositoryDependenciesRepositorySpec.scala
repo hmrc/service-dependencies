@@ -41,7 +41,7 @@ class RepositoryDependenciesRepositorySpec
       with CleanMongoCollectionSupport {
 
   val futureHelper: FutureHelpers = new MockFutureHelpers()
-  override lazy val repository = new RepositoryDependenciesRepository(mongoComponent, futureHelper, throttleConfig)
+  override lazy val repository = new RepositoryDependenciesRepository(mongoComponent, futureHelper)
 
   override implicit val patienceConfig = PatienceConfig(timeout = 30.seconds, interval = 100.millis)
 

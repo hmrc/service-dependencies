@@ -22,20 +22,18 @@ import org.mongodb.scala.model.Filters.{and, equal}
 import org.mongodb.scala.model.ReplaceOptions
 import org.mongodb.scala.model.Updates._
 import uk.gov.hmrc.mongo.MongoComponent
-import uk.gov.hmrc.mongo.throttle.{ThrottleConfig, WithThrottling}
 import uk.gov.hmrc.servicedependencies.model._
 
 import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
 class SlugInfoRepository @Inject()(
-    mongoComponent    : MongoComponent
-  , val throttleConfig: ThrottleConfig
+    mongoComponent: MongoComponent
   )(implicit ec: ExecutionContext
   ) extends SlugInfoRepositoryBase[SlugInfo](
     mongoComponent
   , domainFormat   = MongoSlugInfoFormats.slugInfoFormat
-  ) with WithThrottling {
+  ) {
 
   def add(slugInfo: SlugInfo): Future[Boolean] =
     collection

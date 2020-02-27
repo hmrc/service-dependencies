@@ -26,15 +26,13 @@ import org.mongodb.scala.model.Sorts.descending
 import org.mongodb.scala.model.{IndexModel, IndexOptions, ReplaceOptions}
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.play.json.PlayMongoRepository
-import uk.gov.hmrc.mongo.throttle.{ThrottleConfig, WithThrottling}
 import uk.gov.hmrc.servicedependencies.model.BobbyRulesSummary
 
 import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
 class BobbyRulesSummaryRepository @Inject()(
-    mongoComponent    : MongoComponent
-  , val throttleConfig: ThrottleConfig
+    mongoComponent: MongoComponent
   )(implicit ec: ExecutionContext
   ) extends PlayMongoRepository[BobbyRulesSummary](
     collectionName = "bobbyRulesSummary"
@@ -44,7 +42,7 @@ class BobbyRulesSummaryRepository @Inject()(
                        IndexModel(ascending("date"), IndexOptions().name("dateIdx").unique(true))
                      )
   , optSchema      = Some(BsonDocument(BobbyRulesSummary.mongoSchema))
-  ) with WithThrottling {
+  ) {
 
   private implicit val brsf = BobbyRulesSummary.mongoFormat
 

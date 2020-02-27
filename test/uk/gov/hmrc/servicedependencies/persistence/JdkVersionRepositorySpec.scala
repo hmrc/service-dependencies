@@ -34,9 +34,9 @@ class JdkVersionRepositorySpec
       with MockitoSugar
       with DefaultPlayMongoRepositorySupport[JDKVersion] {
 
-  override protected lazy val repository = new JdkVersionRepository(mongoComponent, throttleConfig)
+  override protected lazy val repository = new JdkVersionRepository(mongoComponent)
 
-  lazy val slugInfoRepo  = new SlugInfoRepository(mongoComponent, throttleConfig)
+  lazy val slugInfoRepo  = new SlugInfoRepository(mongoComponent)
 
   "JdkVersionRepository.findJDKUsage" should {
     "find all the jdk version for a given environment" in {

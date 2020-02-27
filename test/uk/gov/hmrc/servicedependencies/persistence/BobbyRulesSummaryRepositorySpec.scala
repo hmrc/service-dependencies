@@ -38,7 +38,7 @@ class BobbyRulesSummaryRepositorySpec
     with MockitoSugar
     with DefaultPlayMongoRepositorySupport[BobbyRulesSummary] {
 
-  override protected lazy val repository = new BobbyRulesSummaryRepository(mongoComponent, throttleConfig) {
+  override protected lazy val repository = new BobbyRulesSummaryRepository(mongoComponent) {
     def findAll(): Future[Seq[BobbyRulesSummary]] =
       collection.withReadPreference(ReadPreference.secondaryPreferred).find().toFuture().map(_.toList)
   }

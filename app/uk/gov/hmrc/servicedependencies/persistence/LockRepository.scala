@@ -20,16 +20,14 @@ import com.google.inject.{Inject, Singleton}
 import org.mongodb.scala.bson.BsonDocument
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.lock.{MongoLockRepository, Lock}
-import uk.gov.hmrc.mongo.throttle.{ThrottleConfig, WithThrottling}
 
 import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
 class LocksRepository @Inject()(
     mongoLockRepository: MongoLockRepository
-  , val throttleConfig: ThrottleConfig
   )(implicit ec: ExecutionContext
-  ) extends WithThrottling {
+  ) {
 
   def getAllEntries: Future[Seq[Lock]] =
     mongoLockRepository.collection.find()

@@ -33,9 +33,9 @@ class ServiceDependenciesRepositorySpec
       with MockitoSugar
       with DefaultPlayMongoRepositorySupport[ServiceDependency] {
 
-  override lazy val repository = new ServiceDependenciesRepository(mongoComponent, throttleConfig)
+  override lazy val repository = new ServiceDependenciesRepository(mongoComponent)
 
-  lazy val slugInfoRepo = new SlugInfoRepository(mongoComponent, throttleConfig)
+  lazy val slugInfoRepo = new SlugInfoRepository(mongoComponent)
 
   "ServiceDependenciesRepository.findServices" should {
 

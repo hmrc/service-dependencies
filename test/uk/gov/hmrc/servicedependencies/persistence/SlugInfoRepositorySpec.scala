@@ -33,7 +33,7 @@ class SlugInfoRepositorySpec
       with MockitoSugar
       with DefaultPlayMongoRepositorySupport[SlugInfo] {
 
-  override lazy val repository = new SlugInfoRepository(mongoComponent, throttleConfig)
+  override lazy val repository = new SlugInfoRepository(mongoComponent)
 
   "SlugInfoRepository.add" should {
     "insert correctly" in {

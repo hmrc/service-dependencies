@@ -27,7 +27,6 @@ import org.mongodb.scala.model.{Collation, CollationStrength, IndexModel, IndexO
 import play.api.Logger
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.play.json.PlayMongoRepository
-import uk.gov.hmrc.mongo.throttle.{ThrottleConfig, WithThrottling}
 import uk.gov.hmrc.servicedependencies.model._
 import uk.gov.hmrc.servicedependencies.util.FutureHelpers
 
@@ -37,9 +36,8 @@ import RepositoryDependenciesRepository.caseInsensitiveCollation
 
 @Singleton
 class RepositoryDependenciesRepository @Inject()(
-    mongoComponent    : MongoComponent
-  , futureHelper      : FutureHelpers
-  , val throttleConfig: ThrottleConfig
+    mongoComponent: MongoComponent
+  , futureHelper  : FutureHelpers
   )(implicit ec: ExecutionContext
   ) extends PlayMongoRepository[MongoRepositoryDependencies](
     collectionName = "repositoryLibraryDependencies"
@@ -55,7 +53,7 @@ class RepositoryDependenciesRepository @Inject()(
                          )
                      )
   , optSchema      = Some(BsonDocument(MongoRepositoryDependencies.schema))
-  ) with WithThrottling {
+  ) {
 
   val logger: Logger = Logger(this.getClass)
 

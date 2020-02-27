@@ -39,9 +39,9 @@ class GroupArtefactsRepositorySpec
       with PlayMongoRepositorySupport[GroupArtefacts]
       with CleanMongoCollectionSupport {
 
-  override lazy val repository = new GroupArtefactRepository(mongoComponent, throttleConfig)
+  override lazy val repository = new GroupArtefactRepository(mongoComponent)
 
-  lazy val slugInfoRepo = new SlugInfoRepository(mongoComponent, throttleConfig)
+  lazy val slugInfoRepo = new SlugInfoRepository(mongoComponent)
 
   override implicit val patienceConfig = PatienceConfig(timeout = 30.seconds, interval = 100.millis)
 

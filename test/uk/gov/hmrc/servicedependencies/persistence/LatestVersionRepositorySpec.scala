@@ -39,7 +39,7 @@ class LatestVersionRepositorySpec
   val metricsRegistry             = new MetricRegistry()
   val futureHelper: FutureHelpers = new MockFutureHelpers()
 
-  override lazy val repository = new LatestVersionRepository(mongoComponent, futureHelper, throttleConfig)
+  override lazy val repository = new LatestVersionRepository(mongoComponent, futureHelper)
 
   val latestVersion = MongoLatestVersion(
       name       = "some-library"
