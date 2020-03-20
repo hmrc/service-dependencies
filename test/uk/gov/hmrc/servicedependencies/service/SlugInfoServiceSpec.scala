@@ -166,7 +166,7 @@ class SlugInfoServiceSpec extends AnyWordSpec with Matchers with MockitoSugar wi
       val mockedJdkVersionRepository            = mock[JdkVersionRepository]
       val mockedGroupArtefactRepository         = mock[GroupArtefactRepository]
       val mockedTeamsAndRepositoriesConnector   = mock[TeamsAndRepositoriesConnector]
-      val mockedServiceDeploymentsConnector     = mock[ReleasesApiConnector]
+      val mockedReleasesApiConnector            = mock[ReleasesApiConnector]
 
       val service = new SlugInfoService(
             mockedSlugInfoRepository
@@ -174,14 +174,14 @@ class SlugInfoServiceSpec extends AnyWordSpec with Matchers with MockitoSugar wi
           , mockedJdkVersionRepository
           , mockedGroupArtefactRepository
           , mockedTeamsAndRepositoriesConnector
-          , mockedServiceDeploymentsConnector
+          , mockedReleasesApiConnector
           )
       Boot(
           mockedSlugInfoRepository
         , mockedServiceDependenciesRepository
         , mockedJdkVersionRepository
         , mockedTeamsAndRepositoriesConnector
-        , mockedServiceDeploymentsConnector
+        , mockedReleasesApiConnector
         , mockedGroupArtefactRepository
         , service
         )
