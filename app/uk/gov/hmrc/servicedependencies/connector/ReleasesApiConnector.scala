@@ -17,34 +17,34 @@
 package uk.gov.hmrc.servicedependencies.connector
 
 import javax.inject.{Inject, Singleton}
-import play.api.libs.json._
-import play.api.libs.functional.syntax._
 import play.api.Logger
+import play.api.libs.functional.syntax._
+import play.api.libs.json._
 import uk.gov.hmrc.http.HeaderCarrier
-import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
 import uk.gov.hmrc.play.bootstrap.http.HttpClient
+import uk.gov.hmrc.servicedependencies.config.ReleasesApiConfig
 import uk.gov.hmrc.servicedependencies.model.Version
 
 import scala.concurrent.{ExecutionContext, Future}
 
 
 @Singleton
-class ServiceDeploymentsConnector @Inject()(
+class ReleasesApiConnector @Inject()(
     httpClient    : HttpClient,
-    servicesConfig: ServicesConfig
-  )(implicit ec: ExecutionContext
-  ) {
-  import ServiceDeploymentsConnector._
+    config        : ReleasesApiConfig
+  )(implicit ec: ExecutionContext) {
 
-  private val serviceUrl: String = servicesConfig.baseUrl("service-deployments")
+  import ReleasesApiConnector._
+
+  private val serviceUrl: String = config.serviceUrl
 
   implicit val sdir = ServiceDeploymentInformation.reads
 
   def getWhatIsRunningWhere(implicit hc: HeaderCarrier): Future[Seq[ServiceDeploymentInformation]] =
-    httpClient.GET[Seq[ServiceDeploymentInformation]](s"$serviceUrl/api/whatsrunningwhere")
+    httpClient.GET[Seq[ServiceDeploymentInformation]](s"$serviceUrl/releases-api/whats-running-where")
 }
 
-object ServiceDeploymentsConnector {
+object ReleasesApiConnector {
   sealed trait Environment
   object Environment {
     case object Production   extends Environment
@@ -55,15 +55,15 @@ object ServiceDeploymentsConnector {
     case object Development  extends Environment
 
     val reads: Reads[Option[Environment]] =
-      (__ \ "name").read[String].map(_ match {
-        case "production"    => Some(Production)
-        case "external test" => Some(ExternalTest)
-        case "staging"       => Some(Staging)
-        case "qa"            => Some(QA)
-        case "integration"   => Some(Integration)
-        case "development"   => Some(Development)
-        case other           => Logger.debug(s"Unsupported environment '$other'"); None
-      })
+      JsPath.read[String].map {
+        case "production" => Some(Production)
+        case "externaltest" => Some(ExternalTest)
+        case "staging" => Some(Staging)
+        case "qa" => Some(QA)
+        case "integration" => Some(Integration)
+        case "development" => Some(Development)
+        case other => Logger.debug(s"Unsupported environment '$other'"); None
+      }
   }
 
   case class Deployment(
@@ -75,8 +75,8 @@ object ServiceDeploymentsConnector {
     val reads: Reads[Deployment] = {
       implicit val dr = Environment.reads
       implicit val vr = Version.apiFormat
-      ( (__ \ "environmentMapping").read[Option[Environment]]
-      ~ (__ \ "version"           ).read[Version]
+      ( (__ \ "environment").read[Option[Environment]]
+      ~ (__ \ "versionNumber").read[Version]
       )(Deployment.apply _)
     }
   }
@@ -89,8 +89,8 @@ object ServiceDeploymentsConnector {
   object ServiceDeploymentInformation {
     val reads: Reads[ServiceDeploymentInformation] = {
       implicit val dr = Deployment.reads
-      ( (__ \ "serviceName").read[String]
-      ~ (__ \ "deployments").read[Seq[Deployment]]
+      ( (__ \ "applicationName").read[String]
+      ~ (__ \ "versions").read[Seq[Deployment]]
       )(ServiceDeploymentInformation.apply _)
     }
   }
