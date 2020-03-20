@@ -24,7 +24,7 @@ import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 import uk.gov.hmrc.http.HeaderCarrier
-import uk.gov.hmrc.servicedependencies.connector.{ServiceDeploymentsConnector, TeamsAndRepositoriesConnector, TeamsForServices}
+import uk.gov.hmrc.servicedependencies.connector.{ReleasesApiConnector, TeamsAndRepositoriesConnector, TeamsForServices}
 import uk.gov.hmrc.servicedependencies.model._
 import uk.gov.hmrc.servicedependencies.persistence.{GroupArtefactRepository, JdkVersionRepository, ServiceDependenciesRepository, SlugInfoRepository}
 
@@ -150,13 +150,13 @@ class SlugInfoServiceSpec extends AnyWordSpec with Matchers with MockitoSugar wi
   }
 
   case class Boot(
-      mockedSlugInfoRepository            : SlugInfoRepository
-    , mockedServiceDependenciesRepository : ServiceDependenciesRepository
-    , mockedJdkVersionRespository         : JdkVersionRepository
-    , mockedTeamsAndRepositoriesConnector : TeamsAndRepositoriesConnector
-    , mockedServiceDeploymentsConnector   : ServiceDeploymentsConnector
-    , mockedGroupArtefactRepository       : GroupArtefactRepository
-    , service                             : SlugInfoService
+                     mockedSlugInfoRepository            : SlugInfoRepository
+                   , mockedServiceDependenciesRepository : ServiceDependenciesRepository
+                   , mockedJdkVersionRespository         : JdkVersionRepository
+                   , mockedTeamsAndRepositoriesConnector : TeamsAndRepositoriesConnector
+                   , mockedReleasesApiConnector          : ReleasesApiConnector
+                   , mockedGroupArtefactRepository       : GroupArtefactRepository
+                   , service                             : SlugInfoService
     )
 
   object Boot {
@@ -166,7 +166,7 @@ class SlugInfoServiceSpec extends AnyWordSpec with Matchers with MockitoSugar wi
       val mockedJdkVersionRepository            = mock[JdkVersionRepository]
       val mockedGroupArtefactRepository         = mock[GroupArtefactRepository]
       val mockedTeamsAndRepositoriesConnector   = mock[TeamsAndRepositoriesConnector]
-      val mockedServiceDeploymentsConnector     = mock[ServiceDeploymentsConnector]
+      val mockedServiceDeploymentsConnector     = mock[ReleasesApiConnector]
 
       val service = new SlugInfoService(
             mockedSlugInfoRepository

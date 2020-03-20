@@ -1,0 +1,28 @@
+[
+  {"applicationName":"add-taxes-frontend",
+    "versions":[
+      {"environment":"qa","versionNumber":"0.158.0","lastSeen":"2020-03-19T18:12:10"},
+      {"environment":"production","versionNumber":"0.158.0","lastSeen":"2020-03-19T18:12:36"},
+      {"environment":"development","versionNumber":"0.158.0","lastSeen":"2020-03-19T18:12:24"},
+      {"environment":"staging","versionNumber":"0.158.0","lastSeen":"2020-03-19T18:12:51"}
+    ]},
+  {"applicationName":"address-lookup","versions":[
+    {"environment":"qa","versionNumber":"4.35.0","lastSeen":"2020-03-19T18:12:13"},
+    {"environment":"production","versionNumber":"4.35.0","lastSeen":"2020-03-19T18:12:36"},
+    {"environment":"staging","versionNumber":"4.35.0","lastSeen":"2020-03-19T18:12:47"}
+  ]},
+  {"applicationName":"address-lookup-frontend","versions":[
+    {"environment":"qa","versionNumber":"2.48.0","lastSeen":"2020-03-19T18:12:13"},
+    {"environment":"staging","versionNumber":"2.46.0","lastSeen":"2020-03-19T18:12:45"},
+    {"environment":"production","versionNumber":"2.46.0","lastSeen":"2020-03-19T18:12:34"}
+  ]},
+  {"applicationName":"address-lookup-frontend-stub","versions":[
+    {"environment":"qa","versionNumber":"1.5.0","lastSeen":"2020-03-19T18:12:10"},
+    {"environment":"staging","versionNumber":"1.5.0","lastSeen":"2020-03-19T18:12:50"},
+    {"environment":"development","versionNumber":"1.1.0-1-g9d1eb86","lastSeen":"2020-03-19T18:12:26"}]},
+  {"applicationName":"address-lookup-stub","versions":[
+    {"environment":"development","versionNumber":"15","lastSeen":"2020-03-19T18:12:27"},
+    {"environment":"qa","versionNumber":"1.3.0","lastSeen":"2020-03-19T18:12:12"},
+    {"environment":"staging","versionNumber":"1.3.0","lastSeen":"2020-03-19T18:12:52"}
+  ]}
+]

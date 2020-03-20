@@ -20,7 +20,7 @@ import cats.instances.all._
 import cats.syntax.all._
 import com.google.inject.{Inject, Singleton}
 import uk.gov.hmrc.http.HeaderCarrier
-import uk.gov.hmrc.servicedependencies.connector.{ServiceDeploymentsConnector, TeamsAndRepositoriesConnector}
+import uk.gov.hmrc.servicedependencies.connector.{ReleasesApiConnector, TeamsAndRepositoriesConnector}
 import uk.gov.hmrc.servicedependencies.model._
 import uk.gov.hmrc.servicedependencies.persistence.{GroupArtefactRepository, JdkVersionRepository, ServiceDependenciesRepository, SlugInfoRepository}
 
@@ -33,7 +33,7 @@ class SlugInfoService @Inject()(
  jdkVersionRepository          : JdkVersionRepository,
  groupArtefactRepository       : GroupArtefactRepository,
  teamsAndRepositoriesConnector : TeamsAndRepositoriesConnector,
- serviceDeploymentsConnector   : ServiceDeploymentsConnector
+ serviceDeploymentsConnector   : ReleasesApiConnector
 )(implicit ec: ExecutionContext
 ) {
   def addSlugInfo(slug: SlugInfo): Future[Boolean] = {
@@ -72,7 +72,7 @@ class SlugInfoService @Inject()(
 
   def updateMetadata()(implicit hc: HeaderCarrier): Future[Unit] = {
 
-    import ServiceDeploymentsConnector._
+    import ReleasesApiConnector._
     for {
       serviceNames           <- slugInfoRepository.getUniqueSlugNames
       serviceDeploymentInfos <- serviceDeploymentsConnector.getWhatIsRunningWhere
@@ -88,8 +88,8 @@ class SlugInfoService @Inject()(
                                                            .map { case (flag, env) =>
                                                                     ( flag
                                                                     , deployments.flatMap(
-                                                                          _.find(_.optEnvironment == Some(env))
-                                                                            .map(_.version)
+                                                                          _.find(_.optEnvironment.contains(env))
+                                                                           .map(_.version)
                                                                         )
                                                                     )
                                                                 }
