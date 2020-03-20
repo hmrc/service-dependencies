@@ -75,7 +75,7 @@ class ReleasesApiConnectorSpec extends org.scalatest.WordSpec with Matchers
 
   def stubWhatsRunningWhere() =
     wireMock.stub(
-      get(urlEqualTo("/api/whatsrunningwhere"))
+      get(urlEqualTo("/releases-api/whats-running-where"))
         .willReturn(
           aResponse()
             .withStatus(200)
