@@ -18,7 +18,6 @@ package uk.gov.hmrc.servicedependencies.util
 
 import com.codahale.metrics.MetricRegistry
 
-import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.{ExecutionContext, Future}
 
 class MockFutureHelpers extends FutureHelpers(null) {

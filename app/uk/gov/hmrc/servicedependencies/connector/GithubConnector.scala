@@ -22,15 +22,11 @@ import javax.inject.Inject
 import org.apache.commons.codec.binary.Base64
 import org.eclipse.egit.github.core.client.RequestException
 import org.eclipse.egit.github.core.{IRepositoryIdProvider, RepositoryContents}
-import org.slf4j.LoggerFactory
 import uk.gov.hmrc.githubclient._
 import uk.gov.hmrc.servicedependencies.config.ServiceDependenciesConfig
-import uk.gov.hmrc.servicedependencies.config.model.{CuratedDependencyConfig, DependencyConfig}
 import uk.gov.hmrc.servicedependencies.model.Version
-import uk.gov.hmrc.servicedependencies.util.{Max, VersionParser}
+import uk.gov.hmrc.servicedependencies.util.VersionParser
 
-import scala.annotation.tailrec
-import scala.util.Try
 
 case class GithubDependency(
     group  : String
@@ -52,8 +48,6 @@ class GithubConnector(
 ) {
 
   private val org = "HMRC"
-
-  private lazy val logger = LoggerFactory.getLogger(this.getClass)
 
   def findVersionsForMultipleArtifacts(repoName: String): Either[GithubSearchError, GithubSearchResults] =
     try {

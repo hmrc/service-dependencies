@@ -21,14 +21,9 @@ import java.time.LocalDate
 import cats.instances.all._
 import cats.syntax.all._
 import org.mockito.MockitoSugar
-import org.mongodb.scala.ReadPreference
-import org.mongodb.scala.bson.BsonDocument
-import org.mongodb.scala.model.IndexModel
 import uk.gov.hmrc.mongo.test.DefaultPlayMongoRepositorySupport
 import uk.gov.hmrc.servicedependencies.model.{BobbyRule, BobbyRulesSummary, BobbyVersionRange, SlugInfoFlag}
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.Future
-import scala.concurrent.duration.DurationInt
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpecLike
 
@@ -38,26 +33,23 @@ class BobbyRulesSummaryRepositorySpec
     with MockitoSugar
     with DefaultPlayMongoRepositorySupport[BobbyRulesSummary] {
 
-  override protected lazy val repository = new BobbyRulesSummaryRepository(mongoComponent) {
-    def findAll(): Future[Seq[BobbyRulesSummary]] =
-      collection.withReadPreference(ReadPreference.secondaryPreferred).find().toFuture().map(_.toList)
-  }
+  override protected lazy val repository = new BobbyRulesSummaryRepository(mongoComponent)
 
   "BobbyRulesSummaryRepository.add" should {
     val summary = bobbyRulesSummary(LocalDate.now, SlugInfoFlag.Development, 1)
 
     "insert correctly" in {
       repository.add(summary).futureValue
-      repository.findAll().futureValue shouldBe Seq(summary)
+      findAll().futureValue shouldBe Seq(summary)
     }
 
     "replace existing" in {
       repository.add(summary).futureValue
-      repository.findAll().futureValue should have size 1
+      findAll().futureValue should have size 1
 
       val duplicate = summary.copy(summary = Map.empty)
       repository.add(duplicate).futureValue
-      repository.findAll().futureValue shouldBe Seq(duplicate)
+      findAll().futureValue shouldBe Seq(duplicate)
     }
   }
 

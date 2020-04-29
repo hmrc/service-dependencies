@@ -18,7 +18,6 @@ package uk.gov.hmrc.servicedependencies.persistence
 
 import com.google.inject.{Inject, Singleton}
 import org.mongodb.scala.bson.BsonDocument
-import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.lock.{MongoLockRepository, Lock}
 
 import scala.concurrent.{ExecutionContext, Future}

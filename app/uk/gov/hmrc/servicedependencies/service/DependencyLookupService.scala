@@ -23,7 +23,6 @@ import java.time.temporal.ChronoUnit
 import cats.implicits._
 import javax.inject.Inject
 import play.api.Logger
-import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.servicedependencies.connector.ServiceConfigsConnector
 import uk.gov.hmrc.servicedependencies.model._
 import uk.gov.hmrc.servicedependencies.persistence.{BobbyRulesSummaryRepository, SlugBlacklist, SlugInfoRepository}
@@ -45,7 +44,7 @@ class DependencyLookupService @Inject() (
     bobbyRulesSummaryRepo.getLatest
       .map(_.getOrElse(BobbyRulesSummary(LocalDate.now, Map.empty)))
 
-  def updateBobbyRulesSummary(implicit hc: HeaderCarrier): Future[Unit] = {
+  def updateBobbyRulesSummary(): Future[Unit] = {
     def calculateCounts(rules: Seq[BobbyRule])(env: SlugInfoFlag): Future[Seq[((BobbyRule, SlugInfoFlag), Int)]] = {
       logger.debug(s"calculateCounts($env)")
       for {

@@ -16,8 +16,6 @@
 
 package uk.gov.hmrc.servicedependencies.scheduler
 
-import java.util.concurrent.TimeUnit
-
 import akka.actor.ActorSystem
 import com.kenshoo.play.metrics.Metrics
 import javax.inject.Inject

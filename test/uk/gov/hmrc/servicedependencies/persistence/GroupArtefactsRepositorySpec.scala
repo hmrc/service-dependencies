@@ -17,9 +17,6 @@
 package uk.gov.hmrc.servicedependencies.persistence
 
 import org.mockito.MockitoSugar
-import org.mongodb.scala.bson.BsonDocument
-import org.mongodb.scala.model.IndexModel
-import org.scalatest.matchers.{HavePropertyMatchResult, HavePropertyMatcher}
 import org.scalatest.OptionValues
 import uk.gov.hmrc.mongo.test.{CleanMongoCollectionSupport, PlayMongoRepositorySupport}
 import uk.gov.hmrc.servicedependencies.model.GroupArtefacts

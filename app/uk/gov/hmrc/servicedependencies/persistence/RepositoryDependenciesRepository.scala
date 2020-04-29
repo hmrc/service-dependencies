@@ -21,7 +21,7 @@ import java.time.Instant
 import cats.implicits._
 import com.google.inject.{Inject, Singleton}
 import org.mongodb.scala.bson.BsonDocument
-import org.mongodb.scala.model.Filters.{equal, regex}
+import org.mongodb.scala.model.Filters.equal
 import org.mongodb.scala.model.Indexes.hashed
 import org.mongodb.scala.model.{Collation, CollationStrength, IndexModel, IndexOptions, ReplaceOptions}
 import play.api.Logger

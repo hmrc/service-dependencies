@@ -21,7 +21,6 @@ import java.util.concurrent.atomic.AtomicReference
 
 import org.mockito.ArgumentMatchers.any
 import org.mockito.MockitoSugar
-import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.mongo.test.MongoSupport
 import uk.gov.hmrc.servicedependencies.connector.ServiceConfigsConnector
 import uk.gov.hmrc.servicedependencies.model._
@@ -118,8 +117,6 @@ class DependencyLookupServiceSpec
         Future(true)
       }
     }
-
-    implicit val hc = HeaderCarrier()
 
     when(configService.getBobbyRules).thenReturn(Future(BobbyRules(Map(("uk.gov.hmrc", "libs") -> List(bobbyRule)))))
     when(slugInfoRepository.getSlugsForEnv(any[SlugInfoFlag])).thenReturn(Future(Seq.empty))

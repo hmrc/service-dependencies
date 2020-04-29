@@ -20,6 +20,7 @@ import com.github.tomakehurst.wiremock.client.WireMock._
 import org.scalatest.BeforeAndAfterAll
 import org.scalatest.concurrent.{IntegrationPatience, ScalaFutures}
 import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpec
 import org.scalatestplus.play.guice.GuiceOneAppPerSuite
 import play.api.libs.json.{JsSuccess, Json}
 import uk.gov.hmrc.http.HeaderCarrier
@@ -30,7 +31,9 @@ import uk.gov.hmrc.servicedependencies.connector.ReleasesApiConnector.Environmen
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
-class ReleasesApiConnectorSpec extends org.scalatest.WordSpec with Matchers
+class ReleasesApiConnectorSpec
+  extends AnyWordSpec
+  with Matchers
   with ScalaFutures
   with BeforeAndAfterAll
   with GuiceOneAppPerSuite

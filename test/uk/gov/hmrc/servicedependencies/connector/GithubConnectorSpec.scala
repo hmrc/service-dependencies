@@ -18,7 +18,7 @@ package uk.gov.hmrc.servicedependencies.connector
 
 import java.util.Base64
 
-import org.eclipse.egit.github.core.client.{GitHubClient, RequestException}
+import org.eclipse.egit.github.core.client.RequestException
 import org.eclipse.egit.github.core.{RepositoryContents, RequestError}
 import org.mockito.ArgumentMatchers.{any, eq => is}
 import org.mockito.MockitoSugar
@@ -26,7 +26,6 @@ import org.scalatest.OptionValues
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 import uk.gov.hmrc.githubclient._
-import uk.gov.hmrc.servicedependencies.config.model.{CuratedDependencyConfig, DependencyConfig}
 import uk.gov.hmrc.servicedependencies.model.Version
 
 import scala.collection.JavaConverters._

@@ -44,7 +44,7 @@ class ServiceDependenciesController @Inject()(
   implicit val dw: OWrites[Dependencies] = Dependencies.writes
 
   def getDependencyVersionsForRepository(repositoryName: String): Action[AnyContent] =
-    Action.async { implicit request =>
+    Action.async {
       (for {
          dependencies  <- EitherT.fromOptionF(
                             repositoryDependenciesService
@@ -56,7 +56,7 @@ class ServiceDependenciesController @Inject()(
     }
 
   def dependencies(): Action[AnyContent] =
-    Action.async { implicit request =>
+    Action.async {
       for {
         dependencies <- repositoryDependenciesService
                           .getDependencyVersionsForAllRepositories
@@ -85,14 +85,14 @@ class ServiceDependenciesController @Inject()(
     }
 
   def getGroupArtefacts: Action[AnyContent] =
-    Action.async { implicit request =>
+    Action.async {
       implicit val format = GroupArtefacts.apiFormat
       slugInfoService.findGroupsArtefacts
         .map(res => Ok(Json.toJson(res)))
     }
 
   def slugInfos(name: String, version: Option[String]): Action[AnyContent] =
-    Action.async { implicit request =>
+    Action.async {
       implicit val format = ApiSlugInfoFormats.siFormat
       slugInfoService
         .getSlugInfos(name, version)
@@ -100,7 +100,7 @@ class ServiceDependenciesController @Inject()(
     }
 
   def slugInfo(name: String, flag: String): Action[AnyContent] =
-    Action.async { implicit request =>
+    Action.async {
       (for {
          f        <- EitherT.fromOption[Future](SlugInfoFlag.parse(flag), BadRequest(s"invalid flag '$flag'"))
          slugInfo <- EitherT.fromOptionF(slugInfoService.getSlugInfo(name, f), NotFound(""))
@@ -112,7 +112,7 @@ class ServiceDependenciesController @Inject()(
     }
 
   def dependenciesOfSlug(name: String, flag: String): Action[AnyContent] =
-    Action.async { implicit request =>
+    Action.async {
       (for {
          f    <- EitherT.fromOption[Future](SlugInfoFlag.parse(flag), BadRequest(s"invalid flag '$flag'"))
          deps <- EitherT.fromOptionF(slugDependenciesService.curatedLibrariesOfSlug(name, f), NotFound(""))
@@ -138,7 +138,7 @@ class ServiceDependenciesController @Inject()(
     }
 
   def findJDKForEnvironment(flag: String): Action[AnyContent] =
-    Action.async { implicit request =>
+    Action.async {
       (for {
          f   <- EitherT.fromOption[Future](SlugInfoFlag.parse(flag), BadRequest(s"invalid flag '$flag'"))
          res <- EitherT.liftF[Future, Result, Seq[JDKVersion]](
