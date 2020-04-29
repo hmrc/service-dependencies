@@ -23,11 +23,9 @@ import com.google.inject.{Inject, Singleton}
 import org.slf4j.LoggerFactory
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.servicedependencies.config.ServiceDependenciesConfig
-import uk.gov.hmrc.servicedependencies.config.model.{CuratedDependencyConfig, DependencyConfig}
 import uk.gov.hmrc.servicedependencies.connector.{ArtifactoryConnector, GithubConnector, GithubDependency, GithubSearchResults, ServiceConfigsConnector, TeamsAndRepositoriesConnector}
 import uk.gov.hmrc.servicedependencies.connector.model.RepositoryInfo
-import uk.gov.hmrc.servicedependencies.controller.model.{Dependencies, Dependency}
-import uk.gov.hmrc.servicedependencies.model.{BobbyRules, MongoRepositoryDependencies, MongoRepositoryDependency, MongoLatestVersion, ScalaVersion, Version}
+import uk.gov.hmrc.servicedependencies.model.{MongoRepositoryDependencies, MongoRepositoryDependency, MongoLatestVersion}
 import uk.gov.hmrc.servicedependencies.persistence.{LatestVersionRepository, RepositoryDependenciesRepository}
 import uk.gov.hmrc.servicedependencies.util.Max
 
@@ -52,7 +50,7 @@ class DependencyDataUpdatingService @Inject()(
   lazy val curatedDependencyConfig =
     serviceDependenciesConfig.curatedDependencyConfig
 
-  def reloadLatestVersions(implicit hc: HeaderCarrier): Future[List[MongoLatestVersion]] =
+  def reloadLatestVersions(): Future[List[MongoLatestVersion]] =
     for {
       res <- curatedDependencyConfig.allDependencies.traverse { config =>
                for {

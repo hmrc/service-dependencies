@@ -16,13 +16,12 @@
 
 package uk.gov.hmrc.servicedependencies.connector
 
-import akka.actor.ActorSystem
 import akka.stream.Materializer
 import akka.stream.scaladsl.{Compression, StreamConverters}
 import java.io.InputStream
 
 import javax.inject.Inject
-import play.api.Logger
+import play.api.Logging
 import play.api.libs.ws.WSClient
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -30,18 +29,17 @@ import scala.concurrent.duration.{Duration, DurationInt}
 
 
 class GzippedResourceConnector @Inject()(
-    ws          : WSClient)(
-    implicit
-    actorSystem : ActorSystem,
+    ws          : WSClient
+  )(implicit
     materializer: Materializer,
     ec          : ExecutionContext
-  ){
+  ) extends Logging {
 
   /** @param resourceUrl the url pointing to gzipped resource
     * @return an uncompressed InputStream, which will close when it reaches the end
     */
   def openGzippedResource(resourceUrl: String): Future[InputStream] = {
-    Logger.debug(s"downloading $resourceUrl")
+    logger.debug(s"downloading $resourceUrl")
 
     ws.url(resourceUrl).withMethod("GET").withRequestTimeout(Duration.Inf).stream.map { resp =>
       resp.bodyAsSource.async.via(Compression.gunzip()).runWith(StreamConverters.asInputStream(readTimeout = 20.hour))

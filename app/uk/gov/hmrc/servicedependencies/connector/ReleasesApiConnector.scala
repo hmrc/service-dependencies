@@ -17,7 +17,7 @@
 package uk.gov.hmrc.servicedependencies.connector
 
 import javax.inject.{Inject, Singleton}
-import play.api.Logger
+import play.api.Logging
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
 import uk.gov.hmrc.http.HeaderCarrier
@@ -44,7 +44,7 @@ class ReleasesApiConnector @Inject()(
     httpClient.GET[Seq[ServiceDeploymentInformation]](s"$serviceUrl/releases-api/whats-running-where")
 }
 
-object ReleasesApiConnector {
+object ReleasesApiConnector extends Logging {
   sealed trait Environment
   object Environment {
     case object Production   extends Environment
@@ -56,13 +56,13 @@ object ReleasesApiConnector {
 
     val reads: Reads[Option[Environment]] =
       JsPath.read[String].map {
-        case "production" => Some(Production)
+        case "production"   => Some(Production)
         case "externaltest" => Some(ExternalTest)
-        case "staging" => Some(Staging)
-        case "qa" => Some(QA)
-        case "integration" => Some(Integration)
-        case "development" => Some(Development)
-        case other => Logger.debug(s"Unsupported environment '$other'"); None
+        case "staging"      => Some(Staging)
+        case "qa"           => Some(QA)
+        case "integration"  => Some(Integration)
+        case "development"  => Some(Development)
+        case other          => logger.debug(s"Unsupported environment '$other'"); None
       }
   }
 

@@ -20,7 +20,6 @@ import java.time.Instant
 
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
-import uk.gov.hmrc.servicedependencies.model.BobbyRules
 
 case class Dependencies(
     repositoryName        : String

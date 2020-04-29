@@ -79,31 +79,31 @@ class IntegrationTestController @Inject()(
     }
 
   def deleteLatestVersions =
-    Action.async { implicit request =>
+    Action.async {
       latestVersionRepository.clearAllData
         .map(_ => NoContent)
     }
 
   def deleteDependencies =
-    Action.async { implicit request =>
+    Action.async {
       repositoryDependenciesRepository.clearAllData
         .map(_ => NoContent)
     }
 
   def deleteSluginfos =
-    Action.async { implicit request =>
+    Action.async {
       sluginfoRepo.clearAllData
         .map(_ => NoContent)
     }
 
   def deleteBobbyRulesSummaries =
-    Action.async { implicit request =>
+    Action.async {
       bobbyRulesSummaryRepo.clearAllData
         .map(_ => NoContent)
     }
 
   def deleteAll =
-    Action.async { implicit request =>
+    Action.async {
       Future.sequence(List(
           latestVersionRepository.clearAllData
         , repositoryDependenciesRepository.clearAllData

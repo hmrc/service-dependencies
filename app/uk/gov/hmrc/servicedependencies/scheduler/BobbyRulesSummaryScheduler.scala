@@ -18,7 +18,7 @@ package uk.gov.hmrc.servicedependencies.scheduler
 
 import akka.actor.ActorSystem
 import javax.inject.Inject
-import play.api.Logger
+import play.api.Logging
 import play.api.inject.ApplicationLifecycle
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.servicedependencies.config.SchedulerConfigs
@@ -37,16 +37,17 @@ class BobbyRulesSummaryScheduler @Inject()(
     actorSystem         : ActorSystem,
     applicationLifecycle: ApplicationLifecycle,
     ec                  : ExecutionContext
-  ) extends SchedulerUtils {
+  ) extends SchedulerUtils
+    with Logging {
 
   implicit val hc: HeaderCarrier = HeaderCarrier()
 
   scheduleWithLock("Bobby Rules Summary", schedulerConfigs.bobbyRulesSummary, mongoLocks.bobbyRulesSummarySchedulerLock) {
 
-    Logger.info("Updating bobby rules summary")
+    logger.info("Updating bobby rules summary")
     for {
       _ <- dependencyLookupService.updateBobbyRulesSummary
-      _ =  Logger.info("Finished updating bobby rules summary")
+      _ =  logger.info("Finished updating bobby rules summary")
     } yield ()
   }
 }

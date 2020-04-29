@@ -20,8 +20,6 @@ import java.time.Instant
 
 import com.codahale.metrics.MetricRegistry
 import org.mockito.MockitoSugar
-import org.mongodb.scala.bson.BsonDocument
-import org.mongodb.scala.model.IndexModel
 import uk.gov.hmrc.mongo.test.DefaultPlayMongoRepositorySupport
 import uk.gov.hmrc.servicedependencies.model.{MongoLatestVersion, Version}
 import uk.gov.hmrc.servicedependencies.util.{FutureHelpers, MockFutureHelpers}

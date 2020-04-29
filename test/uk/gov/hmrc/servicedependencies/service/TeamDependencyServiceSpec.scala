@@ -18,7 +18,7 @@ package uk.gov.hmrc.servicedependencies.service
 
 import java.time.Instant
 
-import org.mockito.{ArgumentMatchers, ArgumentMatchersSugar, MockitoSugar}
+import org.mockito.{ArgumentMatchersSugar, MockitoSugar}
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec

@@ -16,7 +16,6 @@
 
 package uk.gov.hmrc.servicedependencies.model
 
-import play.api.libs.json.Json
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.must.Matchers
 

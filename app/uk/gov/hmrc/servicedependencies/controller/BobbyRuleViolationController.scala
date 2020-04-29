@@ -34,7 +34,7 @@ class BobbyRuleViolationController @Inject() (
 
   def findBobbyRuleViolations: Action[AnyContent] = {
     implicit val brsf = BobbyRulesSummary.apiFormat
-    Action.async { implicit request =>
+    Action.async {
       dependencyLookup.getLatestBobbyRuleViolations
         .map(v => Ok(Json.toJson(v)))
     }
@@ -42,7 +42,7 @@ class BobbyRuleViolationController @Inject() (
 
   def findHistoricBobbyRuleViolations: Action[AnyContent] = {
     implicit val brsf = HistoricBobbyRulesSummary.apiFormat
-    Action.async { implicit request =>
+    Action.async {
       dependencyLookup.getHistoricBobbyRuleViolations
         .map(v => Ok(Json.toJson(v)))
     }

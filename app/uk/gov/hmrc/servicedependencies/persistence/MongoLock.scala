@@ -19,14 +19,11 @@ package uk.gov.hmrc.servicedependencies.persistence
 import com.google.inject.{Inject, Singleton}
 import uk.gov.hmrc.mongo.lock.MongoLockRepository
 
-import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 
 @Singleton
 class MongoLocks @Inject()(
   mongoLockRepository: MongoLockRepository
-)(
-  implicit ec: ExecutionContext
 ) {
   val dependencyReloadSchedulerLock     = mongoLockRepository.toService("dependency-reload-scheduler"        , 1.hour)
   val latestVersionsReloadSchedulerLock = mongoLockRepository.toService("dependencyVersions-reload-scheduler", 1.hour)

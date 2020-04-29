@@ -23,7 +23,7 @@ import uk.gov.hmrc.play.bootstrap.controller.BackendController
 import uk.gov.hmrc.servicedependencies.persistence.{LatestVersionRepository, LocksRepository, RepositoryDependenciesRepository}
 import uk.gov.hmrc.servicedependencies.service.DependencyDataUpdatingService
 
-import scala.concurrent.ExecutionContext
+import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
 class AdministrationController @Inject()(
@@ -39,24 +39,24 @@ class AdministrationController @Inject()(
     Action { implicit request =>
       dependencyDataUpdatingService
         .reloadCurrentDependenciesDataForAllRepositories
-        .onFailure {
-          case ex => throw new RuntimeException("reload of dependencies failed", ex)
+        .recoverWith {
+          case ex => Future.failed(new RuntimeException("reload of dependencies failed", ex))
         }
       Accepted("reload started")
     }
 
   def reloadLatestVersions =
-    Action { implicit request =>
+    Action {
       dependencyDataUpdatingService
         .reloadLatestVersions
-        .onFailure {
-          case ex => throw new RuntimeException("reload of dependency versions failed", ex)
+        .recoverWith {
+          case ex => Future.failed(new RuntimeException("reload of dependency versions failed", ex))
         }
       Accepted("reload started")
     }
 
   def dropCollection(collection: String) =
-    Action.async { implicit request =>
+    Action.async {
       (collection match {
          case "locks"                         => locksRepository.clearAllData
          case "repositoryLibraryDependencies" => repositoryDependenciesRepository.clearAllData
@@ -67,14 +67,14 @@ class AdministrationController @Inject()(
     }
 
   def clearUpdateDates =
-    Action.async { implicit request =>
+    Action.async {
       repositoryDependenciesRepository
         .clearUpdateDates
         .map(rs => Ok(s"${rs.size} records updated"))
     }
 
   def clearUpdateDatesForRepository(repositoryName: String) =
-    Action.async { implicit request =>
+    Action.async {
       repositoryDependenciesRepository
         .clearUpdateDatesForRepository(repositoryName)
         .map {
@@ -84,7 +84,7 @@ class AdministrationController @Inject()(
     }
 
   def mongoLocks() =
-    Action.async { implicit request =>
+    Action.async {
       locksRepository.getAllEntries.map(locks => Ok(Json.toJson(locks)))
     }
 }
