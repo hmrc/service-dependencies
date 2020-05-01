@@ -20,7 +20,6 @@ import com.google.inject.{Inject, Singleton}
 import org.mongodb.scala.bson.BsonDocument
 import org.mongodb.scala.model.Indexes.{ascending, compoundIndex, descending, hashed}
 import org.mongodb.scala.model.{IndexModel, IndexOptions}
-import play.api.Logger
 import play.api.libs.json.Format
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.play.json.PlayMongoRepository
@@ -48,7 +47,4 @@ abstract class SlugInfoRepositoryBase[A: ClassTag] @Inject()(
                          IndexOptions().name("slugInfoNameLatestIdx").background(true))
                       )
   , optSchema      = Some(BsonDocument(MongoSlugInfoFormats.schema))
-  ) {
-
-  val logger: Logger = Logger(this.getClass)
-}
+  )

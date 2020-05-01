@@ -20,7 +20,7 @@ import com.google.inject.{Inject, Singleton}
 import org.mongodb.scala.bson.BsonDocument
 import org.mongodb.scala.model.Filters.{and, equal}
 import org.mongodb.scala.model.{Indexes, IndexModel, IndexOptions, ReplaceOptions}
-import play.api.Logger
+import play.api.Logging
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.play.json.PlayMongoRepository
 import uk.gov.hmrc.servicedependencies.model._
@@ -41,9 +41,7 @@ class LatestVersionRepository @Inject()(
                        IndexModel(Indexes.ascending("name", "group"), IndexOptions().unique(true))
                      )
   , optSchema      = Some(BsonDocument(MongoLatestVersion.schema))
-  ) {
-
-  val logger: Logger = Logger(this.getClass)
+  ) with Logging {
 
   def update(latestVersion: MongoLatestVersion): Future[Unit] = {
     logger.debug(s"writing $latestVersion")

@@ -22,7 +22,7 @@ import java.time.temporal.ChronoUnit
 
 import cats.implicits._
 import javax.inject.Inject
-import play.api.Logger
+import play.api.Logging
 import uk.gov.hmrc.servicedependencies.connector.ServiceConfigsConnector
 import uk.gov.hmrc.servicedependencies.model._
 import uk.gov.hmrc.servicedependencies.persistence.{BobbyRulesSummaryRepository, SlugBlacklist, SlugInfoRepository}
@@ -31,12 +31,11 @@ import scala.concurrent.{ExecutionContext, Future}
 
 
 class DependencyLookupService @Inject() (
-    serviceConfigs       : ServiceConfigsConnector
-  , slugRepo             : SlugInfoRepository
-  , bobbyRulesSummaryRepo: BobbyRulesSummaryRepository
-  )(implicit ec: ExecutionContext
-  ) {
-  val logger = Logger("application.service.DependencyLookupService")
+  serviceConfigs       : ServiceConfigsConnector
+, slugRepo             : SlugInfoRepository
+, bobbyRulesSummaryRepo: BobbyRulesSummaryRepository
+)(implicit ec: ExecutionContext
+) extends Logging {
 
   import DependencyLookupService._
 

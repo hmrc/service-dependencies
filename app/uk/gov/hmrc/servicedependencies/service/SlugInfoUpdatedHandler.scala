@@ -23,7 +23,7 @@ import akka.stream.alpakka.sqs.SqsSourceSettings
 import akka.stream.alpakka.sqs.scaladsl.{SqsAckSink, SqsSource}
 import com.github.matsluni.akkahttpspi.AkkaHttpClient
 import com.google.inject.Inject
-import play.api.Logger
+import play.api.Logging
 import play.api.libs.json.Json
 import software.amazon.awssdk.auth.credentials.{AwsCredentialsProvider, DefaultCredentialsProvider}
 import software.amazon.awssdk.services.sqs.SqsAsyncClient
@@ -32,18 +32,19 @@ import uk.gov.hmrc.servicedependencies.config.ArtefactReceivingConfig
 import uk.gov.hmrc.servicedependencies.model.{ApiSlugInfoFormats, SlugInfo}
 
 import scala.concurrent.{ExecutionContext, Future}
-import scala.util.Try
+import scala.util.{Failure, Try}
 import scala.util.control.NonFatal
 
-class SlugInfoUpdatedHandler @Inject()
-(config: ArtefactReceivingConfig, slugInfoService: SlugInfoService)
-(implicit val actorSystem: ActorSystem,
- implicit val materializer: Materializer,
- implicit val executionContext: ExecutionContext) {
+class SlugInfoUpdatedHandler @Inject()(
+  config         : ArtefactReceivingConfig,
+  slugInfoService: SlugInfoService
+)(implicit
+   actorSystem : ActorSystem,
+   materializer: Materializer,
+   ec          : ExecutionContext
+) extends Logging {
 
-  val logger = Logger("application.SlugInfoUpdatedHandler")
-
-  if(!config.isEnabled) {
+  if (!config.isEnabled) {
     logger.debug("SlugInfoUpdatedHandler is disabled.")
   }
 
@@ -55,27 +56,29 @@ class SlugInfoUpdatedHandler @Inject()
       case NonFatal(e) => logger.error(e.getMessage, e); throw e
     }.get
 
-  private lazy val awsSqsClient = Try({
-    val client = SqsAsyncClient.builder().credentialsProvider(awsCredentialsProvider)
-      .httpClient(AkkaHttpClient.builder().withActorSystem(actorSystem).build())
-      .build()
+  private lazy val awsSqsClient =
+    Try {
+      val client = SqsAsyncClient.builder().credentialsProvider(awsCredentialsProvider)
+        .httpClient(AkkaHttpClient.builder().withActorSystem(actorSystem).build())
+        .build()
 
-    actorSystem.registerOnTermination(client.close())
-    client
-  }).recover {
-    case NonFatal(e) => logger.error(e.getMessage, e); throw e
-  }.get
+      actorSystem.registerOnTermination(client.close())
+      client
+    }.recoverWith {
+      case NonFatal(e) => logger.error(s"Failed to set up awsSqsClient: ${e.getMessage}", e); Failure(e)
+    }.get
 
-  if(config.isEnabled) {
+  if (config.isEnabled) {
     SqsSource(
       queueUrl, settings)(awsSqsClient)
       .map(logMessage)
       .map(messageToSlugInfo)
       .mapAsync(10)(saveSlugInfo)
       .map(acknowledge)
-      .runWith(SqsAckSink(queueUrl)(awsSqsClient)).recover {
-      case NonFatal(e) => logger.error(e.getMessage, e); throw e
-    }
+      .runWith(SqsAckSink(queueUrl)(awsSqsClient))
+      .recoverWith {
+        case NonFatal(e) => logger.error(s"Failed to process sqs messages: ${e.getMessage}", e); Future.failed(e)
+      }
   }
 
   private def logMessage(message: Message): Message = {

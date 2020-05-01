@@ -21,6 +21,7 @@ import org.mongodb.scala.bson.BsonDocument
 import org.mongodb.scala.model.Filters.{and, equal}
 import org.mongodb.scala.model.ReplaceOptions
 import org.mongodb.scala.model.Updates._
+import play.api.Logging
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.servicedependencies.model._
 
@@ -33,7 +34,7 @@ class SlugInfoRepository @Inject()(
   ) extends SlugInfoRepositoryBase[SlugInfo](
     mongoComponent
   , domainFormat   = MongoSlugInfoFormats.slugInfoFormat
-  ) {
+  ) with Logging {
 
   def add(slugInfo: SlugInfo): Future[Boolean] =
     collection

@@ -17,7 +17,7 @@
 package uk.gov.hmrc.servicedependencies.service
 
 import com.google.inject.{Inject, Singleton}
-import org.slf4j.LoggerFactory
+import play.api.Logging
 import uk.gov.hmrc.servicedependencies.config.ServiceDependenciesConfig
 import uk.gov.hmrc.servicedependencies.connector.ServiceConfigsConnector
 import uk.gov.hmrc.servicedependencies.controller.model.{Dependencies, Dependency}
@@ -33,9 +33,7 @@ class RepositoryDependenciesService @Inject()(
 , latestVersionRepository         : LatestVersionRepository
 , serviceConfigsConnector         : ServiceConfigsConnector
 )(implicit ec: ExecutionContext
-) {
-
-  lazy val logger = LoggerFactory.getLogger(this.getClass)
+) extends Logging {
 
   lazy val curatedDependencyConfig =
     serviceDependenciesConfig.curatedDependencyConfig
