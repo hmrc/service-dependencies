@@ -24,7 +24,7 @@ import org.mongodb.scala.bson.BsonDocument
 import org.mongodb.scala.model.Filters.equal
 import org.mongodb.scala.model.Indexes.hashed
 import org.mongodb.scala.model.{Collation, CollationStrength, IndexModel, IndexOptions, ReplaceOptions}
-import play.api.Logger
+import play.api.Logging
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.play.json.PlayMongoRepository
 import uk.gov.hmrc.servicedependencies.model._
@@ -53,9 +53,7 @@ class RepositoryDependenciesRepository @Inject()(
                          )
                      )
   , optSchema      = Some(BsonDocument(MongoRepositoryDependencies.schema))
-  ) {
-
-  val logger: Logger = Logger(this.getClass)
+  ) with Logging {
 
   def update(repositoryLibraryDependencies: MongoRepositoryDependencies): Future[MongoRepositoryDependencies] = {
     logger.info(s"writing to mongo: $repositoryLibraryDependencies")

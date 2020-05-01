@@ -20,7 +20,7 @@ import java.time.Instant
 
 import cats.implicits._
 import com.google.inject.{Inject, Singleton}
-import org.slf4j.LoggerFactory
+import play.api.Logging
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.servicedependencies.config.ServiceDependenciesConfig
 import uk.gov.hmrc.servicedependencies.connector.{ArtifactoryConnector, GithubConnector, GithubDependency, GithubSearchResults, ServiceConfigsConnector, TeamsAndRepositoriesConnector}
@@ -41,9 +41,7 @@ class DependencyDataUpdatingService @Inject()(
 , githubConnector                 : GithubConnector
 , serviceConfigsConnector         : ServiceConfigsConnector
 )(implicit ec: ExecutionContext
-) {
-
-  lazy val logger = LoggerFactory.getLogger(this.getClass)
+) extends Logging {
 
   def now: Instant = Instant.now()
 

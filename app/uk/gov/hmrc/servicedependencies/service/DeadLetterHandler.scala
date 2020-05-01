@@ -23,23 +23,23 @@ import akka.stream.alpakka.sqs.SqsSourceSettings
 import akka.stream.alpakka.sqs.scaladsl.{SqsAckSink, SqsSource}
 import com.github.matsluni.akkahttpspi.AkkaHttpClient
 import com.google.inject.Inject
-import play.api.Logger
+import play.api.Logging
 import software.amazon.awssdk.auth.credentials.{AwsCredentialsProvider, DefaultCredentialsProvider}
 import software.amazon.awssdk.services.sqs.SqsAsyncClient
 import software.amazon.awssdk.services.sqs.model.Message
 import uk.gov.hmrc.servicedependencies.config.ArtefactReceivingConfig
 
 import scala.concurrent.{ExecutionContext, Future}
-import scala.util.Try
+import scala.util.{Failure, Try}
 import scala.util.control.NonFatal
 
-class DeadLetterHandler @Inject()
-(config: ArtefactReceivingConfig)
-(implicit val actorSystem: ActorSystem,
- implicit val materializer: Materializer,
- implicit val executionContext: ExecutionContext) {
-
-  val logger = Logger(this.getClass)
+class DeadLetterHandler @Inject()(
+  config: ArtefactReceivingConfig
+)(implicit
+  actorSystem : ActorSystem,
+  materializer: Materializer,
+  ec          : ExecutionContext
+) extends Logging {
 
   if (!config.isEnabled) {
     logger.debug("DeadLetterHandler is disabled.")
@@ -49,27 +49,30 @@ class DeadLetterHandler @Inject()
   private lazy val settings = SqsSourceSettings()
 
   private lazy val awsCredentialsProvider: AwsCredentialsProvider =
-    Try(DefaultCredentialsProvider.builder().build()).recover {
-      case NonFatal(e) => logger.error(e.getMessage, e); throw e
-    }.get
+    Try(DefaultCredentialsProvider.builder().build())
+      .recoverWith {
+        case NonFatal(e) => logger.error(e.getMessage, e); Failure(e)
+      }.get
 
-  private lazy val awsSqsClient = Try({
-    val client = SqsAsyncClient.builder().credentialsProvider(awsCredentialsProvider)
-      .httpClient(AkkaHttpClient.builder().withActorSystem(actorSystem).build())
-      .build()
-    actorSystem.registerOnTermination(client.close())
-    client
-  }).recover {
-    case NonFatal(e) => logger.error(e.getMessage, e); throw e
-  }.get
+  private lazy val awsSqsClient =
+    Try {
+      val client = SqsAsyncClient.builder().credentialsProvider(awsCredentialsProvider)
+        .httpClient(AkkaHttpClient.builder().withActorSystem(actorSystem).build())
+        .build()
+      actorSystem.registerOnTermination(client.close())
+      client
+    }.recoverWith {
+      case NonFatal(e) => logger.error(e.getMessage, e); Failure(e)
+    }.get
 
   if (config.isEnabled) {
     SqsSource(
       queueUrl, settings)(awsSqsClient)
       .mapAsync(10)(processMessage)
-      .runWith(SqsAckSink(queueUrl)(awsSqsClient)).recover {
-      case NonFatal(e) => logger.error(e.getMessage, e); throw e
-    }
+      .runWith(SqsAckSink(queueUrl)(awsSqsClient))
+      .recoverWith {
+        case NonFatal(e) => logger.error(e.getMessage, e); Future.failed(e)
+      }
   }
 
   private def processMessage(message: Message) = {
