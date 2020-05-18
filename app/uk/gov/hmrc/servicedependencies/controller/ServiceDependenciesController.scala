@@ -25,14 +25,13 @@ import uk.gov.hmrc.play.bootstrap.controller.BackendController
 import uk.gov.hmrc.servicedependencies.connector.ServiceConfigsConnector
 import uk.gov.hmrc.servicedependencies.controller.model.{Dependencies, Dependency}
 import uk.gov.hmrc.servicedependencies.model._
-import uk.gov.hmrc.servicedependencies.service.{DependencyDataUpdatingService, RepositoryDependenciesService, SlugDependenciesService, SlugInfoService, TeamDependencyService}
+import uk.gov.hmrc.servicedependencies.service.{RepositoryDependenciesService, SlugDependenciesService, SlugInfoService, TeamDependencyService}
 
 import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
 class ServiceDependenciesController @Inject()(
-  dependencyDataUpdatingService: DependencyDataUpdatingService
-, slugInfoService              : SlugInfoService
+  slugInfoService              : SlugInfoService
 , slugDependenciesService      : SlugDependenciesService
 , serviceConfigsConnector      : ServiceConfigsConnector
 , teamDependencyService        : TeamDependencyService

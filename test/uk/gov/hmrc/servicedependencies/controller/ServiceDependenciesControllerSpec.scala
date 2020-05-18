@@ -132,8 +132,7 @@ class ServiceDependenciesControllerSpec
   }
 
   case class Boot(
-      mockDependencyDataUpdatingService: DependencyDataUpdatingService
-    , mockSlugInfoService              : SlugInfoService
+      mockSlugInfoService              : SlugInfoService
     , mockSlugDependenciesService      : SlugDependenciesService
     , mockServiceConfigsConnector      : ServiceConfigsConnector
     , mockTeamDependencyService        : TeamDependencyService
@@ -143,15 +142,13 @@ class ServiceDependenciesControllerSpec
 
   object Boot {
     def init: Boot = {
-      val mockDependencyDataUpdatingService = mock[DependencyDataUpdatingService]
       val mockSlugInfoService               = mock[SlugInfoService]
       val mockSlugDependenciesService       = mock[SlugDependenciesService]
       val mockServiceConfigsConnector       = mock[ServiceConfigsConnector]
       val mockTeamDependencyService         = mock[TeamDependencyService]
       val mockRepositoryDependenciesService = mock[RepositoryDependenciesService]
       val controller = new ServiceDependenciesController(
-          mockDependencyDataUpdatingService
-        , mockSlugInfoService
+          mockSlugInfoService
         , mockSlugDependenciesService
         , mockServiceConfigsConnector
         , mockTeamDependencyService
@@ -159,8 +156,7 @@ class ServiceDependenciesControllerSpec
         , stubControllerComponents()
         )
       Boot(
-          mockDependencyDataUpdatingService
-        , mockSlugInfoService
+          mockSlugInfoService
         , mockSlugDependenciesService
         , mockServiceConfigsConnector
         , mockTeamDependencyService
