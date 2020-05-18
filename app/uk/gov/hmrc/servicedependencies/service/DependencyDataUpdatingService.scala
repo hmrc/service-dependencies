@@ -25,7 +25,7 @@ import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.servicedependencies.config.ServiceDependenciesConfig
 import uk.gov.hmrc.servicedependencies.connector.{ArtifactoryConnector, GithubConnector, GithubDependency, GithubSearchResults, ServiceConfigsConnector, TeamsAndRepositoriesConnector}
 import uk.gov.hmrc.servicedependencies.connector.model.RepositoryInfo
-import uk.gov.hmrc.servicedependencies.model.{MongoRepositoryDependencies, MongoRepositoryDependency, MongoLatestVersion}
+import uk.gov.hmrc.servicedependencies.model.{MongoLatestVersion, MongoRepositoryDependencies, MongoRepositoryDependency}
 import uk.gov.hmrc.servicedependencies.persistence.{LatestVersionRepository, RepositoryDependenciesRepository}
 import uk.gov.hmrc.servicedependencies.util.Max
 
@@ -49,25 +49,25 @@ class DependencyDataUpdatingService @Inject()(
     serviceDependenciesConfig.curatedDependencyConfig
 
   def reloadLatestVersions(): Future[List[MongoLatestVersion]] =
-    for {
-      res <- curatedDependencyConfig.allDependencies.traverse { config =>
-               for {
-                 optVersion   <- config.latestVersion
-                                   .fold(
-                                      artifactoryConnector.findLatestVersion(config.group, config.name)
-                                        .map(vs => Max.maxOf(vs.values))
-                                    )(v =>
-                                      Future.successful(Some(v))
-                                    )
-                 optDbVersion <- optVersion.traverse { version =>
-                                   val dbVersion  = MongoLatestVersion(name = config.name, group = config.group, version = version, now)
-                                   latestVersionRepository.update(dbVersion)
-                                     .map(_ => dbVersion)
-                                 }
-               } yield optDbVersion
-             }
-    } yield res.flatten
-
+    curatedDependencyConfig.allDependencies
+      .foldLeftM[Future, List[MongoLatestVersion]](List.empty) {
+        case (acc, config) =>
+          (for {
+            optVersion <- config.latestVersion
+                           .fold(
+                             artifactoryConnector
+                               .findLatestVersion(config.group, config.name)
+                               .map(vs => Max.maxOf(vs.values))
+                           )(v => Future.successful(Some(v)))
+            optDbVersion <- optVersion.traverse { version =>
+                             val dbVersion =
+                               MongoLatestVersion(name = config.name, group = config.group, version = version, now)
+                             latestVersionRepository
+                               .update(dbVersion)
+                               .map(_ => dbVersion)
+                           }
+          } yield optDbVersion).map(acc ++ _)
+      }
 
   def reloadCurrentDependenciesDataForAllRepositories(implicit hc: HeaderCarrier): Future[Seq[MongoRepositoryDependencies]] = {
     logger.debug(s"reloading current dependencies data for all repositories...")
