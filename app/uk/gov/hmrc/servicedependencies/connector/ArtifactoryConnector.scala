@@ -16,13 +16,11 @@
 
 package uk.gov.hmrc.servicedependencies.connector
 
-import java.util.concurrent.Executors
-
 import cats.implicits._
 import javax.inject.{Inject, Singleton}
-import uk.gov.hmrc.play.bootstrap.http.HttpClient
-import uk.gov.hmrc.http.{HeaderCarrier, HttpResponse}
 import uk.gov.hmrc.http.logging.Authorization
+import uk.gov.hmrc.http.{HeaderCarrier, HttpResponse}
+import uk.gov.hmrc.play.bootstrap.http.HttpClient
 import uk.gov.hmrc.servicedependencies.config.ServiceDependenciesConfig
 import uk.gov.hmrc.servicedependencies.model.{ScalaVersion, Version}
 
@@ -32,12 +30,9 @@ import scala.concurrent.{ExecutionContext, Future}
 class ArtifactoryConnector @Inject()(
   http  : HttpClient
 , config: ServiceDependenciesConfig
-){
+)(implicit ec: ExecutionContext){
 
-  implicit val ec: ExecutionContext =
-    ExecutionContext.fromExecutorService(Executors.newFixedThreadPool(1))
-
-  private lazy val authorization : Option[Authorization] =
+  private lazy val authorization: Option[Authorization] =
     for {
       token <- config.artifactoryToken
     } yield Authorization(s"Bearer $token")
