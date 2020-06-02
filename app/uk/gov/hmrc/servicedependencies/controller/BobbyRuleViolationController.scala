@@ -21,7 +21,7 @@ import play.api.Configuration
 import play.api.libs.json.Json
 import play.api.mvc._
 import uk.gov.hmrc.servicedependencies.model.{BobbyRulesSummary, HistoricBobbyRulesSummary}
-import uk.gov.hmrc.play.bootstrap.controller.BackendController
+import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 import uk.gov.hmrc.servicedependencies.service.DependencyLookupService
 
 import scala.concurrent.ExecutionContext

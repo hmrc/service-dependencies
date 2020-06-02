@@ -20,7 +20,7 @@ import javax.inject.Inject
 import play.api.libs.json._
 import play.api.mvc.ControllerComponents
 import uk.gov.hmrc.mongo.play.json.formats.MongoJavatimeFormats
-import uk.gov.hmrc.play.bootstrap.controller.BackendController
+import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 import uk.gov.hmrc.servicedependencies.model._
 import uk.gov.hmrc.servicedependencies.persistence._
 
@@ -37,14 +37,10 @@ class IntegrationTestController @Inject()(
 
   implicit val dtf                = MongoJavatimeFormats.localDateFormats
   implicit val vf                 = Version.apiFormat
-  implicit val latestVersionReads = {
-                                      implicit val sbf = ScalaVersion.format
-                                      Json.using[Json.WithDefaultValues].reads[MongoLatestVersion]
-                                    }
+  implicit val latestVersionReads = Json.using[Json.WithDefaultValues].reads[MongoLatestVersion]
   implicit val dependenciesReads  = Json.using[Json.WithDefaultValues].reads[MongoRepositoryDependencies]
-
   implicit val sluginfoReads      = { implicit val sdr = Json.using[Json.WithDefaultValues].reads[SlugDependency]
-                                      implicit val javaInfoReads = Json.using[Json.WithDefaultValues].reads[JavaInfo]
+                                      implicit val jir = Json.using[Json.WithDefaultValues].reads[JavaInfo]
                                       Json.using[Json.WithDefaultValues].reads[SlugInfo]
                                     }
   implicit val bobbyRulesSummaryReads = BobbyRulesSummary.apiFormat

@@ -23,8 +23,7 @@ import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 import org.scalatestplus.play.guice.GuiceOneAppPerSuite
 import play.api.libs.json.{JsSuccess, Json}
-import uk.gov.hmrc.http.HeaderCarrier
-import uk.gov.hmrc.play.bootstrap.http.HttpClient
+import uk.gov.hmrc.http.{HeaderCarrier, HttpClient}
 import uk.gov.hmrc.servicedependencies.WireMockConfig
 import uk.gov.hmrc.servicedependencies.config.ReleasesApiConfig
 import uk.gov.hmrc.servicedependencies.connector.ReleasesApiConnector.Environment

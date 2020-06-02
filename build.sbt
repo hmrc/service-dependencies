@@ -16,8 +16,9 @@ lazy val microservice = Project(appName, file("."))
   .settings(libraryDependencies ++= AppDependencies.compile ++ AppDependencies.test)
   .settings(resolvers += Resolver.jcenterRepo)
   .settings(scalaVersion := "2.12.11")
+  .settings(scalacOptions += "-Ywarn-macros:after") //Remove lots of false warnings about unused implicits for json formats
   .settings(
-    // Use the silencer plugin to suppress warnings from unused imports in compiled twirl templates
+    // Use the silencer plugin to suppress warnings from unused imports in routes etc.
     scalacOptions += "-P:silencer:pathFilters=routes;resources",
     libraryDependencies ++= Seq(
       compilerPlugin("com.github.ghik" % "silencer-plugin" % silencerVersion cross CrossVersion.full),

@@ -19,8 +19,7 @@ package uk.gov.hmrc.servicedependencies.connector
 import cats.implicits._
 import javax.inject.{Inject, Singleton}
 import uk.gov.hmrc.http.logging.Authorization
-import uk.gov.hmrc.http.{HeaderCarrier, HttpResponse}
-import uk.gov.hmrc.play.bootstrap.http.HttpClient
+import uk.gov.hmrc.http.{HeaderCarrier, HttpClient, HttpReads, HttpResponse}
 import uk.gov.hmrc.servicedependencies.config.ServiceDependenciesConfig
 import uk.gov.hmrc.servicedependencies.model.{ScalaVersion, Version}
 
@@ -30,7 +29,9 @@ import scala.concurrent.{ExecutionContext, Future}
 class ArtifactoryConnector @Inject()(
   http  : HttpClient
 , config: ServiceDependenciesConfig
-)(implicit ec: ExecutionContext){
+)(implicit ec: ExecutionContext
+){
+  import HttpReads.Implicits._
 
   private lazy val authorization: Option[Authorization] =
     for {

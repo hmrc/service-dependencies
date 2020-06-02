@@ -19,20 +19,21 @@ package uk.gov.hmrc.servicedependencies.connector
 import javax.inject.Inject
 import play.api.cache.AsyncCacheApi
 import play.api.libs.json.Reads
-import uk.gov.hmrc.http.HeaderCarrier
+import uk.gov.hmrc.http.{HeaderCarrier, HttpClient, HttpReads}
 import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
-import uk.gov.hmrc.play.bootstrap.http.HttpClient
 import uk.gov.hmrc.servicedependencies.connector.model.DeprecatedDependencies
 import uk.gov.hmrc.servicedependencies.model.BobbyRules
 import scala.concurrent.duration.Duration
 import scala.concurrent.{ExecutionContext, Future}
 
 class ServiceConfigsConnector @Inject()(
-    httpClient    : HttpClient,
-    servicesConfig: ServicesConfig,
-    cache         : AsyncCacheApi
-  )(implicit ec: ExecutionContext
-  ) {
+  httpClient    : HttpClient,
+  servicesConfig: ServicesConfig,
+  cache         : AsyncCacheApi
+)(implicit ec: ExecutionContext
+) {
+  import HttpReads.Implicits._
+
   private implicit val hc: HeaderCarrier                    = HeaderCarrier()
   private implicit val reads: Reads[DeprecatedDependencies] = DeprecatedDependencies.reads
 

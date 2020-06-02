@@ -18,8 +18,7 @@ package uk.gov.hmrc.servicedependencies.connector
 
 import com.google.inject.{Inject, Singleton}
 import play.api.cache.AsyncCacheApi
-import uk.gov.hmrc.http.HeaderCarrier
-import uk.gov.hmrc.play.bootstrap.http.HttpClient
+import uk.gov.hmrc.http.{HeaderCarrier, HttpClient, HttpReads}
 import uk.gov.hmrc.servicedependencies.config.ServiceDependenciesConfig
 import uk.gov.hmrc.servicedependencies.connector.model.{Repository, RepositoryInfo}
 import uk.gov.hmrc.servicedependencies.model.Team
@@ -33,11 +32,12 @@ case class TeamsForServices(toMap: Map[String, Seq[String]]) {
 
 @Singleton
 class TeamsAndRepositoriesConnector @Inject()(
-    httpClient          : HttpClient,
-    serviceConfiguration: ServiceDependenciesConfig,
-    cache               : AsyncCacheApi
-  )(implicit ec: ExecutionContext
-  ) {
+  httpClient          : HttpClient,
+  serviceConfiguration: ServiceDependenciesConfig,
+  cache               : AsyncCacheApi
+)(implicit ec: ExecutionContext
+) {
+  import HttpReads.Implicits._
 
   val teamsAndRepositoriesApiBase = serviceConfiguration.teamsAndRepositoriesServiceUrl
 

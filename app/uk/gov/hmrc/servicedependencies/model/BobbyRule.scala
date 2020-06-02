@@ -16,6 +16,7 @@
 
 package uk.gov.hmrc.servicedependencies.model
 
+import com.github.ghik.silencer.silent
 import java.time.LocalDate
 import play.api.data.format.Formats
 import play.api.libs.functional.syntax._
@@ -47,7 +48,7 @@ final case class BobbyRule(
 
 object BobbyRule {
   val format: OFormat[BobbyRule] = {
-    implicit val ldw  = Formats.localDateFormat
+    @silent("never used") implicit val ldw  = Formats.localDateFormat
     implicit val bvwf = BobbyVersionRange.format
     ( (__ \ "organisation").format[String]
     ~ (__ \ "name"        ).format[String]

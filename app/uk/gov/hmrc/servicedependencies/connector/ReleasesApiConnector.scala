@@ -20,8 +20,7 @@ import javax.inject.{Inject, Singleton}
 import play.api.Logging
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
-import uk.gov.hmrc.http.HeaderCarrier
-import uk.gov.hmrc.play.bootstrap.http.HttpClient
+import uk.gov.hmrc.http.{HeaderCarrier, HttpClient, HttpReads}
 import uk.gov.hmrc.servicedependencies.config.ReleasesApiConfig
 import uk.gov.hmrc.servicedependencies.model.Version
 
@@ -30,11 +29,12 @@ import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
 class ReleasesApiConnector @Inject()(
-    httpClient    : HttpClient,
-    config        : ReleasesApiConfig
-  )(implicit ec: ExecutionContext) {
-
+  httpClient    : HttpClient,
+  config        : ReleasesApiConfig
+)(implicit ec: ExecutionContext
+) {
   import ReleasesApiConnector._
+  import HttpReads.Implicits._
 
   private val serviceUrl: String = config.serviceUrl
 
@@ -75,7 +75,7 @@ object ReleasesApiConnector extends Logging {
     val reads: Reads[Deployment] = {
       implicit val dr = Environment.reads
       implicit val vr = Version.apiFormat
-      ( (__ \ "environment").read[Option[Environment]]
+      ( (__ \ "environment"  ).read[Option[Environment]]
       ~ (__ \ "versionNumber").read[Version]
       )(Deployment.apply _)
     }
@@ -90,7 +90,7 @@ object ReleasesApiConnector extends Logging {
     val reads: Reads[ServiceDeploymentInformation] = {
       implicit val dr = Deployment.reads
       ( (__ \ "applicationName").read[String]
-      ~ (__ \ "versions").read[Seq[Deployment]]
+      ~ (__ \ "versions"       ).read[Seq[Deployment]]
       )(ServiceDeploymentInformation.apply _)
     }
   }

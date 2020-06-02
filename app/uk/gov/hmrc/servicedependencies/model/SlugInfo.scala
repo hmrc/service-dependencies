@@ -222,7 +222,6 @@ trait ApiSlugInfoFormats {
     Json.format[JavaInfo]
 
   implicit val siFormat: OFormat[SlugInfo] = {
-    implicit val vf = Version.apiFormat
     ( (__ \ "uri"              ).format[String]
     ~ (__ \ "created"          ).format[LocalDateTime]
     ~ (__ \ "name"             ).format[String]
@@ -252,18 +251,18 @@ trait ApiSlugInfoFormats {
     )(DependencyConfig.apply, unlift(DependencyConfig.unapply))
 
   val slugReads: Reads[SlugInfo] =
-    ( (__ \ "uri").read[String]
-    ~ (__ \ "created").read[LocalDateTime]
-    ~ (__ \ "name").read[String]
-    ~ (__ \ "version").read[String].map(Version.apply)
-    ~ (__ \ "teams").read[List[String]]
-    ~ (__ \ "runnerVersion").read[String]
-    ~ (__ \ "classpath").read[String]
-    ~ (__ \ "java").read[JavaInfo]
-    ~ (__ \ "dependencies").read[List[SlugDependency]]
+    ( (__ \ "uri"              ).read[String]
+    ~ (__ \ "created"          ).read[LocalDateTime]
+    ~ (__ \ "name"             ).read[String]
+    ~ (__ \ "version"          ).read[String].map(Version.apply)
+    ~ (__ \ "teams"            ).read[List[String]]
+    ~ (__ \ "runnerVersion"    ).read[String]
+    ~ (__ \ "classpath"        ).read[String]
+    ~ (__ \ "java"             ).read[JavaInfo]
+    ~ (__ \ "dependencies"     ).read[List[SlugDependency]]
     ~ (__ \ "applicationConfig").read[String]
-    ~ (__ \ "slugConfig").read[String]
-    ~ (__ \ "latest").read[Boolean]
+    ~ (__ \ "slugConfig"       ).read[String]
+    ~ (__ \ "latest"           ).read[Boolean]
     ~ Reads.pure(false)
     ~ Reads.pure(false)
     ~ Reads.pure(false)
