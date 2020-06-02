@@ -44,8 +44,6 @@ class BobbyRulesSummaryRepository @Inject()(
   , optSchema      = Some(BsonDocument(BobbyRulesSummary.mongoSchema))
   ) {
 
-  private implicit val brsf = BobbyRulesSummary.mongoFormat
-
   def add(summary: BobbyRulesSummary): Future[Unit] =
     collection
       .replaceOne(

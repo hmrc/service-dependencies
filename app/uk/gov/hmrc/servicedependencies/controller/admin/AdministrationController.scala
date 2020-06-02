@@ -19,7 +19,7 @@ package uk.gov.hmrc.servicedependencies.controller.admin
 import javax.inject.{Inject, Singleton}
 import play.api.libs.json.Json
 import play.api.mvc.ControllerComponents
-import uk.gov.hmrc.play.bootstrap.controller.BackendController
+import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 import uk.gov.hmrc.servicedependencies.persistence.{LatestVersionRepository, LocksRepository, RepositoryDependenciesRepository}
 import uk.gov.hmrc.servicedependencies.service.DependencyDataUpdatingService
 
