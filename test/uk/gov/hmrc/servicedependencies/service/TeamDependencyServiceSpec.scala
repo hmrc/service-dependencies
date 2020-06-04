@@ -65,7 +65,7 @@ class TeamDependencyServiceSpec extends AnyWordSpec with Matchers with MockitoSu
 
   "findAllDepsForTeam" should {
 
-    "return dependencies for all projects belonging to team" in {
+    "return dependencies for all projects belonging to team with archived flag" in {
       implicit val hc: HeaderCarrier = new HeaderCarrier()
       val team = new Team("foo", Map("Service" -> Seq("foo-service")))
 
