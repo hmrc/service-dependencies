@@ -65,11 +65,11 @@ class TeamDependencyServiceSpec extends AnyWordSpec with Matchers with MockitoSu
 
   "findAllDepsForTeam" should {
 
-    "return dependencies for all projects belonging to  team" in {
+    "return dependencies for all projects belonging to team" in {
       implicit val hc: HeaderCarrier = new HeaderCarrier()
       val team = new Team("foo", Map("Service" -> Seq("foo-service")))
 
-      when(mockTeamsAndReposConnector.getTeamDetails("foo"))
+      when(mockTeamsAndReposConnector.getTeamDetails("foo", Some(false)))
         .thenReturn(Future.successful(team))
 
       val fooDep1    = Dependency(name = "foo-dep1", group = "uk.gov.hmrc", currentVersion = Version("1.2.0"), latestVersion = None, bobbyRuleViolations = List.empty)
@@ -93,7 +93,7 @@ class TeamDependencyServiceSpec extends AnyWordSpec with Matchers with MockitoSu
       when(mockServiceConfigsConnector.getBobbyRules)
         .thenReturn(Future.successful(BobbyRules(Map.empty)))
 
-      val res = tds.findAllDepsForTeam("foo").futureValue
+      val res = tds.findAllDepsForTeam("foo", Some(false)).futureValue
 
       res.head.libraryDependencies should contain (fooDep1)
       res.head.libraryDependencies should contain (fooSlugDep)

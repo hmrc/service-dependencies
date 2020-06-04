@@ -62,10 +62,10 @@ class ServiceDependenciesController @Inject()(
       } yield Ok(Json.toJson(dependencies))
     }
 
-  def dependenciesForTeam(teamName: String): Action[AnyContent] =
+  def dependenciesForTeam(teamName: String, archived: Option[Boolean]): Action[AnyContent] =
     Action.async { implicit request =>
       for {
-        depsWithRules <- teamDependencyService.findAllDepsForTeam(teamName)
+        depsWithRules <- teamDependencyService.findAllDepsForTeam(teamName, archived)
       } yield Ok(Json.toJson(depsWithRules))
     }
 
@@ -122,12 +122,12 @@ class ServiceDependenciesController @Inject()(
       ).merge
     }
 
-  def dependenciesOfSlugForTeam(team: String, flag: String): Action[AnyContent] =
+  def dependenciesOfSlugForTeam(team: String, flag: String, archived: Option[Boolean]): Action[AnyContent] =
     Action.async { implicit request =>
       (for {
          f    <- EitherT.fromOption[Future](SlugInfoFlag.parse(flag), BadRequest(s"invalid flag '$flag'"))
          deps <- EitherT.liftF[Future, Result, Map[String, Seq[Dependency]]](
-                   teamDependencyService.dependenciesOfSlugForTeam(team, f)
+                   teamDependencyService.dependenciesOfSlugForTeam(team, f, archived)
                  )
        } yield {
          implicit val dw = Dependency.writes
