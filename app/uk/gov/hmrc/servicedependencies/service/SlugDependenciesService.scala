@@ -17,14 +17,17 @@
 package uk.gov.hmrc.servicedependencies.service
 
 import javax.inject.{Inject, Singleton}
+import play.api.cache.AsyncCacheApi
 import uk.gov.hmrc.servicedependencies.config.ServiceDependenciesConfig
 import uk.gov.hmrc.servicedependencies.config.model.CuratedDependencyConfig
 import uk.gov.hmrc.servicedependencies.connector.ServiceConfigsConnector
 import uk.gov.hmrc.servicedependencies.controller.model.Dependency
-import uk.gov.hmrc.servicedependencies.model.{SlugInfo, SlugInfoFlag, Version}
+import uk.gov.hmrc.servicedependencies.model.{MongoLatestVersion, SlugInfo, SlugInfoFlag, Version}
 import uk.gov.hmrc.servicedependencies.persistence.LatestVersionRepository
 
 import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.duration.{Duration, SECONDS}
+
 
 @Singleton
 class SlugDependenciesService @Inject()(
@@ -32,8 +35,20 @@ class SlugDependenciesService @Inject()(
 , serviceDependenciesConfig: ServiceDependenciesConfig
 , latestVersionRepository  : LatestVersionRepository
 , serviceConfigsConnector  : ServiceConfigsConnector
+, cache                    : AsyncCacheApi
 )(implicit ec: ExecutionContext
 ) {
+
+  private val cacheDuration = Duration.create(60, SECONDS)
+
+  private def cachedLatestVersions(): Future[Seq[MongoLatestVersion]] = {
+    cache.getOrElseUpdate(s"SlugDependenciesService.latestVersion", cacheDuration) {
+      latestVersionRepository.getAllEntries
+    }
+  }
+
+  // warm cache
+  cachedLatestVersions()
 
   private lazy val curatedDependencyConfig: CuratedDependencyConfig =
     serviceDependenciesConfig.curatedDependencyConfig
@@ -49,7 +64,7 @@ class SlugDependenciesService @Inject()(
 
   private def curatedLibrariesOfSlugInfo(slugInfo: SlugInfo): Future[List[Dependency]] =
     for {
-      latestVersions <- latestVersionRepository.getAllEntries
+      latestVersions <- cachedLatestVersions()
       bobbyRules     <- serviceConfigsConnector.getBobbyRules
       dependencies   =  slugInfo
                           .dependencies
