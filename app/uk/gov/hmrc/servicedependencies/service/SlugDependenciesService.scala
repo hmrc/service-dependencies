@@ -35,20 +35,8 @@ class SlugDependenciesService @Inject()(
 , serviceDependenciesConfig: ServiceDependenciesConfig
 , latestVersionRepository  : LatestVersionRepository
 , serviceConfigsConnector  : ServiceConfigsConnector
-, cache                    : AsyncCacheApi
 )(implicit ec: ExecutionContext
 ) {
-
-  private val cacheDuration = Duration.create(60, SECONDS)
-
-  private def cachedLatestVersions(): Future[Seq[MongoLatestVersion]] = {
-    cache.getOrElseUpdate(s"SlugDependenciesService.latestVersion", cacheDuration) {
-      latestVersionRepository.getAllEntries
-    }
-  }
-
-  // warm cache
-  cachedLatestVersions()
 
   private lazy val curatedDependencyConfig: CuratedDependencyConfig =
     serviceDependenciesConfig.curatedDependencyConfig
@@ -59,12 +47,22 @@ class SlugDependenciesService @Inject()(
   def curatedLibrariesOfSlug(name: String, flag: SlugInfoFlag): Future[Option[List[Dependency]]] =
     slugInfoService.getSlugInfo(name, flag).flatMap {
       case None           => Future.successful(None)
-      case Some(slugInfo) => curatedLibrariesOfSlugInfo(slugInfo).map(Some.apply)
+      case Some(slugInfo) => latestVersionRepository
+        .getAllEntries
+        .flatMap(latestVersions => curatedLibrariesOfSlugInfo(slugInfo, latestVersions).map(Some.apply))
     }
 
-  private def curatedLibrariesOfSlugInfo(slugInfo: SlugInfo): Future[List[Dependency]] =
+  /*
+ * We may want to evolve the model - but for this initial version we reuse the existing Dependency definition.
+ */
+  def curatedLibrariesOfSlug(name: String, flag: SlugInfoFlag, latestVersions: Seq[MongoLatestVersion]): Future[Option[List[Dependency]]] =
+    slugInfoService.getSlugInfo(name, flag).flatMap {
+      case None           => Future.successful(None)
+      case Some(slugInfo) => curatedLibrariesOfSlugInfo(slugInfo, latestVersions).map(Some.apply)
+    }
+
+  private def curatedLibrariesOfSlugInfo(slugInfo: SlugInfo, latestVersions: Seq[MongoLatestVersion]): Future[List[Dependency]] =
     for {
-      latestVersions <- cachedLatestVersions()
       bobbyRules     <- serviceConfigsConnector.getBobbyRules
       dependencies   =  slugInfo
                           .dependencies

@@ -20,9 +20,10 @@ import cats.implicits._
 import javax.inject.{Inject, Singleton}
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.servicedependencies.connector.{ServiceConfigsConnector, TeamsAndRepositoriesConnector}
-import uk.gov.hmrc.servicedependencies.controller.model.{Dependency, Dependencies}
-import uk.gov.hmrc.servicedependencies.model.SlugInfoFlag
-import uk.gov.hmrc.servicedependencies.persistence.SlugInfoRepository
+import uk.gov.hmrc.servicedependencies.controller.model.{Dependencies, Dependency}
+import uk.gov.hmrc.servicedependencies.model.{MongoLatestVersion, SlugInfoFlag}
+import uk.gov.hmrc.servicedependencies.persistence.{LatestVersionRepository, SlugInfoRepository}
+
 import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
@@ -32,6 +33,7 @@ class TeamDependencyService @Inject()(
 , repositoryDependenciesService: RepositoryDependenciesService
 , serviceConfigsConnector      : ServiceConfigsConnector
 , slugDependenciesService      : SlugDependenciesService
+, latestVersionRepository      : LatestVersionRepository
 )(implicit ec: ExecutionContext
 ) {
 
@@ -39,27 +41,29 @@ class TeamDependencyService @Inject()(
     for {
       (teamDetails, githubDeps) <- ( teamsAndReposConnector.getTeamDetails(teamName)
                                    , repositoryDependenciesService.getDependencyVersionsForAllRepositories
-                                   ).mapN { case (td, gh) => (td, gh) }
+        ).mapN { case (td, gh) => (td, gh) }
       libs                      =  teamDetails.libraries.flatMap(l => githubDeps.find(_.repositoryName == l))
       services                  =  teamDetails.services.flatMap(s => githubDeps.find(_.repositoryName == s))
-      updatedServices           <- services.toList.traverse(replaceServiceDependencies)
-    } yield libs ++ updatedServices
+      latestVersions            <- latestVersionRepository.getAllEntries
+      updatedServices           <- services.toList.traverse(dep => replaceServiceDependencies(dep, latestVersions))
+    } yield libs  ++ updatedServices
 
-  protected[service] def replaceServiceDependencies(dependencies: Dependencies): Future[Dependencies] =
+  protected[service] def replaceServiceDependencies(dependencies: Dependencies, latestVersions: Seq[MongoLatestVersion]): Future[Dependencies] =
     for {
-      optLibraryDependencies <- slugDependenciesService.curatedLibrariesOfSlug(dependencies.repositoryName, SlugInfoFlag.Latest)
+      optLibraryDependencies <- slugDependenciesService.curatedLibrariesOfSlug(dependencies.repositoryName, SlugInfoFlag.Latest, latestVersions)
       output                 =  optLibraryDependencies.map(libraryDependencies => dependencies.copy(libraryDependencies = libraryDependencies)).getOrElse(dependencies)
     } yield output
 
-  def dependenciesOfSlugForTeam(
+  def dependenciesOfSlugsForTeam(
     teamName: String
   , flag    : SlugInfoFlag
   )(implicit hc: HeaderCarrier
   ): Future[Map[String, Seq[Dependency]]] =
     for {
       teamDetails <- teamsAndReposConnector.getTeamDetails(teamName)
+      latestVersions <- latestVersionRepository.getAllEntries
       res         <- teamDetails.services.toList.traverse { serviceName =>
-                       slugDependenciesService.curatedLibrariesOfSlug(serviceName, flag)
+                       slugDependenciesService.curatedLibrariesOfSlug(serviceName, flag, latestVersions)
                          .map(_.map(serviceName -> _))
                      }
     } yield res.collect { case Some(kv) => kv }.toMap

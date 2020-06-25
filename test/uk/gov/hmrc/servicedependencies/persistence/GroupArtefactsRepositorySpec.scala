@@ -26,6 +26,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration.DurationInt
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpecLike
+import uk.gov.hmrc.servicedependencies.persistence.derived.{DerivedGroupArtefactRepository, DerivedMongoCollections}
 
 class GroupArtefactsRepositorySpec
     extends AnyWordSpecLike
@@ -36,15 +37,17 @@ class GroupArtefactsRepositorySpec
       with PlayMongoRepositorySupport[GroupArtefacts]
       with CleanMongoCollectionSupport {
 
-  override lazy val repository = new GroupArtefactRepository(mongoComponent)
+  override lazy val repository = new DerivedGroupArtefactRepository(mongoComponent)
 
   lazy val slugInfoRepo = new SlugInfoRepository(mongoComponent)
+  val derivedCollectionGenerator = new DerivedMongoCollections(mongoComponent)
 
   override implicit val patienceConfig = PatienceConfig(timeout = 30.seconds, interval = 100.millis)
 
   "GroupArtefactsRepository.findGroupsArtefacts" should {
     "return a map of artefact group to list of found artefacts" in {
       slugInfoRepo.add(slugInfo).futureValue
+      derivedCollectionGenerator.generateArtefactLookup().futureValue
 
       val result = repository.findGroupsArtefacts.futureValue
 

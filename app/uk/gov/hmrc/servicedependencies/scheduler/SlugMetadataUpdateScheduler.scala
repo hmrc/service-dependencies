@@ -23,7 +23,7 @@ import play.api.inject.ApplicationLifecycle
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.servicedependencies.config.SchedulerConfigs
 import uk.gov.hmrc.servicedependencies.persistence.MongoLocks
-import uk.gov.hmrc.servicedependencies.service.SlugInfoService
+import uk.gov.hmrc.servicedependencies.service.{DerivedViewsService, SlugInfoService}
 import uk.gov.hmrc.servicedependencies.util.SchedulerUtils
 
 import scala.concurrent.ExecutionContext
@@ -32,6 +32,7 @@ import scala.concurrent.ExecutionContext
 class SlugMetadataUpdateScheduler @Inject()(
     schedulerConfigs    : SchedulerConfigs,
     slugInfoService     : SlugInfoService,
+    derivedViewsService : DerivedViewsService,
     mongoLocks          : MongoLocks
   )(implicit
     actorSystem         : ActorSystem,
@@ -42,11 +43,20 @@ class SlugMetadataUpdateScheduler @Inject()(
 
   implicit val hc: HeaderCarrier = HeaderCarrier()
 
+  // create derived views if the scheduler is disabled, i.e. local dev etc
+  if(!schedulerConfigs.slugMetadataUpdate.enabled) {
+    logger.info("Pre-populating derived views...")
+    derivedViewsService.generateAllViews()
+  }
+
   scheduleWithLock("Slug Metadata Updater", schedulerConfigs.slugMetadataUpdate, mongoLocks.slugMetadataUpdateSchedulerLock) {
     logger.info("Updating slug metadata")
     for {
       _ <- slugInfoService.updateMetadata()
       _ = logger.info("Finished updating slug metadata")
+      _ <- derivedViewsService.generateAllViews()
+      _ = logger.info("Finished updating derived views")
     } yield ()
   }
+
 }

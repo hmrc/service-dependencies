@@ -22,18 +22,19 @@ import com.google.inject.{Inject, Singleton}
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.servicedependencies.connector.{ReleasesApiConnector, TeamsAndRepositoriesConnector}
 import uk.gov.hmrc.servicedependencies.model._
-import uk.gov.hmrc.servicedependencies.persistence.{GroupArtefactRepository, JdkVersionRepository, ServiceDependenciesRepository, SlugInfoRepository}
+import uk.gov.hmrc.servicedependencies.persistence.derived.{DerivedGroupArtefactRepository, DerivedServiceDependenciesRepository}
+import uk.gov.hmrc.servicedependencies.persistence.{JdkVersionRepository, SlugInfoRepository}
 
 import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
 class SlugInfoService @Inject()(
- slugInfoRepository            : SlugInfoRepository,
- serviceDependencyRepository   : ServiceDependenciesRepository,
- jdkVersionRepository          : JdkVersionRepository,
- groupArtefactRepository       : GroupArtefactRepository,
- teamsAndRepositoriesConnector : TeamsAndRepositoriesConnector,
- serviceDeploymentsConnector   : ReleasesApiConnector
+                                 slugInfoRepository            : SlugInfoRepository,
+                                 serviceDependencyRepository   : DerivedServiceDependenciesRepository,
+                                 jdkVersionRepository          : JdkVersionRepository,
+                                 groupArtefactRepository       : DerivedGroupArtefactRepository,
+                                 teamsAndRepositoriesConnector : TeamsAndRepositoriesConnector,
+                                 serviceDeploymentsConnector   : ReleasesApiConnector
 )(implicit ec: ExecutionContext
 ) {
   def addSlugInfo(slug: SlugInfo): Future[Boolean] = {
@@ -59,7 +60,7 @@ class SlugInfoService @Inject()(
     , versionRange: BobbyVersionRange
     )(implicit hc: HeaderCarrier): Future[Seq[ServiceDependency]] =
       for {
-        services            <- serviceDependencyRepository.findServices(flag, group, artefact)
+        services            <- serviceDependencyRepository.findServicesWithDependency(flag, group, artefact)
         servicesWithinRange =  services.filter(_.depSemanticVersion.map(versionRange.includes).getOrElse(true)) // include invalid semanticVersion in results
         teamsForServices    <- teamsAndRepositoriesConnector.getTeamsForServices
       } yield servicesWithinRange.map { r =>
