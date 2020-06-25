@@ -60,11 +60,21 @@ class BobbyRulesSummaryRepository @Inject()(
       .map(_.headOption)
       .flatMap {
         case Some(a) => Future(Some(a))
-        case None    => getHistoric.map(_.headOption)
+        case None    => getMostRecent()
+      }
+
+  def getMostRecent() : Future[Option[BobbyRulesSummary]] =
+    collection.find()
+      .sort(descending("date"))
+      .first()
+      .toFuture()
+      .map(Option.apply)
+      .recover {
+        case _ => None
       }
 
   // Not time bound yet
-  def getHistoric: Future[List[BobbyRulesSummary]] =
+  def getHistoric(): Future[List[BobbyRulesSummary]] =
     collection
       .find()
       .sort(descending("date"))
