@@ -23,6 +23,7 @@ import uk.gov.hmrc.mongo.play.json.formats.MongoJavatimeFormats
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 import uk.gov.hmrc.servicedependencies.model._
 import uk.gov.hmrc.servicedependencies.persistence._
+import uk.gov.hmrc.servicedependencies.service.DerivedViewsService
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -31,6 +32,7 @@ class IntegrationTestController @Inject()(
   , repositoryDependenciesRepository: RepositoryDependenciesRepository
   , sluginfoRepo                    : SlugInfoRepository
   , bobbyRulesSummaryRepo           : BobbyRulesSummaryRepository
+  , derivedViewsService             : DerivedViewsService
   , cc                              : ControllerComponents
   )(implicit ec: ExecutionContext
   ) extends BackendController(cc) {
@@ -106,5 +108,10 @@ class IntegrationTestController @Inject()(
         , sluginfoRepo.clearAllData
         , bobbyRulesSummaryRepo.clearAllData
         )).map(_ => NoContent)
+    }
+
+  def createDerivedViews =
+    Action.async {
+      derivedViewsService.generateAllViews().map(_ => NoContent)
     }
 }

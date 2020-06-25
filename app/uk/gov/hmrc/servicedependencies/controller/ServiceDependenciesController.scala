@@ -67,7 +67,7 @@ class ServiceDependenciesController @Inject()(
       for {
         depsWithRules <- teamDependencyService.findAllDepsForTeam(teamName)
       } yield Ok(Json.toJson(depsWithRules))
-    }
+  }
 
   def getServicesWithDependency(flag: String, group: String, artefact: String, versionRange: String): Action[AnyContent] =
     Action.async { implicit request =>
@@ -79,7 +79,7 @@ class ServiceDependenciesController @Inject()(
                   slugInfoService
                     .findServicesWithDependency(f, group, artefact, vr)
                 }
-      } yield Ok(Json.toJson(res))
+      } yield Ok( Json.toJson(res) )
       ).merge
     }
 
@@ -127,7 +127,7 @@ class ServiceDependenciesController @Inject()(
       (for {
          f    <- EitherT.fromOption[Future](SlugInfoFlag.parse(flag), BadRequest(s"invalid flag '$flag'"))
          deps <- EitherT.liftF[Future, Result, Map[String, Seq[Dependency]]](
-                   teamDependencyService.dependenciesOfSlugForTeam(team, f)
+                   teamDependencyService.dependenciesOfSlugsForTeam(team, f)
                  )
        } yield {
          implicit val dw = Dependency.writes

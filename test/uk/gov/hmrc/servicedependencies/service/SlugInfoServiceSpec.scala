@@ -26,7 +26,8 @@ import org.scalatest.wordspec.AnyWordSpec
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.servicedependencies.connector.{ReleasesApiConnector, TeamsAndRepositoriesConnector, TeamsForServices}
 import uk.gov.hmrc.servicedependencies.model._
-import uk.gov.hmrc.servicedependencies.persistence.{GroupArtefactRepository, JdkVersionRepository, ServiceDependenciesRepository, SlugInfoRepository}
+import uk.gov.hmrc.servicedependencies.persistence.derived.{DerivedGroupArtefactRepository, DerivedServiceDependenciesRepository}
+import uk.gov.hmrc.servicedependencies.persistence.{JdkVersionRepository, SlugInfoRepository}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
@@ -73,7 +74,7 @@ class SlugInfoServiceSpec extends AnyWordSpec with Matchers with MockitoSugar wi
 
       val boot = Boot.init
 
-      when(boot.mockedServiceDependenciesRepository.findServices(SlugInfoFlag.Latest, group, artefact))
+      when(boot.mockedServiceDependenciesRepository.findServicesWithDependency(SlugInfoFlag.Latest, group, artefact))
         .thenReturn(Future(Seq(v100, v200, v205)))
 
       when(boot.mockedTeamsAndRepositoriesConnector.getTeamsForServices)
@@ -96,7 +97,7 @@ class SlugInfoServiceSpec extends AnyWordSpec with Matchers with MockitoSugar wi
 
       val bad = v100.copy(depVersion  = "r938")
 
-      when(boot.mockedServiceDependenciesRepository.findServices(SlugInfoFlag.Latest, group, artefact))
+      when(boot.mockedServiceDependenciesRepository.findServicesWithDependency(SlugInfoFlag.Latest, group, artefact))
         .thenReturn(Future(Seq(v100, v200, v205, bad)))
 
       when(boot.mockedTeamsAndRepositoriesConnector.getTeamsForServices)
@@ -151,26 +152,26 @@ class SlugInfoServiceSpec extends AnyWordSpec with Matchers with MockitoSugar wi
 
   case class Boot(
                      mockedSlugInfoRepository            : SlugInfoRepository
-                   , mockedServiceDependenciesRepository : ServiceDependenciesRepository
+                   , mockedServiceDependenciesRepository : DerivedServiceDependenciesRepository
                    , mockedJdkVersionRespository         : JdkVersionRepository
                    , mockedTeamsAndRepositoriesConnector : TeamsAndRepositoriesConnector
                    , mockedReleasesApiConnector          : ReleasesApiConnector
-                   , mockedGroupArtefactRepository       : GroupArtefactRepository
+                   , mockedGroupArtefactRepository       : DerivedGroupArtefactRepository
                    , service                             : SlugInfoService
     )
 
   object Boot {
     def init: Boot = {
       val mockedSlugInfoRepository              = mock[SlugInfoRepository]
-      val mockedServiceDependenciesRepository   = mock[ServiceDependenciesRepository]
       val mockedJdkVersionRepository            = mock[JdkVersionRepository]
-      val mockedGroupArtefactRepository         = mock[GroupArtefactRepository]
+      val mockedGroupArtefactRepository         = mock[DerivedGroupArtefactRepository]
       val mockedTeamsAndRepositoriesConnector   = mock[TeamsAndRepositoriesConnector]
       val mockedReleasesApiConnector            = mock[ReleasesApiConnector]
+      val mockDerivedSlugDependenciesRepository = mock[DerivedServiceDependenciesRepository]
 
       val service = new SlugInfoService(
             mockedSlugInfoRepository
-          , mockedServiceDependenciesRepository
+          , mockDerivedSlugDependenciesRepository
           , mockedJdkVersionRepository
           , mockedGroupArtefactRepository
           , mockedTeamsAndRepositoriesConnector
@@ -178,7 +179,7 @@ class SlugInfoServiceSpec extends AnyWordSpec with Matchers with MockitoSugar wi
           )
       Boot(
           mockedSlugInfoRepository
-        , mockedServiceDependenciesRepository
+        , mockDerivedSlugDependenciesRepository
         , mockedJdkVersionRepository
         , mockedTeamsAndRepositoriesConnector
         , mockedReleasesApiConnector
