@@ -33,25 +33,13 @@ class DerivedServiceDependenciesRepository @Inject()(mongoComponent: MongoCompon
   , mongoComponent = mongoComponent
   , domainFormat   = ApiServiceDependencyFormats.mongoMaterializedFormat
   , indexes        = Seq(
-    IndexModel(compoundIndex(ascending("group"), ascending("artifact"), ascending("latest")),
-      IndexOptions().name("slugInfoNameLatestIdx").partialFilterExpression(BsonDocument("latest" -> true)).background(true)),
-
-    IndexModel(compoundIndex(ascending("group"), ascending("artifact"), ascending("production")),
-      IndexOptions().name("slugInfoProductionIdx").partialFilterExpression(BsonDocument("production" -> true)).background(true)),
-
-    IndexModel(compoundIndex(ascending("group"), ascending("artifact"), ascending("qa")),
-      IndexOptions().name("slugInfoQaIdx").partialFilterExpression(BsonDocument("qa" -> true)).background(true)),
-
-    IndexModel(compoundIndex(ascending("group"), ascending("artifact"), ascending("staging")),
-      IndexOptions().name("slugInfoStagingIdx").partialFilterExpression(BsonDocument("staging" -> true)).background(true)),
-
-    IndexModel(compoundIndex(ascending("group"), ascending("artifact"), ascending("development")),
-      IndexOptions().name("slugInfoDevelopmentIdx").partialFilterExpression(BsonDocument("development" -> true)).background(true)),
-
-    IndexModel(compoundIndex(ascending("group"), ascending("artifact"), ascending("external test")),
-      IndexOptions().name("slugInfoExternalTestIdx").partialFilterExpression(BsonDocument("external test" -> true)).background(true)))
-
-  , optSchema = None
+                          IndexModel(ascending("slugName"),
+                            IndexOptions().name("derivedServiceDepsSlugNameIdx")),
+                          IndexModel(compoundIndex(ascending("group"),ascending("artifact")),
+                            IndexOptions().name("derivedServiceDepsGroupArtifactIdx")),
+                          IndexModel( compoundIndex( SlugInfoFlag.values.map(f => ascending(f.asString)) :_*),
+                            IndexOptions().name("derivedServiceDepsFlagIdx").background(true))
+  ), optSchema = None
 ){
 
   def findServicesWithDependency(flag     : SlugInfoFlag

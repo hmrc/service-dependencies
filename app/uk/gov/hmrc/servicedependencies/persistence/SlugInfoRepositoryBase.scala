@@ -38,24 +38,16 @@ abstract class SlugInfoRepositoryBase[A: ClassTag] @Inject()(
   , mongoComponent = mongoComponent
   , domainFormat   = domainFormat
   , indexes        = Seq(
-                       IndexModel(ascending("uri"), IndexOptions().name("slugInfoUniqueIdx").unique(true)),
-                       IndexModel(hashed("name"), IndexOptions().name("slugInfoIdx").background(true)),
-                       IndexModel(hashed("latest"), IndexOptions().name("slugInfoLatestIdx").background(true)),
+                       IndexModel(ascending("uri"),
+                         IndexOptions().name("slugInfoUniqueIdx").unique(true)),
+                       IndexModel(hashed("name"),
+                         IndexOptions().name("slugInfoIdx").background(true)),
+                       IndexModel(hashed("latest"),
+                         IndexOptions().name("slugInfoLatestIdx").background(true)),
                        IndexModel(compoundIndex(ascending("name"), descending("version")),
                          IndexOptions().name("slugInfoNameVersionIdx").background(true)),
                        IndexModel(compoundIndex(ascending("name"), descending("latest")),
-                         IndexOptions().name("slugInfoNameLatestIdx").background(true)),
-                      // index each of the env flags
-                      IndexModel(descending("production"),
-                        IndexOptions().name("slugInfoProductionIdx").partialFilterExpression(BsonDocument("production" -> true)).background(true)),
-                      IndexModel(descending("qa"),
-                        IndexOptions().name("slugInfoQaIdx").partialFilterExpression(BsonDocument("qa" -> true)).background(true)),
-                      IndexModel(descending("staging"),
-                        IndexOptions().name("slugInfoStagingIdx").partialFilterExpression(BsonDocument("staging" -> true)).background(true)),
-                      IndexModel(descending("development"),
-                        IndexOptions().name("slugInfoDevelopmentIdx").partialFilterExpression(BsonDocument("development" -> true)).background(true)),
-                      IndexModel(descending("external test"),
-                        IndexOptions().name("slugInfoExternalTestIdx").partialFilterExpression(BsonDocument("external test" -> true)).background(true))
+                         IndexOptions().name("slugInfoNameLatestIdx").background(true))
   )
   , optSchema      = Some(BsonDocument(MongoSlugInfoFormats.schema))
   )

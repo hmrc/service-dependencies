@@ -31,7 +31,7 @@ import uk.gov.hmrc.servicedependencies.persistence.SlugBlacklist
 import scala.concurrent.{ExecutionContext, Future}
 
 object DerivedMongoCollections {
-  val artefactLookup = "DERIVED-artefact-lookup"
+  val artefactLookup       = "DERIVED-artefact-lookup"
   val slugDependencyLookup = "DERVIED-slug-dependencies"
 }
 
@@ -69,7 +69,7 @@ class DerivedMongoCollections @Inject()(mongoComponent: MongoComponent)(implicit
 
   /**
     * A flattened version of slugInfo containing only slugs deployed + latest
-    * One document per dependency in the slug so lots of
+    * One document per dependency in the slug
     * @return
     */
   def generateSlugDependencyLookup() :Future[Unit] = {
@@ -116,10 +116,10 @@ class DerivedMongoCollections @Inject()(mongoComponent: MongoComponent)(implicit
       )),
       out(DerivedMongoCollections.slugDependencyLookup)
     )
+
     mongoComponent.database.getCollection("slugInfos").aggregate(agg).allowDiskUse(true)
       .toFuture
       .map(_ => Unit)
-
   }
 
 }
