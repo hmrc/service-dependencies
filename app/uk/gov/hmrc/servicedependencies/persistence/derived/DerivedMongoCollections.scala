@@ -102,7 +102,7 @@ class DerivedMongoCollections @Inject()(mongoComponent: MongoComponent)(implicit
       unwind("$dependencies"),
       project(fields(
         computed("group", "$dependencies.group"),
-        computed("artifact", "$dependencies.artifact"),
+        computed("artefact", "$dependencies.artifact"),
         computed("version", "$dependencies.version"),
         include("slugName"),
         include("slugVersion"),
