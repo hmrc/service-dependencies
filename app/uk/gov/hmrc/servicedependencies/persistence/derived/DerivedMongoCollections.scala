@@ -32,7 +32,7 @@ import scala.concurrent.{ExecutionContext, Future}
 
 object DerivedMongoCollections {
   val artefactLookup       = "DERIVED-artefact-lookup"
-  val slugDependencyLookup = "DERVIED-slug-dependencies"
+  val slugDependencyLookup = "DERIVED-slug-dependencies"
 }
 
 class DerivedMongoCollections @Inject()(mongoComponent: MongoComponent)(implicit ec: ExecutionContext)
@@ -59,6 +59,7 @@ class DerivedMongoCollections @Inject()(mongoComponent: MongoComponent)(implicit
       // Group by artefact group id
       group("$dependencies.group", addToSet("artifacts",  "$dependencies.artifact")),
       sort(orderBy(ascending("_id"))),
+      // replace content of target collection
       out(DerivedMongoCollections.artefactLookup)
     )
 
@@ -74,14 +75,17 @@ class DerivedMongoCollections @Inject()(mongoComponent: MongoComponent)(implicit
     */
   def generateSlugDependencyLookup() :Future[Unit] = {
     val agg = List(
+      // filter slugs to just those deployed in any environment, or tagged as latest
       `match`(
         or(
           SlugInfoFlag.values.map(f => equal(f.asString, true)): _* // filter for reachable data
         )
       ),
+      // remove blacklisted slugs
       `match`(
         nin("name", SlugBlacklist.blacklistedSlugs)
       ),
+      // project relevant fields including the dependencies list
       project(
         fields(
           excludeId(),
@@ -99,7 +103,9 @@ class DerivedMongoCollections @Inject()(mongoComponent: MongoComponent)(implicit
           include("latest")
         )
       ),
+      // unwind the dependencies into 1 record per depdencies
       unwind("$dependencies"),
+      // reproject the result so dependencies are at the root level
       project(fields(
         computed("group", "$dependencies.group"),
         computed("artefact", "$dependencies.artifact"),
@@ -114,6 +120,7 @@ class DerivedMongoCollections @Inject()(mongoComponent: MongoComponent)(implicit
         include("integration"),
         include("latest")
       )),
+      // replace content of target collection
       out(DerivedMongoCollections.slugDependencyLookup)
     )
 

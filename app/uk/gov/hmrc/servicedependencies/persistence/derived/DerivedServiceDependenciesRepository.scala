@@ -31,7 +31,7 @@ class DerivedServiceDependenciesRepository @Inject()(mongoComponent: MongoCompon
 ) extends PlayMongoRepository[ServiceDependency](
   collectionName =  DerivedMongoCollections.slugDependencyLookup
   , mongoComponent = mongoComponent
-  , domainFormat   = ApiServiceDependencyFormats.mongoMaterializedFormat
+  , domainFormat   = ApiServiceDependencyFormats.derivedMongoFormat
   , indexes        = Seq(
                           IndexModel(ascending("slugName"),
                             IndexOptions().name("derivedServiceDepsSlugNameIdx")),
@@ -49,7 +49,7 @@ class DerivedServiceDependenciesRepository @Inject()(mongoComponent: MongoCompon
     collection.find(and(
       equal(flag.asString, true),
       equal("group", group),
-      equal("artifact", artefact))
+      equal("artefact", artefact))
     ).toFuture()
 
   def findDependenciesForService(name:String, flag: SlugInfoFlag): Future[Seq[ServiceDependency]] = {

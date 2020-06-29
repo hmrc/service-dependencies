@@ -32,7 +32,7 @@ case class ServiceDependency(
 
 trait ApiServiceDependencyFormats {
 
-  val mongoMaterializedFormat: OFormat[ServiceDependency] =
+  val derivedMongoFormat: OFormat[ServiceDependency] =
     ( (__ \ "slugName"     ).format[String]
       ~ (__ \ "slugVersion").format[String]
       ~ (__ \ "teams"      ).formatWithDefault[List[String]](List.empty[String])
