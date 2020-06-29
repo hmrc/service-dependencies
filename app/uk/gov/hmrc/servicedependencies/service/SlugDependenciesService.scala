@@ -17,7 +17,6 @@
 package uk.gov.hmrc.servicedependencies.service
 
 import javax.inject.{Inject, Singleton}
-import play.api.cache.AsyncCacheApi
 import uk.gov.hmrc.servicedependencies.config.ServiceDependenciesConfig
 import uk.gov.hmrc.servicedependencies.config.model.CuratedDependencyConfig
 import uk.gov.hmrc.servicedependencies.connector.ServiceConfigsConnector
@@ -26,7 +25,6 @@ import uk.gov.hmrc.servicedependencies.model.{MongoLatestVersion, SlugInfo, Slug
 import uk.gov.hmrc.servicedependencies.persistence.LatestVersionRepository
 
 import scala.concurrent.{ExecutionContext, Future}
-import scala.concurrent.duration.{Duration, SECONDS}
 
 
 @Singleton
