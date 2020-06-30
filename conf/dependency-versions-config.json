@@ -1,6 +1,6 @@
 {
   "sbtPlugins": [
-    { "group": "com.typesafe.play", "name": "sbt-plugin", "latestVersion": "2.6.24" },
+    { "group": "com.typesafe.play", "name": "sbt-plugin", "latestVersion": "2.7.5" },
     { "group": "se.marcuslonnberg", "name": "sbt-docker", "latestVersion": "1.5.0" },
     { "group": "uk.gov.hmrc", "name": "sbt-artifactory" },
     { "group": "uk.gov.hmrc", "name": "sbt-auto-build" },
@@ -164,7 +164,7 @@
     {
       "name": "sbt",
       "group": "org.scala-sbt",
-      "latestVersion": "0.13.18"
+      "latestVersion": "1.3.13"
     }
   ]
 }
