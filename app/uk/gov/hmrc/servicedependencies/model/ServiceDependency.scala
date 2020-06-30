@@ -32,6 +32,15 @@ case class ServiceDependency(
 
 trait ApiServiceDependencyFormats {
 
+  val derivedMongoFormat: OFormat[ServiceDependency] =
+    ( (__ \ "slugName"     ).format[String]
+      ~ (__ \ "slugVersion").format[String]
+      ~ (__ \ "teams"      ).formatWithDefault[List[String]](List.empty[String])
+      ~ (__ \ "group"      ).format[String]
+      ~ (__ \ "artefact"   ).format[String]
+      ~ (__ \ "version"    ).format[String]
+      )(ServiceDependency.apply, unlift(ServiceDependency.unapply))
+
   val sdFormat: OFormat[ServiceDependency] =
     ( (__ \ "slugName"   ).format[String]
     ~ (__ \ "slugVersion").format[String]

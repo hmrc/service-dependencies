@@ -21,10 +21,11 @@ import uk.gov.hmrc.servicedependencies.config.ServiceDependenciesConfig
 import uk.gov.hmrc.servicedependencies.config.model.CuratedDependencyConfig
 import uk.gov.hmrc.servicedependencies.connector.ServiceConfigsConnector
 import uk.gov.hmrc.servicedependencies.controller.model.Dependency
-import uk.gov.hmrc.servicedependencies.model.{SlugInfo, SlugInfoFlag, Version}
+import uk.gov.hmrc.servicedependencies.model.{MongoLatestVersion, SlugInfo, SlugInfoFlag, Version}
 import uk.gov.hmrc.servicedependencies.persistence.LatestVersionRepository
 
 import scala.concurrent.{ExecutionContext, Future}
+
 
 @Singleton
 class SlugDependenciesService @Inject()(
@@ -42,14 +43,19 @@ class SlugDependenciesService @Inject()(
    * We may want to evolve the model - but for this initial version we reuse the existing Dependency definition.
    */
   def curatedLibrariesOfSlug(name: String, flag: SlugInfoFlag): Future[Option[List[Dependency]]] =
+    for {
+      latestVersions   <- latestVersionRepository.getAllEntries
+      curatedLibraries <- curatedLibrariesOfSlug(name, flag, latestVersions)
+    } yield curatedLibraries
+
+  def curatedLibrariesOfSlug(name: String, flag: SlugInfoFlag, latestVersions: Seq[MongoLatestVersion]): Future[Option[List[Dependency]]] =
     slugInfoService.getSlugInfo(name, flag).flatMap {
       case None           => Future.successful(None)
-      case Some(slugInfo) => curatedLibrariesOfSlugInfo(slugInfo).map(Some.apply)
+      case Some(slugInfo) => curatedLibrariesOfSlugInfo(slugInfo, latestVersions).map(Some.apply)
     }
 
-  private def curatedLibrariesOfSlugInfo(slugInfo: SlugInfo): Future[List[Dependency]] =
+  private def curatedLibrariesOfSlugInfo(slugInfo: SlugInfo, latestVersions: Seq[MongoLatestVersion]): Future[List[Dependency]] =
     for {
-      latestVersions <- latestVersionRepository.getAllEntries
       bobbyRules     <- serviceConfigsConnector.getBobbyRules
       dependencies   =  slugInfo
                           .dependencies

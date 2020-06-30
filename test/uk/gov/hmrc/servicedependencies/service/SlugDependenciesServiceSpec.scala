@@ -18,11 +18,13 @@ package uk.gov.hmrc.servicedependencies.service
 
 import java.time.{LocalDate, LocalDateTime}
 
+import akka.Done
 import org.mockito.MockitoSugar
 import org.scalatest.OptionValues
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.should.Matchers
+import play.api.cache.AsyncCacheApi
 import uk.gov.hmrc.servicedependencies.config.ServiceDependenciesConfig
 import uk.gov.hmrc.servicedependencies.config.model.{CuratedDependencyConfig, DependencyConfig}
 import uk.gov.hmrc.servicedependencies.connector.ServiceConfigsConnector
@@ -31,8 +33,9 @@ import uk.gov.hmrc.servicedependencies.model._
 import uk.gov.hmrc.servicedependencies.persistence.LatestVersionRepository
 
 import scala.concurrent.Future
-
 import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.duration.Duration
+import scala.reflect.ClassTag
 
 class SlugDependenciesServiceSpec extends AnyFreeSpec with MockitoSugar with Matchers with ScalaFutures with OptionValues {
 
@@ -43,6 +46,14 @@ class SlugDependenciesServiceSpec extends AnyFreeSpec with MockitoSugar with Mat
     val mockServiceDependenciesConfig = mock[ServiceDependenciesConfig]
     val mockLatestVersionRepository   = mock[LatestVersionRepository]
     val mockServiceConfigsConnector   = mock[ServiceConfigsConnector]
+
+    val mockCache = new AsyncCacheApi {
+      override def set(key: String, value: Any, expiration: Duration): Future[Done] = Future.successful(Done)
+      override def remove(key: String): Future[Done] = Future.successful(Done)
+      override def getOrElseUpdate[A](key: String, expiration: Duration)(orElse: => Future[A])(implicit evidence$1: ClassTag[A]): Future[A] = orElse
+      override def get[T](key: String)(implicit evidence$2: ClassTag[T]): Future[Option[T]] = Future.successful(None)
+      override def removeAll(): Future[Done] = Future.successful(Done)
+    }
 
     val underTest =
       new SlugDependenciesService(
