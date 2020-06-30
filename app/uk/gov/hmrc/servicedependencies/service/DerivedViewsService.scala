@@ -25,14 +25,13 @@ import scala.concurrent.{ExecutionContext, Future}
 class DerivedViewsService @Inject()(derivedMongoCollections: DerivedMongoCollections)(implicit val ec: ExecutionContext) extends Logging{
 
   def generateAllViews() : Future[Unit] = {
-    val x = for {
+    for {
        _ <- derivedMongoCollections.generateArtefactLookup()
        _ <- derivedMongoCollections.generateSlugDependencyLookup()
     } yield ()
-
-    x.recover {
-      case e => logger.error("Failed to update derived collections", e)
-    }
+  }.recover {
+    case e => logger.error("Failed to update derived collections", e)
   }
+
 
 }

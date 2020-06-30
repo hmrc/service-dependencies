@@ -43,16 +43,11 @@ class SlugDependenciesService @Inject()(
    * We may want to evolve the model - but for this initial version we reuse the existing Dependency definition.
    */
   def curatedLibrariesOfSlug(name: String, flag: SlugInfoFlag): Future[Option[List[Dependency]]] =
-    slugInfoService.getSlugInfo(name, flag).flatMap {
-      case None           => Future.successful(None)
-      case Some(slugInfo) => latestVersionRepository
-        .getAllEntries
-        .flatMap(latestVersions => curatedLibrariesOfSlugInfo(slugInfo, latestVersions).map(Some.apply))
-    }
+    for {
+      latestVersions   <- latestVersionRepository.getAllEntries
+      curatedLibraries <- curatedLibrariesOfSlug(name, flag, latestVersions)
+    } yield curatedLibraries
 
-  /*
- * We may want to evolve the model - but for this initial version we reuse the existing Dependency definition.
- */
   def curatedLibrariesOfSlug(name: String, flag: SlugInfoFlag, latestVersions: Seq[MongoLatestVersion]): Future[Option[List[Dependency]]] =
     slugInfoService.getSlugInfo(name, flag).flatMap {
       case None           => Future.successful(None)
