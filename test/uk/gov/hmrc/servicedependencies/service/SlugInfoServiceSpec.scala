@@ -165,14 +165,14 @@ class SlugInfoServiceSpec extends AnyWordSpec with Matchers with MockitoSugar wi
     }
     "mark the slug as latest if the version is latest" in new GetSlugInfoFixture {
       val slugv1 = sampleSlugInfo.copy(version = Version("1.0.0"), uri = "uri1")
-      val slugv2 = slugv1.copy(version = Version("1.0.0"), uri = "uri2")
+      val slugv2 = slugv1.copy(version = Version("2.0.0"), uri = "uri2")
 
-      when(boot.mockedSlugInfoRepository.getSlugInfos(sampleSlugInfo.name, None)).thenReturn(Future.successful(List(slugv2)))
+      when(boot.mockedSlugInfoRepository.getSlugInfos(sampleSlugInfo.name, None)).thenReturn(Future.successful(List(slugv1, slugv2)))
       when(boot.mockedSlugInfoRepository.add(any)).thenReturn(Future.successful(true))
       when(boot.mockedSlugInfoRepository.markLatest(any, any)).thenReturn(Future.successful(()))
 
-      boot.service.addSlugInfo(slugv1).futureValue
-      verify(boot.mockedSlugInfoRepository, times(1)).markLatest(sampleSlugInfo.name, Version("1.0.0"))
+      boot.service.addSlugInfo(slugv2).futureValue
+      verify(boot.mockedSlugInfoRepository, times(1)).markLatest(slugv2.name, Version("2.0.0"))
 
       verifyNoMoreInteractions(boot.mockedSlugInfoRepository)
     }
