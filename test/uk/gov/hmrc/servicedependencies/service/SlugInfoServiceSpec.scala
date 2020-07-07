@@ -20,7 +20,7 @@ import java.time.LocalDateTime
 import java.time.Month.DECEMBER
 
 import org.mockito.scalatest.MockitoSugar
-import org.scalatest.concurrent.ScalaFutures
+import org.scalatest.concurrent.{IntegrationPatience, ScalaFutures}
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 import uk.gov.hmrc.http.HeaderCarrier
@@ -28,15 +28,14 @@ import uk.gov.hmrc.servicedependencies.connector.{ReleasesApiConnector, TeamsAnd
 import uk.gov.hmrc.servicedependencies.model._
 import uk.gov.hmrc.servicedependencies.persistence.derived.{DerivedGroupArtefactRepository, DerivedServiceDependenciesRepository}
 import uk.gov.hmrc.servicedependencies.persistence.{JdkVersionRepository, SlugInfoRepository}
-import scala.concurrent.duration._
 
+import scala.concurrent.duration._
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
-class SlugInfoServiceSpec extends AnyWordSpec with Matchers with MockitoSugar with ScalaFutures {
+class SlugInfoServiceSpec extends AnyWordSpec with Matchers with MockitoSugar with ScalaFutures with IntegrationPatience {
 
   implicit val hc = HeaderCarrier()
-  override implicit val patienceConfig = PatienceConfig(timeout = 2.seconds, interval = 100.millis)
 
   val group        = "group"
   val artefact     = "artefact"
