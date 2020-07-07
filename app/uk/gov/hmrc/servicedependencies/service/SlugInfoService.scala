@@ -40,9 +40,9 @@ class SlugInfoService @Inject()(
 ) extends Logging {
   def addSlugInfo(slug: SlugInfo): Future[Boolean] = {
     for {
-      added <- slugInfoRepository.add(slug)
-
       // Determine which slug is latest from the existing collection, not relying on the potentially stale state of the message
+      added <- slugInfoRepository.add(slug.copy(latest = false))
+
       isLatest        <- slugInfoRepository.getSlugInfos(name = slug.name, optVersion = None)
         .map { case Nil      => true
         case nonempty => val isLatest = nonempty.map(_.version).max == slug.version

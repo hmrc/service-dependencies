@@ -176,6 +176,18 @@ class SlugInfoServiceSpec extends AnyWordSpec with Matchers with MockitoSugar wi
 
       verifyNoMoreInteractions(boot.mockedSlugInfoRepository)
     }
+    "not use the latest flag from sqs/artefact processor" in new GetSlugInfoFixture {
+      val slugv1 = sampleSlugInfo.copy(version = Version("1.0.0"), uri = "uri1")
+      val slugv2 = slugv1.copy(version = Version("2.0.0"), uri = "uri2")
+
+      when(boot.mockedSlugInfoRepository.getSlugInfos(sampleSlugInfo.name, None)).thenReturn(Future.successful(List(slugv2)))
+      when(boot.mockedSlugInfoRepository.add(any)).thenReturn(Future.successful(true))
+
+      boot.service.addSlugInfo(slugv1).futureValue
+
+      verify(boot.mockedSlugInfoRepository, times(1)).add(slugv1.copy(latest = false))
+      verifyNoMoreInteractions(boot.mockedSlugInfoRepository)
+    }
     "not mark the slug as latest if there is a later one already in the collection" in new GetSlugInfoFixture {
       val slugv1 = sampleSlugInfo.copy(version = Version("1.0.0"), uri = "uri1")
       val slugv2 = slugv1.copy(version = Version("2.0.0"), uri = "uri2")
