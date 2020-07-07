@@ -19,8 +19,8 @@ package uk.gov.hmrc.servicedependencies.service
 import java.time.LocalDateTime
 import java.time.Month.DECEMBER
 
-import org.mockito.MockitoSugar
-import org.scalatest.concurrent.ScalaFutures
+import org.mockito.scalatest.MockitoSugar
+import org.scalatest.concurrent.{IntegrationPatience, ScalaFutures}
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 import uk.gov.hmrc.http.HeaderCarrier
@@ -29,10 +29,11 @@ import uk.gov.hmrc.servicedependencies.model._
 import uk.gov.hmrc.servicedependencies.persistence.derived.{DerivedGroupArtefactRepository, DerivedServiceDependenciesRepository}
 import uk.gov.hmrc.servicedependencies.persistence.{JdkVersionRepository, SlugInfoRepository}
 
+import scala.concurrent.duration._
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
-class SlugInfoServiceSpec extends AnyWordSpec with Matchers with MockitoSugar with ScalaFutures {
+class SlugInfoServiceSpec extends AnyWordSpec with Matchers with MockitoSugar with ScalaFutures with IntegrationPatience {
 
   implicit val hc = HeaderCarrier()
 
@@ -115,10 +116,10 @@ class SlugInfoServiceSpec extends AnyWordSpec with Matchers with MockitoSugar wi
   "SlugInfoService.getSlugInfo" should {
     "support retrieval of a SlugInfo by flag" in new GetSlugInfoFixture {
       when(boot.mockedSlugInfoRepository.getSlugInfo(SlugName, SlugInfoFlag.Latest)).thenReturn(
-        Future.successful(Some(SampleSlugInfo))
+        Future.successful(Some(sampleSlugInfo))
       )
 
-      boot.service.getSlugInfo(SlugName, SlugInfoFlag.Latest).futureValue shouldBe Some(SampleSlugInfo)
+      boot.service.getSlugInfo(SlugName, SlugInfoFlag.Latest).futureValue shouldBe Some(sampleSlugInfo)
     }
 
     "return None when no SlugInfos are found matching the target name and flag" in new GetSlugInfoFixture {
@@ -133,11 +134,11 @@ class SlugInfoServiceSpec extends AnyWordSpec with Matchers with MockitoSugar wi
       val targetVersion = "1.2.3"
       when(boot.mockedSlugInfoRepository.getSlugInfos(SlugName, Some(targetVersion))).thenReturn(
         Future.successful(
-          Seq(SampleSlugInfo)
+          Seq(sampleSlugInfo)
         )
       )
 
-      boot.service.getSlugInfo(SlugName, targetVersion).futureValue shouldBe Some(SampleSlugInfo)
+      boot.service.getSlugInfo(SlugName, targetVersion).futureValue shouldBe Some(sampleSlugInfo)
     }
 
     "return None when no SlugInfos are found matching the target name and version" in new GetSlugInfoFixture {
@@ -147,6 +148,55 @@ class SlugInfoServiceSpec extends AnyWordSpec with Matchers with MockitoSugar wi
       )
 
       boot.service.getSlugInfo(SlugName, targetVersion).futureValue shouldBe None
+    }
+  }
+
+  "SlugInfoService.addSlugInfo" should {
+    "mark the slug as latest if it is the first slug with that name" in new GetSlugInfoFixture {
+      when(boot.mockedSlugInfoRepository.getSlugInfos(sampleSlugInfo.name, None)).thenReturn(Future.successful(List.empty))
+      when(boot.mockedSlugInfoRepository.add(any)).thenReturn(Future.successful(true))
+      when(boot.mockedSlugInfoRepository.markLatest(any, any)).thenReturn(Future.successful(()))
+
+      boot.service.addSlugInfo(sampleSlugInfo).futureValue
+
+      verify(boot.mockedSlugInfoRepository, times(1)).markLatest(sampleSlugInfo.name, sampleSlugInfo.version)
+      verifyNoMoreInteractions(boot.mockedSlugInfoRepository)
+    }
+    "mark the slug as latest if the version is latest" in new GetSlugInfoFixture {
+      val slugv1 = sampleSlugInfo.copy(version = Version("1.0.0"), uri = "uri1")
+      val slugv2 = slugv1.copy(version = Version("2.0.0"), uri = "uri2")
+
+      when(boot.mockedSlugInfoRepository.getSlugInfos(sampleSlugInfo.name, None)).thenReturn(Future.successful(List(slugv1, slugv2)))
+      when(boot.mockedSlugInfoRepository.add(any)).thenReturn(Future.successful(true))
+      when(boot.mockedSlugInfoRepository.markLatest(any, any)).thenReturn(Future.successful(()))
+
+      boot.service.addSlugInfo(slugv2).futureValue
+      verify(boot.mockedSlugInfoRepository, times(1)).markLatest(slugv2.name, Version("2.0.0"))
+
+      verifyNoMoreInteractions(boot.mockedSlugInfoRepository)
+    }
+    "not use the latest flag from sqs/artefact processor" in new GetSlugInfoFixture {
+      val slugv1 = sampleSlugInfo.copy(version = Version("1.0.0"), uri = "uri1")
+      val slugv2 = slugv1.copy(version = Version("2.0.0"), uri = "uri2")
+
+      when(boot.mockedSlugInfoRepository.getSlugInfos(sampleSlugInfo.name, None)).thenReturn(Future.successful(List(slugv2)))
+      when(boot.mockedSlugInfoRepository.add(any)).thenReturn(Future.successful(true))
+
+      boot.service.addSlugInfo(slugv1).futureValue
+
+      verify(boot.mockedSlugInfoRepository, times(1)).add(slugv1.copy(latest = false))
+      verifyNoMoreInteractions(boot.mockedSlugInfoRepository)
+    }
+    "not mark the slug as latest if there is a later one already in the collection" in new GetSlugInfoFixture {
+      val slugv1 = sampleSlugInfo.copy(version = Version("1.0.0"), uri = "uri1")
+      val slugv2 = slugv1.copy(version = Version("2.0.0"), uri = "uri2")
+
+      when(boot.mockedSlugInfoRepository.getSlugInfos(sampleSlugInfo.name, None)).thenReturn(Future.successful(List(slugv2)))
+      when(boot.mockedSlugInfoRepository.add(any)).thenReturn(Future.successful(true))
+
+      boot.service.addSlugInfo(slugv1).futureValue
+
+      verifyNoMoreInteractions(boot.mockedSlugInfoRepository)
     }
   }
 
@@ -191,7 +241,7 @@ class SlugInfoServiceSpec extends AnyWordSpec with Matchers with MockitoSugar wi
 
   private trait GetSlugInfoFixture {
     val SlugName = "a-slug-name"
-    val SampleSlugInfo = SlugInfo(
+    val sampleSlugInfo = SlugInfo(
       uri = "sample-uri",
       created = LocalDateTime.of(2019, DECEMBER, 12, 13, 14),
       name = SlugName,
