@@ -27,7 +27,7 @@ private object AppDependencies {
     "org.scalatest"          %% "scalatest"               % "3.1.0"              % Test,
     "org.scalatestplus.play" %% "scalatestplus-play"      % "3.1.3"              % Test,
     "uk.gov.hmrc.mongo"      %% "hmrc-mongo-test-play-27" % hmrcMongoVersion     % Test,
-    "org.mockito"            %% "mockito-scala"           % "1.10.2"             % Test,
+    "org.mockito"            %% "mockito-scala-scalatest" % "1.13.10"            % Test,
     "com.typesafe.play"      %% "play-test"               % PlayVersion.current  % Test,
     "com.github.tomakehurst" %  "wiremock"                % "1.58"               % Test,
     "com.typesafe.akka"      %% "akka-testkit"            % "2.5.26"             % Test

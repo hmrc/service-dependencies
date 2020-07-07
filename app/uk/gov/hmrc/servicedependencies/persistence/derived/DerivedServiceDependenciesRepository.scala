@@ -17,15 +17,14 @@
 package uk.gov.hmrc.servicedependencies.persistence.derived
 
 import javax.inject.Inject
-import org.mongodb.scala.bson.BsonDocument
 import org.mongodb.scala.model.Filters._
+import org.mongodb.scala.model.Indexes.{ascending, compoundIndex}
+import org.mongodb.scala.model.{IndexModel, IndexOptions}
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.play.json.PlayMongoRepository
 import uk.gov.hmrc.servicedependencies.model.{ApiServiceDependencyFormats, ServiceDependency, SlugInfoFlag}
 
 import scala.concurrent.{ExecutionContext, Future}
-import org.mongodb.scala.model.Indexes.{ascending, compoundIndex}
-import org.mongodb.scala.model.{IndexModel, IndexOptions}
 
 class DerivedServiceDependenciesRepository @Inject()(mongoComponent: MongoComponent)(implicit ec: ExecutionContext
 ) extends PlayMongoRepository[ServiceDependency](

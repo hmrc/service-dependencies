@@ -19,6 +19,7 @@ package uk.gov.hmrc.servicedependencies.service
 import cats.instances.all._
 import cats.syntax.all._
 import com.google.inject.{Inject, Singleton}
+import play.api.Logging
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.servicedependencies.connector.{ReleasesApiConnector, TeamsAndRepositoriesConnector}
 import uk.gov.hmrc.servicedependencies.model._
@@ -36,11 +37,20 @@ class SlugInfoService @Inject()(
                                  teamsAndRepositoriesConnector : TeamsAndRepositoriesConnector,
                                  serviceDeploymentsConnector   : ReleasesApiConnector
 )(implicit ec: ExecutionContext
-) {
+) extends Logging {
   def addSlugInfo(slug: SlugInfo): Future[Boolean] = {
     for {
       added <- slugInfoRepository.add(slug)
-      _ <- if (slug.latest) slugInfoRepository.markLatest(slug.name, slug.version) else Future(())
+
+      // Determine which slug is latest from the existing collection, not relying on the potentially stale state of the message
+      isLatest        <- slugInfoRepository.getSlugInfos(name = slug.name, optVersion = None)
+        .map { case Nil      => true
+        case nonempty => val isLatest = nonempty.map(_.version).max == slug.version
+          logger.info(s"Slug ${slug.name} ${slug.version} isLatest=$isLatest (out of: ${nonempty.map(_.version).sorted})")
+          isLatest
+        }
+
+      _ <- if (isLatest) slugInfoRepository.markLatest(slug.name, slug.version) else Future(())
     } yield added
   }
 
