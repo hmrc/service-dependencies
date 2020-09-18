@@ -11,7 +11,7 @@ The service gathers the following information:
 
 * Dependencies from SBT build files read from github
   * Covers all HMRC repos, including services, libraries, prototypes
-  * Limited to a whitelist of dependencies, doesn't cover transitive
+  * Limited to an allow-list of dependencies, doesn't cover transitive
   * Only shows the dependencies from master branch
 
 * Dependencies included in a Slug
@@ -19,7 +19,7 @@ The service gathers the following information:
   * Includes all runtime dependencies used by service, including transitive
   * Shows dependencies across different releases of slug, not just latest
 
-* The Latest version found for any of the whitelisted dependencies
+* The Latest version found for any of the allow-listed dependencies
   * This is looked up periodically from Artifactory
   * It will be included in the dependencies returned for a Slug or Github repository. Identifying if the repositories dependencies are out of date.
 
@@ -34,7 +34,7 @@ repositoryDependencies.slugJob.interval          # delay between polling service
 
 The latest version parser is configured:
 ````
-dependencyVersionsReload.scheduler.enabled      # disable refreshing the latest version for the whitelisted dependencies
+dependencyVersionsReload.scheduler.enabled      # disable refreshing the latest version for the allow-listed dependencies
 dependencyVersionsReload.scheduler.interval     # delay between refresh
 ````
 
@@ -44,16 +44,9 @@ dependencyReload.scheduler.enabled   # disable the refresh of dependencies from 
 dependencyReload.scheduler.interval  # delay between refresh
 ````
 
-The metrics reporter is configured:
-
-````
-repositoryDependencies.metricsGauges.enabled   # enable the metrics reporter
-repositoryDependencies.metricsGauges.interval  # how often stats are uploaded
-````
-
 #### Admin endpoints
 
-As well as the configured scheduler, a refresh of the latest version for whitelisted dependencies can be initiated with:
+As well as the configured scheduler, a refresh of the latest version for allow-listed dependencies can be initiated with:
   `POST    /reload-latest-versions`
 
 Similarly, a refresh of dependencies from Github, for all modified repositories, can be initiated with:

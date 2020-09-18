@@ -23,7 +23,6 @@ import play.api.libs.concurrent.MaterializerProvider
 class Module() extends AbstractModule {
   override def configure(): Unit = {
     bind(classOf[scheduler.DataReloadScheduler        ]).asEagerSingleton()
-    bind(classOf[scheduler.MetricsScheduler           ]).asEagerSingleton()
     bind(classOf[scheduler.SlugMetadataUpdateScheduler]).asEagerSingleton()
     bind(classOf[scheduler.BobbyRulesSummaryScheduler ]).asEagerSingleton()
     bind(classOf[service.SlugInfoUpdatedHandler       ]).asEagerSingleton()

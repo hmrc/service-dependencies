@@ -30,7 +30,6 @@ import uk.gov.hmrc.servicedependencies.WireMockConfig
 import uk.gov.hmrc.servicedependencies.connector.model.RepositoryInfo
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.must.Matchers
-import uk.gov.hmrc.servicedependencies.model.Team
 
 class TeamsAndRepositoriesConnectorSpec
     extends AnyFreeSpec
@@ -53,7 +52,6 @@ class TeamsAndRepositoriesConnectorSpec
     stubRepositoriesWith404("non-existing-test-repo")
     stubAllRepositories()
     stubServices()
-    stubTeamsWithRepositories()
   }
 
   override protected def afterAll(): Unit =
@@ -98,16 +96,6 @@ class TeamsAndRepositoriesConnectorSpec
     }
   }
 
-  "Retrieving a list of all teams with repositories" - {
-    "correctly parse json response" in {
-      val teamsWithRepositories = connector.getTeamsWithRepositories.futureValue
-      teamsWithRepositories mustBe Seq(
-        Team("team A", Map("Service" -> Seq("service A", "service B"), "Library" -> Seq("library A")))
-      )
-    }
-  }
-
-
   private def loadFileAsString(filename: String): String =
     scala.io.Source.fromInputStream(getClass.getResourceAsStream(filename)).mkString
 
@@ -140,18 +128,4 @@ class TeamsAndRepositoriesConnectorSpec
           aResponse()
             .withStatus(200)
             .withBody(loadFileAsString(s"/teams-and-repositories/service-teams.json"))))
-
-  private def stubTeamsWithRepositories() =
-    wireMock.stub(
-      get(urlEqualTo(s"/api/teams_with_repositories"))
-        .willReturn(
-          aResponse()
-            .withStatus(200)
-            .withBody(s"""
-                         |[
-                         |{ "name": "team A", "repos": { "Service": [ "service A", "service B" ], "Library": [ "library A" ] } }
-                         |]
-               """.stripMargin)
-        )
-    )
 }

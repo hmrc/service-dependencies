@@ -22,34 +22,33 @@ import play.api.Configuration
 import scala.concurrent.duration.FiniteDuration
 
 case class SchedulerConfig(
-    enabledKey  : String
-  , enabled     : Boolean
-  , interval    : FiniteDuration
-  , initialDelay: FiniteDuration
-  )
+  enabledKey  : String,
+  enabled     : Boolean,
+  interval    : FiniteDuration,
+  initialDelay: FiniteDuration,
+)
 
 object SchedulerConfig {
   def apply(
-      configuration   : Configuration
-    , schedulerKey    : String
+    configuration   : Configuration,
+    schedulerKey    : String,
     ): SchedulerConfig = {
       val enabledKey      = s"$schedulerKey.enabled"
       val intervalKey     = s"$schedulerKey.interval"
       val initialDelayKey = s"$schedulerKey.initialDelay"
       SchedulerConfig(
-          enabledKey   = enabledKey
-        , enabled      = configuration.get[Boolean](enabledKey)
-        , interval     = configuration.get[FiniteDuration](intervalKey)
-        , initialDelay = configuration.get[FiniteDuration](initialDelayKey)
-        )
+        enabledKey   = enabledKey,
+        enabled      = configuration.get[Boolean](enabledKey),
+        interval     = configuration.get[FiniteDuration](intervalKey),
+        initialDelay = configuration.get[FiniteDuration](initialDelayKey),
+      )
     }
 }
 
 @Singleton
 class SchedulerConfigs @Inject()(configuration: Configuration) extends ConfigUtils {
-  val slugMetadataUpdate   = SchedulerConfig(configuration, "repositoryDependencies.slugJob"                   )
+  val slugMetadataUpdate   = SchedulerConfig(configuration, "repositoryDependencies.slugJob")
   val bobbyRulesSummary    = SchedulerConfig(configuration, "repositoryDependencies.bobbyRulesSummaryScheduler")
-  val metrics              = SchedulerConfig(configuration, "repositoryDependencies.metricsGauges"             )
-  val dependencyReload     = SchedulerConfig(configuration, "dependencyReload.scheduler"                       )
-  val latestVersionsReload = SchedulerConfig(configuration, "dependencyVersionsReload.scheduler"               )
+  val dependencyReload     = SchedulerConfig(configuration, "dependencyReload.scheduler")
+  val latestVersionsReload = SchedulerConfig(configuration, "dependencyVersionsReload.scheduler")
 }
