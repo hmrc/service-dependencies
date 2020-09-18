@@ -40,7 +40,4 @@ object Team {
     ~ (__ \ "repos").formatNullable[Map[String, Seq[String]]]
                     .inmap[Map[String, Seq[String]]](_.getOrElse(Map.empty), Some.apply)
     )(Team.apply, unlift(Team.unapply))
-
-  def normalisedName(name: String): String =
-    name.toLowerCase.replaceAll(" ", "_")
 }
