@@ -21,7 +21,7 @@ import cats.syntax.all._
 import com.google.inject.{Inject, Singleton}
 import play.api.Logging
 import uk.gov.hmrc.http.HeaderCarrier
-import uk.gov.hmrc.servicedependencies.connector.{ReleasesApiConnector, TeamsAndRepositoriesConnector}
+import uk.gov.hmrc.servicedependencies.connector.{GithubConnector, ReleasesApiConnector, TeamsAndRepositoriesConnector}
 import uk.gov.hmrc.servicedependencies.model._
 import uk.gov.hmrc.servicedependencies.persistence.derived.{DerivedGroupArtefactRepository, DerivedServiceDependenciesRepository}
 import uk.gov.hmrc.servicedependencies.persistence.{JdkVersionRepository, SlugInfoRepository}
@@ -30,29 +30,28 @@ import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
 class SlugInfoService @Inject()(
-                                 slugInfoRepository            : SlugInfoRepository,
-                                 serviceDependencyRepository   : DerivedServiceDependenciesRepository,
-                                 jdkVersionRepository          : JdkVersionRepository,
-                                 groupArtefactRepository       : DerivedGroupArtefactRepository,
-                                 teamsAndRepositoriesConnector : TeamsAndRepositoriesConnector,
-                                 serviceDeploymentsConnector   : ReleasesApiConnector
+  slugInfoRepository            : SlugInfoRepository,
+  serviceDependencyRepository   : DerivedServiceDependenciesRepository,
+  jdkVersionRepository          : JdkVersionRepository,
+  groupArtefactRepository       : DerivedGroupArtefactRepository,
+  teamsAndRepositoriesConnector : TeamsAndRepositoriesConnector,
+  releasesApiConnector          : ReleasesApiConnector,
+  githubConnector               : GithubConnector,
 )(implicit ec: ExecutionContext
 ) extends Logging {
-  def addSlugInfo(slug: SlugInfo): Future[Boolean] = {
+  def addSlugInfo(slug: SlugInfo): Future[Boolean] =
     for {
       // Determine which slug is latest from the existing collection, not relying on the potentially stale state of the message
-      added <- slugInfoRepository.add(slug.copy(latest = false))
-
-      isLatest        <- slugInfoRepository.getSlugInfos(name = slug.name, optVersion = None)
-        .map { case Nil      => true
-        case nonempty => val isLatest = nonempty.map(_.version).max == slug.version
-          logger.info(s"Slug ${slug.name} ${slug.version} isLatest=$isLatest (out of: ${nonempty.map(_.version).sorted})")
-          isLatest
-        }
-
-      _ <- if (isLatest) slugInfoRepository.markLatest(slug.name, slug.version) else Future(())
+      added    <- slugInfoRepository.add(slug.copy(latest = false))
+      isLatest <- slugInfoRepository.getSlugInfos(name = slug.name, optVersion = None)
+                    .map {
+                      case Nil      => true
+                      case nonempty => val isLatest = nonempty.map(_.version).max == slug.version
+                                       logger.info(s"Slug ${slug.name} ${slug.version} isLatest=$isLatest (out of: ${nonempty.map(_.version).sorted})")
+                                       isLatest
+                    }
+      _        <- if (isLatest) slugInfoRepository.markLatest(slug.name, slug.version) else Future(())
     } yield added
-  }
 
   def getSlugInfos(name: String, version: Option[String]): Future[Seq[SlugInfo]] =
     slugInfoRepository.getSlugInfos(name, version)
@@ -82,11 +81,11 @@ class SlugInfoService @Inject()(
       .findGroupsArtefacts
 
   def updateMetadata()(implicit hc: HeaderCarrier): Future[Unit] = {
-
     import ReleasesApiConnector._
     for {
       serviceNames           <- slugInfoRepository.getUniqueSlugNames
-      serviceDeploymentInfos <- serviceDeploymentsConnector.getWhatIsRunningWhere
+      serviceDeploymentInfos <- releasesApiConnector.getWhatIsRunningWhere
+      decomissionedServices  <- githubConnector.decomissionedServices
       allServiceDeployments  =  serviceNames.map { serviceName =>
                                   val deployments       = serviceDeploymentInfos.find(_.serviceName == serviceName).map(_.deployments)
                                   val deploymentsByFlag = List( (SlugInfoFlag.Production    , Environment.Production)
@@ -105,7 +104,9 @@ class SlugInfoService @Inject()(
                                                                     )
                                                                 }
                                   (serviceName, deploymentsByFlag)
-                                }
+                                } ++
+                                // clear Latest flag from decomissioned services
+                                decomissionedServices.map((_, List(SlugInfoFlag.Latest -> None)))
       _                      <- allServiceDeployments.toList.traverse { case (serviceName, deployments) =>
                                   deployments.traverse {
                                     case (flag, None         ) => slugInfoRepository.clearFlag(flag, serviceName)

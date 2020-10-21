@@ -18,19 +18,34 @@ package uk.gov.hmrc.servicedependencies.connector
 
 import java.util.Base64
 
+import com.typesafe.config.ConfigFactory
 import org.eclipse.egit.github.core.client.RequestException
 import org.eclipse.egit.github.core.{RepositoryContents, RequestError}
 import org.mockito.ArgumentMatchers.{any, eq => is}
 import org.mockito.MockitoSugar
 import org.scalatest.OptionValues
+import org.scalatest.concurrent.{IntegrationPatience, ScalaFutures}
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
+import play.api.Configuration
 import uk.gov.hmrc.githubclient._
+import uk.gov.hmrc.http.{HeaderCarrier, HttpClient, HttpResponse, UpstreamErrorResponse}
+import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
+import uk.gov.hmrc.servicedependencies.config.ServiceDependenciesConfig
 import uk.gov.hmrc.servicedependencies.model.Version
 
 import scala.collection.JavaConverters._
+import scala.concurrent.{ExecutionContext, Future}
 
-class GithubConnectorSpec extends AnyWordSpec with Matchers with MockitoSugar with OptionValues {
+class GithubConnectorSpec
+  extends AnyWordSpec
+     with Matchers
+     with MockitoSugar
+     with OptionValues
+     with ScalaFutures
+     with IntegrationPatience {
+
+  import ExecutionContext.Implicits.global
 
   "Finding multiple artifacts versions for a repository" should {
 
@@ -237,6 +252,27 @@ class GithubConnectorSpec extends AnyWordSpec with Matchers with MockitoSugar wi
         , GithubDependency(group = "uk.gov.hmrc"            , name = "play-health"            , version = Version("8.8.8"))
         ))
     }
+
+    "parse decommissioned services" in new TestSetup {
+      val body =
+        """|- database_name: false
+           |  service_name: cds-stub
+           |  ticket_id: SUP-11290
+           |- database_name: journey-backend-transport
+           |  service_name: journey-backend-transport
+           |  ticket_id: SUP-11286
+           """.stripMargin
+
+      when(mockedHttpClient.GET[Either[UpstreamErrorResponse, HttpResponse]](any(), any(), any())(any(), any(), any()))
+        .thenReturn(Future.successful(Right(HttpResponse(200, body))))
+
+
+      github.decomissionedServices(HeaderCarrier()).futureValue shouldBe
+        List(
+          "cds-stub"
+        , "journey-backend-transport"
+        )
+    }
   }
 
   trait TestSetup {
@@ -257,8 +293,17 @@ class GithubConnectorSpec extends AnyWordSpec with Matchers with MockitoSugar wi
       .thenReturn(List[RepositoryContents]().asJava)
 
     val mockedReleaseService = mock[ReleaseService]
+    val mockedHttpClient     = mock[HttpClient]
+    val mockServicesConfig   = mock[ServicesConfig]
 
-    val github = new GithubConnector(mockedReleaseService, mockContentsService)
+    val serviceDependenciesConfig = new ServiceDependenciesConfig(Configuration(ConfigFactory.load()), mockServicesConfig)
+
+    val github = new GithubConnector(
+        mockedReleaseService
+      , mockContentsService
+      , mockedHttpClient
+      , serviceDependenciesConfig
+      )
   }
 
   private def loadFileAsBase64String(filename: String): String = {

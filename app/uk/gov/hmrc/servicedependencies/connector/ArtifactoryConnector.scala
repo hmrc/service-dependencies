@@ -27,8 +27,8 @@ import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
 class ArtifactoryConnector @Inject()(
-  http  : HttpClient
-, config: ServiceDependenciesConfig
+  httpClient: HttpClient
+, config    : ServiceDependenciesConfig
 )(implicit ec: ExecutionContext
 ){
   import HttpReads.Implicits._
@@ -44,7 +44,7 @@ class ArtifactoryConnector @Inject()(
   , scalaVersion: ScalaVersion
   ): Future[Option[Version]] = {
     implicit val hc = HeaderCarrier(authorization = authorization)
-    http.GET[Option[HttpResponse]](
+    httpClient.GET[Option[HttpResponse]](
         url         = s"${config.artifactoryBase}/api/search/latestVersion"
       , queryParams = Map( "g" -> group
                          , "a" -> s"$artefact${scalaVersion.asClassifier}"

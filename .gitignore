@@ -20,6 +20,7 @@ precompiled
 /.project
 project/project
 project/target
+project/metals.sbt
 /RUNNING_PID
 server.pid
 /.settings
@@ -33,3 +34,4 @@ conf/local.conf
 nohup*
 .bloop
 .metals
+.vscode/

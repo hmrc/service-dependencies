@@ -30,21 +30,21 @@ import scala.concurrent.ExecutionContext
 
 
 class SlugMetadataUpdateScheduler @Inject()(
-    schedulerConfigs    : SchedulerConfigs,
-    slugInfoService     : SlugInfoService,
-    derivedViewsService : DerivedViewsService,
-    mongoLocks          : MongoLocks
-  )(implicit
-    actorSystem         : ActorSystem,
-    applicationLifecycle: ApplicationLifecycle,
-    ec                  : ExecutionContext
-  ) extends SchedulerUtils
-    with Logging {
+   schedulerConfigs          : SchedulerConfigs,
+   slugInfoService           : SlugInfoService,
+   derivedViewsService       : DerivedViewsService,
+   mongoLocks                : MongoLocks
+ )(implicit
+   actorSystem               : ActorSystem,
+   applicationLifecycle      : ApplicationLifecycle,
+   ec                        : ExecutionContext
+ ) extends SchedulerUtils
+   with Logging {
 
   implicit val hc: HeaderCarrier = HeaderCarrier()
 
   // create derived views if the scheduler is disabled, i.e. local dev etc
-  if(!schedulerConfigs.slugMetadataUpdate.enabled) {
+  if (!schedulerConfigs.slugMetadataUpdate.enabled) {
     logger.info("Pre-populating derived views...")
     derivedViewsService.generateAllViews()
   }
@@ -53,10 +53,9 @@ class SlugMetadataUpdateScheduler @Inject()(
     logger.info("Updating slug metadata")
     for {
       _ <- slugInfoService.updateMetadata()
-      _ = logger.info("Finished updating slug metadata")
+      _ =  logger.info("Finished updating slug metadata")
       _ <- derivedViewsService.generateAllViews()
-      _ = logger.info("Finished updating derived views")
+      _ =  logger.info("Finished updating derived views")
     } yield ()
   }
-
 }
