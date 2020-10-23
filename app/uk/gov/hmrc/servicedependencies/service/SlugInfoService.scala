@@ -105,8 +105,8 @@ class SlugInfoService @Inject()(
                                                                 }
                                   (serviceName, deploymentsByFlag)
                                 } ++
-                                // clear Latest flag from decomissioned services
-                                decomissionedServices.map((_, List(SlugInfoFlag.Latest -> None)))
+                                // clear flags from decomissioned services
+                                decomissionedServices.map((_, SlugInfoFlag.values.map(_ -> None)))
       _                      <- allServiceDeployments.toList.traverse { case (serviceName, deployments) =>
                                   deployments.traverse {
                                     case (flag, None         ) => slugInfoRepository.clearFlag(flag, serviceName)
