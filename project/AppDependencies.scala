@@ -18,7 +18,8 @@ private object AppDependencies {
     "com.lightbend.akka" %% "akka-stream-alpakka-sns"   % "1.1.2",
     "com.lightbend.akka" %% "akka-stream-alpakka-sqs"   % "1.1.2",
     // akka-stream-alpakka-sns depends on 10.1.10 which isn't compatible with play's akka version 10.1.11
-    "com.typesafe.akka"  %% "akka-http"                 % "10.1.11"
+    "com.typesafe.akka"  %% "akka-http"                 % "10.1.11",
+    "org.yaml"           %  "snakeyaml"                 % "1.25"
   )
 
   val test = Seq(

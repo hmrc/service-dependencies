@@ -16,6 +16,7 @@
 
 package uk.gov.hmrc.servicedependencies.config
 
+import com.typesafe.config.ConfigFactory
 import org.mockito.ArgumentMatchers.any
 import org.mockito.MockitoSugar
 import org.scalatest.OptionValues
@@ -32,10 +33,12 @@ class ServiceDependenciesConfigTest extends AnyFunSpec with Matchers with Mockit
 
     it("should load github credentials from config, when available") {
 
-      val config = Configuration(
-        "github.open.api.host" -> "https://api.test.url",
-        "github.open.api.user" -> "testuser",
-        "github.open.api.key"  -> "key123")
+
+      val config = Configuration(ConfigFactory.load()) ++ Configuration(
+        "github.open.api.host"     -> "https://api.test.url",
+        "github.open.api.user"     -> "testuser",
+        "github.open.api.key"      -> "key123"
+      )
 
       val serviceConfig = mock[ServicesConfig]
       when(serviceConfig.baseUrl(any())).thenReturn("")
@@ -48,9 +51,9 @@ class ServiceDependenciesConfigTest extends AnyFunSpec with Matchers with Mockit
     }
 
     it("should load the curatedDependencyConfig") {
-      val config =
-        Configuration("curated.config.path" -> "/config/test-config.json")
-
+      val config = Configuration(ConfigFactory.load()) ++ Configuration(
+        "curated.config.path" -> "/config/test-config.json"
+      )
 
       val serviceConfig = mock[ServicesConfig]
       when(serviceConfig.baseUrl(any())).thenReturn("")

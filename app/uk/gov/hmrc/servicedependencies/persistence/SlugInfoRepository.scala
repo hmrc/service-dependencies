@@ -18,9 +18,9 @@ package uk.gov.hmrc.servicedependencies.persistence
 
 import com.google.inject.{Inject, Singleton}
 import org.mongodb.scala.bson.BsonDocument
-import org.mongodb.scala.model.Filters.{and, equal}
+import org.mongodb.scala.model.Filters.{and, equal, in}
 import org.mongodb.scala.model.ReplaceOptions
-import org.mongodb.scala.model.Updates._
+import org.mongodb.scala.model.Updates.{combine, set}
 import play.api.Logging
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.servicedependencies.model._
@@ -89,6 +89,17 @@ class SlugInfoRepository @Inject()(
       .updateMany(
           filter = equal("name", name)
         , update = set(flag.asString, false)
+        )
+      .toFuture
+      .map(_ => ())
+  }
+
+  def clearFlags(flags: List[SlugInfoFlag], names: List[String]): Future[Unit] = {
+    logger.debug(s"clearing ${flags.size} flags on ${names.size} services")
+    collection
+      .updateMany(
+          filter = in("name", names:_ *)
+        , update = combine(flags.map(flag => set(flag.asString, false)):_ *)
         )
       .toFuture
       .map(_ => ())
