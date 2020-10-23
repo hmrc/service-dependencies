@@ -224,16 +224,12 @@ class SlugInfoServiceSpec
       when(boot.mockedGithubConnector.decomissionedServices)
         .thenReturn(Future.successful(decomissionedServices))
 
-      when(boot.mockedSlugInfoRepository.clearFlag(any[SlugInfoFlag], any[String]))
+      when(boot.mockedSlugInfoRepository.clearFlags(any[List[SlugInfoFlag]], any[List[String]]))
         .thenReturn(Future.successful(()))
 
       boot.service.updateMetadata().futureValue
 
-      decomissionedServices.foreach { serviceName =>
-        SlugInfoFlag.values.foreach { flag =>
-          verify(boot.mockedSlugInfoRepository).clearFlag(flag, serviceName)
-        }
-      }
+      verify(boot.mockedSlugInfoRepository).clearFlags(SlugInfoFlag.values, decomissionedServices)
     }
   }
 
