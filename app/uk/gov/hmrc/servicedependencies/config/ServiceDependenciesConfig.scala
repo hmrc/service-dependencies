@@ -37,9 +37,9 @@ class ServiceDependenciesConfig @Inject()(
   private def gitPath(gitFolder: String): String =
     s"${System.getProperty("user.home")}/.github/$gitFolder"
 
-  val host = configuration.getOptional[String]("github.open.api.host")
-  val user = configuration.getOptional[String]("github.open.api.user")
-  val key  = configuration.getOptional[String]("github.open.api.key")
+  private val host = configuration.getOptional[String]("github.open.api.host")
+  private val user = configuration.getOptional[String]("github.open.api.user")
+  private val key  = configuration.getOptional[String]("github.open.api.key")
 
   val githubApiOpenConfig: GitApiConfig =
     (user, key, host) match {
@@ -68,10 +68,6 @@ class ServiceDependenciesConfig @Inject()(
     }
     json.as[CuratedDependencyConfig]
   }
-
-
-  val githubAccesToken =
-    configuration.get[String]("github-access-token")
 
   val githubRawUrl =
     configuration.get[String]("github.open.api.rawurl")

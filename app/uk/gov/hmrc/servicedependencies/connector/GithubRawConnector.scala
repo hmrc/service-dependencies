@@ -40,7 +40,7 @@ class GithubRawConnector @Inject()(
       .GET[Either[UpstreamErrorResponse, HttpResponse]](
           url         = url
         , queryParams = Seq.empty
-        , headers     = Seq("Authorization" -> s"Token ${serviceDependenciesConfig.githubAccesToken}")
+        , headers     = Seq("Authorization" -> s"Token ${serviceDependenciesConfig.githubApiOpenConfig.key}")
         )
       .flatMap(
         _.flatMap(res =>
