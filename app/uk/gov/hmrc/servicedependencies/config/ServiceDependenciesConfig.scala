@@ -73,6 +73,6 @@ class ServiceDependenciesConfig @Inject()(
   val githubAccesToken =
     configuration.get[String]("github-access-token")
 
-  val decomissionedServicesUrl =
-    configuration.get[String]("decomissionedServicesUrl")
+  val githubRawUrl =
+    configuration.get[String]("github.open.api.rawurl")
 }

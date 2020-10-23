@@ -22,14 +22,11 @@ import javax.inject.Inject
 import org.apache.commons.codec.binary.Base64
 import org.eclipse.egit.github.core.client.RequestException
 import org.eclipse.egit.github.core.{IRepositoryIdProvider, RepositoryContents}
-import uk.gov.hmrc.http.{HeaderCarrier, HttpClient, HttpReads, HttpResponse, UpstreamErrorResponse}
 import uk.gov.hmrc.githubclient._
 import uk.gov.hmrc.servicedependencies.config.ServiceDependenciesConfig
 import uk.gov.hmrc.servicedependencies.model.Version
 import uk.gov.hmrc.servicedependencies.util.VersionParser
 
-import scala.concurrent.{ExecutionContext, Future}
-import scala.util.Try
 
 case class GithubDependency(
     group  : String
@@ -46,12 +43,8 @@ case class GithubSearchResults(
 case class GithubSearchError(message: String, throwable: Throwable)
 
 class GithubConnector(
-  releaseService           : ReleaseService
-, contentsService          : ExtendedContentsService
-, httpClient               : HttpClient
-, serviceDependenciesConfig: ServiceDependenciesConfig
-)(implicit
-  ec: ExecutionContext
+  releaseService : ReleaseService
+, contentsService: ExtendedContentsService
 ) {
 
   private val org = "HMRC"
@@ -124,41 +117,12 @@ class GithubConnector(
        case ex: RequestException if ex.getStatus == 404 => Nil
      }
   }
-
-  def decomissionedServices(implicit hc: HeaderCarrier): Future[List[String]] = {
-    import HttpReads.Implicits._
-    import _root_.org.yaml.snakeyaml.Yaml
-    import scala.collection.JavaConverters._
-    import cats.implicits._
-    httpClient
-      .GET[Either[UpstreamErrorResponse, HttpResponse]](
-          url         = serviceDependenciesConfig.decomissionedServicesUrl
-        , queryParams = Seq.empty
-        , headers     = Seq("Authorization" -> s"Token ${serviceDependenciesConfig.githubAccesToken}")
-        )
-      .flatMap(
-        _.flatMap(res =>
-           Try(
-             new Yaml()
-               .load(res.body)
-               .asInstanceOf[java.util.List[java.util.LinkedHashMap[String, String]]].asScala.toList
-               .flatMap(_.asScala.get("service_name").toList)
-           ).toEither
-         )
-         .leftMap(e => new RuntimeException(s"Failed to call ${serviceDependenciesConfig.decomissionedServicesUrl}: $e", e))
-         .fold(Future.failed, Future.successful)
-      )
-    }
 }
 
 
 class GithubConnectorProvider @Inject()(
-  config                   : ServiceDependenciesConfig
-, metrics                  : Metrics
-, httpClient               : HttpClient
-, serviceDependenciesConfig: ServiceDependenciesConfig
-)(implicit
-  ec: ExecutionContext
+  config : ServiceDependenciesConfig
+, metrics: Metrics
 ) extends Provider[GithubConnector] {
 
   class GithubMetrics(override val metricName: String) extends GithubClientMetrics {
@@ -180,7 +144,5 @@ class GithubConnectorProvider @Inject()(
     new GithubConnector(
         new ReleaseService(client)
       , new ExtendedContentsService(client)
-      , httpClient
-      , serviceDependenciesConfig
       )
 }

@@ -18,34 +18,24 @@ package uk.gov.hmrc.servicedependencies.connector
 
 import java.util.Base64
 
-import com.typesafe.config.ConfigFactory
 import org.eclipse.egit.github.core.client.RequestException
 import org.eclipse.egit.github.core.{RepositoryContents, RequestError}
 import org.mockito.ArgumentMatchers.{any, eq => is}
 import org.mockito.MockitoSugar
 import org.scalatest.OptionValues
-import org.scalatest.concurrent.{IntegrationPatience, ScalaFutures}
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
-import play.api.Configuration
 import uk.gov.hmrc.githubclient._
-import uk.gov.hmrc.http.{HeaderCarrier, HttpClient, HttpResponse, UpstreamErrorResponse}
 import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
-import uk.gov.hmrc.servicedependencies.config.ServiceDependenciesConfig
 import uk.gov.hmrc.servicedependencies.model.Version
 
 import scala.collection.JavaConverters._
-import scala.concurrent.{ExecutionContext, Future}
 
 class GithubConnectorSpec
   extends AnyWordSpec
      with Matchers
      with MockitoSugar
-     with OptionValues
-     with ScalaFutures
-     with IntegrationPatience {
-
-  import ExecutionContext.Implicits.global
+     with OptionValues {
 
   "Finding multiple artifacts versions for a repository" should {
 
@@ -55,7 +45,7 @@ class GithubConnectorSpec
         .thenReturn(List(new RepositoryContents()
           .setContent(loadFileAsBase64String("/github/contents_plugins_sbt_file_with_sbt_plugin.sbt.txt"))).asJava)
 
-      github.findVersionsForMultipleArtifacts(repoName).right.map(_.sbtPlugins.toList) shouldBe Right(List(
+      githubConnector.findVersionsForMultipleArtifacts(repoName).right.map(_.sbtPlugins.toList) shouldBe Right(List(
           GithubDependency(group = "uk.gov.hmrc"      , name = "sbt-auto-build"    , version = Version("1.3.0"))
         , GithubDependency(group = "uk.gov.hmrc"      , name = "sbt-git-versioning", version = Version("0.8.0"))
         , GithubDependency(group = "uk.gov.hmrc"      , name = "sbt-distributables", version = Version("0.9.0"))
@@ -67,7 +57,7 @@ class GithubConnectorSpec
       when(mockContentsService.getContents(any(), is(buildPropertiesFile)))
         .thenReturn(List(new RepositoryContents().setContent(loadFileAsBase64String("/github/build.properties"))).asJava)
 
-      github.findVersionsForMultipleArtifacts(repoName).right.map(_.others.toList) shouldBe Right(List(
+      githubConnector.findVersionsForMultipleArtifacts(repoName).right.map(_.others.toList) shouldBe Right(List(
         GithubDependency(name = "sbt", group = "org.scala-sbt", version = Version("0.13.15"))
       ))
     }
@@ -76,7 +66,7 @@ class GithubConnectorSpec
       when(mockContentsService.getContents(any(), is(buildPropertiesFile)))
         .thenReturn(List(new RepositoryContents().setContent(loadFileAsBase64String("/github/multiplekey_build.properties"))).asJava)
 
-      github.findVersionsForMultipleArtifacts(repoName).right.map(_.others.toList) shouldBe Right(List(
+      githubConnector.findVersionsForMultipleArtifacts(repoName).right.map(_.others.toList) shouldBe Right(List(
         GithubDependency(name = "sbt", group = "org.scala-sbt", version = Version("0.13.17"))
       ))
     }
@@ -93,7 +83,7 @@ class GithubConnectorSpec
         .thenReturn(List(new RepositoryContents()
           .setContent(loadFileAsBase64String("/github/contents_build_file_with_play_frontend.sbt.txt"))).asJava)
 
-      val results = github.findVersionsForMultipleArtifacts(repoName)
+      val results = githubConnector.findVersionsForMultipleArtifacts(repoName)
 
       results.right.map(_.sbtPlugins.toList) shouldBe Right(Seq(
           GithubDependency(group = "uk.gov.hmrc"      , name = "sbt-auto-build"    , version = Version("1.3.0"))
@@ -125,7 +115,7 @@ class GithubConnectorSpec
         .thenReturn(List(new RepositoryContents()
           .setContent(loadFileAsBase64String("/github/contents_sbt-build_file_with_play_frontend.build.txt"))).asJava)
 
-      github
+      githubConnector
         .findVersionsForMultipleArtifacts(repoName).right.map(_.libraries.toList) shouldBe Right(List(
             GithubDependency(group = "org.reactivemongo"      , name = "reactivemongo"          , version = Version("0.12.0"))
           , GithubDependency(group = "org.seleniumhq.selenium", name = "selenium-java"          , version = Version("2.43.1"))
@@ -156,7 +146,7 @@ class GithubConnectorSpec
         .thenReturn(List(new RepositoryContents()
           .setContent(loadFileAsBase64String("/github/contents_sbt-build_file_with_play_frontend.build.txt"))).asJava)
 
-      github
+      githubConnector
         .findVersionsForMultipleArtifacts(repoName) shouldBe Left(
           GithubSearchError("Unable to find dependencies for citizen-auth-frontend. Reason: 500", exception)
         )
@@ -167,7 +157,7 @@ class GithubConnectorSpec
         .thenReturn(List(new RepositoryContents()
           .setContent(loadFileAsBase64String("/github/contents_sbt-build_file_with_play_frontend.build.txt"))).asJava)
 
-      github
+      githubConnector
         .findVersionsForMultipleArtifacts(repoName).right.map(_.libraries.toList) shouldBe Right(List(
             GithubDependency(group = "org.reactivemongo"      , name = "reactivemongo"          , version = Version("0.12.0"))
           , GithubDependency(group = "org.seleniumhq.selenium", name = "selenium-java"          , version = Version("2.43.1"))
@@ -203,7 +193,7 @@ class GithubConnectorSpec
         .thenReturn(List(new RepositoryContents()
           .setContent(loadFileAsBase64String("/github/contents_appDependencies.scala.txt"))).asJava)
 
-      github.findVersionsForMultipleArtifacts(repoName).right.map(_.libraries.toList) shouldBe Right(List(
+      githubConnector.findVersionsForMultipleArtifacts(repoName).right.map(_.libraries.toList) shouldBe Right(List(
           GithubDependency(group = "uk.gov.hmrc"   , name = "play-reactivemongo"         , version = Version("5.2.0"))
         , GithubDependency(group = "uk.gov.hmrc"   , name = "microservice-bootstrap"     , version = Version("5.16.0"))
         , GithubDependency(group = "uk.gov.hmrc"   , name = "play-health"                , version = Version("2.1.0-play-25"))
@@ -232,7 +222,7 @@ class GithubConnectorSpec
         .thenReturn(List(new RepositoryContents()
           .setContent(loadFileAsBase64String("/github/contents_sbt-build_file_with_play_frontend.build.txt"))).asJava)
 
-      github.findVersionsForMultipleArtifacts(repoName).right.map(_.libraries.toList) shouldBe Right(List(
+      githubConnector.findVersionsForMultipleArtifacts(repoName).right.map(_.libraries.toList) shouldBe Right(List(
           GithubDependency(group = "org.reactivemongo"      , name = "reactivemongo"          , version = Version("0.12.0"))
         , GithubDependency(group = "org.seleniumhq.selenium", name = "selenium-java"          , version = Version("2.43.1"))
         , GithubDependency(group = "org.seleniumhq.selenium", name = "selenium-firefox-driver", version = Version("2.43.1"))
@@ -251,27 +241,6 @@ class GithubConnectorSpec
         , GithubDependency(group = "uk.gov.hmrc"            , name = "play-ui"                , version = Version("2.2.2"))
         , GithubDependency(group = "uk.gov.hmrc"            , name = "play-health"            , version = Version("8.8.8"))
         ))
-    }
-
-    "parse decommissioned services" in new TestSetup {
-      val body =
-        """|- database_name: false
-           |  service_name: cds-stub
-           |  ticket_id: SUP-11290
-           |- database_name: journey-backend-transport
-           |  service_name: journey-backend-transport
-           |  ticket_id: SUP-11286
-           """.stripMargin
-
-      when(mockedHttpClient.GET[Either[UpstreamErrorResponse, HttpResponse]](any(), any(), any())(any(), any(), any()))
-        .thenReturn(Future.successful(Right(HttpResponse(200, body))))
-
-
-      github.decomissionedServices(HeaderCarrier()).futureValue shouldBe
-        List(
-          "cds-stub"
-        , "journey-backend-transport"
-        )
     }
   }
 
@@ -293,16 +262,11 @@ class GithubConnectorSpec
       .thenReturn(List[RepositoryContents]().asJava)
 
     val mockedReleaseService = mock[ReleaseService]
-    val mockedHttpClient     = mock[HttpClient]
     val mockServicesConfig   = mock[ServicesConfig]
 
-    val serviceDependenciesConfig = new ServiceDependenciesConfig(Configuration(ConfigFactory.load()), mockServicesConfig)
-
-    val github = new GithubConnector(
+    val githubConnector = new GithubConnector(
         mockedReleaseService
       , mockContentsService
-      , mockedHttpClient
-      , serviceDependenciesConfig
       )
   }
 

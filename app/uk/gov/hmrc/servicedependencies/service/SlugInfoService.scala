@@ -21,7 +21,7 @@ import cats.syntax.all._
 import com.google.inject.{Inject, Singleton}
 import play.api.Logging
 import uk.gov.hmrc.http.HeaderCarrier
-import uk.gov.hmrc.servicedependencies.connector.{GithubConnector, ReleasesApiConnector, TeamsAndRepositoriesConnector}
+import uk.gov.hmrc.servicedependencies.connector.{GithubRawConnector, ReleasesApiConnector, TeamsAndRepositoriesConnector}
 import uk.gov.hmrc.servicedependencies.model._
 import uk.gov.hmrc.servicedependencies.persistence.derived.{DerivedGroupArtefactRepository, DerivedServiceDependenciesRepository}
 import uk.gov.hmrc.servicedependencies.persistence.{JdkVersionRepository, SlugInfoRepository}
@@ -36,7 +36,7 @@ class SlugInfoService @Inject()(
   groupArtefactRepository       : DerivedGroupArtefactRepository,
   teamsAndRepositoriesConnector : TeamsAndRepositoriesConnector,
   releasesApiConnector          : ReleasesApiConnector,
-  githubConnector               : GithubConnector,
+  githubRawConnector             : GithubRawConnector,
 )(implicit ec: ExecutionContext
 ) extends Logging {
   def addSlugInfo(slug: SlugInfo): Future[Boolean] =
@@ -85,7 +85,7 @@ class SlugInfoService @Inject()(
     for {
       serviceNames           <- slugInfoRepository.getUniqueSlugNames
       serviceDeploymentInfos <- releasesApiConnector.getWhatIsRunningWhere
-      decomissionedServices  <- githubConnector.decomissionedServices
+      decomissionedServices  <- githubRawConnector.decomissionedServices
       allServiceDeployments  =  serviceNames.map { serviceName =>
                                   val deployments       = serviceDeploymentInfos.find(_.serviceName == serviceName).map(_.deployments)
                                   val deploymentsByFlag = List( (SlugInfoFlag.Production    , Environment.Production)

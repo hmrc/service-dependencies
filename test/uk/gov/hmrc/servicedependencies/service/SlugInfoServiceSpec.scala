@@ -24,7 +24,7 @@ import org.scalatest.concurrent.{IntegrationPatience, ScalaFutures}
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 import uk.gov.hmrc.http.HeaderCarrier
-import uk.gov.hmrc.servicedependencies.connector.{GithubConnector, ReleasesApiConnector, TeamsAndRepositoriesConnector, TeamsForServices}
+import uk.gov.hmrc.servicedependencies.connector.{GithubRawConnector, ReleasesApiConnector, TeamsAndRepositoriesConnector, TeamsForServices}
 import uk.gov.hmrc.servicedependencies.model._
 import uk.gov.hmrc.servicedependencies.persistence.derived.{DerivedGroupArtefactRepository, DerivedServiceDependenciesRepository}
 import uk.gov.hmrc.servicedependencies.persistence.{JdkVersionRepository, SlugInfoRepository}
@@ -221,7 +221,7 @@ class SlugInfoServiceSpec
       when(boot.mockedReleasesApiConnector.getWhatIsRunningWhere)
         .thenReturn(Future.successful(List.empty))
 
-      when(boot.mockedGithubConnector.decomissionedServices)
+      when(boot.mockedRawGithubConnector.decomissionedServices)
         .thenReturn(Future.successful(decomissionedServices))
 
       when(boot.mockedSlugInfoRepository.clearFlags(any[List[SlugInfoFlag]], any[List[String]]))
@@ -240,7 +240,7 @@ class SlugInfoServiceSpec
   , mockedGroupArtefactRepository       : DerivedGroupArtefactRepository
   , mockedTeamsAndRepositoriesConnector : TeamsAndRepositoriesConnector
   , mockedReleasesApiConnector          : ReleasesApiConnector
-  , mockedGithubConnector               : GithubConnector
+  , mockedRawGithubConnector            : GithubRawConnector
   , service                             : SlugInfoService
   )
 
@@ -252,7 +252,7 @@ class SlugInfoServiceSpec
       val mockedGroupArtefactRepository           = mock[DerivedGroupArtefactRepository]
       val mockedTeamsAndRepositoriesConnector     = mock[TeamsAndRepositoriesConnector]
       val mockedReleasesApiConnector              = mock[ReleasesApiConnector]
-      val mockedGithubConnector                   = mock[GithubConnector]
+      val mockedRawGithubConnector                = mock[GithubRawConnector]
 
       val service = new SlugInfoService(
             mockedSlugInfoRepository
@@ -261,7 +261,7 @@ class SlugInfoServiceSpec
           , mockedGroupArtefactRepository
           , mockedTeamsAndRepositoriesConnector
           , mockedReleasesApiConnector
-          , mockedGithubConnector
+          , mockedRawGithubConnector
           )
       Boot(
           mockedSlugInfoRepository
@@ -270,7 +270,7 @@ class SlugInfoServiceSpec
         , mockedGroupArtefactRepository
         , mockedTeamsAndRepositoriesConnector
         , mockedReleasesApiConnector
-        , mockedGithubConnector
+        , mockedRawGithubConnector
         , service
         )
     }
