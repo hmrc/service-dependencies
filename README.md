@@ -1,6 +1,6 @@
 # service-dependencies
 
-[![Build Status](https://travis-ci.org/hmrc/service-dependencies.svg)](https://travis-ci.org/hmrc/service-dependencies) [ ![Download](https://api.bintray.com/packages/hmrc/releases/service-dependencies/images/download.svg) ](https://bintray.com/hmrc/releases/service-dependencies/_latestVersion)
+[ ![Download](https://api.bintray.com/packages/hmrc/releases/service-dependencies/images/download.svg) ](https://bintray.com/hmrc/releases/service-dependencies/_latestVersion)
 
 This service provides information about scala library dependencies across the platform.
 
