@@ -89,7 +89,7 @@ class SlugInfoService @Inject()(
                                   .map(_.map(_.name))
       decomissionedServices  <- githubRawConnector.decomissionedServices
       servicesToIgnore       =  decomissionedServices ++ serviceNames.diff(activeRepos)
-      allServiceDeployments  =  serviceNames.map { serviceName =>
+      allServiceDeployments  =  serviceNames.intersect(activeRepos).map { serviceName =>
                                   val deployments       = serviceDeploymentInfos.find(_.serviceName == serviceName).map(_.deployments)
                                   val deploymentsByFlag = List( (SlugInfoFlag.Production    , Environment.Production)
                                                               , (SlugInfoFlag.QA            , Environment.QA)
