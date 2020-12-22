@@ -85,7 +85,10 @@ class SlugInfoService @Inject()(
     for {
       serviceNames           <- slugInfoRepository.getUniqueSlugNames
       serviceDeploymentInfos <- releasesApiConnector.getWhatIsRunningWhere
+      activeRepos            <- teamsAndRepositoriesConnector.getAllRepositories(archived = Some(false))
+                                  .map(_.map(_.name))
       decomissionedServices  <- githubRawConnector.decomissionedServices
+      servicesToIgnore       =  decomissionedServices ++ serviceNames.diff(activeRepos)
       allServiceDeployments  =  serviceNames.map { serviceName =>
                                   val deployments       = serviceDeploymentInfos.find(_.serviceName == serviceName).map(_.deployments)
                                   val deploymentsByFlag = List( (SlugInfoFlag.Production    , Environment.Production)
@@ -111,7 +114,7 @@ class SlugInfoService @Inject()(
                                     case (flag, Some(version)) => slugInfoRepository.setFlag(flag, serviceName, version)
                                   }
                                 }
-      _                      <- slugInfoRepository.clearFlags(SlugInfoFlag.values, decomissionedServices)
+      _                      <- slugInfoRepository.clearFlags(SlugInfoFlag.values, servicesToIgnore)
     } yield ()
   }
 
