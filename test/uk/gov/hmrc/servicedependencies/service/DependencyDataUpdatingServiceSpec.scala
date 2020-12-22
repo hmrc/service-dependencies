@@ -102,7 +102,7 @@ class DependencyDataUpdatingServiceSpec
       when(boot.mockRepositoryDependenciesRepository.getAllEntries)
         .thenReturn(Future.successful(Seq(mongoRepositoryDependencies)))
 
-      when(boot.mockTeamsAndRepositoriesConnector.getAllRepositories(any()))
+      when(boot.mockTeamsAndRepositoriesConnector.getAllRepositories(archived = eqTo(Some(false)))(any()))
         .thenReturn(Future.successful(Seq(repositoryInfo)))
 
       when(boot.mockGithubConnector.findVersionsForMultipleArtifacts(any()))

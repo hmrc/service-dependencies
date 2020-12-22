@@ -89,10 +89,23 @@ class TeamsAndRepositoriesConnectorSpec
 
   "Retrieving a list of all repositories" - {
     "correctly parse json response" in {
-      val repositories = connector.getAllRepositories.futureValue
+      val repositories = connector.getAllRepositories(archived = None).futureValue
       repositories mustBe List(
-        RepositoryInfo("test-repo", Instant.parse("2015-09-15T16:27:38.000Z"), Instant.parse("2017-05-19T11:00:51.000Z"),"Prototype",None),
-        RepositoryInfo("another-repo", Instant.parse("2016-05-12T10:18:53.000Z"), Instant.parse("2016-05-12T15:43:32.000Z"),"Prototype",None))
+        RepositoryInfo(
+            name          = "test-repo"
+          , createdAt     = Instant.parse("2015-09-15T16:27:38.000Z")
+          , lastUpdatedAt = Instant.parse("2017-05-19T11:00:51.000Z")
+          , repoType      = "Prototype"
+          , language      = None
+          )
+        , RepositoryInfo(
+            name          = "another-repo"
+          , createdAt     = Instant.parse("2016-05-12T10:18:53.000Z")
+          , lastUpdatedAt = Instant.parse("2016-05-12T15:43:32.000Z")
+          , repoType      = "Prototype"
+          , language      = None
+          )
+        )
     }
   }
 

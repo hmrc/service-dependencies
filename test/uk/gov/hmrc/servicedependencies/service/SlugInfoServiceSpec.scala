@@ -16,8 +16,7 @@
 
 package uk.gov.hmrc.servicedependencies.service
 
-import java.time.LocalDateTime
-import java.time.Month.DECEMBER
+import java.time.{Instant, LocalDateTime}
 
 import org.mockito.scalatest.MockitoSugar
 import org.scalatest.concurrent.{IntegrationPatience, ScalaFutures}
@@ -25,6 +24,7 @@ import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.servicedependencies.connector.{GithubRawConnector, ReleasesApiConnector, TeamsAndRepositoriesConnector, TeamsForServices}
+import uk.gov.hmrc.servicedependencies.connector.model.RepositoryInfo
 import uk.gov.hmrc.servicedependencies.model._
 import uk.gov.hmrc.servicedependencies.persistence.derived.{DerivedGroupArtefactRepository, DerivedServiceDependenciesRepository}
 import uk.gov.hmrc.servicedependencies.persistence.{JdkVersionRepository, SlugInfoRepository}
@@ -224,12 +224,55 @@ class SlugInfoServiceSpec
       when(boot.mockedRawGithubConnector.decomissionedServices)
         .thenReturn(Future.successful(decomissionedServices))
 
+      when(boot.mockedTeamsAndRepositoriesConnector.getAllRepositories(eqTo(Some(false)))(any[HeaderCarrier]))
+        .thenReturn(Future.successful(Seq.empty))
+
       when(boot.mockedSlugInfoRepository.clearFlags(any[List[SlugInfoFlag]], any[List[String]]))
         .thenReturn(Future.successful(()))
 
       boot.service.updateMetadata().futureValue
 
       verify(boot.mockedSlugInfoRepository).clearFlags(SlugInfoFlag.values, decomissionedServices)
+    }
+
+    "clear latest flag for deleted/archived services" in {
+      val boot = Boot.init
+
+      def toRepositoryInfo(name: String) =
+        RepositoryInfo(
+            name          = name
+          , createdAt     = Instant.parse("2015-09-15T16:27:38.000Z")
+          , lastUpdatedAt = Instant.parse("2017-05-19T11:00:51.000Z")
+          , repoType      = "Service"
+          , language      = None
+          )
+
+
+      val knownSlugs          = List("service1", "service2", "service3")
+      val activeServices      = List("service1", "service3").map(toRepositoryInfo)
+      val servicesToBeCleared = List("service2")
+
+      when(boot.mockedSlugInfoRepository.getUniqueSlugNames)
+        .thenReturn(Future.successful(knownSlugs))
+
+      when(boot.mockedReleasesApiConnector.getWhatIsRunningWhere)
+        .thenReturn(Future.successful(List.empty))
+
+      when(boot.mockedRawGithubConnector.decomissionedServices)
+        .thenReturn(Future.successful(List.empty))
+
+      when(boot.mockedTeamsAndRepositoriesConnector.getAllRepositories(eqTo(Some(false)))(any[HeaderCarrier]))
+        .thenReturn(Future.successful(activeServices))
+
+      when(boot.mockedSlugInfoRepository.clearFlag(any[SlugInfoFlag], any[String]))
+        .thenReturn(Future.successful(()))
+
+      when(boot.mockedSlugInfoRepository.clearFlags(any[List[SlugInfoFlag]], any[List[String]]))
+        .thenReturn(Future.successful(()))
+
+      boot.service.updateMetadata().futureValue
+
+      verify(boot.mockedSlugInfoRepository).clearFlags(SlugInfoFlag.values, servicesToBeCleared)
     }
   }
 
@@ -280,7 +323,7 @@ class SlugInfoServiceSpec
     val SlugName = "a-slug-name"
     val sampleSlugInfo = SlugInfo(
       uri               = "sample-uri",
-      created           = LocalDateTime.of(2019, DECEMBER, 12, 13, 14),
+      created           = LocalDateTime.parse("2019-12-12T13:14:00"),
       name              = SlugName,
       version           = Version(major = 1, minor = 2, patch = 3),
       teams             = Nil,

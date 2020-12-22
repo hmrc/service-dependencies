@@ -54,8 +54,8 @@ class TeamsAndRepositoriesConnector @Inject()(
         .map(TeamsForServices.apply)
     }
 
-  def getAllRepositories(implicit hc: HeaderCarrier): Future[Seq[RepositoryInfo]] =
-    httpClient.GET[Seq[RepositoryInfo]](s"$teamsAndRepositoriesApiBase/api/repositories")
+  def getAllRepositories(archived: Option[Boolean])(implicit hc: HeaderCarrier): Future[Seq[RepositoryInfo]] =
+    httpClient.GET[Seq[RepositoryInfo]](s"$teamsAndRepositoriesApiBase/api/repositories${archived.map("?archived=" + _).getOrElse("")}")
 
   def getTeam(team: String)(implicit hc: HeaderCarrier): Future[Option[Map[String, Seq[String]]]] =
     httpClient.GET[Option[Map[String, Seq[String]]]](s"$teamsAndRepositoriesApiBase/api/teams/$team")

@@ -73,7 +73,7 @@ class DependencyDataUpdatingService @Inject()(
     logger.debug(s"reloading current dependencies data for all repositories...")
     for {
       currentDependencyEntries <- repositoryDependenciesRepository.getAllEntries
-      repos                    <- teamsAndRepositoriesConnector.getAllRepositories
+      repos                    <- teamsAndRepositoriesConnector.getAllRepositories(archived = Some(false))
       libraryDependencies      <- repos.toList.traverse { repo =>
                                     buildMongoRepositoryDependencies(repo, currentDependencyEntries)
                                       .traverse(repositoryDependenciesRepository.update)
