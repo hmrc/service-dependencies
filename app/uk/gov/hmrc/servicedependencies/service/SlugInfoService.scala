@@ -88,8 +88,8 @@ class SlugInfoService @Inject()(
       activeRepos            <- teamsAndRepositoriesConnector.getAllRepositories(archived = Some(false))
                                   .map(_.map(_.name))
       decomissionedServices  <- githubRawConnector.decomissionedServices
-      servicesToIgnore       =  decomissionedServices ++ serviceNames.diff(activeRepos)
-      allServiceDeployments  =  serviceNames.intersect(activeRepos).map { serviceName =>
+      inactiveServices       =  serviceNames.diff(activeRepos).toList
+      allServiceDeployments  =  serviceNames.map { serviceName =>
                                   val deployments       = serviceDeploymentInfos.find(_.serviceName == serviceName).map(_.deployments)
                                   val deploymentsByFlag = List( (SlugInfoFlag.Production    , Environment.Production)
                                                               , (SlugInfoFlag.QA            , Environment.QA)
@@ -114,7 +114,9 @@ class SlugInfoService @Inject()(
                                     case (flag, Some(version)) => slugInfoRepository.setFlag(flag, serviceName, version)
                                   }
                                 }
-      _                      <- slugInfoRepository.clearFlags(SlugInfoFlag.values, servicesToIgnore)
+      _                      <- slugInfoRepository.clearFlags(SlugInfoFlag.values, decomissionedServices)
+      _                      <- // we have found some "archived" projects which are still deployed, we will only remove the latest flag for them
+                                slugInfoRepository.clearFlags(List(SlugInfoFlag.Latest), inactiveServices)
     } yield ()
   }
 
