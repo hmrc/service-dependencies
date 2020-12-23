@@ -272,7 +272,7 @@ class SlugInfoServiceSpec
 
       boot.service.updateMetadata().futureValue
 
-      verify(boot.mockedSlugInfoRepository).clearFlags(SlugInfoFlag.values, servicesToBeCleared)
+      verify(boot.mockedSlugInfoRepository).clearFlags(List(SlugInfoFlag.Latest), servicesToBeCleared)
     }
   }
 
