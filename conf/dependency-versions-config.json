@@ -90,6 +90,7 @@
     { "group": "uk.gov.hmrc", "name": "order-id-encoder" },
     { "group": "uk.gov.hmrc", "name": "paye-tests-common" },
     { "group": "uk.gov.hmrc", "name": "performance-test-runner" },
+    { "group": "uk.gov.hmrc", "name": "platops-example-library" },
     { "group": "uk.gov.hmrc", "name": "play-async" },
     { "group": "uk.gov.hmrc", "name": "play-auditing" },
     { "group": "uk.gov.hmrc", "name": "play-auth" },
