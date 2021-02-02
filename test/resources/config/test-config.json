@@ -4,7 +4,7 @@
     { "group": "com.example.external", "name": "external-plugin", "latestVersion": "1.4.0" }
   ],
   "libraries": [
-    { "group": "uk.gov.hmrc", "name": "lib1" },
+    { "group": "uk.gov.hmrc", "name": "lib1", "latestVersion": "1.4.1" },
     { "group": "uk.gov.hmrc", "name": "lib2" }
   ],
   "others": [

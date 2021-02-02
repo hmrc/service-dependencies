@@ -45,7 +45,6 @@ object DependencyConfig {
 
   private def validateLatestVersion[C <: DependencyConfig](c: C): Reads[C] =
     (c.group.startsWith("uk.gov.hmrc"), c.latestVersion.isDefined) match {
-      case (true , true ) => failed("latestVersion is not needed for internal ('uk.gov.hmrc') libraries")
       case (false, false) => failed("latestVersion is required for external (non 'uk.gov.hmrc') libraries")
       case _              => Reads.pure(c)
     }
