@@ -66,7 +66,7 @@ class ServiceDependenciesConfigTest extends AnyFunSpec with Matchers with Mockit
                        , DependencyConfig(name = "external-plugin", group = "com.example.external", latestVersion = Some(Version("1.4.0")))
                        )
         , libraries  = List(
-                         DependencyConfig(name = "lib1", group = "uk.gov.hmrc", latestVersion = None)
+                         DependencyConfig(name = "lib1", group = "uk.gov.hmrc", latestVersion = Some(Version("1.4.1")))
                        , DependencyConfig(name = "lib2", group = "uk.gov.hmrc", latestVersion = None)
                        )
         , others     = List(
