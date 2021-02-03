@@ -12,7 +12,7 @@ The service gathers the following information:
 * Dependencies from SBT build files read from github
   * Covers all HMRC repos, including services, libraries, prototypes
   * Limited to an allow-list of dependencies, doesn't cover transitive
-  * Only shows the dependencies from master branch
+  * Only shows the dependencies from the main branch
 
 * Dependencies included in a Slug
   * Covers all services that generate a slug

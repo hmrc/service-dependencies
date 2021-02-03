@@ -180,11 +180,6 @@
     "ver": "7.5.0"
   },
   {
-    "an": "whitelist-campaign-frontend",
-    "env": "prod-right",
-    "ver": "0.12.0"
-  },
-  {
     "an": "pbik-frontend",
     "env": "prod-left-a",
     "ver": "1.8.6"

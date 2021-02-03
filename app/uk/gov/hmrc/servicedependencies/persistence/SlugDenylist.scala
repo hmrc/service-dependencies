@@ -16,10 +16,10 @@
 
 package uk.gov.hmrc.servicedependencies.persistence
 
-object SlugBlacklist {
+object SlugDenylist {
   // Initially populated with list of services without owners
   // Consider moving list to Mongo to enable updates without rebuilding/deploying
-  val blacklistedSlugs = List(
+  val denylistedSlugs = List(
         "admin-message-router"
       , "agent-fi-agent-frontend"
       , "agents-enrolment-store-stubs"
@@ -73,5 +73,5 @@ object SlugBlacklist {
       , "your-tax-calculator-frontend"
       )
 
-    val blacklistedSlugsSet = blacklistedSlugs.toSet
+    val denylistedSlugsSet = denylistedSlugs.toSet
 }

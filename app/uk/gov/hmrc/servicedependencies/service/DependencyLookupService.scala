@@ -25,7 +25,7 @@ import javax.inject.Inject
 import play.api.Logging
 import uk.gov.hmrc.servicedependencies.connector.ServiceConfigsConnector
 import uk.gov.hmrc.servicedependencies.model._
-import uk.gov.hmrc.servicedependencies.persistence.{BobbyRulesSummaryRepository, SlugBlacklist, SlugInfoRepository}
+import uk.gov.hmrc.servicedependencies.persistence.{BobbyRulesSummaryRepository, SlugDenylist, SlugInfoRepository}
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -93,7 +93,7 @@ object DependencyLookupService {
 
   def buildLookup(slugs: Seq[SlugInfo]): Map[String, Map[Version, Set[ServiceDependency]]] =
     slugs
-      .filterNot(slug => SlugBlacklist.blacklistedSlugsSet.contains(slug.name))
+      .filterNot(slug => SlugDenylist.denylistedSlugsSet.contains(slug.name))
       .flatMap(slug => slug.dependencies.map(deps => (slug, deps)))
       .groupBy { case (_, dep) => s"${dep.group}:${dep.artifact}" }
       .mapValues(
