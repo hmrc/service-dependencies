@@ -4,14 +4,14 @@ private object AppDependencies {
   import play.core.PlayVersion
   import play.sbt.PlayImport._
 
-  val bootstrapPlayVersion = "2.15.0"
-  val hmrcMongoVersion     = "0.28.0"
+  val bootstrapPlayVersion = "2.25.0"
+  val hmrcMongoVersion     = "0.33.0"
 
   val compile = Seq(
     ws,
     ehcache,
     "uk.gov.hmrc"        %% "bootstrap-backend-play-27" % bootstrapPlayVersion,
-    "uk.gov.hmrc"        %% "github-client"             % "2.11.0",
+    "uk.gov.hmrc"        %% "github-client"             % "2.16.0",
     "uk.gov.hmrc.mongo"  %% "hmrc-mongo-play-27"        % hmrcMongoVersion,
     "org.typelevel"      %% "cats-core"                 % "2.1.1",
     "org.apache.commons" %  "commons-compress"          % "1.19",
