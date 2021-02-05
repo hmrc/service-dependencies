@@ -26,7 +26,7 @@ import org.mongodb.scala.model.Sorts._
 import play.api.Logging
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.servicedependencies.model.SlugInfoFlag
-import uk.gov.hmrc.servicedependencies.persistence.SlugBlacklist
+import uk.gov.hmrc.servicedependencies.persistence.SlugDenylist
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -81,9 +81,9 @@ class DerivedMongoCollections @Inject()(mongoComponent: MongoComponent)(implicit
           SlugInfoFlag.values.map(f => equal(f.asString, true)): _* // filter for reachable data
         )
       ),
-      // remove blacklisted slugs
+      // remove denylisted slugs
       `match`(
-        nin("name", SlugBlacklist.blacklistedSlugs)
+        nin("name", SlugDenylist.denylistedSlugs)
       ),
       // project relevant fields including the dependencies list
       project(

@@ -540,11 +540,6 @@
     "ver": "4.9.0"
   },
   {
-    "an": "whitelist-campaign-frontend",
-    "env": "qa-right",
-    "ver": "0.12.0"
-  },
-  {
     "an": "paye",
     "env": "qa-right",
     "ver": "9.2.0"

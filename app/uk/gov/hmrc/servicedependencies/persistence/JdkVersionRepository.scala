@@ -40,7 +40,7 @@ class JdkVersionRepository @Inject()(
         and(
           equal(flag.asString, true),
           notEqual("java.version", ""),
-          nin("name", SlugBlacklist.blacklistedSlugs)
+          nin("name", SlugDenylist.denylistedSlugs)
         )
       ),
       project(
