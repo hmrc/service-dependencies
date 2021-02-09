@@ -35,17 +35,19 @@ trait SchedulerUtils extends Logging {
         val interval     = schedulerConfig.interval
         logger.info(s"Enabling $label scheduler, running every $interval (after initial delay $initialDelay)")
         val cancellable =
-          actorSystem.scheduler.schedule(initialDelay, interval) {
-            val start = System.currentTimeMillis
-            logger.info(s"Scheduler $label started")
-            f.map { res =>
-              logger.info(s"Scheduler $label finished - took ${System.currentTimeMillis - start} millis")
-              res
+          actorSystem.scheduler.scheduleWithFixedDelay(initialDelay, interval)(
+            toRunnable {
+              val start = System.currentTimeMillis
+              logger.info(s"Scheduler $label started")
+              f.map { res =>
+                logger.info(s"Scheduler $label finished - took ${System.currentTimeMillis - start} millis")
+                res
+              }
+              .recover {
+                case e => logger.error(s"$label interrupted after ${System.currentTimeMillis - start} millis because: ${e.getMessage}", e)
+              }
             }
-            .recover {
-              case e => logger.error(s"$label interrupted after ${System.currentTimeMillis - start} millis because: ${e.getMessage}", e)
-            }
-          }
+          )
         applicationLifecycle.addStopHook(() => Future(cancellable.cancel()))
       } else
         logger.info(s"$label scheduler is DISABLED. to enable, configure configure ${schedulerConfig.enabledKey}=true in config.")
@@ -62,6 +64,10 @@ trait SchedulerUtils extends Logging {
           case None    => logger.debug(s"$label cannot run - lock ${lock.lockId} is taken... skipping update")
         }
   }
+
+  private def toRunnable(f: => Unit): Runnable =
+    new Runnable { override def run(): Unit = f }
+
 }
 
 object SchedulerUtils extends SchedulerUtils
