@@ -19,8 +19,7 @@ package uk.gov.hmrc.servicedependencies.connector
 import cats.implicits._
 import javax.inject.{Inject, Singleton}
 import org.yaml.snakeyaml.Yaml
-import uk.gov.hmrc.http.{HeaderCarrier, HttpClient, HttpReads, HttpResponse, UpstreamErrorResponse}
-import uk.gov.hmrc.http.StringContextOps
+import uk.gov.hmrc.http.{HeaderCarrier, HttpClient, HttpReads, HttpResponse, StringContextOps, UpstreamErrorResponse}
 import uk.gov.hmrc.servicedependencies.config.ServiceDependenciesConfig
 import HttpReads.Implicits._
 
