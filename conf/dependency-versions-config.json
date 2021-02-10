@@ -127,7 +127,7 @@
     { "group": "uk.gov.hmrc", "name": "portal-metrics" },
     { "group": "uk.gov.hmrc", "name": "raml-tools" },
     { "group": "uk.gov.hmrc", "name": "reactive-circuit-breaker" },
-    { "group": "uk.gov.hmrc", "name": "reactivemongo" },
+    { "group": "uk.gov.hmrc", "name": "reactivemongo", "latestVersion": "0.18.8" },
     { "group": "uk.gov.hmrc", "name": "reactivemongo-bson" },
     { "group": "uk.gov.hmrc", "name": "reactivemongo-bson-macros" },
     { "group": "uk.gov.hmrc", "name": "reactivemongo-json" },

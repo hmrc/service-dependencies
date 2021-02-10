@@ -34,7 +34,7 @@ object SlugInfoFlag {
   val values: List[SlugInfoFlag] = List(Latest, Production, ExternalTest, Staging, QA, Integration, Development)
 
   def parse(s: String): Option[SlugInfoFlag] = {
-    if( s.equalsIgnoreCase("externaltest") )
+    if (s.equalsIgnoreCase("externaltest"))
       Some(ExternalTest)
     else
       values.find(_.asString.equalsIgnoreCase(s))
@@ -46,12 +46,14 @@ case class SlugDependency(
   version    : String,
   group      : String,
   artifact   : String,
-  meta       : String = "")
+  meta       : String = ""
+)
 
 case class JavaInfo(
   version : String,
   vendor  : String,
-  kind    : String)
+  kind    : String
+)
 
 case class SlugInfo(
   uri              : String,
@@ -72,13 +74,13 @@ case class SlugInfo(
   development      : Boolean,
   externalTest     : Boolean,
   integration      : Boolean
-  ) {
-    lazy val classpathOrderedDependencies: List[SlugDependency] =
-      classpath.split(":")
-        .map(_.replace("$lib_dir/", s"./$name-$version/lib/"))
-        .toList
-        .flatMap(path => dependencies.filter(_.path == path))
-  }
+) {
+  lazy val classpathOrderedDependencies: List[SlugDependency] =
+    classpath.split(":")
+      .map(_.replace("$lib_dir/", s"./$name-$version/lib/"))
+      .toList
+      .flatMap(path => dependencies.filter(_.path == path))
+}
 
 case class DependencyConfig(
     group   : String
@@ -94,7 +96,7 @@ trait MongoSlugInfoFormats {
   implicit val javaFormat: OFormat[JavaInfo] =
     Json.format[JavaInfo]
 
-  val ignore = OWrites[Any](_ => Json.obj())
+  def ignore[A] = OWrites[A](_ => Json.obj())
 
   implicit val slugInfoFormat: OFormat[SlugInfo] =
     ( (__ \ "uri"              ).format[String]
@@ -102,7 +104,7 @@ trait MongoSlugInfoFormats {
     ~ (__ \ "name"             ).format[String]
     ~ (__ \ "version"          ).format[String].inmap[Version](Version.apply, _.original)
     ~ OFormat( Reads.pure(List.empty[String])
-             , ignore
+             , ignore[List[String]]
              )
     ~ (__ \ "runnerVersion"    ).format[String]
     ~ (__ \ "classpath"        ).format[String]
@@ -128,19 +130,17 @@ trait MongoSlugInfoFormats {
     ~ (__ \ "depVersion"       ).format[String]
     )(ServiceDependency.apply, unlift(ServiceDependency.unapply))
 
-  implicit val jdkVersionFormat: OFormat[JDKVersion] = {
+  implicit val jdkVersionFormat: OFormat[JDKVersion] =
     ( (__ \ "name"             ).format[String]
     ~ (__ \ "version"          ).format[String]
     ~ (__ \ "vendor"           ).formatWithDefault[String]("Oracle")
     ~ (__ \ "kind"             ).formatWithDefault[String]("JDK")
     )(JDKVersion.apply, unlift(JDKVersion.unapply))
-  }
 
-  implicit val groupArtefactsFormat: OFormat[GroupArtefacts] = {
+  implicit val groupArtefactsFormat: OFormat[GroupArtefacts] =
     ( (__ \ "_id"              ).format[String]
     ~ (__ \ "artifacts"        ).format[List[String]]
     )(GroupArtefacts.apply, unlift(GroupArtefacts.unapply))
-  }
 
   val dcFormat: OFormat[DependencyConfig] =
     ( (__ \ "group"   ).format[String]

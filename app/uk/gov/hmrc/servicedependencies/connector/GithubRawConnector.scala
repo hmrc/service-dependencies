@@ -19,7 +19,7 @@ package uk.gov.hmrc.servicedependencies.connector
 import cats.implicits._
 import javax.inject.{Inject, Singleton}
 import org.yaml.snakeyaml.Yaml
-import uk.gov.hmrc.http.{HeaderCarrier, HttpClient, HttpReads, HttpResponse, UpstreamErrorResponse}
+import uk.gov.hmrc.http.{HeaderCarrier, HttpClient, HttpReads, HttpResponse, StringContextOps, UpstreamErrorResponse}
 import uk.gov.hmrc.servicedependencies.config.ServiceDependenciesConfig
 import HttpReads.Implicits._
 
@@ -35,12 +35,11 @@ class GithubRawConnector @Inject()(
   ec: ExecutionContext
 ) {
   def decomissionedServices(implicit hc: HeaderCarrier): Future[List[String]] = {
-    val url = s"${serviceDependenciesConfig.githubRawUrl}/hmrc/deploy-with-docktor/master/decommissioning/microservices-to-decommission.yaml"
+    val url = url"${serviceDependenciesConfig.githubRawUrl}/hmrc/deploy-with-docktor/master/decommissioning/microservices-to-decommission.yaml"
     httpClient
       .GET[Either[UpstreamErrorResponse, HttpResponse]](
-          url         = url
-        , queryParams = Seq.empty
-        , headers     = Seq("Authorization" -> s"Token ${serviceDependenciesConfig.githubApiOpenConfig.key}")
+          url     = url
+        , headers = Seq("Authorization" -> s"Token ${serviceDependenciesConfig.githubApiOpenConfig.key}")
         )
       .flatMap(
         _.flatMap(res =>
