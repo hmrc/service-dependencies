@@ -20,6 +20,7 @@ import javax.inject.Inject
 import play.api.cache.AsyncCacheApi
 import play.api.libs.json.Reads
 import uk.gov.hmrc.http.{HeaderCarrier, HttpClient, HttpReads}
+import uk.gov.hmrc.http.StringContextOps
 import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
 import uk.gov.hmrc.servicedependencies.connector.model.DeprecatedDependencies
 import uk.gov.hmrc.servicedependencies.model.BobbyRules
@@ -45,7 +46,7 @@ class ServiceConfigsConnector @Inject()(
   def getBobbyRules: Future[BobbyRules] =
     cache.getOrElseUpdate("bobby-rules", cacheExpiration) {
       httpClient
-        .GET[DeprecatedDependencies](s"$serviceUrl/bobby/rules")
+        .GET[DeprecatedDependencies](url"$serviceUrl/bobby/rules")
         .map { dependencies =>
            BobbyRules(
              (dependencies.libraries.toList ++ dependencies.plugins)

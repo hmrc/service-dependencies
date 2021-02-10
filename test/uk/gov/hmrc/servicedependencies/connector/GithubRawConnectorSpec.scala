@@ -52,7 +52,7 @@ class GithubRawConnectorSpec
            |  ticket_id: SUP-11286
            """.stripMargin
 
-      when(boot.mockHttpClient.GET[Either[UpstreamErrorResponse, HttpResponse]](any(), any(), any())(any(), any(), any()))
+      when(boot.mockHttpClient.GET[Either[UpstreamErrorResponse, HttpResponse]](any(), any())(any(), any(), any()))
         .thenReturn(Future.successful(Right(HttpResponse(200, body))))
 
       boot.githubRawConnector.decomissionedServices(HeaderCarrier()).futureValue shouldBe
