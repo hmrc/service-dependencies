@@ -22,7 +22,7 @@ import cats.implicits._
 import com.google.inject.{Inject, Singleton}
 import org.mongodb.scala.bson.BsonDocument
 import org.mongodb.scala.model.Filters.equal
-import org.mongodb.scala.model.Indexes.hashed
+import org.mongodb.scala.model.Indexes.ascending
 import org.mongodb.scala.model.{Collation, CollationStrength, IndexModel, IndexOptions, ReplaceOptions}
 import play.api.Logging
 import uk.gov.hmrc.mongo.MongoComponent
@@ -45,13 +45,15 @@ class RepositoryDependenciesRepository @Inject()(
   , domainFormat   = MongoRepositoryDependencies.format
   , indexes        = Seq(
                          IndexModel(
-                           hashed("repositoryName")
+                           ascending("repositoryName")
                          , IndexOptions()
                            .name("RepositoryNameIdx")
                            .collation(caseInsensitiveCollation)
                            .background(true)
+                           .unique(true)
                          )
                      )
+  , replaceIndexes = true
   , optSchema      = Some(BsonDocument(MongoRepositoryDependencies.schema))
   ) with Logging {
 
@@ -80,12 +82,7 @@ class RepositoryDependenciesRepository @Inject()(
         .find(equal("repositoryName", repositoryName))
         .collation(caseInsensitiveCollation)
         .toFuture
-        .map {
-          case data if data.size > 1 =>
-            throw new RuntimeException(
-              s"There should only be '1' record per repository! for $repositoryName there are ${data.size}")
-          case data => data.headOption
-        }
+        .map(_.headOption)
     }
 
   def getAllEntries: Future[Seq[MongoRepositoryDependencies]] = {
