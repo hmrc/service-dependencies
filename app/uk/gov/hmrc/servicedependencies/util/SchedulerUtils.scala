@@ -19,7 +19,7 @@ package uk.gov.hmrc.servicedependencies.util
 import akka.actor.ActorSystem
 import play.api.Logging
 import play.api.inject.ApplicationLifecycle
-import uk.gov.hmrc.mongo.lock.MongoLockService
+import uk.gov.hmrc.mongo.lock.LockService
 import uk.gov.hmrc.servicedependencies.config.SchedulerConfig
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -36,7 +36,7 @@ trait SchedulerUtils extends Logging {
         logger.info(s"Enabling $label scheduler, running every $interval (after initial delay $initialDelay)")
         val cancellable =
           actorSystem.scheduler.scheduleWithFixedDelay(initialDelay, interval)(
-            toRunnable {
+            () => {
               val start = System.currentTimeMillis
               logger.info(s"Scheduler $label started")
               f.map { res =>
@@ -55,19 +55,15 @@ trait SchedulerUtils extends Logging {
   def scheduleWithLock(
       label          : String
     , schedulerConfig: SchedulerConfig
-    , lock           : MongoLockService
+    , lock           : LockService
     )(f: => Future[Unit]
     )(implicit actorSystem: ActorSystem, applicationLifecycle: ApplicationLifecycle, ec: ExecutionContext) =
       schedule(label, schedulerConfig) {
-        lock.attemptLockWithRelease(f).map {
+        lock.withLock(f).map {
           case Some(_) => logger.debug(s"$label finished - releasing lock")
           case None    => logger.debug(s"$label cannot run - lock ${lock.lockId} is taken... skipping update")
         }
   }
-
-  private def toRunnable(f: => Unit): Runnable =
-    new Runnable { override def run(): Unit = f }
-
 }
 
 object SchedulerUtils extends SchedulerUtils

@@ -37,7 +37,7 @@ class IntegrationTestController @Inject()(
   )(implicit ec: ExecutionContext
   ) extends BackendController(cc) {
 
-  implicit val dtf                = MongoJavatimeFormats.localDateFormats
+  implicit val dtf                = MongoJavatimeFormats.localDateFormat
   implicit val vf                 = Version.apiFormat
   implicit val latestVersionReads = Json.using[Json.WithDefaultValues].reads[MongoLatestVersion]
   implicit val dependenciesReads  = Json.using[Json.WithDefaultValues].reads[MongoRepositoryDependencies]

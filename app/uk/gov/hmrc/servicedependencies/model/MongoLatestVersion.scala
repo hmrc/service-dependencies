@@ -31,7 +31,7 @@ case class MongoLatestVersion(
 
 object MongoLatestVersion {
   implicit val format = {
-    implicit val iF  = MongoJavatimeFormats.instantFormats
+    implicit val iF  = MongoJavatimeFormats.instantFormat
     implicit val vf  = Version.mongoFormat
     ( (__ \ "name"        ).format[String]
     ~ (__ \ "group"       ).format[String]

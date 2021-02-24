@@ -68,7 +68,7 @@ object BobbyRulesSummary {
     )(BobbyRulesSummary.apply _, unlift(BobbyRulesSummary.unapply _))
 
   val mongoFormat: OFormat[BobbyRulesSummary] = {
-    implicit val ldf = MongoJavatimeFormats.localDateFormats
+    implicit val ldf = MongoJavatimeFormats.localDateFormat
     ( (__ \ "date"     ).format[LocalDate]
     ~ (__ \ "summary"  ).format[Map[(BobbyRule, SlugInfoFlag), Int]]
     )(BobbyRulesSummary.apply _, unlift(BobbyRulesSummary.unapply _))
