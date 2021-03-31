@@ -37,7 +37,8 @@ import scala.util.control.NonFatal
 
 class SlugInfoUpdatedHandler @Inject()(
   config         : ArtefactReceivingConfig,
-  slugInfoService: SlugInfoService
+  slugInfoService: SlugInfoService,
+  messageHandling: SqsMessageHandling
 )(implicit
    actorSystem : ActorSystem,
    materializer: Materializer,
@@ -71,9 +72,7 @@ class SlugInfoUpdatedHandler @Inject()(
   if (config.isEnabled) {
     SqsSource(
       queueUrl, settings)(awsSqsClient)
-      .map(logMessage)
-      .map(messageToSlugInfo)
-      .mapAsync(10)(saveSlugInfo)
+      .mapAsync(10)(processMessage)
       .map(acknowledge)
       .withAttributes(ActorAttributes.supervisionStrategy {
         case NonFatal(e) => logger.error(s"Failed to process sqs messages: ${e.getMessage}", e); Supervision.Restart
@@ -81,16 +80,19 @@ class SlugInfoUpdatedHandler @Inject()(
       .runWith(SqsAckSink(queueUrl)(awsSqsClient))
   }
 
-  private def logMessage(message: Message): Message = {
+  private def processMessage(message: Message): Future[(Message, Either[String, Unit])] = {
     logger.debug(s"Starting processing message with ID '${message.messageId()}'")
-    message
+    for {
+      parsed <- messageHandling
+                  .decompress(message.body)
+                  .map(decompressed =>
+                    Json.parse(decompressed)
+                    .validate(ApiSlugInfoFormats.slugReads)
+                    .asEither.left.map(error => s"Could not parse message with ID '${message.messageId}'.  Reason: " + error.toString)
+                  )
+      saved  <- saveSlugInfo((message, parsed))
+    } yield saved
   }
-
-  private def messageToSlugInfo(message: Message): (Message, Either[String, SlugInfo]) =
-    (message,
-      Json.parse(message.body())
-        .validate(ApiSlugInfoFormats.slugReads)
-        .asEither.left.map(error => s"Could not parse message with ID '${message.messageId()}'.  Reason: " + error.toString()))
 
   private def saveSlugInfo(input: (Message, Either[String, SlugInfo])): Future[(Message, Either[String, Unit])] = {
     val (message, eitherSlugInfo) = input
