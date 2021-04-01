@@ -113,9 +113,9 @@ trait MongoSlugInfoFormats {
     ~ (__ \ "classpath"        ).format[String]
     ~ (__ \ "java"             ).format[JavaInfo]
     ~ (__ \ "dependencies"     ).format[List[SlugDependency]]
-    ~ (__ \ "dependencyDot" \ "compile").format[String]
-    ~ (__ \ "dependencyDot" \ "test"   ).format[String]
-    ~ (__ \ "dependencyDot" \ "build"  ).format[String]
+    ~ (__ \ "dependencyDot" \ "compile").formatWithDefault[String]("")
+    ~ (__ \ "dependencyDot" \ "test"   ).formatWithDefault[String]("")
+    ~ (__ \ "dependencyDot" \ "build"  ).formatWithDefault[String]("")
     ~ (__ \ "applicationConfig").formatWithDefault[String]("")
     ~ (__ \ "slugConfig"       ).formatWithDefault[String]("")
     ~ (__ \ "latest"           ).format[Boolean]
@@ -237,9 +237,9 @@ trait ApiSlugInfoFormats {
     ~ (__ \ "classpath"        ).format[String]
     ~ (__ \ "java"             ).format[JavaInfo]
     ~ (__ \ "dependencies"     ).format[List[SlugDependency]]
-    ~ (__ \ "dependencyDot" \ "compile").formatWithDefault("")
-    ~ (__ \ "dependencyDot" \ "test"   ).formatWithDefault("")
-    ~ (__ \ "dependencyDot" \ "build"  ).formatWithDefault("")
+    ~ (__ \ "dependencyDot" \ "compile").format[String]
+    ~ (__ \ "dependencyDot" \ "test"   ).format[String]
+    ~ (__ \ "dependencyDot" \ "build"  ).format[String]
     ~ (__ \ "applicationConfig").format[String]
     ~ (__ \ "slugConfig"       ).format[String]
     ~ (__ \ "latest"           ).format[Boolean]
