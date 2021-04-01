@@ -1,0 +1,484 @@
+digraph "dependency-graph" {
+    graph[rankdir="LR"]
+    edge [
+        arrowtail="none"
+    ]
+    "uk.gov.hmrc:file-upload_2.12:2.22.0"[label=<uk.gov.hmrc<BR/><B>file-upload_2.12</B><BR/>2.22.0> style=""]
+    "javax.activation:javax.activation-api:1.2.0"[label=<javax.activation<BR/><B>javax.activation-api</B><BR/>1.2.0> style=""]
+    "commons-io:commons-io:2.6"[label=<commons-io<BR/><B>commons-io</B><BR/>2.6> style=""]
+    "com.typesafe:config:1.4.0"[label=<com.typesafe<BR/><B>config</B><BR/>1.4.0> style=""]
+    "com.typesafe:config:1.3.4"[label=<com.typesafe<BR/><B>config</B><BR/>1.3.4> style="stroke-dasharray: 5,5"]
+    "com.typesafe:config:1.3.3"[label=<com.typesafe<BR/><B>config</B><BR/>1.3.3> style="stroke-dasharray: 5,5"]
+    "com.typesafe:config:1.3.3"[label=<com.typesafe<BR/><B>config</B><BR/>1.3.3> style="stroke-dasharray: 5,5"]
+    "com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.9.10"[label=<com.fasterxml.jackson.datatype<BR/><B>jackson-datatype-jsr310</B><BR/>2.9.10> style=""]
+    "com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.9.8"[label=<com.fasterxml.jackson.datatype<BR/><B>jackson-datatype-jsr310</B><BR/>2.9.8> style="stroke-dasharray: 5,5"]
+    "com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.9.7"[label=<com.fasterxml.jackson.datatype<BR/><B>jackson-datatype-jsr310</B><BR/>2.9.7> style="stroke-dasharray: 5,5"]
+    "com.google.inject:guice:4.2.2"[label=<com.google.inject<BR/><B>guice</B><BR/>4.2.2> style=""]
+    "org.joda:joda-convert:2.2.0"[label=<org.joda<BR/><B>joda-convert</B><BR/>2.2.0> style=""]
+    "org.joda:joda-convert:1.9.2"[label=<org.joda<BR/><B>joda-convert</B><BR/>1.9.2> style="stroke-dasharray: 5,5"]
+    "com.typesafe.play:shaded-oauth:2.0.8"[label=<com.typesafe.play<BR/><B>shaded-oauth</B><BR/>2.0.8> style=""]
+    "org.scala-lang.modules:scala-xml_2.12:1.2.0"[label=<org.scala-lang.modules<BR/><B>scala-xml_2.12</B><BR/>1.2.0> style=""]
+    "org.scala-lang.modules:scala-xml_2.12:1.1.1"[label=<org.scala-lang.modules<BR/><B>scala-xml_2.12</B><BR/>1.1.1> style="stroke-dasharray: 5,5"]
+    "org.scala-lang.modules:scala-xml_2.12:1.0.6"[label=<org.scala-lang.modules<BR/><B>scala-xml_2.12</B><BR/>1.0.6> style="stroke-dasharray: 5,5"]
+    "com.google.inject.extensions:guice-assistedinject:4.2.2"[label=<com.google.inject.extensions<BR/><B>guice-assistedinject</B><BR/>4.2.2> style=""]
+    "com.iheart:ficus_2.12:1.4.7"[label=<com.iheart<BR/><B>ficus_2.12</B><BR/>1.4.7> style=""]
+    "com.typesafe.akka:akka-http-core_2.12:10.1.12"[label=<com.typesafe.akka<BR/><B>akka-http-core_2.12</B><BR/>10.1.12> style=""]
+    "io.dropwizard.metrics:metrics-core:4.1.5"[label=<io.dropwizard.metrics<BR/><B>metrics-core</B><BR/>4.1.5> style=""]
+    "io.dropwizard.metrics:metrics-core:4.0.5"[label=<io.dropwizard.metrics<BR/><B>metrics-core</B><BR/>4.0.5> style="stroke-dasharray: 5,5"]
+    "io.dropwizard.metrics:metrics-core:4.0.5"[label=<io.dropwizard.metrics<BR/><B>metrics-core</B><BR/>4.0.5> style="stroke-dasharray: 5,5"]
+    "io.dropwizard.metrics:metrics-core:4.0.5"[label=<io.dropwizard.metrics<BR/><B>metrics-core</B><BR/>4.0.5> style="stroke-dasharray: 5,5"]
+    "io.dropwizard.metrics:metrics-core:4.0.5"[label=<io.dropwizard.metrics<BR/><B>metrics-core</B><BR/>4.0.5> style="stroke-dasharray: 5,5"]
+    "uk.gov.hmrc:bootstrap-common-play-27_2.12:2.25.0"[label=<uk.gov.hmrc<BR/><B>bootstrap-common-play-27_2.12</B><BR/>2.25.0> style=""]
+    "uk.gov.hmrc:play-auditing-play-27_2.12:5.8.0"[label=<uk.gov.hmrc<BR/><B>play-auditing-play-27_2.12</B><BR/>5.8.0> style=""]
+    "org.slf4j:log4j-over-slf4j:1.7.26"[label=<org.slf4j<BR/><B>log4j-over-slf4j</B><BR/>1.7.26> style=""]
+    "joda-time:joda-time:2.10.1"[label=<joda-time<BR/><B>joda-time</B><BR/>2.10.1> style=""]
+    "joda-time:joda-time:2.9.9"[label=<joda-time<BR/><B>joda-time</B><BR/>2.9.9> style="stroke-dasharray: 5,5"]
+    "joda-time:joda-time:2.9.9"[label=<joda-time<BR/><B>joda-time</B><BR/>2.9.9> style="stroke-dasharray: 5,5"]
+    "uk.gov.hmrc:time_2.12:3.3.0"[label=<uk.gov.hmrc<BR/><B>time_2.12</B><BR/>3.3.0> style=""]
+    "org.reactivemongo:reactivemongo-shaded:0.18.8"[label=<org.reactivemongo<BR/><B>reactivemongo-shaded</B><BR/>0.18.8> style=""]
+    "org.typelevel:cats-core_2.12:2.2.0"[label=<org.typelevel<BR/><B>cats-core_2.12</B><BR/>2.2.0> style=""]
+    "com.typesafe.play:play-ws-standalone-xml_2.12:2.0.8"[label=<com.typesafe.play<BR/><B>play-ws-standalone-xml_2.12</B><BR/>2.0.8> style=""]
+    "com.typesafe.play:filters-helpers_2.12:2.7.5"[label=<com.typesafe.play<BR/><B>filters-helpers_2.12</B><BR/>2.7.5> style=""]
+    "com.typesafe.play:filters-helpers_2.12:2.7.4"[label=<com.typesafe.play<BR/><B>filters-helpers_2.12</B><BR/>2.7.4> style="stroke-dasharray: 5,5"]
+    "com.typesafe.play:filters-helpers_2.12:2.7.4"[label=<com.typesafe.play<BR/><B>filters-helpers_2.12</B><BR/>2.7.4> style="stroke-dasharray: 5,5"]
+    "com.typesafe.play:filters-helpers_2.12:2.7.4"[label=<com.typesafe.play<BR/><B>filters-helpers_2.12</B><BR/>2.7.4> style="stroke-dasharray: 5,5"]
+    "com.typesafe.play:play-ahc-ws_2.12:2.7.5"[label=<com.typesafe.play<BR/><B>play-ahc-ws_2.12</B><BR/>2.7.5> style=""]
+    "com.typesafe.play:play-ahc-ws_2.12:2.7.4"[label=<com.typesafe.play<BR/><B>play-ahc-ws_2.12</B><BR/>2.7.4> style="stroke-dasharray: 5,5"]
+    "org.reactivemongo:reactivemongo-bson-macros_2.12:0.18.8"[label=<org.reactivemongo<BR/><B>reactivemongo-bson-macros_2.12</B><BR/>0.18.8> style=""]
+    "org.scala-stm:scala-stm_2.12:0.8"[label=<org.scala-stm<BR/><B>scala-stm_2.12</B><BR/>0.8> style=""]
+    "org.scala-lang.modules:scala-parser-combinators_2.12:1.1.2"[label=<org.scala-lang.modules<BR/><B>scala-parser-combinators_2.12</B><BR/>1.1.2> style=""]
+    "com.google.j2objc:j2objc-annotations:1.1"[label=<com.google.j2objc<BR/><B>j2objc-annotations</B><BR/>1.1> style=""]
+    "com.typesafe.play:play-json-joda_2.12:2.6.14"[label=<com.typesafe.play<BR/><B>play-json-joda_2.12</B><BR/>2.6.14> style=""]
+    "com.google.errorprone:error_prone_annotations:2.2.0"[label=<com.google.errorprone<BR/><B>error_prone_annotations</B><BR/>2.2.0> style=""]
+    "org.reactivestreams:reactive-streams:1.0.2"[label=<org.reactivestreams<BR/><B>reactive-streams</B><BR/>1.0.2> style=""]
+    "org.reactivestreams:reactive-streams:1.0.0"[label=<org.reactivestreams<BR/><B>reactive-streams</B><BR/>1.0.0> style="stroke-dasharray: 5,5"]
+    "org.scala-lang.modules:scala-java8-compat_2.12:0.9.0"[label=<org.scala-lang.modules<BR/><B>scala-java8-compat_2.12</B><BR/>0.9.0> style=""]
+    "org.scala-lang.modules:scala-java8-compat_2.12:0.8.0"[label=<org.scala-lang.modules<BR/><B>scala-java8-compat_2.12</B><BR/>0.8.0> style="stroke-dasharray: 5,5"]
+    "aopalliance:aopalliance:1.0"[label=<aopalliance<BR/><B>aopalliance</B><BR/>1.0> style=""]
+    "com.typesafe.play:play-server_2.12:2.7.5"[label=<com.typesafe.play<BR/><B>play-server_2.12</B><BR/>2.7.5> style=""]
+    "uk.gov.hmrc:secure_2.12:7.11.0"[label=<uk.gov.hmrc<BR/><B>secure_2.12</B><BR/>7.11.0> style=""]
+    "org.slf4j:jul-to-slf4j:1.7.26"[label=<org.slf4j<BR/><B>jul-to-slf4j</B><BR/>1.7.26> style=""]
+    "uk.gov.hmrc:http-core_2.12:2.4.0"[label=<uk.gov.hmrc<BR/><B>http-core_2.12</B><BR/>2.4.0> style=""]
+    "ch.qos.logback:logback-classic:1.2.3"[label=<ch.qos.logback<BR/><B>logback-classic</B><BR/>1.2.3> style=""]
+    "com.typesafe.play:play_2.12:2.7.5"[label=<com.typesafe.play<BR/><B>play_2.12</B><BR/>2.7.5> style=""]
+    "com.typesafe.play:play_2.12:2.7.4"[label=<com.typesafe.play<BR/><B>play_2.12</B><BR/>2.7.4> style="stroke-dasharray: 5,5"]
+    "com.typesafe.play:play_2.12:2.7.4"[label=<com.typesafe.play<BR/><B>play_2.12</B><BR/>2.7.4> style="stroke-dasharray: 5,5"]
+    "com.typesafe.play:play_2.12:2.7.4"[label=<com.typesafe.play<BR/><B>play_2.12</B><BR/>2.7.4> style="stroke-dasharray: 5,5"]
+    "org.reactivemongo:reactivemongo-bson_2.12:0.18.8"[label=<org.reactivemongo<BR/><B>reactivemongo-bson_2.12</B><BR/>0.18.8> style=""]
+    "com.typesafe.akka:akka-parsing_2.12:10.1.12"[label=<com.typesafe.akka<BR/><B>akka-parsing_2.12</B><BR/>10.1.12> style=""]
+    "org.scala-lang:scala-reflect:2.12.12"[label=<org.scala-lang<BR/><B>scala-reflect</B><BR/>2.12.12> style=""]
+    "io.dropwizard.metrics:metrics-graphite:4.1.5"[label=<io.dropwizard.metrics<BR/><B>metrics-graphite</B><BR/>4.1.5> style=""]
+    "com.typesafe.play:cachecontrol_2.12:1.1.7"[label=<com.typesafe.play<BR/><B>cachecontrol_2.12</B><BR/>1.1.7> style=""]
+    "org.checkerframework:checker-qual:2.5.2"[label=<org.checkerframework<BR/><B>checker-qual</B><BR/>2.5.2> style=""]
+    "uk.gov.hmrc:http-verbs_2.12:11.6.0"[label=<uk.gov.hmrc<BR/><B>http-verbs_2.12</B><BR/>11.6.0> style=""]
+    "com.google.code.findbugs:jsr305:3.0.2"[label=<com.google.code.findbugs<BR/><B>jsr305</B><BR/>3.0.2> style=""]
+    "com.typesafe.play:play-iteratees-reactive-streams_2.12:2.6.1"[label=<com.typesafe.play<BR/><B>play-iteratees-reactive-streams_2.12</B><BR/>2.6.1> style=""]
+    "javax.xml.bind:jaxb-api:2.3.1"[label=<javax.xml.bind<BR/><B>jaxb-api</B><BR/>2.3.1> style=""]
+    "com.typesafe.play:play-ws-standalone-json_2.12:2.0.8"[label=<com.typesafe.play<BR/><B>play-ws-standalone-json_2.12</B><BR/>2.0.8> style=""]
+    "com.typesafe.play:shaded-asynchttpclient:2.0.8"[label=<com.typesafe.play<BR/><B>shaded-asynchttpclient</B><BR/>2.0.8> style=""]
+    "org.reactivemongo:reactivemongo_2.12:0.18.8"[label=<org.reactivemongo<BR/><B>reactivemongo_2.12</B><BR/>0.18.8> style=""]
+    "com.fasterxml.jackson.core:jackson-annotations:2.10.3"[label=<com.fasterxml.jackson.core<BR/><B>jackson-annotations</B><BR/>2.10.3> style=""]
+    "com.fasterxml.jackson.core:jackson-annotations:2.9.10"[label=<com.fasterxml.jackson.core<BR/><B>jackson-annotations</B><BR/>2.9.10> style="stroke-dasharray: 5,5"]
+    "com.fasterxml.jackson.core:jackson-annotations:2.9.8"[label=<com.fasterxml.jackson.core<BR/><B>jackson-annotations</B><BR/>2.9.8> style="stroke-dasharray: 5,5"]
+    "com.fasterxml.jackson.core:jackson-annotations:2.9.10"[label=<com.fasterxml.jackson.core<BR/><B>jackson-annotations</B><BR/>2.9.10> style="stroke-dasharray: 5,5"]
+    "com.fasterxml.jackson.core:jackson-annotations:2.9.7"[label=<com.fasterxml.jackson.core<BR/><B>jackson-annotations</B><BR/>2.9.7> style="stroke-dasharray: 5,5"]
+    "io.dropwizard.metrics:metrics-jvm:4.0.5"[label=<io.dropwizard.metrics<BR/><B>metrics-jvm</B><BR/>4.0.5> style=""]
+    "com.google.guava:listenablefuture:9999.0-empty-to-avoid-conflict-with-guava"[label=<com.google.guava<BR/><B>listenablefuture</B><BR/>9999.0-empty-to-avoid-conflict-with-guava> style=""]
+    "com.typesafe.akka:akka-protobuf_2.12:2.5.31"[label=<com.typesafe.akka<BR/><B>akka-protobuf_2.12</B><BR/>2.5.31> style=""]
+    "com.typesafe.akka:akka-testkit_2.12:2.5.26"[label=<com.typesafe.akka<BR/><B>akka-testkit_2.12</B><BR/>2.5.26> style=""]
+    "com.google.guava:guava:27.1-jre"[label=<com.google.guava<BR/><B>guava</B><BR/>27.1-jre> style=""]
+    "com.google.guava:guava:25.1-android"[label=<com.google.guava<BR/><B>guava</B><BR/>25.1-android> style="stroke-dasharray: 5,5"]
+    "com.typesafe.akka:akka-actor_2.12:2.5.31"[label=<com.typesafe.akka<BR/><B>akka-actor_2.12</B><BR/>2.5.31> style=""]
+    "com.typesafe.akka:akka-actor_2.12:2.5.26"[label=<com.typesafe.akka<BR/><B>akka-actor_2.12</B><BR/>2.5.26> style="stroke-dasharray: 5,5"]
+    "com.typesafe.akka:akka-actor_2.12:2.5.25"[label=<com.typesafe.akka<BR/><B>akka-actor_2.12</B><BR/>2.5.25> style="stroke-dasharray: 5,5"]
+    "io.dropwizard.metrics:metrics-logback:4.0.5"[label=<io.dropwizard.metrics<BR/><B>metrics-logback</B><BR/>4.0.5> style=""]
+    "javax.transaction:jta:1.1"[label=<javax.transaction<BR/><B>jta</B><BR/>1.1> style=""]
+    "com.fasterxml.jackson.core:jackson-core:2.10.3"[label=<com.fasterxml.jackson.core<BR/><B>jackson-core</B><BR/>2.10.3> style=""]
+    "com.fasterxml.jackson.core:jackson-core:2.9.10"[label=<com.fasterxml.jackson.core<BR/><B>jackson-core</B><BR/>2.9.10> style="stroke-dasharray: 5,5"]
+    "com.fasterxml.jackson.core:jackson-core:2.9.10"[label=<com.fasterxml.jackson.core<BR/><B>jackson-core</B><BR/>2.9.10> style="stroke-dasharray: 5,5"]
+    "com.fasterxml.jackson.core:jackson-core:2.9.8"[label=<com.fasterxml.jackson.core<BR/><B>jackson-core</B><BR/>2.9.8> style="stroke-dasharray: 5,5"]
+    "com.fasterxml.jackson.core:jackson-core:2.9.10"[label=<com.fasterxml.jackson.core<BR/><B>jackson-core</B><BR/>2.9.10> style="stroke-dasharray: 5,5"]
+    "com.fasterxml.jackson.core:jackson-core:2.9.7"[label=<com.fasterxml.jackson.core<BR/><B>jackson-core</B><BR/>2.9.7> style="stroke-dasharray: 5,5"]
+    "com.typesafe.play:play-streams_2.12:2.7.5"[label=<com.typesafe.play<BR/><B>play-streams_2.12</B><BR/>2.7.5> style=""]
+    "com.typesafe:ssl-config-core_2.12:0.4.1"[label=<com.typesafe<BR/><B>ssl-config-core_2.12</B><BR/>0.4.1> style=""]
+    "com.typesafe:ssl-config-core_2.12:0.3.8"[label=<com.typesafe<BR/><B>ssl-config-core_2.12</B><BR/>0.3.8> style="stroke-dasharray: 5,5"]
+    "com.typesafe:ssl-config-core_2.12:0.3.8"[label=<com.typesafe<BR/><B>ssl-config-core_2.12</B><BR/>0.3.8> style="stroke-dasharray: 5,5"]
+    "org.apache.commons:commons-lang3:3.9"[label=<org.apache.commons<BR/><B>commons-lang3</B><BR/>3.9> style=""]
+    "org.slf4j:jcl-over-slf4j:1.7.26"[label=<org.slf4j<BR/><B>jcl-over-slf4j</B><BR/>1.7.26> style=""]
+    "commons-codec:commons-codec:1.13"[label=<commons-codec<BR/><B>commons-codec</B><BR/>1.13> style=""]
+    "commons-codec:commons-codec:1.8"[label=<commons-codec<BR/><B>commons-codec</B><BR/>1.8> style="stroke-dasharray: 5,5"]
+    "commons-codec:commons-codec:1.12"[label=<commons-codec<BR/><B>commons-codec</B><BR/>1.12> style="stroke-dasharray: 5,5"]
+    "com.typesafe.play:play-ws-standalone_2.12:2.0.8"[label=<com.typesafe.play<BR/><B>play-ws-standalone_2.12</B><BR/>2.0.8> style=""]
+    "uk.gov.hmrc:bootstrap-backend-play-27_2.12:2.25.0"[label=<uk.gov.hmrc<BR/><B>bootstrap-backend-play-27_2.12</B><BR/>2.25.0> style=""]
+    "com.typesafe.play:twirl-api_2.12:1.4.2"[label=<com.typesafe.play<BR/><B>twirl-api_2.12</B><BR/>1.4.2> style=""]
+    "com.typesafe.play:play-json_2.12:2.7.4"[label=<com.typesafe.play<BR/><B>play-json_2.12</B><BR/>2.7.4> style=""]
+    "com.typesafe.play:play-json_2.12:2.6.14"[label=<com.typesafe.play<BR/><B>play-json_2.12</B><BR/>2.6.14> style="stroke-dasharray: 5,5"]
+    "com.fasterxml.jackson.core:jackson-databind:2.10.3"[label=<com.fasterxml.jackson.core<BR/><B>jackson-databind</B><BR/>2.10.3> style=""]
+    "com.fasterxml.jackson.core:jackson-databind:2.9.10"[label=<com.fasterxml.jackson.core<BR/><B>jackson-databind</B><BR/>2.9.10> style="stroke-dasharray: 5,5"]
+    "com.fasterxml.jackson.core:jackson-databind:2.9.10"[label=<com.fasterxml.jackson.core<BR/><B>jackson-databind</B><BR/>2.9.10> style="stroke-dasharray: 5,5"]
+    "com.fasterxml.jackson.core:jackson-databind:2.9.8"[label=<com.fasterxml.jackson.core<BR/><B>jackson-databind</B><BR/>2.9.8> style="stroke-dasharray: 5,5"]
+    "com.fasterxml.jackson.core:jackson-databind:2.9.10.1"[label=<com.fasterxml.jackson.core<BR/><B>jackson-databind</B><BR/>2.9.10.1> style="stroke-dasharray: 5,5"]
+    "com.fasterxml.jackson.core:jackson-databind:2.9.5"[label=<com.fasterxml.jackson.core<BR/><B>jackson-databind</B><BR/>2.9.5> style="stroke-dasharray: 5,5"]
+    "com.fasterxml.jackson.core:jackson-databind:2.9.6"[label=<com.fasterxml.jackson.core<BR/><B>jackson-databind</B><BR/>2.9.6> style="stroke-dasharray: 5,5"]
+    "com.fasterxml.jackson.core:jackson-databind:2.9.7"[label=<com.fasterxml.jackson.core<BR/><B>jackson-databind</B><BR/>2.9.7> style="stroke-dasharray: 5,5"]
+    "org.apache.logging.log4j:log4j-api:2.12.1"[label=<org.apache.logging.log4j<BR/><B>log4j-api</B><BR/>2.12.1> style=""]
+    "com.github.nscala-time:nscala-time_2.12:2.22.0"[label=<com.github.nscala-time<BR/><B>nscala-time_2.12</B><BR/>2.22.0> style=""]
+    "com.github.nscala-time:nscala-time_2.12:2.16.0"[label=<com.github.nscala-time<BR/><B>nscala-time_2.12</B><BR/>2.16.0> style="stroke-dasharray: 5,5"]
+    "com.kenshoo:metrics-play_2.12:2.7.3_0.8.2"[label=<com.kenshoo<BR/><B>metrics-play_2.12</B><BR/>2.7.3_0.8.2> style=""]
+    "org.bouncycastle:bcprov-jdk15on:1.60"[label=<org.bouncycastle<BR/><B>bcprov-jdk15on</B><BR/>1.60> style=""]
+    "io.dropwizard.metrics:metrics-json:4.0.5"[label=<io.dropwizard.metrics<BR/><B>metrics-json</B><BR/>4.0.5> style=""]
+    "com.fasterxml.jackson.datatype:jackson-datatype-jdk8:2.9.10"[label=<com.fasterxml.jackson.datatype<BR/><B>jackson-datatype-jdk8</B><BR/>2.9.10> style=""]
+    "com.fasterxml.jackson.datatype:jackson-datatype-jdk8:2.9.8"[label=<com.fasterxml.jackson.datatype<BR/><B>jackson-datatype-jdk8</B><BR/>2.9.8> style="stroke-dasharray: 5,5"]
+    "com.fasterxml.jackson.datatype:jackson-datatype-jdk8:2.9.7"[label=<com.fasterxml.jackson.datatype<BR/><B>jackson-datatype-jdk8</B><BR/>2.9.7> style="stroke-dasharray: 5,5"]
+    "com.typesafe.play:play-iteratees_2.12:2.6.1"[label=<com.typesafe.play<BR/><B>play-iteratees_2.12</B><BR/>2.6.1> style=""]
+    "com.typesafe.play:play-exceptions:2.7.5"[label=<com.typesafe.play<BR/><B>play-exceptions</B><BR/>2.7.5> style=""]
+    "com.typesafe.play:play-akka-http-server_2.12:2.7.5"[label=<com.typesafe.play<BR/><B>play-akka-http-server_2.12</B><BR/>2.7.5> style=""]
+    "javax.inject:javax.inject:1"[label=<javax.inject<BR/><B>javax.inject</B><BR/>1> style=""]
+    "com.typesafe.play:play-ws_2.12:2.7.5"[label=<com.typesafe.play<BR/><B>play-ws_2.12</B><BR/>2.7.5> style=""]
+    "org.typelevel:macro-compat_2.12:1.1.1"[label=<org.typelevel<BR/><B>macro-compat_2.12</B><BR/>1.1.1> style=""]
+    "uk.gov.hmrc:logback-json-logger_2.12:4.8.0"[label=<uk.gov.hmrc<BR/><B>logback-json-logger_2.12</B><BR/>4.8.0> style=""]
+    "dnsjava:dnsjava:2.1.9"[label=<dnsjava<BR/><B>dnsjava</B><BR/>2.1.9> style=""]
+    "org.typelevel:cats-kernel_2.12:2.2.0"[label=<org.typelevel<BR/><B>cats-kernel_2.12</B><BR/>2.2.0> style=""]
+    "io.jsonwebtoken:jjwt:0.9.1"[label=<io.jsonwebtoken<BR/><B>jjwt</B><BR/>0.9.1> style=""]
+    "com.google.guava:failureaccess:1.0.1"[label=<com.google.guava<BR/><B>failureaccess</B><BR/>1.0.1> style=""]
+    "com.typesafe.play:play-guice_2.12:2.7.5"[label=<com.typesafe.play<BR/><B>play-guice_2.12</B><BR/>2.7.5> style=""]
+    "com.typesafe.play:play-guice_2.12:2.7.4"[label=<com.typesafe.play<BR/><B>play-guice_2.12</B><BR/>2.7.4> style="stroke-dasharray: 5,5"]
+    "com.typesafe.play:play-guice_2.12:2.7.4"[label=<com.typesafe.play<BR/><B>play-guice_2.12</B><BR/>2.7.4> style="stroke-dasharray: 5,5"]
+    "com.typesafe.play:play-guice_2.12:2.7.4"[label=<com.typesafe.play<BR/><B>play-guice_2.12</B><BR/>2.7.4> style="stroke-dasharray: 5,5"]
+    "uk.gov.hmrc:bootstrap-health-play-27_2.12:2.25.0"[label=<uk.gov.hmrc<BR/><B>bootstrap-health-play-27_2.12</B><BR/>2.25.0> style=""]
+    "com.typesafe.play:build-link:2.7.5"[label=<com.typesafe.play<BR/><B>build-link</B><BR/>2.7.5> style=""]
+    "uk.gov.hmrc:simple-reactivemongo_2.12:7.30.0-play-27"[label=<uk.gov.hmrc<BR/><B>simple-reactivemongo_2.12</B><BR/>7.30.0-play-27> style=""]
+    "uk.gov.hmrc:domain_2.12:5.10.0-play-27"[label=<uk.gov.hmrc<BR/><B>domain_2.12</B><BR/>5.10.0-play-27> style=""]
+    "org.reactivemongo:reactivemongo-play-json_2.12:0.18.8-play27"[label=<org.reactivemongo<BR/><B>reactivemongo-play-json_2.12</B><BR/>0.18.8-play27> style=""]
+    "uk.gov.hmrc:http-verbs-play-27_2.12:11.6.0"[label=<uk.gov.hmrc<BR/><B>http-verbs-play-27_2.12</B><BR/>11.6.0> style=""]
+    "uk.gov.hmrc:http-verbs-play-27_2.12:11.2.0"[label=<uk.gov.hmrc<BR/><B>http-verbs-play-27_2.12</B><BR/>11.2.0> style="stroke-dasharray: 5,5"]
+    "com.typesafe.play:play-ahc-ws-standalone_2.12:2.0.8"[label=<com.typesafe.play<BR/><B>play-ahc-ws-standalone_2.12</B><BR/>2.0.8> style=""]
+    "org.codehaus.mojo:animal-sniffer-annotations:1.17"[label=<org.codehaus.mojo<BR/><B>animal-sniffer-annotations</B><BR/>1.17> style=""]
+    "com.rabbitmq:amqp-client:5.5.3"[label=<com.rabbitmq<BR/><B>amqp-client</B><BR/>5.5.3> style=""]
+    "com.typesafe.akka:akka-stream_2.12:2.5.31"[label=<com.typesafe.akka<BR/><B>akka-stream_2.12</B><BR/>2.5.31> style=""]
+    "com.typesafe.akka:akka-stream_2.12:2.5.23"[label=<com.typesafe.akka<BR/><B>akka-stream_2.12</B><BR/>2.5.23> style="stroke-dasharray: 5,5"]
+    "uk.gov.hmrc:auth-client_2.12:3.1.0-play-27"[label=<uk.gov.hmrc<BR/><B>auth-client_2.12</B><BR/>3.1.0-play-27> style=""]
+    "uk.gov.hmrc:auth-client_2.12:3.0.0-play-27"[label=<uk.gov.hmrc<BR/><B>auth-client_2.12</B><BR/>3.0.0-play-27> style="stroke-dasharray: 5,5"]
+    "uk.gov.hmrc:auth-client_2.12:3.0.0-play-27"[label=<uk.gov.hmrc<BR/><B>auth-client_2.12</B><BR/>3.0.0-play-27> style="stroke-dasharray: 5,5"]
+    "ch.qos.logback:logback-core:1.2.3"[label=<ch.qos.logback<BR/><B>logback-core</B><BR/>1.2.3> style=""]
+    "uk.gov.hmrc:mongo-lock_2.12:6.23.0-play-27"[label=<uk.gov.hmrc<BR/><B>mongo-lock_2.12</B><BR/>6.23.0-play-27> style=""]
+    "javax.cache:cache-api:1.0.0"[label=<javax.cache<BR/><B>cache-api</B><BR/>1.0.0> style=""]
+    "org.slf4j:slf4j-api:1.7.30"[label=<org.slf4j<BR/><B>slf4j-api</B><BR/>1.7.30> style=""]
+    "org.slf4j:slf4j-api:1.7.25"[label=<org.slf4j<BR/><B>slf4j-api</B><BR/>1.7.25> style="stroke-dasharray: 5,5"]
+    "org.slf4j:slf4j-api:1.7.25"[label=<org.slf4j<BR/><B>slf4j-api</B><BR/>1.7.25> style="stroke-dasharray: 5,5"]
+    "org.slf4j:slf4j-api:1.7.25"[label=<org.slf4j<BR/><B>slf4j-api</B><BR/>1.7.25> style="stroke-dasharray: 5,5"]
+    "org.slf4j:slf4j-api:1.7.26"[label=<org.slf4j<BR/><B>slf4j-api</B><BR/>1.7.26> style="stroke-dasharray: 5,5"]
+    "org.slf4j:slf4j-api:1.7.26"[label=<org.slf4j<BR/><B>slf4j-api</B><BR/>1.7.26> style="stroke-dasharray: 5,5"]
+    "org.slf4j:slf4j-api:1.7.25"[label=<org.slf4j<BR/><B>slf4j-api</B><BR/>1.7.25> style="stroke-dasharray: 5,5"]
+    "org.slf4j:slf4j-api:1.7.25"[label=<org.slf4j<BR/><B>slf4j-api</B><BR/>1.7.25> style="stroke-dasharray: 5,5"]
+    "org.slf4j:slf4j-api:1.7.25"[label=<org.slf4j<BR/><B>slf4j-api</B><BR/>1.7.25> style="stroke-dasharray: 5,5"]
+    "org.slf4j:slf4j-api:1.7.26"[label=<org.slf4j<BR/><B>slf4j-api</B><BR/>1.7.26> style="stroke-dasharray: 5,5"]
+    "org.slf4j:slf4j-api:1.7.26"[label=<org.slf4j<BR/><B>slf4j-api</B><BR/>1.7.26> style="stroke-dasharray: 5,5"]
+    "org.slf4j:slf4j-api:1.7.26"[label=<org.slf4j<BR/><B>slf4j-api</B><BR/>1.7.26> style="stroke-dasharray: 5,5"]
+    "org.slf4j:slf4j-api:1.7.25"[label=<org.slf4j<BR/><B>slf4j-api</B><BR/>1.7.25> style="stroke-dasharray: 5,5"]
+    "org.slf4j:slf4j-api:1.7.26"[label=<org.slf4j<BR/><B>slf4j-api</B><BR/>1.7.26> style="stroke-dasharray: 5,5"]
+    "com.typesafe.play:play-logback_2.12:2.7.5"[label=<com.typesafe.play<BR/><B>play-logback_2.12</B><BR/>2.7.5> style=""]
+    "com.typesafe.akka:akka-slf4j_2.12:2.5.31"[label=<com.typesafe.akka<BR/><B>akka-slf4j_2.12</B><BR/>2.5.31> style=""]
+    "uk.gov.hmrc:crypto_2.12:5.6.0"[label=<uk.gov.hmrc<BR/><B>crypto_2.12</B><BR/>5.6.0> style=""]
+    "org.reactivemongo:reactivemongo-iteratees_2.12:0.18.8"[label=<org.reactivemongo<BR/><B>reactivemongo-iteratees_2.12</B><BR/>0.18.8> style=""]
+    "com.typesafe.play:play-functional_2.12:2.7.4"[label=<com.typesafe.play<BR/><B>play-functional_2.12</B><BR/>2.7.4> style=""]
+    "javax.xml.bind:jaxb-api:2.3.1" -> "javax.activation:javax.activation-api:1.2.0"
+    "uk.gov.hmrc:logback-json-logger_2.12:4.8.0" -> "commons-io:commons-io:2.6"
+    "uk.gov.hmrc:crypto_2.12:5.6.0" -> "com.typesafe:config:1.4.0"
+    "uk.gov.hmrc:logback-json-logger_2.12:4.8.0" -> "com.typesafe:config:1.4.0"
+    "com.typesafe:ssl-config-core_2.12:0.4.1" -> "com.typesafe:config:1.4.0"
+    "com.iheart:ficus_2.12:1.4.7" -> "com.typesafe:config:1.3.4"
+    "com.typesafe.akka:akka-actor_2.12:2.5.31" -> "com.typesafe:config:1.3.3"
+    "uk.gov.hmrc:http-verbs-play-27_2.12:11.6.0" -> "com.typesafe:config:1.3.3"
+    "com.typesafe.play:play_2.12:2.7.5" -> "com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.9.10"
+    "com.typesafe.play:play-json_2.12:2.7.4" -> "com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.9.8"
+    "uk.gov.hmrc:mongo-lock_2.12:6.23.0-play-27" -> "com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.9.7"
+    "com.typesafe.play:play-guice_2.12:2.7.5" -> "com.google.inject:guice:4.2.2"
+    "com.google.inject.extensions:guice-assistedinject:4.2.2" -> "com.google.inject:guice:4.2.2"
+    "com.kenshoo:metrics-play_2.12:2.7.3_0.8.2" -> "org.joda:joda-convert:2.2.0"
+    "com.github.nscala-time:nscala-time_2.12:2.22.0" -> "org.joda:joda-convert:2.2.0"
+    "com.typesafe.play:cachecontrol_2.12:1.1.7" -> "org.joda:joda-convert:1.9.2"
+    "com.typesafe.play:play-ahc-ws-standalone_2.12:2.0.8" -> "com.typesafe.play:shaded-oauth:2.0.8"
+    "com.typesafe.play:play-ahc-ws_2.12:2.7.5" -> "com.typesafe.play:shaded-oauth:2.0.8"
+    "com.typesafe.play:twirl-api_2.12:1.4.2" -> "org.scala-lang.modules:scala-xml_2.12:1.2.0"
+    "com.typesafe.play:play-ws-standalone-xml_2.12:2.0.8" -> "org.scala-lang.modules:scala-xml_2.12:1.1.1"
+    "uk.gov.hmrc:play-auditing-play-27_2.12:5.8.0" -> "org.scala-lang.modules:scala-xml_2.12:1.0.6"
+    "com.typesafe.play:play-guice_2.12:2.7.5" -> "com.google.inject.extensions:guice-assistedinject:4.2.2"
+    "uk.gov.hmrc:auth-client_2.12:3.1.0-play-27" -> "com.iheart:ficus_2.12:1.4.7"
+    "com.typesafe.play:play-akka-http-server_2.12:2.7.5" -> "com.typesafe.akka:akka-http-core_2.12:10.1.12"
+    "io.dropwizard.metrics:metrics-graphite:4.1.5" -> "io.dropwizard.metrics:metrics-core:4.1.5"
+    "com.kenshoo:metrics-play_2.12:2.7.3_0.8.2" -> "io.dropwizard.metrics:metrics-core:4.0.5"
+    "io.dropwizard.metrics:metrics-json:4.0.5" -> "io.dropwizard.metrics:metrics-core:4.0.5"
+    "io.dropwizard.metrics:metrics-jvm:4.0.5" -> "io.dropwizard.metrics:metrics-core:4.0.5"
+    "io.dropwizard.metrics:metrics-logback:4.0.5" -> "io.dropwizard.metrics:metrics-core:4.0.5"
+    "uk.gov.hmrc:bootstrap-backend-play-27_2.12:2.25.0" -> "uk.gov.hmrc:bootstrap-common-play-27_2.12:2.25.0"
+    "uk.gov.hmrc:bootstrap-common-play-27_2.12:2.25.0" -> "uk.gov.hmrc:play-auditing-play-27_2.12:5.8.0"
+    "uk.gov.hmrc:bootstrap-backend-play-27_2.12:2.25.0" -> "uk.gov.hmrc:play-auditing-play-27_2.12:5.8.0"
+    "uk.gov.hmrc:simple-reactivemongo_2.12:7.30.0-play-27" -> "org.slf4j:log4j-over-slf4j:1.7.26"
+    "com.typesafe.play:play-json_2.12:2.7.4" -> "joda-time:joda-time:2.10.1"
+    "com.github.nscala-time:nscala-time_2.12:2.22.0" -> "joda-time:joda-time:2.10.1"
+    "com.typesafe.play:cachecontrol_2.12:1.1.7" -> "joda-time:joda-time:2.9.9"
+    "com.typesafe.play:play-json-joda_2.12:2.6.14" -> "joda-time:joda-time:2.9.9"
+    "uk.gov.hmrc:mongo-lock_2.12:6.23.0-play-27" -> "uk.gov.hmrc:time_2.12:3.3.0"
+    "org.reactivemongo:reactivemongo_2.12:0.18.8" -> "org.reactivemongo:reactivemongo-shaded:0.18.8"
+    "uk.gov.hmrc:file-upload_2.12:2.22.0" -> "org.typelevel:cats-core_2.12:2.2.0"
+    "com.typesafe.play:play-ws_2.12:2.7.5" -> "com.typesafe.play:play-ws-standalone-xml_2.12:2.0.8"
+    "uk.gov.hmrc:file-upload_2.12:2.22.0" -> "com.typesafe.play:filters-helpers_2.12:2.7.5"
+    "uk.gov.hmrc:bootstrap-backend-play-27_2.12:2.25.0" -> "com.typesafe.play:filters-helpers_2.12:2.7.4"
+    "uk.gov.hmrc:bootstrap-common-play-27_2.12:2.25.0" -> "com.typesafe.play:filters-helpers_2.12:2.7.4"
+    "uk.gov.hmrc:mongo-lock_2.12:6.23.0-play-27" -> "com.typesafe.play:filters-helpers_2.12:2.7.4"
+    "uk.gov.hmrc:file-upload_2.12:2.22.0" -> "com.typesafe.play:play-ahc-ws_2.12:2.7.5"
+    "uk.gov.hmrc:http-verbs-play-27_2.12:11.6.0" -> "com.typesafe.play:play-ahc-ws_2.12:2.7.4"
+    "org.reactivemongo:reactivemongo_2.12:0.18.8" -> "org.reactivemongo:reactivemongo-bson-macros_2.12:0.18.8"
+    "com.typesafe.play:play-iteratees_2.12:2.6.1" -> "org.scala-stm:scala-stm_2.12:0.8"
+    "com.typesafe.play:play_2.12:2.7.5" -> "org.scala-lang.modules:scala-parser-combinators_2.12:1.1.2"
+    "com.typesafe.play:cachecontrol_2.12:1.1.7" -> "org.scala-lang.modules:scala-parser-combinators_2.12:1.1.2"
+    "com.typesafe:ssl-config-core_2.12:0.4.1" -> "org.scala-lang.modules:scala-parser-combinators_2.12:1.1.2"
+    "com.google.guava:guava:27.1-jre" -> "com.google.j2objc:j2objc-annotations:1.1"
+    "uk.gov.hmrc:file-upload_2.12:2.22.0" -> "com.typesafe.play:play-json-joda_2.12:2.6.14"
+    "com.google.guava:guava:27.1-jre" -> "com.google.errorprone:error_prone_annotations:2.2.0"
+    "com.typesafe.play:play-ahc-ws-standalone_2.12:2.0.8" -> "org.reactivestreams:reactive-streams:1.0.2"
+    "com.typesafe.play:play-streams_2.12:2.7.5" -> "org.reactivestreams:reactive-streams:1.0.2"
+    "com.typesafe.akka:akka-stream_2.12:2.5.31" -> "org.reactivestreams:reactive-streams:1.0.2"
+    "com.typesafe.play:play-iteratees-reactive-streams_2.12:2.6.1" -> "org.reactivestreams:reactive-streams:1.0.0"
+    "com.typesafe.play:play-ahc-ws-standalone_2.12:2.0.8" -> "org.scala-lang.modules:scala-java8-compat_2.12:0.9.0"
+    "com.typesafe.play:play-streams_2.12:2.7.5" -> "org.scala-lang.modules:scala-java8-compat_2.12:0.9.0"
+    "com.typesafe.play:play_2.12:2.7.5" -> "org.scala-lang.modules:scala-java8-compat_2.12:0.9.0"
+    "com.typesafe.play:play-ahc-ws_2.12:2.7.5" -> "org.scala-lang.modules:scala-java8-compat_2.12:0.9.0"
+    "com.typesafe.akka:akka-actor_2.12:2.5.31" -> "org.scala-lang.modules:scala-java8-compat_2.12:0.8.0"
+    "com.google.inject:guice:4.2.2" -> "aopalliance:aopalliance:1.0"
+    "com.typesafe.play:play-akka-http-server_2.12:2.7.5" -> "com.typesafe.play:play-server_2.12:2.7.5"
+    "uk.gov.hmrc:file-upload_2.12:2.22.0" -> "com.typesafe.play:play-server_2.12:2.7.5"
+    "uk.gov.hmrc:crypto_2.12:5.6.0" -> "uk.gov.hmrc:secure_2.12:7.11.0"
+    "com.typesafe.play:play_2.12:2.7.5" -> "org.slf4j:jul-to-slf4j:1.7.26"
+    "uk.gov.hmrc:http-verbs-play-27_2.12:11.6.0" -> "uk.gov.hmrc:http-core_2.12:2.4.0"
+    "com.typesafe.play:play-logback_2.12:2.7.5" -> "ch.qos.logback:logback-classic:1.2.3"
+    "uk.gov.hmrc:logback-json-logger_2.12:4.8.0" -> "ch.qos.logback:logback-classic:1.2.3"
+    "io.dropwizard.metrics:metrics-logback:4.0.5" -> "ch.qos.logback:logback-classic:1.2.3"
+    "com.typesafe.play:play-ws_2.12:2.7.5" -> "com.typesafe.play:play_2.12:2.7.5"
+    "com.typesafe.play:play-logback_2.12:2.7.5" -> "com.typesafe.play:play_2.12:2.7.5"
+    "com.typesafe.play:filters-helpers_2.12:2.7.5" -> "com.typesafe.play:play_2.12:2.7.5"
+    "com.typesafe.play:play-server_2.12:2.7.5" -> "com.typesafe.play:play_2.12:2.7.5"
+    "com.typesafe.play:play-guice_2.12:2.7.5" -> "com.typesafe.play:play_2.12:2.7.5"
+    "uk.gov.hmrc:bootstrap-health-play-27_2.12:2.25.0" -> "com.typesafe.play:play_2.12:2.7.4"
+    "uk.gov.hmrc:mongo-lock_2.12:6.23.0-play-27" -> "com.typesafe.play:play_2.12:2.7.4"
+    "uk.gov.hmrc:simple-reactivemongo_2.12:7.30.0-play-27" -> "com.typesafe.play:play_2.12:2.7.4"
+    "org.reactivemongo:reactivemongo-bson-macros_2.12:0.18.8" -> "org.reactivemongo:reactivemongo-bson_2.12:0.18.8"
+    "com.typesafe.akka:akka-http-core_2.12:10.1.12" -> "com.typesafe.akka:akka-parsing_2.12:10.1.12"
+    "com.typesafe.play:play-json_2.12:2.7.4" -> "org.scala-lang:scala-reflect:2.12.12"
+    "com.typesafe.play:play_2.12:2.7.5" -> "org.scala-lang:scala-reflect:2.12.12"
+    "uk.gov.hmrc:bootstrap-common-play-27_2.12:2.25.0" -> "io.dropwizard.metrics:metrics-graphite:4.1.5"
+    "uk.gov.hmrc:bootstrap-backend-play-27_2.12:2.25.0" -> "io.dropwizard.metrics:metrics-graphite:4.1.5"
+    "com.typesafe.play:play-ahc-ws-standalone_2.12:2.0.8" -> "com.typesafe.play:cachecontrol_2.12:1.1.7"
+    "com.google.guava:guava:27.1-jre" -> "org.checkerframework:checker-qual:2.5.2"
+    "uk.gov.hmrc:http-verbs-play-27_2.12:11.6.0" -> "uk.gov.hmrc:http-verbs_2.12:11.6.0"
+    "com.google.guava:guava:27.1-jre" -> "com.google.code.findbugs:jsr305:3.0.2"
+    "uk.gov.hmrc:file-upload_2.12:2.22.0" -> "com.google.code.findbugs:jsr305:3.0.2"
+    "uk.gov.hmrc:file-upload_2.12:2.22.0" -> "com.typesafe.play:play-iteratees-reactive-streams_2.12:2.6.1"
+    "com.typesafe.play:play_2.12:2.7.5" -> "javax.xml.bind:jaxb-api:2.3.1"
+    "com.typesafe.play:play-ws_2.12:2.7.5" -> "com.typesafe.play:play-ws-standalone-json_2.12:2.0.8"
+    "com.typesafe.play:play-ahc-ws-standalone_2.12:2.0.8" -> "com.typesafe.play:shaded-asynchttpclient:2.0.8"
+    "com.typesafe.play:play-ahc-ws_2.12:2.7.5" -> "com.typesafe.play:shaded-asynchttpclient:2.0.8"
+    "uk.gov.hmrc:simple-reactivemongo_2.12:7.30.0-play-27" -> "org.reactivemongo:reactivemongo_2.12:0.18.8"
+    "com.fasterxml.jackson.core:jackson-databind:2.10.3" -> "com.fasterxml.jackson.core:jackson-annotations:2.10.3"
+    "com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.9.10" -> "com.fasterxml.jackson.core:jackson-annotations:2.9.10"
+    "com.typesafe.play:play-json_2.12:2.7.4" -> "com.fasterxml.jackson.core:jackson-annotations:2.9.8"
+    "com.typesafe.play:play_2.12:2.7.5" -> "com.fasterxml.jackson.core:jackson-annotations:2.9.10"
+    "uk.gov.hmrc:mongo-lock_2.12:6.23.0-play-27" -> "com.fasterxml.jackson.core:jackson-annotations:2.9.7"
+    "com.kenshoo:metrics-play_2.12:2.7.3_0.8.2" -> "io.dropwizard.metrics:metrics-jvm:4.0.5"
+    "com.google.guava:guava:27.1-jre" -> "com.google.guava:listenablefuture:9999.0-empty-to-avoid-conflict-with-guava"
+    "com.typesafe.akka:akka-stream_2.12:2.5.31" -> "com.typesafe.akka:akka-protobuf_2.12:2.5.31"
+    "uk.gov.hmrc:file-upload_2.12:2.22.0" -> "com.typesafe.akka:akka-testkit_2.12:2.5.26"
+    "com.typesafe.play:play_2.12:2.7.5" -> "com.google.guava:guava:27.1-jre"
+    "com.google.inject:guice:4.2.2" -> "com.google.guava:guava:25.1-android"
+    "com.typesafe.akka:akka-slf4j_2.12:2.5.31" -> "com.typesafe.akka:akka-actor_2.12:2.5.31"
+    "com.typesafe.play:play_2.12:2.7.5" -> "com.typesafe.akka:akka-actor_2.12:2.5.31"
+    "com.typesafe.akka:akka-stream_2.12:2.5.31" -> "com.typesafe.akka:akka-actor_2.12:2.5.31"
+    "uk.gov.hmrc:file-upload_2.12:2.22.0" -> "com.typesafe.akka:akka-actor_2.12:2.5.31"
+    "com.typesafe.akka:akka-testkit_2.12:2.5.26" -> "com.typesafe.akka:akka-actor_2.12:2.5.26"
+    "org.reactivemongo:reactivemongo_2.12:0.18.8" -> "com.typesafe.akka:akka-actor_2.12:2.5.25"
+    "com.kenshoo:metrics-play_2.12:2.7.3_0.8.2" -> "io.dropwizard.metrics:metrics-logback:4.0.5"
+    "com.typesafe.play:play_2.12:2.7.5" -> "javax.transaction:jta:1.1"
+    "uk.gov.hmrc:http-verbs-play-27_2.12:11.6.0" -> "com.fasterxml.jackson.core:jackson-core:2.10.3"
+    "com.fasterxml.jackson.core:jackson-databind:2.10.3" -> "com.fasterxml.jackson.core:jackson-core:2.10.3"
+    "uk.gov.hmrc:logback-json-logger_2.12:4.8.0" -> "com.fasterxml.jackson.core:jackson-core:2.10.3"
+    "com.fasterxml.jackson.datatype:jackson-datatype-jdk8:2.9.10" -> "com.fasterxml.jackson.core:jackson-core:2.9.10"
+    "com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.9.10" -> "com.fasterxml.jackson.core:jackson-core:2.9.10"
+    "com.typesafe.play:play-json_2.12:2.7.4" -> "com.fasterxml.jackson.core:jackson-core:2.9.8"
+    "com.typesafe.play:play_2.12:2.7.5" -> "com.fasterxml.jackson.core:jackson-core:2.9.10"
+    "uk.gov.hmrc:mongo-lock_2.12:6.23.0-play-27" -> "com.fasterxml.jackson.core:jackson-core:2.9.7"
+    "com.typesafe.play:play_2.12:2.7.5" -> "com.typesafe.play:play-streams_2.12:2.7.5"
+    "com.typesafe.play:play-akka-http-server_2.12:2.7.5" -> "com.typesafe.play:play-streams_2.12:2.7.5"
+    "com.typesafe.play:play_2.12:2.7.5" -> "com.typesafe:ssl-config-core_2.12:0.4.1"
+    "com.typesafe.akka:akka-stream_2.12:2.5.31" -> "com.typesafe:ssl-config-core_2.12:0.3.8"
+    "com.typesafe.play:play-ws-standalone_2.12:2.0.8" -> "com.typesafe:ssl-config-core_2.12:0.3.8"
+    "uk.gov.hmrc:logback-json-logger_2.12:4.8.0" -> "org.apache.commons:commons-lang3:3.9"
+    "com.typesafe.play:play_2.12:2.7.5" -> "org.slf4j:jcl-over-slf4j:1.7.26"
+    "org.reactivemongo:reactivemongo_2.12:0.18.8" -> "commons-codec:commons-codec:1.13"
+    "uk.gov.hmrc:secure_2.12:7.11.0" -> "commons-codec:commons-codec:1.8"
+    "uk.gov.hmrc:simple-reactivemongo_2.12:7.30.0-play-27" -> "commons-codec:commons-codec:1.12"
+    "com.typesafe.play:play-ws_2.12:2.7.5" -> "com.typesafe.play:play-ws-standalone_2.12:2.0.8"
+    "com.typesafe.play:play-ahc-ws-standalone_2.12:2.0.8" -> "com.typesafe.play:play-ws-standalone_2.12:2.0.8"
+    "com.typesafe.play:play-ws-standalone-xml_2.12:2.0.8" -> "com.typesafe.play:play-ws-standalone_2.12:2.0.8"
+    "com.typesafe.play:play-ws-standalone-json_2.12:2.0.8" -> "com.typesafe.play:play-ws-standalone_2.12:2.0.8"
+    "uk.gov.hmrc:file-upload_2.12:2.22.0" -> "uk.gov.hmrc:bootstrap-backend-play-27_2.12:2.25.0"
+    "com.typesafe.play:play_2.12:2.7.5" -> "com.typesafe.play:twirl-api_2.12:1.4.2"
+    "uk.gov.hmrc:file-upload_2.12:2.22.0" -> "com.typesafe.play:twirl-api_2.12:1.4.2"
+    "uk.gov.hmrc:http-verbs-play-27_2.12:11.6.0" -> "com.typesafe.play:play-json_2.12:2.7.4"
+    "com.typesafe.play:play_2.12:2.7.5" -> "com.typesafe.play:play-json_2.12:2.7.4"
+    "com.typesafe.play:play-ws-standalone-json_2.12:2.0.8" -> "com.typesafe.play:play-json_2.12:2.7.4"
+    "uk.gov.hmrc:domain_2.12:5.10.0-play-27" -> "com.typesafe.play:play-json_2.12:2.7.4"
+    "com.typesafe.play:play-json-joda_2.12:2.6.14" -> "com.typesafe.play:play-json_2.12:2.6.14"
+    "uk.gov.hmrc:http-verbs-play-27_2.12:11.6.0" -> "com.fasterxml.jackson.core:jackson-databind:2.10.3"
+    "uk.gov.hmrc:logback-json-logger_2.12:4.8.0" -> "com.fasterxml.jackson.core:jackson-databind:2.10.3"
+    "com.fasterxml.jackson.datatype:jackson-datatype-jdk8:2.9.10" -> "com.fasterxml.jackson.core:jackson-databind:2.9.10"
+    "com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.9.10" -> "com.fasterxml.jackson.core:jackson-databind:2.9.10"
+    "com.typesafe.play:play-json_2.12:2.7.4" -> "com.fasterxml.jackson.core:jackson-databind:2.9.8"
+    "com.typesafe.play:play_2.12:2.7.5" -> "com.fasterxml.jackson.core:jackson-databind:2.9.10.1"
+    "io.dropwizard.metrics:metrics-json:4.0.5" -> "com.fasterxml.jackson.core:jackson-databind:2.9.5"
+    "io.jsonwebtoken:jjwt:0.9.1" -> "com.fasterxml.jackson.core:jackson-databind:2.9.6"
+    "uk.gov.hmrc:mongo-lock_2.12:6.23.0-play-27" -> "com.fasterxml.jackson.core:jackson-databind:2.9.7"
+    "org.reactivemongo:reactivemongo_2.12:0.18.8" -> "org.apache.logging.log4j:log4j-api:2.12.1"
+    "uk.gov.hmrc:simple-reactivemongo_2.12:7.30.0-play-27" -> "com.github.nscala-time:nscala-time_2.12:2.22.0"
+    "uk.gov.hmrc:time_2.12:3.3.0" -> "com.github.nscala-time:nscala-time_2.12:2.16.0"
+    "uk.gov.hmrc:bootstrap-common-play-27_2.12:2.25.0" -> "com.kenshoo:metrics-play_2.12:2.7.3_0.8.2"
+    "uk.gov.hmrc:bootstrap-backend-play-27_2.12:2.25.0" -> "com.kenshoo:metrics-play_2.12:2.7.3_0.8.2"
+    "uk.gov.hmrc:secure_2.12:7.11.0" -> "org.bouncycastle:bcprov-jdk15on:1.60"
+    "com.kenshoo:metrics-play_2.12:2.7.3_0.8.2" -> "io.dropwizard.metrics:metrics-json:4.0.5"
+    "com.typesafe.play:play_2.12:2.7.5" -> "com.fasterxml.jackson.datatype:jackson-datatype-jdk8:2.9.10"
+    "com.typesafe.play:play-json_2.12:2.7.4" -> "com.fasterxml.jackson.datatype:jackson-datatype-jdk8:2.9.8"
+    "uk.gov.hmrc:mongo-lock_2.12:6.23.0-play-27" -> "com.fasterxml.jackson.datatype:jackson-datatype-jdk8:2.9.7"
+    "com.typesafe.play:play-iteratees-reactive-streams_2.12:2.6.1" -> "com.typesafe.play:play-iteratees_2.12:2.6.1"
+    "org.reactivemongo:reactivemongo_2.12:0.18.8" -> "com.typesafe.play:play-iteratees_2.12:2.6.1"
+    "com.typesafe.play:build-link:2.7.5" -> "com.typesafe.play:play-exceptions:2.7.5"
+    "uk.gov.hmrc:file-upload_2.12:2.22.0" -> "com.typesafe.play:play-akka-http-server_2.12:2.7.5"
+    "uk.gov.hmrc:crypto_2.12:5.6.0" -> "javax.inject:javax.inject:1"
+    "com.typesafe.play:play_2.12:2.7.5" -> "javax.inject:javax.inject:1"
+    "com.google.inject:guice:4.2.2" -> "javax.inject:javax.inject:1"
+    "com.typesafe.play:play-ws-standalone_2.12:2.0.8" -> "javax.inject:javax.inject:1"
+    "com.typesafe.play:play-ahc-ws_2.12:2.7.5" -> "com.typesafe.play:play-ws_2.12:2.7.5"
+    "com.iheart:ficus_2.12:1.4.7" -> "org.typelevel:macro-compat_2.12:1.1.1"
+    "uk.gov.hmrc:bootstrap-common-play-27_2.12:2.25.0" -> "uk.gov.hmrc:logback-json-logger_2.12:4.8.0"
+    "uk.gov.hmrc:bootstrap-backend-play-27_2.12:2.25.0" -> "uk.gov.hmrc:logback-json-logger_2.12:4.8.0"
+    "org.reactivemongo:reactivemongo_2.12:0.18.8" -> "dnsjava:dnsjava:2.1.9"
+    "org.typelevel:cats-core_2.12:2.2.0" -> "org.typelevel:cats-kernel_2.12:2.2.0"
+    "com.typesafe.play:play_2.12:2.7.5" -> "io.jsonwebtoken:jjwt:0.9.1"
+    "com.google.guava:guava:27.1-jre" -> "com.google.guava:failureaccess:1.0.1"
+    "uk.gov.hmrc:bootstrap-backend-play-27_2.12:2.25.0" -> "com.typesafe.play:play-guice_2.12:2.7.4"
+    "uk.gov.hmrc:bootstrap-common-play-27_2.12:2.25.0" -> "com.typesafe.play:play-guice_2.12:2.7.4"
+    "uk.gov.hmrc:simple-reactivemongo_2.12:7.30.0-play-27" -> "com.typesafe.play:play-guice_2.12:2.7.4"
+    "uk.gov.hmrc:bootstrap-backend-play-27_2.12:2.25.0" -> "uk.gov.hmrc:bootstrap-health-play-27_2.12:2.25.0"
+    "com.typesafe.play:play_2.12:2.7.5" -> "com.typesafe.play:build-link:2.7.5"
+    "uk.gov.hmrc:mongo-lock_2.12:6.23.0-play-27" -> "uk.gov.hmrc:simple-reactivemongo_2.12:7.30.0-play-27"
+    "uk.gov.hmrc:file-upload_2.12:2.22.0" -> "uk.gov.hmrc:domain_2.12:5.10.0-play-27"
+    "uk.gov.hmrc:simple-reactivemongo_2.12:7.30.0-play-27" -> "org.reactivemongo:reactivemongo-play-json_2.12:0.18.8-play27"
+    "uk.gov.hmrc:bootstrap-common-play-27_2.12:2.25.0" -> "uk.gov.hmrc:http-verbs-play-27_2.12:11.6.0"
+    "uk.gov.hmrc:bootstrap-backend-play-27_2.12:2.25.0" -> "uk.gov.hmrc:http-verbs-play-27_2.12:11.6.0"
+    "uk.gov.hmrc:play-auditing-play-27_2.12:5.8.0" -> "uk.gov.hmrc:http-verbs-play-27_2.12:11.2.0"
+    "com.typesafe.play:play-ahc-ws_2.12:2.7.5" -> "com.typesafe.play:play-ahc-ws-standalone_2.12:2.0.8"
+    "com.google.guava:guava:27.1-jre" -> "org.codehaus.mojo:animal-sniffer-annotations:1.17"
+    "io.dropwizard.metrics:metrics-graphite:4.1.5" -> "com.rabbitmq:amqp-client:5.5.3"
+    "com.typesafe.play:play-streams_2.12:2.7.5" -> "com.typesafe.akka:akka-stream_2.12:2.5.31"
+    "com.typesafe.play:play-ws-standalone_2.12:2.0.8" -> "com.typesafe.akka:akka-stream_2.12:2.5.23"
+    "uk.gov.hmrc:file-upload_2.12:2.22.0" -> "uk.gov.hmrc:auth-client_2.12:3.1.0-play-27"
+    "uk.gov.hmrc:bootstrap-backend-play-27_2.12:2.25.0" -> "uk.gov.hmrc:auth-client_2.12:3.0.0-play-27"
+    "uk.gov.hmrc:bootstrap-common-play-27_2.12:2.25.0" -> "uk.gov.hmrc:auth-client_2.12:3.0.0-play-27"
+    "uk.gov.hmrc:bootstrap-common-play-27_2.12:2.25.0" -> "ch.qos.logback:logback-core:1.2.3"
+    "ch.qos.logback:logback-classic:1.2.3" -> "ch.qos.logback:logback-core:1.2.3"
+    "uk.gov.hmrc:logback-json-logger_2.12:4.8.0" -> "ch.qos.logback:logback-core:1.2.3"
+    "uk.gov.hmrc:bootstrap-backend-play-27_2.12:2.25.0" -> "ch.qos.logback:logback-core:1.2.3"
+    "uk.gov.hmrc:file-upload_2.12:2.22.0" -> "uk.gov.hmrc:mongo-lock_2.12:6.23.0-play-27"
+    "com.typesafe.play:play-ahc-ws_2.12:2.7.5" -> "javax.cache:cache-api:1.0.0"
+    "io.dropwizard.metrics:metrics-core:4.1.5" -> "org.slf4j:slf4j-api:1.7.30"
+    "io.dropwizard.metrics:metrics-graphite:4.1.5" -> "org.slf4j:slf4j-api:1.7.30"
+    "uk.gov.hmrc:play-auditing-play-27_2.12:5.8.0" -> "org.slf4j:slf4j-api:1.7.30"
+    "ch.qos.logback:logback-classic:1.2.3" -> "org.slf4j:slf4j-api:1.7.25"
+    "com.typesafe.akka:akka-slf4j_2.12:2.5.31" -> "org.slf4j:slf4j-api:1.7.25"
+    "com.typesafe.play:cachecontrol_2.12:1.1.7" -> "org.slf4j:slf4j-api:1.7.25"
+    "com.typesafe.play:play-ahc-ws-standalone_2.12:2.0.8" -> "org.slf4j:slf4j-api:1.7.26"
+    "com.typesafe.play:play_2.12:2.7.5" -> "org.slf4j:slf4j-api:1.7.26"
+    "io.dropwizard.metrics:metrics-json:4.0.5" -> "org.slf4j:slf4j-api:1.7.25"
+    "io.dropwizard.metrics:metrics-jvm:4.0.5" -> "org.slf4j:slf4j-api:1.7.25"
+    "io.dropwizard.metrics:metrics-logback:4.0.5" -> "org.slf4j:slf4j-api:1.7.25"
+    "org.slf4j:jcl-over-slf4j:1.7.26" -> "org.slf4j:slf4j-api:1.7.26"
+    "org.slf4j:jul-to-slf4j:1.7.26" -> "org.slf4j:slf4j-api:1.7.26"
+    "org.slf4j:log4j-over-slf4j:1.7.26" -> "org.slf4j:slf4j-api:1.7.26"
+    "uk.gov.hmrc:http-verbs-play-27_2.12:11.6.0" -> "org.slf4j:slf4j-api:1.7.25"
+    "uk.gov.hmrc:simple-reactivemongo_2.12:7.30.0-play-27" -> "org.slf4j:slf4j-api:1.7.26"
+    "uk.gov.hmrc:file-upload_2.12:2.22.0" -> "com.typesafe.play:play-logback_2.12:2.7.5"
+    "com.typesafe.play:play_2.12:2.7.5" -> "com.typesafe.akka:akka-slf4j_2.12:2.5.31"
+    "uk.gov.hmrc:bootstrap-common-play-27_2.12:2.25.0" -> "uk.gov.hmrc:crypto_2.12:5.6.0"
+    "uk.gov.hmrc:bootstrap-backend-play-27_2.12:2.25.0" -> "uk.gov.hmrc:crypto_2.12:5.6.0"
+    "uk.gov.hmrc:file-upload_2.12:2.22.0" -> "org.reactivemongo:reactivemongo-iteratees_2.12:0.18.8"
+    "com.typesafe.play:play-json_2.12:2.7.4" -> "com.typesafe.play:play-functional_2.12:2.7.4"
+    "com.typesafe:config:1.3.4" -> "com.typesafe:config:1.4.0" [label="Evicted By" style="stroke-dasharray: 5,5"]
+    "com.typesafe:config:1.3.3" -> "com.typesafe:config:1.4.0" [label="Evicted By" style="stroke-dasharray: 5,5"]
+    "com.typesafe:config:1.3.3" -> "com.typesafe:config:1.4.0" [label="Evicted By" style="stroke-dasharray: 5,5"]
+    "com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.9.8" -> "com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.9.10" [label="Evicted By" style="stroke-dasharray: 5,5"]
+    "com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.9.7" -> "com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.9.10" [label="Evicted By" style="stroke-dasharray: 5,5"]
+    "org.joda:joda-convert:1.9.2" -> "org.joda:joda-convert:2.2.0" [label="Evicted By" style="stroke-dasharray: 5,5"]
+    "org.scala-lang.modules:scala-xml_2.12:1.1.1" -> "org.scala-lang.modules:scala-xml_2.12:1.2.0" [label="Evicted By" style="stroke-dasharray: 5,5"]
+    "org.scala-lang.modules:scala-xml_2.12:1.0.6" -> "org.scala-lang.modules:scala-xml_2.12:1.2.0" [label="Evicted By" style="stroke-dasharray: 5,5"]
+    "io.dropwizard.metrics:metrics-core:4.0.5" -> "io.dropwizard.metrics:metrics-core:4.1.5" [label="Evicted By" style="stroke-dasharray: 5,5"]
+    "io.dropwizard.metrics:metrics-core:4.0.5" -> "io.dropwizard.metrics:metrics-core:4.1.5" [label="Evicted By" style="stroke-dasharray: 5,5"]
+    "io.dropwizard.metrics:metrics-core:4.0.5" -> "io.dropwizard.metrics:metrics-core:4.1.5" [label="Evicted By" style="stroke-dasharray: 5,5"]
+    "io.dropwizard.metrics:metrics-core:4.0.5" -> "io.dropwizard.metrics:metrics-core:4.1.5" [label="Evicted By" style="stroke-dasharray: 5,5"]
+    "joda-time:joda-time:2.9.9" -> "joda-time:joda-time:2.10.1" [label="Evicted By" style="stroke-dasharray: 5,5"]
+    "joda-time:joda-time:2.9.9" -> "joda-time:joda-time:2.10.1" [label="Evicted By" style="stroke-dasharray: 5,5"]
+    "com.typesafe.play:filters-helpers_2.12:2.7.4" -> "com.typesafe.play:filters-helpers_2.12:2.7.5" [label="Evicted By" style="stroke-dasharray: 5,5"]
+    "com.typesafe.play:filters-helpers_2.12:2.7.4" -> "com.typesafe.play:filters-helpers_2.12:2.7.5" [label="Evicted By" style="stroke-dasharray: 5,5"]
+    "com.typesafe.play:filters-helpers_2.12:2.7.4" -> "com.typesafe.play:filters-helpers_2.12:2.7.5" [label="Evicted By" style="stroke-dasharray: 5,5"]
+    "com.typesafe.play:play-ahc-ws_2.12:2.7.4" -> "com.typesafe.play:play-ahc-ws_2.12:2.7.5" [label="Evicted By" style="stroke-dasharray: 5,5"]
+    "org.reactivestreams:reactive-streams:1.0.0" -> "org.reactivestreams:reactive-streams:1.0.2" [label="Evicted By" style="stroke-dasharray: 5,5"]
+    "org.scala-lang.modules:scala-java8-compat_2.12:0.8.0" -> "org.scala-lang.modules:scala-java8-compat_2.12:0.9.0" [label="Evicted By" style="stroke-dasharray: 5,5"]
+    "com.typesafe.play:play_2.12:2.7.4" -> "com.typesafe.play:play_2.12:2.7.5" [label="Evicted By" style="stroke-dasharray: 5,5"]
+    "com.typesafe.play:play_2.12:2.7.4" -> "com.typesafe.play:play_2.12:2.7.5" [label="Evicted By" style="stroke-dasharray: 5,5"]
+    "com.typesafe.play:play_2.12:2.7.4" -> "com.typesafe.play:play_2.12:2.7.5" [label="Evicted By" style="stroke-dasharray: 5,5"]
+    "com.fasterxml.jackson.core:jackson-annotations:2.9.10" -> "com.fasterxml.jackson.core:jackson-annotations:2.10.3" [label="Evicted By" style="stroke-dasharray: 5,5"]
+    "com.fasterxml.jackson.core:jackson-annotations:2.9.8" -> "com.fasterxml.jackson.core:jackson-annotations:2.10.3" [label="Evicted By" style="stroke-dasharray: 5,5"]
+    "com.fasterxml.jackson.core:jackson-annotations:2.9.10" -> "com.fasterxml.jackson.core:jackson-annotations:2.10.3" [label="Evicted By" style="stroke-dasharray: 5,5"]
+    "com.fasterxml.jackson.core:jackson-annotations:2.9.7" -> "com.fasterxml.jackson.core:jackson-annotations:2.10.3" [label="Evicted By" style="stroke-dasharray: 5,5"]
+    "com.google.guava:guava:25.1-android" -> "com.google.guava:guava:27.1-jre" [label="Evicted By" style="stroke-dasharray: 5,5"]
+    "com.typesafe.akka:akka-actor_2.12:2.5.26" -> "com.typesafe.akka:akka-actor_2.12:2.5.31" [label="Evicted By" style="stroke-dasharray: 5,5"]
+    "com.typesafe.akka:akka-actor_2.12:2.5.25" -> "com.typesafe.akka:akka-actor_2.12:2.5.31" [label="Evicted By" style="stroke-dasharray: 5,5"]
+    "com.fasterxml.jackson.core:jackson-core:2.9.10" -> "com.fasterxml.jackson.core:jackson-core:2.10.3" [label="Evicted By" style="stroke-dasharray: 5,5"]
+    "com.fasterxml.jackson.core:jackson-core:2.9.10" -> "com.fasterxml.jackson.core:jackson-core:2.10.3" [label="Evicted By" style="stroke-dasharray: 5,5"]
+    "com.fasterxml.jackson.core:jackson-core:2.9.8" -> "com.fasterxml.jackson.core:jackson-core:2.10.3" [label="Evicted By" style="stroke-dasharray: 5,5"]
+    "com.fasterxml.jackson.core:jackson-core:2.9.10" -> "com.fasterxml.jackson.core:jackson-core:2.10.3" [label="Evicted By" style="stroke-dasharray: 5,5"]
+    "com.fasterxml.jackson.core:jackson-core:2.9.7" -> "com.fasterxml.jackson.core:jackson-core:2.10.3" [label="Evicted By" style="stroke-dasharray: 5,5"]
+    "com.typesafe:ssl-config-core_2.12:0.3.8" -> "com.typesafe:ssl-config-core_2.12:0.4.1" [label="Evicted By" style="stroke-dasharray: 5,5"]
+    "com.typesafe:ssl-config-core_2.12:0.3.8" -> "com.typesafe:ssl-config-core_2.12:0.4.1" [label="Evicted By" style="stroke-dasharray: 5,5"]
+    "commons-codec:commons-codec:1.8" -> "commons-codec:commons-codec:1.13" [label="Evicted By" style="stroke-dasharray: 5,5"]
+    "commons-codec:commons-codec:1.12" -> "commons-codec:commons-codec:1.13" [label="Evicted By" style="stroke-dasharray: 5,5"]
+    "com.typesafe.play:play-json_2.12:2.6.14" -> "com.typesafe.play:play-json_2.12:2.7.4" [label="Evicted By" style="stroke-dasharray: 5,5"]
+    "com.fasterxml.jackson.core:jackson-databind:2.9.10" -> "com.fasterxml.jackson.core:jackson-databind:2.10.3" [label="Evicted By" style="stroke-dasharray: 5,5"]
+    "com.fasterxml.jackson.core:jackson-databind:2.9.10" -> "com.fasterxml.jackson.core:jackson-databind:2.10.3" [label="Evicted By" style="stroke-dasharray: 5,5"]
+    "com.fasterxml.jackson.core:jackson-databind:2.9.8" -> "com.fasterxml.jackson.core:jackson-databind:2.10.3" [label="Evicted By" style="stroke-dasharray: 5,5"]
+    "com.fasterxml.jackson.core:jackson-databind:2.9.10.1" -> "com.fasterxml.jackson.core:jackson-databind:2.10.3" [label="Evicted By" style="stroke-dasharray: 5,5"]
+    "com.fasterxml.jackson.core:jackson-databind:2.9.5" -> "com.fasterxml.jackson.core:jackson-databind:2.10.3" [label="Evicted By" style="stroke-dasharray: 5,5"]
+    "com.fasterxml.jackson.core:jackson-databind:2.9.6" -> "com.fasterxml.jackson.core:jackson-databind:2.10.3" [label="Evicted By" style="stroke-dasharray: 5,5"]
+    "com.fasterxml.jackson.core:jackson-databind:2.9.7" -> "com.fasterxml.jackson.core:jackson-databind:2.10.3" [label="Evicted By" style="stroke-dasharray: 5,5"]
+    "com.github.nscala-time:nscala-time_2.12:2.16.0" -> "com.github.nscala-time:nscala-time_2.12:2.22.0" [label="Evicted By" style="stroke-dasharray: 5,5"]
+    "com.fasterxml.jackson.datatype:jackson-datatype-jdk8:2.9.8" -> "com.fasterxml.jackson.datatype:jackson-datatype-jdk8:2.9.10" [label="Evicted By" style="stroke-dasharray: 5,5"]
+    "com.fasterxml.jackson.datatype:jackson-datatype-jdk8:2.9.7" -> "com.fasterxml.jackson.datatype:jackson-datatype-jdk8:2.9.10" [label="Evicted By" style="stroke-dasharray: 5,5"]
+    "com.typesafe.play:play-guice_2.12:2.7.4" -> "com.typesafe.play:play-guice_2.12:2.7.5" [label="Evicted By" style="stroke-dasharray: 5,5"]
+    "com.typesafe.play:play-guice_2.12:2.7.4" -> "com.typesafe.play:play-guice_2.12:2.7.5" [label="Evicted By" style="stroke-dasharray: 5,5"]
+    "com.typesafe.play:play-guice_2.12:2.7.4" -> "com.typesafe.play:play-guice_2.12:2.7.5" [label="Evicted By" style="stroke-dasharray: 5,5"]
+    "uk.gov.hmrc:http-verbs-play-27_2.12:11.2.0" -> "uk.gov.hmrc:http-verbs-play-27_2.12:11.6.0" [label="Evicted By" style="stroke-dasharray: 5,5"]
+    "com.typesafe.akka:akka-stream_2.12:2.5.23" -> "com.typesafe.akka:akka-stream_2.12:2.5.31" [label="Evicted By" style="stroke-dasharray: 5,5"]
+    "uk.gov.hmrc:auth-client_2.12:3.0.0-play-27" -> "uk.gov.hmrc:auth-client_2.12:3.1.0-play-27" [label="Evicted By" style="stroke-dasharray: 5,5"]
+    "uk.gov.hmrc:auth-client_2.12:3.0.0-play-27" -> "uk.gov.hmrc:auth-client_2.12:3.1.0-play-27" [label="Evicted By" style="stroke-dasharray: 5,5"]
+    "org.slf4j:slf4j-api:1.7.25" -> "org.slf4j:slf4j-api:1.7.30" [label="Evicted By" style="stroke-dasharray: 5,5"]
+    "org.slf4j:slf4j-api:1.7.25" -> "org.slf4j:slf4j-api:1.7.30" [label="Evicted By" style="stroke-dasharray: 5,5"]
+    "org.slf4j:slf4j-api:1.7.25" -> "org.slf4j:slf4j-api:1.7.30" [label="Evicted By" style="stroke-dasharray: 5,5"]
+    "org.slf4j:slf4j-api:1.7.26" -> "org.slf4j:slf4j-api:1.7.30" [label="Evicted By" style="stroke-dasharray: 5,5"]
+    "org.slf4j:slf4j-api:1.7.26" -> "org.slf4j:slf4j-api:1.7.30" [label="Evicted By" style="stroke-dasharray: 5,5"]
+    "org.slf4j:slf4j-api:1.7.25" -> "org.slf4j:slf4j-api:1.7.30" [label="Evicted By" style="stroke-dasharray: 5,5"]
+    "org.slf4j:slf4j-api:1.7.25" -> "org.slf4j:slf4j-api:1.7.30" [label="Evicted By" style="stroke-dasharray: 5,5"]
+    "org.slf4j:slf4j-api:1.7.25" -> "org.slf4j:slf4j-api:1.7.30" [label="Evicted By" style="stroke-dasharray: 5,5"]
+    "org.slf4j:slf4j-api:1.7.26" -> "org.slf4j:slf4j-api:1.7.30" [label="Evicted By" style="stroke-dasharray: 5,5"]
+    "org.slf4j:slf4j-api:1.7.26" -> "org.slf4j:slf4j-api:1.7.30" [label="Evicted By" style="stroke-dasharray: 5,5"]
+    "org.slf4j:slf4j-api:1.7.26" -> "org.slf4j:slf4j-api:1.7.30" [label="Evicted By" style="stroke-dasharray: 5,5"]
+    "org.slf4j:slf4j-api:1.7.25" -> "org.slf4j:slf4j-api:1.7.30" [label="Evicted By" style="stroke-dasharray: 5,5"]
+    "org.slf4j:slf4j-api:1.7.26" -> "org.slf4j:slf4j-api:1.7.30" [label="Evicted By" style="stroke-dasharray: 5,5"]
+}

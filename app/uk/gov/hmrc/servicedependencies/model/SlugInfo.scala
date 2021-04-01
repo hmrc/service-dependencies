@@ -116,8 +116,8 @@ trait MongoSlugInfoFormats {
     ~ (__ \ "dependencyDot" \ "compile").format[String]
     ~ (__ \ "dependencyDot" \ "test"   ).format[String]
     ~ (__ \ "dependencyDot" \ "build"  ).format[String]
-    ~ (__ \ "applicationConfig").formatNullable[String].inmap[String](_.getOrElse(""), Option.apply)
-    ~ (__ \ "slugConfig"       ).formatNullable[String].inmap[String](_.getOrElse(""), Option.apply)
+    ~ (__ \ "applicationConfig").formatWithDefault[String]("")
+    ~ (__ \ "slugConfig"       ).formatWithDefault[String]("")
     ~ (__ \ "latest"           ).format[Boolean]
     ~ (__ \ "production"       ).format[Boolean]
     ~ (__ \ "qa"               ).format[Boolean]
