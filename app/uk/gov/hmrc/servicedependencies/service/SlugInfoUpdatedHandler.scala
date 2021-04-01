@@ -25,7 +25,6 @@ import com.github.matsluni.akkahttpspi.AkkaHttpClient
 import com.google.inject.Inject
 import play.api.Logging
 import play.api.libs.json.Json
-import software.amazon.awssdk.auth.credentials.{AwsCredentialsProvider, DefaultCredentialsProvider}
 import software.amazon.awssdk.services.sqs.SqsAsyncClient
 import software.amazon.awssdk.services.sqs.model.Message
 import uk.gov.hmrc.servicedependencies.config.ArtefactReceivingConfig
@@ -52,14 +51,9 @@ class SlugInfoUpdatedHandler @Inject()(
   private lazy val queueUrl = config.sqsSlugQueue
   private lazy val settings = SqsSourceSettings()
 
-  private lazy val awsCredentialsProvider: AwsCredentialsProvider =
-    Try(DefaultCredentialsProvider.builder().build()).recover {
-      case NonFatal(e) => logger.error(e.getMessage, e); throw e
-    }.get
-
   private lazy val awsSqsClient =
     Try {
-      val client = SqsAsyncClient.builder().credentialsProvider(awsCredentialsProvider)
+      val client = SqsAsyncClient.builder()
         .httpClient(AkkaHttpClient.builder().withActorSystem(actorSystem).build())
         .build()
 
