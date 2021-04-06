@@ -32,32 +32,52 @@ class DerivedServiceDependenciesRepository @Inject()(mongoComponent: MongoCompon
   , mongoComponent = mongoComponent
   , domainFormat   = ApiServiceDependencyFormats.derivedMongoFormat
   , indexes        = Seq(
-                          IndexModel(ascending("slugName"),
-                            IndexOptions().name("derivedServiceDepsSlugNameIdx")),
-                          IndexModel(compoundIndex(ascending("group"),ascending("artifact")),
-                            IndexOptions().name("derivedServiceDepsGroupArtifactIdx")),
-                          IndexModel( compoundIndex( SlugInfoFlag.values.map(f => ascending(f.asString)) :_*),
-                            IndexOptions().name("derivedServiceDepsFlagIdx").background(true))
-  ), optSchema = None
+                       IndexModel(
+                         ascending("slugName"),
+                         IndexOptions().name("derivedServiceDepsSlugNameIdx")
+                       ),
+                       IndexModel(
+                         compoundIndex(
+                           ascending("group"),
+                           ascending("artefact")
+                         ),
+                         IndexOptions().name("derivedServiceDepsGroupArtifactIdx")
+                       ),
+                       IndexModel(
+                         compoundIndex(SlugInfoFlag.values.map(f => ascending(f.asString)) :_*),
+                         IndexOptions().name("derivedServiceDepsFlagIdx").background(true)
+                       ),
+                       IndexModel(
+                         compoundIndex(
+                           ascending("slugName"),
+                           ascending("slugVersion"),
+                           ascending("group"),
+                           ascending("artefact"),
+                           ascending("version")
+                         ),
+                         IndexOptions().name("uniqueIdx").unique(true)
+                       )
+                     )
+  , optSchema = None
 ){
 
-  def findServicesWithDependency(flag     : SlugInfoFlag
-                                , group   : String
-                                , artefact: String
-                                ): Future[Seq[ServiceDependency]] =
+  def findServicesWithDependency(
+    flag    : SlugInfoFlag,
+    group   : String,
+    artefact: String
+  ): Future[Seq[ServiceDependency]] =
     collection.find(and(
       equal(flag.asString, true),
       equal("group", group),
       equal("artefact", artefact))
     ).toFuture()
 
-  def findDependenciesForService(name:String, flag: SlugInfoFlag): Future[Seq[ServiceDependency]] = {
+  def findDependenciesForService(name: String, flag: SlugInfoFlag): Future[Seq[ServiceDependency]] =
     collection.find(
       and(
-         equal("slugName", name)
-        ,equal(flag.asString, true)
+        equal("slugName", name),
+        equal(flag.asString, true),
+        equal("compile", true) // TODO make this a parameter
       )
     ).toFuture()
-  }
-
 }

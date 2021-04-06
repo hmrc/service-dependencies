@@ -33,7 +33,6 @@ class DerivedViewsService @Inject()(
     for {
        _ <- derivedMongoCollections.generateArtefactLookup()
        _ <- derivedMongoCollections.generateSlugDependencyLookup()
-       _ <- derivedMongoCollections.generateDependencyDotLookup()
     } yield ()
   }.recover {
     case e => logger.error("Failed to update derived collections", e)

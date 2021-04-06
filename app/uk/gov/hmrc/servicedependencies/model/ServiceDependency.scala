@@ -19,13 +19,56 @@ package uk.gov.hmrc.servicedependencies.model
 import play.api.libs.json.{__, OFormat}
 import play.api.libs.functional.syntax._
 
+case class ServiceDependencyWrite(
+  slugName        : String,
+  slugVersion     : String,
+  depGroup        : String,
+  depArtefact     : String,
+  depVersion      : String,
+  scalaVersion    : Option[String],
+  // scope flag
+  compileFlag     : Boolean,
+  testFlag        : Boolean,
+  buildFlag       : Boolean,
+  // env flags
+  productionFlag  : Boolean,
+  qaFlag          : Boolean,
+  stagingFlag     : Boolean,
+  developmentFlag : Boolean,
+  externalTestFlag: Boolean,
+  integrationFlag : Boolean,
+  latestFlag      : Boolean
+)
+
+object ServiceDependencyWrite {
+  val format: OFormat[ServiceDependencyWrite] =
+    ( (__ \ "slugName"     ).format[String]
+    ~ (__ \ "slugVersion"  ).format[String]
+    ~ (__ \ "group"        ).format[String]
+    ~ (__ \ "artefact"     ).format[String]
+    ~ (__ \ "version"      ).format[String]
+    ~ (__ \ "scalaVersion" ).formatNullable[String]
+    ~ (__ \ "compile"      ).format[Boolean]
+    ~ (__ \ "test"         ).format[Boolean]
+    ~ (__ \ "build"        ).format[Boolean]
+    ~ (__ \ "production"   ).format[Boolean]
+    ~ (__ \ "qa"           ).format[Boolean]
+    ~ (__ \ "staging"      ).format[Boolean]
+    ~ (__ \ "development"  ).format[Boolean]
+    ~ (__ \ "external test").format[Boolean]
+    ~ (__ \ "integration"  ).format[Boolean]
+    ~ (__ \ "latest"       ).format[Boolean]
+    )(ServiceDependencyWrite.apply _, unlift(ServiceDependencyWrite.unapply _))
+}
+
 case class ServiceDependency(
-    slugName    : String,
-    slugVersion : String,
-    teams       : List[String],
-    depGroup    : String,
-    depArtefact : String,
-    depVersion  : String) {
+  slugName    : String,
+  slugVersion : String,
+  teams       : List[String], // not stored in db
+  depGroup    : String,
+  depArtefact : String,
+  depVersion  : String
+) {
   lazy val depSemanticVersion: Option[Version] =
     Version.parse(depVersion)
 }
@@ -33,13 +76,13 @@ case class ServiceDependency(
 trait ApiServiceDependencyFormats {
 
   val derivedMongoFormat: OFormat[ServiceDependency] =
-    ( (__ \ "slugName"     ).format[String]
-      ~ (__ \ "slugVersion").format[String]
-      ~ (__ \ "teams"      ).formatWithDefault[List[String]](List.empty[String])
-      ~ (__ \ "group"      ).format[String]
-      ~ (__ \ "artefact"   ).format[String]
-      ~ (__ \ "version"    ).format[String]
-      )(ServiceDependency.apply, unlift(ServiceDependency.unapply))
+    ( (__ \ "slugName"   ).format[String]
+    ~ (__ \ "slugVersion").format[String]
+    ~ (__ \ "teams"      ).formatWithDefault[List[String]](List.empty[String])
+    ~ (__ \ "group"      ).format[String]
+    ~ (__ \ "artefact"   ).format[String]
+    ~ (__ \ "version"    ).format[String]
+    )(ServiceDependency.apply, unlift(ServiceDependency.unapply))
 
   val sdFormat: OFormat[ServiceDependency] =
     ( (__ \ "slugName"   ).format[String]
