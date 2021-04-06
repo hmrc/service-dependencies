@@ -21,6 +21,7 @@ import org.scalatest.OptionValues
 import uk.gov.hmrc.mongo.test.{CleanMongoCollectionSupport, PlayMongoRepositorySupport}
 import uk.gov.hmrc.servicedependencies.model.GroupArtefacts
 import uk.gov.hmrc.servicedependencies.persistence.TestSlugInfos._
+import uk.gov.hmrc.servicedependencies.service.DependencyGraphParser
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration.DurationInt
@@ -40,7 +41,8 @@ class GroupArtefactsRepositorySpec
   override lazy val repository = new DerivedGroupArtefactRepository(mongoComponent)
 
   lazy val slugInfoRepo = new SlugInfoRepository(mongoComponent)
-  val derivedCollectionGenerator = new DerivedMongoCollections(mongoComponent)
+  val dependencyGraphParser = new DependencyGraphParser
+  val derivedCollectionGenerator = new DerivedMongoCollections(mongoComponent, dependencyGraphParser)
 
   override implicit val patienceConfig = PatienceConfig(timeout = 30.seconds, interval = 100.millis)
 
