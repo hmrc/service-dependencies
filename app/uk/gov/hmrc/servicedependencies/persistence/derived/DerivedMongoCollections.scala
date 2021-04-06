@@ -19,7 +19,6 @@ package uk.gov.hmrc.servicedependencies.persistence.derived
 import javax.inject.{Inject, Singleton}
 import org.mongodb.scala.SingleObservable
 import org.mongodb.scala.bson.{BsonDocument, BsonString}
-import org.mongodb.scala.model.{ReplaceOneModel, ReplaceOptions}
 import org.mongodb.scala.model.Accumulators._
 import org.mongodb.scala.model.Aggregates._
 import org.mongodb.scala.model.Filters._
@@ -28,8 +27,8 @@ import org.mongodb.scala.model.Projections._
 import org.mongodb.scala.model.Sorts._
 import play.api.Logging
 import uk.gov.hmrc.mongo.MongoComponent
-import uk.gov.hmrc.mongo.play.json.CollectionFactory
-import uk.gov.hmrc.servicedependencies.model.{ServiceDependencyWrite, SlugInfoFlag}
+import uk.gov.hmrc.mongo.play.json.PlayMongoRepository
+import uk.gov.hmrc.servicedependencies.model.{DependencyScopeFlag, ServiceDependencyWrite, SlugInfoFlag}
 import uk.gov.hmrc.servicedependencies.persistence.SlugDenylist
 import uk.gov.hmrc.servicedependencies.service.DependencyGraphParser
 
@@ -38,12 +37,14 @@ import scala.concurrent.{ExecutionContext, Future}
 object DerivedMongoCollections {
   val artefactLookup       = "DERIVED-artefact-lookup"
   val slugDependencyLookup = "DERIVED-slug-dependencies"
+  val slugDependencyLookupTemp = "DERIVED-slug-dependencies-temp"
 }
 
 @Singleton
 class DerivedMongoCollections @Inject()(
-  mongoComponent       : MongoComponent,
-  dependencyGraphParser: DependencyGraphParser
+  mongoComponent                      : MongoComponent,
+  dependencyGraphParser               : DependencyGraphParser,
+  derivedServiceDependenciesRepository: DerivedServiceDependenciesRepository
 )(implicit
   ec: ExecutionContext
 ) extends Logging {
@@ -85,13 +86,21 @@ class DerivedMongoCollections @Inject()(
     * @return
     */
   def generateSlugDependencyLookup(): Future[Unit] = {
-    // TODO should we delete the content of the collection, or just run upsert? Can we skip slugs that we've already analysed? (maybe not because of environment tagging?)
-    // but we could ignore the environment, and let that be maintained (as we do on slugInfos currently)
-    // Better yet, process the dependencyDot off the queue - it's immutable data. We just need to move the environment filtering (which is transient)
-    // out into another collection, and make a join?
+    // TODO we should process the dependencyDot off the queue - it's immutable data.
+    // it requires that we move the environment/latest flag out first (e.g. collection join?), or, if the value stays in the same collection, at least maintain the value in a separate process.
     logger.info(s"Running generateSlugDependencyLookup")
-    val targetCollection =
-      CollectionFactory.collection(mongoComponent.database, DerivedMongoCollections.slugDependencyLookup, ServiceDependencyWrite.format)
+
+    // create temp repo to replace derivedServiceDependenciesRepository - it needs to copy the indices
+    // then replace the collection once the temp has finished being populated
+    // this emulates the behaviour of the $out aggregation https://docs.mongodb.com/manual/reference/operator/aggregation/out/#replace-existing-collection
+    val tempRepo =
+      new PlayMongoRepository[ServiceDependencyWrite](
+        mongoComponent = mongoComponent,
+        collectionName = DerivedMongoCollections.slugDependencyLookupTemp,
+        domainFormat   = ServiceDependencyWrite.format,
+        indexes        = derivedServiceDependenciesRepository.indexes
+      )
+
     mongoComponent.database.getCollection("slugInfos")
       .aggregate(
         List(
@@ -138,15 +147,14 @@ class DerivedMongoCollections @Inject()(
           val integrationFlag  = res.getBoolean("integration"  , false)
           val latestFlag       = res.getBoolean("latest"       , false)
 
-
           val dependencyDot: BsonDocument = res.get[BsonDocument]("dependencyDot").getOrElse(BsonDocument())
-          val compile = dependencyGraphParser.parse(dependencyDot.getString("compile", BsonString("")).getValue.split("\n")).dependencies.map((_, "compile"))
-          val test    = dependencyGraphParser.parse(dependencyDot.getString("test"   , BsonString("")).getValue.split("\n")).dependencies.map((_, "test"   ))
-          val build   = dependencyGraphParser.parse(dependencyDot.getString("build"  , BsonString("")).getValue.split("\n")).dependencies.map((_, "build"  ))
+          val compile = dependencyGraphParser.parse(dependencyDot.getString("compile", BsonString("")).getValue.split("\n")).dependencies.map((_, DependencyScopeFlag.Compile))
+          val test    = dependencyGraphParser.parse(dependencyDot.getString("test"   , BsonString("")).getValue.split("\n")).dependencies.map((_, DependencyScopeFlag.Test   ))
+          val build   = dependencyGraphParser.parse(dependencyDot.getString("build"  , BsonString("")).getValue.split("\n")).dependencies.map((_, DependencyScopeFlag.Build  ))
 
-          val dependencies: Map[DependencyGraphParser.Node, Set[String]] =
+          val dependencies: Map[DependencyGraphParser.Node, Set[DependencyScopeFlag]] =
             (compile ++ test ++ build)
-              .foldLeft(Map.empty[DependencyGraphParser.Node, Set[String]]){ case (acc, (n, flag)) =>
+              .foldLeft(Map.empty[DependencyGraphParser.Node, Set[DependencyScopeFlag]]){ case (acc, (n, flag)) =>
                 acc + (n -> (acc.getOrElse(n, Set.empty) + flag))
               }
 
@@ -159,9 +167,9 @@ class DerivedMongoCollections @Inject()(
                 depArtefact      = node.artefact,
                 depVersion       = node.version,
                 scalaVersion     = node.scalaVersion,
-                compileFlag      = scopeFlags.contains("compile"),
-                testFlag         = scopeFlags.contains("test"   ),
-                buildFlag        = scopeFlags.contains("build"  ),
+                compileFlag      = scopeFlags.contains(DependencyScopeFlag.Compile),
+                testFlag         = scopeFlags.contains(DependencyScopeFlag.Test),
+                buildFlag        = scopeFlags.contains(DependencyScopeFlag.Build),
                 productionFlag   = productionFlag,
                 qaFlag           = qaFlag,
                 stagingFlag      = stagingFlag,
@@ -176,30 +184,26 @@ class DerivedMongoCollections @Inject()(
         }
          .flatMap(group =>
            if (group.isEmpty)
-             SingleObservable(())
+             SingleObservable(0)
            else {
              logger.info(s"Inserting ${group.size}}")
-             import org.mongodb.scala.model.Filters
-             targetCollection
-               .bulkWrite(
-                 group.map(d =>
-                  ReplaceOneModel(
-                    filter      = Filters.and(
-                                    Filters.equal("slugName"   , d.slugName),
-                                    Filters.equal("slugVersion", d.slugVersion),
-                                    Filters.equal("group"      , d.depGroup),
-                                    Filters.equal("artefact"   , d.depArtefact),
-                                    Filters.equal("version"    , d.depVersion),
-                                  ),
-                    replacement = d,
-                    replaceOptions = ReplaceOptions().upsert(true)
-                  )
-                ).toSeq
-               ).map { _ =>
-                logger.info(s"Inserted ${group.size}")
-                ()
+             tempRepo.collection
+               .insertMany(group.toSeq).map { _ =>
+                 logger.info(s"Inserted ${group.size}")
+                 group.size
                }
            }
-         ).toFuture.map(_ => ())
+         )
+         // toFuture here is important, since it waits for the observable above to complete, ensuring the collection rename happens at the end
+         .toFuture
+         .flatMap(res =>
+           mongoComponent.client.getDatabase("admin").runCommand(
+             BsonDocument(
+               "renameCollection" -> ("service-dependencies." + DerivedMongoCollections.slugDependencyLookupTemp),
+               "to"               -> ("service-dependencies." + derivedServiceDependenciesRepository.collectionName),
+               "dropTarget"       -> true
+             )
+           ).toFuture.map(_ => ())
+         ).map(_ => ())
     }
 }
