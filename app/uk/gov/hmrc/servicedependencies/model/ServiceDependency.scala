@@ -19,6 +19,21 @@ package uk.gov.hmrc.servicedependencies.model
 import play.api.libs.json.{__, OFormat}
 import play.api.libs.functional.syntax._
 
+
+sealed trait DependencyScopeFlag { def asString: String }
+object DependencyScopeFlag {
+  case object Compile extends DependencyScopeFlag { val asString = "compile" }
+  case object Test    extends DependencyScopeFlag { val asString = "test"    }
+  case object Build   extends DependencyScopeFlag { val asString = "build"   }
+
+  val values: List[DependencyScopeFlag] =
+    List(Compile, Test, Build)
+
+  def parse(s: String): Option[DependencyScopeFlag] =
+    values.find(_.asString == s)
+}
+
+
 case class ServiceDependencyWrite(
   slugName        : String,
   slugVersion     : String,
