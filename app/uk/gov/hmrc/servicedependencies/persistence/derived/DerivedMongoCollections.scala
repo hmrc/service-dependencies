@@ -33,6 +33,7 @@ import uk.gov.hmrc.servicedependencies.persistence.SlugDenylist
 import uk.gov.hmrc.servicedependencies.service.DependencyGraphParser
 
 import scala.concurrent.{ExecutionContext, Future}
+import org.mongodb.scala.SingleObservable
 
 object DerivedMongoCollections {
   val artefactLookup       = "DERIVED-artefact-lookup"
@@ -151,6 +152,9 @@ class DerivedMongoCollections @Inject()(
   def generateDependencyDotLookup(): Future[Unit] = {
     // TODO should we delete the content of the collection, or just run upsert? Can we skip slugs that we've already analysed? (maybe not because of environment tagging?)
     // but we could ignore the environment, and let that be maintained (as we do on slugInfos currently)
+    // Better yet, process the dependencyDot off the queue - it's immutable data. We just need to move the environment filtering (which is transient)
+    // out into another collection, and make a join?
+    logger.info(s"Running generateDependencyDotLookup")
     val targetCollection =
       CollectionFactory.collection(mongoComponent.database, DerivedMongoCollections.dependencyDotLookup, Dependency.format)
     mongoComponent.database.getCollection("slugInfos")
@@ -186,11 +190,19 @@ class DerivedMongoCollections @Inject()(
           )
         )
       )
-      // TODO stream the result out of collection
-      .toFuture
-      .flatMap(
-        _.flatMap { res =>
-          val doc = res.toBsonDocument
+      .map { res =>
+          logger.info(s"Processing results")
+          //val doc = res.toBsonDocument
+          val slugName         = res.getString("slugName"   )
+          val slugVersion      = res.getString("slugVersion")
+          val productionFlag   = res.getBoolean("production"   , false)
+          val qaFlag           = res.getBoolean("qa"           , false)
+          val stagingFlag      = res.getBoolean("staging"      , false)
+          val developmentFlag  = res.getBoolean("development"  , false)
+          val externalTestFlag = res.getBoolean("external test", false)
+          val integrationFlag  = res.getBoolean("integration"  , false)
+          val latestFlag       = res.getBoolean("latest"       , false)
+
 
           val dependencyDot: BsonDocument = res.get[BsonDocument]("dependencyDot").getOrElse(BsonDocument())
           val compile = dependencyGraphParser.parse(dependencyDot.getString("compile", BsonString("")).getValue.split("\n")).dependencies.map((_, "compile"))
@@ -206,8 +218,8 @@ class DerivedMongoCollections @Inject()(
           val deps =
             dependencies.map { case (node, scopeFlags) =>
               Dependency(
-                slugName         = res.getString("slugName"   ),
-                slugVersion      = res.getString("slugVersion"),
+                slugName         = slugName,
+                slugVersion      = slugVersion,
                 version          = node.version,
                 group            = node.group,
                 artefact         = node.artefact,
@@ -215,27 +227,27 @@ class DerivedMongoCollections @Inject()(
                 compileFlag      = scopeFlags.contains("compile"),
                 testFlag         = scopeFlags.contains("test"   ),
                 buildFlag        = scopeFlags.contains("build"  ),
-                productionFlag   = res.getBoolean("production"   , false),
-                qaFlag           = res.getBoolean("qa"           , false),
-                stagingFlag      = res.getBoolean("staging"      , false),
-                developmentFlag  = res.getBoolean("development"  , false),
-                externalTestFlag = res.getBoolean("external test", false),
-                integrationFlag  = res.getBoolean("integration"  , false),
-                latestFlag       = res.getBoolean("latest"       , false)
+                productionFlag   = productionFlag,
+                qaFlag           = qaFlag,
+                stagingFlag      = stagingFlag,
+                developmentFlag  = developmentFlag,
+                externalTestFlag = externalTestFlag,
+                integrationFlag  = integrationFlag,
+                latestFlag       = latestFlag
               )
             }
-          logger.info(s"Found ${dependencies.size} for ${res.getString("slugName")}")
+          logger.info(s"Found ${dependencies.size} for $slugName $slugVersion")
           deps
-        }.grouped(100) // TODO what's a good group size?
-         .toList.traverse_ { group =>
-           logger.info(s"Inserting ${group.size}}")
+        }
+         .flatMap(group =>
            if (group.isEmpty)
-             Future.successful(())
-           else
+             SingleObservable(())
+           else {
+             logger.info(s"Inserting ${group.size}}")
              targetCollection
-               .insertMany(group).toFuture
-         }
-      )
+               .insertMany(group.toSeq).map(_ => ())
+           }
+         ).toFuture.map(_ => ())
     }
 
   // TODO can this replace ServiceDependency?
