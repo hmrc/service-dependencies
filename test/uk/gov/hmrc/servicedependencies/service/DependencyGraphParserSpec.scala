@@ -22,25 +22,32 @@ import org.scalatest.wordspec.AnyWordSpec
 class DependencyGraphParserSpec
   extends AnyWordSpec
      with Matchers {
+  import DependencyGraphParser._
 
   val dependencyGraphParser = new DependencyGraphParser
 
   "DependencyGraphParser.parse" should {
-    "parse" in {
+    "return dependencies with evictions applied" in {
       val source = scala.io.Source.fromResource("slugs/dependencies-compile.dot")
-      val graph = dependencyGraphParser.parse(source.getLines().toSeq)
-      println(graph.dependencies.mkString("\n"))
+      val graph = dependencyGraphParser.parse(source.getLines.toSeq)
+      graph.dependencies shouldBe List(
+        Node("com.typesafe.play:filters-helpers_2.12:2.7.5"),
+        Node("org.typelevel:cats-core_2.12:2.2.0"),
+        Node("org.typelevel:cats-kernel_2.12:2.2.0"),
+        Node("uk.gov.hmrc:file-upload_2.12:2.22.0")
+      )
     }
   }
 
   "DependencyGraphParser.pathToRoot" should {
     "return path to root" in {
       val source = scala.io.Source.fromResource("slugs/dependencies-compile.dot")
-      val graph = dependencyGraphParser.parse(source.getLines().toSeq)
-
-      graph.dependencies.foreach { n =>
-        println(graph.pathToRoot(n).mkString(" -> "))
-      }
+      val graph = dependencyGraphParser.parse(source.getLines.toSeq)
+      graph.pathToRoot(Node("org.typelevel:cats-kernel_2.12:2.2.0")) shouldBe List(
+        Node("org.typelevel:cats-kernel_2.12:2.2.0"),
+        Node("org.typelevel:cats-core_2.12:2.2.0"),
+        Node("uk.gov.hmrc:file-upload_2.12:2.22.0")
+      )
     }
   }
 }

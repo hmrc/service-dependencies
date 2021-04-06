@@ -74,7 +74,8 @@ class DeadLetterHandler @Inject()(
         logger.warn(
           s"""Dead letter message with
              |ID: '${message.messageId}'
-             |Body: '$m'""".stripMargin)
+             |Body: '$m'""".stripMargin
+        )
       case Failure(e) =>
         // if the decompress failed, log without message body
         logger.error(s"Could not decompress message with ID '${message.messageId}'", e)
