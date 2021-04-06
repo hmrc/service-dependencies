@@ -18,9 +18,9 @@ package uk.gov.hmrc.servicedependencies.service
 
 import akka.actor.ActorSystem
 import akka.stream.{ActorAttributes, Materializer, Supervision}
-import akka.stream.alpakka.sqs.MessageAction.{Delete, Ignore}
-import akka.stream.alpakka.sqs.SqsSourceSettings
+import akka.stream.alpakka.sqs.{MessageAction, SqsSourceSettings}
 import akka.stream.alpakka.sqs.scaladsl.{SqsAckSink, SqsSource}
+import cats.data.EitherT
 import com.github.matsluni.akkahttpspi.AkkaHttpClient
 import com.google.inject.Inject
 import play.api.Logging
@@ -28,7 +28,7 @@ import play.api.libs.json.Json
 import software.amazon.awssdk.services.sqs.SqsAsyncClient
 import software.amazon.awssdk.services.sqs.model.Message
 import uk.gov.hmrc.servicedependencies.config.ArtefactReceivingConfig
-import uk.gov.hmrc.servicedependencies.model.{ApiSlugInfoFormats, SlugInfo}
+import uk.gov.hmrc.servicedependencies.model.ApiSlugInfoFormats
 
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Try}
@@ -64,56 +64,47 @@ class SlugInfoUpdatedHandler @Inject()(
     }.get
 
   if (config.isEnabled) {
-    SqsSource(
-      queueUrl, settings)(awsSqsClient)
+    SqsSource(queueUrl, settings)(awsSqsClient)
       .mapAsync(10)(processMessage)
-      .map(acknowledge)
       .withAttributes(ActorAttributes.supervisionStrategy {
         case NonFatal(e) => logger.error(s"Failed to process sqs messages: ${e.getMessage}", e); Supervision.Restart
       })
       .runWith(SqsAckSink(queueUrl)(awsSqsClient))
   }
 
-  private def processMessage(message: Message): Future[(Message, Either[String, Unit])] = {
+  private def processMessage(message: Message): Future[MessageAction] = {
     logger.debug(s"Starting processing message with ID '${message.messageId()}'")
-    for {
-      parsed <- messageHandling
-                  .decompress(message.body)
-                  .map(decompressed =>
-                    Json.parse(decompressed)
-                    .validate(ApiSlugInfoFormats.slugReads)
-                    .asEither.left.map(error => s"Could not parse message with ID '${message.messageId}'.  Reason: " + error.toString)
-                  )
-      saved  <- saveSlugInfo((message, parsed))
-    } yield saved
-  }
-
-  private def saveSlugInfo(input: (Message, Either[String, SlugInfo])): Future[(Message, Either[String, Unit])] = {
-    val (message, eitherSlugInfo) = input
-
-    (eitherSlugInfo match {
-      case Left(error) => Future(Left(error))
-      case Right(slugInfo) =>
-        slugInfoService.addSlugInfo(slugInfo)
-          .map(saveResult => if (saveResult) Right(()) else Left(s"SlugInfo for message (ID '${message.messageId()}') was sent on but not saved."))
-          .recover {
-            case e =>
-              val errorMessage = s"Could not store slug info for message with ID '${message.messageId()}'"
-              logger.error(errorMessage, e)
-              Left(s"$errorMessage ${e.getMessage}")
-          }
-    }).map((message, _))
-  }
-
-  private def acknowledge(input: (Message, Either[String, Unit])) = {
-    val (message, eitherResult) = input
-    eitherResult match {
+    (for {
+       slugInfo <- EitherT(
+                     messageHandling
+                       .decompress(message.body)
+                       .map(decompressed =>
+                         Json.parse(decompressed)
+                           .validate(ApiSlugInfoFormats.slugReads)
+                           .asEither.left.map(error => s"Could not parse message with ID '${message.messageId}'.  Reason: " + error.toString)
+                       )
+                   )
+       _        <- EitherT(
+                     slugInfoService.addSlugInfo(slugInfo)
+                       .map(saveResult =>
+                          if (saveResult) Right(())
+                          else Left(s"SlugInfo for message (ID '${message.messageId()}') was sent on but not saved.")
+                       )
+                       .recover {
+                         case e =>
+                           val errorMessage = s"Could not store slug info for message with ID '${message.messageId()}'"
+                           logger.error(errorMessage, e)
+                           Left(s"$errorMessage ${e.getMessage}")
+                       }
+                   )
+     } yield ()
+    ).value.map {
       case Left(error) =>
         logger.error(error)
-        Ignore(message)
+        MessageAction.Ignore(message)
       case Right(_) =>
-        logger.debug(s"Message with ID '${message.messageId()}' successfully processed.")
-        Delete(message)
+        logger.info(s"Message with ID '${message.messageId()}' successfully processed.")
+        MessageAction.Delete(message)
     }
   }
 }
