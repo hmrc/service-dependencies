@@ -112,7 +112,7 @@ trait MongoSlugInfoFormats {
     ~ (__ \ "runnerVersion"    ).format[String]
     ~ (__ \ "classpath"        ).format[String]
     ~ (__ \ "java"             ).format[JavaInfo]
-    ~ (__ \ "dependencies"     ).format[List[SlugDependency]]
+    ~ (__ \ "dependencies"     ).format[List[SlugDependency]] // TODO remove this once dependendencyDot\compile is proven to be a replacement
     ~ (__ \ "dependencyDot" \ "compile").formatWithDefault[String]("")
     ~ (__ \ "dependencyDot" \ "test"   ).formatWithDefault[String]("")
     ~ (__ \ "dependencyDot" \ "build"  ).formatWithDefault[String]("")
@@ -126,15 +126,6 @@ trait MongoSlugInfoFormats {
     ~ (__ \ "external test"    ).format[Boolean]
     ~ (__ \ "integration"      ).format[Boolean]
     )(SlugInfo.apply, unlift(SlugInfo.unapply))
-
-  implicit val serviceDependencyFormat: OFormat[ServiceDependency] =
-    ( (__ \ "slugName"         ).format[String]
-    ~ (__ \ "slugVersion"      ).format[String]
-    ~ (__ \ "teams"            ).formatWithDefault[List[String]](List.empty)
-    ~ (__ \ "depGroup"         ).format[String]
-    ~ (__ \ "depArtifact"      ).format[String]
-    ~ (__ \ "depVersion"       ).format[String]
-    )(ServiceDependency.apply, unlift(ServiceDependency.unapply))
 
   implicit val jdkVersionFormat: OFormat[JDKVersion] =
     ( (__ \ "name"             ).format[String]

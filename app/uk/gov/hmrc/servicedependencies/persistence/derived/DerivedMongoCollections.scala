@@ -16,9 +16,10 @@
 
 package uk.gov.hmrc.servicedependencies.persistence.derived
 
-import cats.implicits._
 import javax.inject.{Inject, Singleton}
-import org.mongodb.scala.bson.{BsonBoolean, BsonDocument, BsonString}
+import org.mongodb.scala.SingleObservable
+import org.mongodb.scala.bson.{BsonDocument, BsonString}
+import org.mongodb.scala.model.{ReplaceOneModel, ReplaceOptions}
 import org.mongodb.scala.model.Accumulators._
 import org.mongodb.scala.model.Aggregates._
 import org.mongodb.scala.model.Filters._
@@ -28,17 +29,15 @@ import org.mongodb.scala.model.Sorts._
 import play.api.Logging
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.play.json.CollectionFactory
-import uk.gov.hmrc.servicedependencies.model.SlugInfoFlag
+import uk.gov.hmrc.servicedependencies.model.{ServiceDependencyWrite, SlugInfoFlag}
 import uk.gov.hmrc.servicedependencies.persistence.SlugDenylist
 import uk.gov.hmrc.servicedependencies.service.DependencyGraphParser
 
 import scala.concurrent.{ExecutionContext, Future}
-import org.mongodb.scala.SingleObservable
 
 object DerivedMongoCollections {
   val artefactLookup       = "DERIVED-artefact-lookup"
   val slugDependencyLookup = "DERIVED-slug-dependencies"
-  val dependencyDotLookup  = "DERIVED-dependency-dot"
 }
 
 @Singleton
@@ -85,78 +84,14 @@ class DerivedMongoCollections @Inject()(
     * One document per dependency in the slug
     * @return
     */
-  def generateSlugDependencyLookup(): Future[Unit] =
-    mongoComponent.database.getCollection("slugInfos")
-      .aggregate(
-        List(
-          // filter slugs to just those deployed in any environment, or tagged as latest
-          `match`(
-            or(
-              SlugInfoFlag.values.map(f => equal(f.asString, true)): _* // filter for reachable data
-            )
-          ),
-          // remove denylisted slugs
-          `match`(
-            nin("name", SlugDenylist.denylistedSlugs)
-          ),
-          // project relevant fields including the dependencies list
-          project(
-            fields(
-              excludeId(),
-              computed("slugName", "$name"),
-              computed("slugVersion", "$version"),
-              include("dependencies.group"),
-              include("dependencies.artifact"),
-              include("dependencies.version"),
-              include("production"),
-              include("qa"),
-              include("staging"),
-              include("development"),
-              include("external test"),
-              include("integration"),
-              include("latest")
-            )
-          ),
-          // unwind the dependencies into 1 record per dependency
-          unwind("$dependencies"),
-          // reproject the result so dependencies are at the root level
-          project(
-            fields(
-              computed("group", "$dependencies.group"),
-              computed("artefact", "$dependencies.artifact"),
-              computed("version", "$dependencies.version"),
-              include("slugName"),
-              include("slugVersion"),
-              include("production"),
-              include("qa"),
-              include("staging"),
-              include("development"),
-              include("external test"),
-              include("integration"),
-              include("latest")
-            )
-          ),
-          // replace content of target collection
-          out(DerivedMongoCollections.slugDependencyLookup)
-        )
-      )
-      .allowDiskUse(true)
-      .toFuture
-      .map(_ => Unit)
-
-  /**
-    * A flattened version of slugInfo containing only slugs deployed + latest
-    * One document per dependency in the slug
-    * @return
-    */
-  def generateDependencyDotLookup(): Future[Unit] = {
+  def generateSlugDependencyLookup(): Future[Unit] = {
     // TODO should we delete the content of the collection, or just run upsert? Can we skip slugs that we've already analysed? (maybe not because of environment tagging?)
     // but we could ignore the environment, and let that be maintained (as we do on slugInfos currently)
     // Better yet, process the dependencyDot off the queue - it's immutable data. We just need to move the environment filtering (which is transient)
     // out into another collection, and make a join?
-    logger.info(s"Running generateDependencyDotLookup")
+    logger.info(s"Running generateSlugDependencyLookup")
     val targetCollection =
-      CollectionFactory.collection(mongoComponent.database, DerivedMongoCollections.dependencyDotLookup, Dependency.format)
+      CollectionFactory.collection(mongoComponent.database, DerivedMongoCollections.slugDependencyLookup, ServiceDependencyWrite.format)
     mongoComponent.database.getCollection("slugInfos")
       .aggregate(
         List(
@@ -217,12 +152,12 @@ class DerivedMongoCollections @Inject()(
 
           val deps =
             dependencies.map { case (node, scopeFlags) =>
-              Dependency(
+              ServiceDependencyWrite(
                 slugName         = slugName,
                 slugVersion      = slugVersion,
-                version          = node.version,
-                group            = node.group,
-                artefact         = node.artefact,
+                depGroup         = node.group,
+                depArtefact      = node.artefact,
+                depVersion       = node.version,
                 scalaVersion     = node.scalaVersion,
                 compileFlag      = scopeFlags.contains("compile"),
                 testFlag         = scopeFlags.contains("test"   ),
@@ -244,75 +179,27 @@ class DerivedMongoCollections @Inject()(
              SingleObservable(())
            else {
              logger.info(s"Inserting ${group.size}}")
+             import org.mongodb.scala.model.Filters
              targetCollection
-               .insertMany(group.toSeq).map(_ => ())
+               .bulkWrite(
+                 group.map(d =>
+                  ReplaceOneModel(
+                    filter      = Filters.and(
+                                    Filters.equal("slugName"   , d.slugName),
+                                    Filters.equal("slugVersion", d.slugVersion),
+                                    Filters.equal("group"      , d.depGroup),
+                                    Filters.equal("artefact"   , d.depArtefact),
+                                    Filters.equal("version"    , d.depVersion),
+                                  ),
+                    replacement = d,
+                    replaceOptions = ReplaceOptions().upsert(true)
+                  )
+                ).toSeq
+               ).map { _ =>
+                logger.info(s"Inserted ${group.size}")
+                ()
+               }
            }
          ).toFuture.map(_ => ())
     }
-
-  // TODO can this replace ServiceDependency?
-
-//   case class ServiceDependency(
-//     slugName    : String,
-//     slugVersion : String,
-//     teams       : List[String],
-//     depGroup    : String,
-//     depArtefact : String,
-//     depVersion  : String) {
-//   lazy val depSemanticVersion: Option[Version] =
-//     Version.parse(depVersion)
-// }
-
-// do we still need SlugDependency? i.e. should we be returning it with SlugInfo?
-//   case class SlugDependency(
-//   path       : String,
-//   version    : String,
-//   group      : String,
-//   artifact   : String,
-//   meta       : String = ""
-// )
-
-  case class Dependency(
-    slugName        : String,
-    slugVersion     : String,
-    version         : String,
-    group           : String,
-    artefact        : String,
-    scalaVersion    : Option[String],
-    // scope flag
-    compileFlag     : Boolean,
-    testFlag        : Boolean,
-    buildFlag       : Boolean,
-    // env flags
-    productionFlag  : Boolean,
-    qaFlag          : Boolean,
-    stagingFlag     : Boolean,
-    developmentFlag : Boolean,
-    externalTestFlag: Boolean,
-    integrationFlag : Boolean,
-    latestFlag      : Boolean
-  )
-
-  object Dependency {
-    import play.api.libs.functional.syntax._
-    import play.api.libs.json.{OFormat, __}
-    val format: OFormat[Dependency] =
-      ( (__ \ "slugName"     ).format[String]
-      ~ (__ \ "slugVersion"  ).format[String]
-      ~ (__ \ "version"      ).format[String]
-      ~ (__ \ "group"        ).format[String]
-      ~ (__ \ "artifact"     ).format[String]
-      ~ (__ \ "scalaVersion" ).formatNullable[String]
-      ~ (__ \ "compile"      ).format[Boolean]
-      ~ (__ \ "test"         ).format[Boolean]
-      ~ (__ \ "build"        ).format[Boolean]
-      ~ (__ \ "production"   ).format[Boolean]
-      ~ (__ \ "qa"           ).format[Boolean]
-      ~ (__ \ "staging"      ).format[Boolean]
-      ~ (__ \ "development"  ).format[Boolean]
-      ~ (__ \ "external test").format[Boolean] // TODO confirm space
-      ~ (__ \ "integration"  ).format[Boolean]
-      ~ (__ \ "latest"       ).format[Boolean]
-      )(Dependency.apply _, unlift(Dependency.unapply _))
-  }
 }
