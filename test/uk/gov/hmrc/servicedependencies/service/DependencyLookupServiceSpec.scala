@@ -175,7 +175,7 @@ object DependencyLookupServiceTestData {
   val dep2: SlugDependency = SlugDependency("", "5.12.0", "org.libs", "mylib")
 
   val slug1 = SlugInfo(
-    uri           = "http://slugs.com/test/test-1.0.0.tgz"
+      uri           = "http://slugs.com/test/test-1.0.0.tgz"
     , created       = LocalDateTime.of(2019, 6, 28, 11, 51,23)
     , name          = "test"
     , version       = Version("1.0.0")
@@ -184,6 +184,9 @@ object DependencyLookupServiceTestData {
     , classpath     = "classpath="
     , java          = JavaInfo("1.8.0", "Oracle", "JDK")
     , dependencies  = List(dep1)
+    , dependencyDotCompile = ""
+    , dependencyDotTest    = ""
+    , dependencyDotBuild   = ""
     , applicationConfig = "config"
     , ""
     , latest       = true

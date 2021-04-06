@@ -31,15 +31,18 @@ object TestSlugInfos {
       runnerVersion = "0.5.2",
       classpath     = "",
       java          = JavaInfo("1.181.0", "OpenJDK", "JRE"),
-      dependencies = List(
-        SlugDependency(
-          path     = "lib1",
-          version  = "1.2.0",
-          group    = "com.test.group",
-          artifact = "lib1"
-        ),
-        SlugDependency(path = "lib2", version = "0.66", group = "com.test.group", artifact = "lib2")
-      ),
+      dependencies  = List(
+                        SlugDependency(
+                          path     = "lib1",
+                          version  = "1.2.0",
+                          group    = "com.test.group",
+                          artifact = "lib1"
+                        ),
+                        SlugDependency(path = "lib2", version = "0.66", group = "com.test.group", artifact = "lib2")
+                      ),
+      dependencyDotCompile = "",
+      dependencyDotTest    = "",
+      dependencyDotBuild   = "",
       applicationConfig = "",
       slugConfig        = "",
       latest            = true,
@@ -67,13 +70,17 @@ object TestSlugInfos {
       runnerVersion = "0.5.2",
       classpath     = "",
       java          = JavaInfo("1.191.0", "Oracle", "JDK"),
-      dependencies = List(
-        SlugDependency(
-          path     = "lib3",
-          version  = "1.66.1",
-          group    = "io.stuff",
-          artifact = "lib3"
-        )),
+      dependencies  = List(
+                        SlugDependency(
+                          path     = "lib3",
+                          version  = "1.66.1",
+                          group    = "io.stuff",
+                          artifact = "lib3"
+                        )
+                      ),
+      dependencyDotCompile = "",
+      dependencyDotTest    = "",
+      dependencyDotBuild   = "",
       applicationConfig = "",
       slugConfig        = "",
       latest            = true,

@@ -25,7 +25,6 @@ import com.github.matsluni.akkahttpspi.AkkaHttpClient
 import com.google.inject.Inject
 import play.api.Logging
 import play.api.libs.json.Json
-import software.amazon.awssdk.auth.credentials.{AwsCredentialsProvider, DefaultCredentialsProvider}
 import software.amazon.awssdk.services.sqs.SqsAsyncClient
 import software.amazon.awssdk.services.sqs.model.Message
 import uk.gov.hmrc.servicedependencies.config.ArtefactReceivingConfig
@@ -37,7 +36,8 @@ import scala.util.control.NonFatal
 
 class SlugInfoUpdatedHandler @Inject()(
   config         : ArtefactReceivingConfig,
-  slugInfoService: SlugInfoService
+  slugInfoService: SlugInfoService,
+  messageHandling: SqsMessageHandling
 )(implicit
    actorSystem : ActorSystem,
    materializer: Materializer,
@@ -51,14 +51,9 @@ class SlugInfoUpdatedHandler @Inject()(
   private lazy val queueUrl = config.sqsSlugQueue
   private lazy val settings = SqsSourceSettings()
 
-  private lazy val awsCredentialsProvider: AwsCredentialsProvider =
-    Try(DefaultCredentialsProvider.builder().build()).recover {
-      case NonFatal(e) => logger.error(e.getMessage, e); throw e
-    }.get
-
   private lazy val awsSqsClient =
     Try {
-      val client = SqsAsyncClient.builder().credentialsProvider(awsCredentialsProvider)
+      val client = SqsAsyncClient.builder()
         .httpClient(AkkaHttpClient.builder().withActorSystem(actorSystem).build())
         .build()
 
@@ -71,9 +66,7 @@ class SlugInfoUpdatedHandler @Inject()(
   if (config.isEnabled) {
     SqsSource(
       queueUrl, settings)(awsSqsClient)
-      .map(logMessage)
-      .map(messageToSlugInfo)
-      .mapAsync(10)(saveSlugInfo)
+      .mapAsync(10)(processMessage)
       .map(acknowledge)
       .withAttributes(ActorAttributes.supervisionStrategy {
         case NonFatal(e) => logger.error(s"Failed to process sqs messages: ${e.getMessage}", e); Supervision.Restart
@@ -81,16 +74,19 @@ class SlugInfoUpdatedHandler @Inject()(
       .runWith(SqsAckSink(queueUrl)(awsSqsClient))
   }
 
-  private def logMessage(message: Message): Message = {
+  private def processMessage(message: Message): Future[(Message, Either[String, Unit])] = {
     logger.debug(s"Starting processing message with ID '${message.messageId()}'")
-    message
+    for {
+      parsed <- messageHandling
+                  .decompress(message.body)
+                  .map(decompressed =>
+                    Json.parse(decompressed)
+                    .validate(ApiSlugInfoFormats.slugReads)
+                    .asEither.left.map(error => s"Could not parse message with ID '${message.messageId}'.  Reason: " + error.toString)
+                  )
+      saved  <- saveSlugInfo((message, parsed))
+    } yield saved
   }
-
-  private def messageToSlugInfo(message: Message): (Message, Either[String, SlugInfo]) =
-    (message,
-      Json.parse(message.body())
-        .validate(ApiSlugInfoFormats.slugReads)
-        .asEither.left.map(error => s"Could not parse message with ID '${message.messageId()}'.  Reason: " + error.toString()))
 
   private def saveSlugInfo(input: (Message, Either[String, SlugInfo])): Future[(Message, Either[String, Unit])] = {
     val (message, eitherSlugInfo) = input

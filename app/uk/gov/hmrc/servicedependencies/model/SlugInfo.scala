@@ -56,24 +56,27 @@ case class JavaInfo(
 )
 
 case class SlugInfo(
-  uri              : String,
-  created          : LocalDateTime,
-  name             : String,
-  version          : Version,
-  teams            : List[String],
-  runnerVersion    : String,
-  classpath        : String,
-  java             : JavaInfo,
-  dependencies     : List[SlugDependency],
-  applicationConfig: String,
-  slugConfig       : String,
-  latest           : Boolean,
-  production       : Boolean,
-  qa               : Boolean,
-  staging          : Boolean,
-  development      : Boolean,
-  externalTest     : Boolean,
-  integration      : Boolean
+  uri                 : String,
+  created             : LocalDateTime,
+  name                : String,
+  version             : Version,
+  teams               : List[String],
+  runnerVersion       : String,
+  classpath           : String,
+  java                : JavaInfo,
+  dependencies        : List[SlugDependency],
+  dependencyDotCompile: String,
+  dependencyDotTest   : String,
+  dependencyDotBuild  : String,
+  applicationConfig   : String,
+  slugConfig          : String,
+  latest              : Boolean,
+  production          : Boolean,
+  qa                  : Boolean,
+  staging             : Boolean,
+  development         : Boolean,
+  externalTest        : Boolean,
+  integration         : Boolean
 ) {
   lazy val classpathOrderedDependencies: List[SlugDependency] =
     classpath.split(":")
@@ -110,8 +113,11 @@ trait MongoSlugInfoFormats {
     ~ (__ \ "classpath"        ).format[String]
     ~ (__ \ "java"             ).format[JavaInfo]
     ~ (__ \ "dependencies"     ).format[List[SlugDependency]]
-    ~ (__ \ "applicationConfig").formatNullable[String].inmap[String](_.getOrElse(""), Option.apply)
-    ~ (__ \ "slugConfig"       ).formatNullable[String].inmap[String](_.getOrElse(""), Option.apply)
+    ~ (__ \ "dependencyDot" \ "compile").formatWithDefault[String]("")
+    ~ (__ \ "dependencyDot" \ "test"   ).formatWithDefault[String]("")
+    ~ (__ \ "dependencyDot" \ "build"  ).formatWithDefault[String]("")
+    ~ (__ \ "applicationConfig").formatWithDefault[String]("")
+    ~ (__ \ "slugConfig"       ).formatWithDefault[String]("")
     ~ (__ \ "latest"           ).format[Boolean]
     ~ (__ \ "production"       ).format[Boolean]
     ~ (__ \ "qa"               ).format[Boolean]
@@ -231,6 +237,9 @@ trait ApiSlugInfoFormats {
     ~ (__ \ "classpath"        ).format[String]
     ~ (__ \ "java"             ).format[JavaInfo]
     ~ (__ \ "dependencies"     ).format[List[SlugDependency]]
+    ~ (__ \ "dependencyDot" \ "compile").format[String]
+    ~ (__ \ "dependencyDot" \ "test"   ).format[String]
+    ~ (__ \ "dependencyDot" \ "build"  ).format[String]
     ~ (__ \ "applicationConfig").format[String]
     ~ (__ \ "slugConfig"       ).format[String]
     ~ (__ \ "latest"           ).format[Boolean]
@@ -260,6 +269,9 @@ trait ApiSlugInfoFormats {
     ~ (__ \ "classpath"        ).read[String]
     ~ (__ \ "java"             ).read[JavaInfo]
     ~ (__ \ "dependencies"     ).read[List[SlugDependency]]
+    ~ (__ \ "dependencyDot" \ "compile").read[String]
+    ~ (__ \ "dependencyDot" \ "test"   ).read[String]
+    ~ (__ \ "dependencyDot" \ "build"  ).read[String]
     ~ (__ \ "applicationConfig").read[String]
     ~ (__ \ "slugConfig"       ).read[String]
     ~ (__ \ "latest"           ).read[Boolean]

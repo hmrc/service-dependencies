@@ -24,17 +24,17 @@ import akka.stream.alpakka.sqs.scaladsl.{SqsAckSink, SqsSource}
 import com.github.matsluni.akkahttpspi.AkkaHttpClient
 import com.google.inject.Inject
 import play.api.Logging
-import software.amazon.awssdk.auth.credentials.{AwsCredentialsProvider, DefaultCredentialsProvider}
 import software.amazon.awssdk.services.sqs.SqsAsyncClient
 import software.amazon.awssdk.services.sqs.model.Message
 import uk.gov.hmrc.servicedependencies.config.ArtefactReceivingConfig
 
 import scala.concurrent.{ExecutionContext, Future}
-import scala.util.{Failure, Try}
+import scala.util.{Failure, Success, Try}
 import scala.util.control.NonFatal
 
 class DeadLetterHandler @Inject()(
-  config: ArtefactReceivingConfig
+  config: ArtefactReceivingConfig,
+  messageHandling: SqsMessageHandling
 )(implicit
   actorSystem : ActorSystem,
   materializer: Materializer,
@@ -48,15 +48,9 @@ class DeadLetterHandler @Inject()(
   private lazy val queueUrl = config.sqsSlugDeadLetterQueue
   private lazy val settings = SqsSourceSettings()
 
-  private lazy val awsCredentialsProvider: AwsCredentialsProvider =
-    Try(DefaultCredentialsProvider.builder().build())
-      .recoverWith {
-        case NonFatal(e) => logger.error(e.getMessage, e); Failure(e)
-      }.get
-
   private lazy val awsSqsClient =
     Try {
-      val client = SqsAsyncClient.builder().credentialsProvider(awsCredentialsProvider)
+      val client = SqsAsyncClient.builder()
         .httpClient(AkkaHttpClient.builder().withActorSystem(actorSystem).build())
         .build()
       actorSystem.registerOnTermination(client.close())
@@ -66,8 +60,7 @@ class DeadLetterHandler @Inject()(
     }.get
 
   if (config.isEnabled) {
-    SqsSource(
-      queueUrl, settings)(awsSqsClient)
+    SqsSource(queueUrl, settings)(awsSqsClient)
       .mapAsync(10)(processMessage)
       .runWith(SqsAckSink(queueUrl)(awsSqsClient))
       .recoverWith {
@@ -76,10 +69,17 @@ class DeadLetterHandler @Inject()(
   }
 
   private def processMessage(message: Message) = {
-    logger.warn(
-      s"""Dead letter message with
-         |ID: '${message.messageId()}'
-         |Body: '${message.body()}'""".stripMargin)
+    messageHandling.decompress(message.body).onComplete {
+      case Success(m) =>
+        logger.warn(
+          s"""Dead letter message with
+             |ID: '${message.messageId}'
+             |Body: '$m'""".stripMargin
+        )
+      case Failure(e) =>
+        // if the decompress failed, log without message body
+        logger.error(s"Could not decompress message with ID '${message.messageId}'", e)
+    }
     Future(Delete(message))
   }
 }

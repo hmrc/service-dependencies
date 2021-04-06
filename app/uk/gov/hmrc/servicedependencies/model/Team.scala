@@ -37,7 +37,6 @@ case class Team(
 object Team {
   val format =
     ( (__ \ "name" ).format[String]
-    ~ (__ \ "repos").formatNullable[Map[String, Seq[String]]]
-                    .inmap[Map[String, Seq[String]]](_.getOrElse(Map.empty), Some.apply)
+    ~ (__ \ "repos").formatWithDefault[Map[String, Seq[String]]](Map.empty)
     )(Team.apply, unlift(Team.unapply))
 }

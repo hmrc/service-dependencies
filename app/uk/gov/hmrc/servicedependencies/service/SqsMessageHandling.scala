@@ -16,25 +16,27 @@
 
 package uk.gov.hmrc.servicedependencies.service
 
-import javax.inject.{Inject, Singleton}
-import play.api.Logging
-import uk.gov.hmrc.servicedependencies.persistence.derived.DerivedMongoCollections
+import java.util.Base64
 
-import scala.concurrent.{ExecutionContext, Future}
+import akka.stream.Materializer
+import akka.stream.scaladsl.{Compression, Sink, Source}
+import akka.util.ByteString
+import javax.inject.{Inject, Singleton}
+
+import scala.concurrent.Future
 
 @Singleton
-class DerivedViewsService @Inject()(
-  derivedMongoCollections: DerivedMongoCollections
-)(implicit
-  ec: ExecutionContext
-) extends Logging{
+class SqsMessageHandling @Inject()(implicit materializer: Materializer) {
 
-  def generateAllViews() : Future[Unit] = {
-    for {
-       _ <- derivedMongoCollections.generateArtefactLookup()
-       _ <- derivedMongoCollections.generateSlugDependencyLookup()
-    } yield ()
-  }.recover {
-    case e => logger.error("Failed to update derived collections", e)
-  }
+  private lazy val decoder = Base64.getDecoder
+
+  def decompress(message: String): Future[String] =
+    decompress(decoder.decode(message))
+
+  private def decompress(compressedInput: Array[Byte]): Future[String] =
+    Source.single(ByteString.fromArray(compressedInput))
+      .via(Compression.gunzip())
+      .fold(ByteString.empty)(_ ++ _)
+      .map(_.utf8String)
+      .runWith(Sink.head)
 }
