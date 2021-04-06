@@ -50,4 +50,22 @@ class DependencyGraphParserSpec
       )
     }
   }
+
+  "Node" should {
+    "parse name without scalaVersion" in {
+      val n = Node("default:project:0.1.0-SNAPSHOT")
+      n.group shouldBe "default"
+      n.artefact shouldBe "project"
+      n.version shouldBe "0.1.0-SNAPSHOT"
+      n.scalaVersion shouldBe None
+    }
+
+    "parse name with scalaVersion" in {
+      val n = Node("org.scala-lang.modules:scala-xml_2.12:1.3.0")
+      n.group shouldBe "org.scala-lang.modules"
+      n.artefact shouldBe "scala-xml"
+      n.version shouldBe "1.3.0"
+      n.scalaVersion shouldBe Some("2.12")
+    }
+  }
 }
