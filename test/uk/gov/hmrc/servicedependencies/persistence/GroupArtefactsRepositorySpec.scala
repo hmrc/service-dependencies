@@ -27,7 +27,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration.DurationInt
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpecLike
-import uk.gov.hmrc.servicedependencies.persistence.derived.{DerivedGroupArtefactRepository, DerivedMongoCollections}
+import uk.gov.hmrc.servicedependencies.persistence.derived.{DerivedGroupArtefactRepository, DerivedMongoCollections, DerivedServiceDependenciesRepository}
 
 class GroupArtefactsRepositorySpec
     extends AnyWordSpecLike
@@ -42,7 +42,8 @@ class GroupArtefactsRepositorySpec
 
   lazy val slugInfoRepo = new SlugInfoRepository(mongoComponent)
   val dependencyGraphParser = new DependencyGraphParser
-  val derivedCollectionGenerator = new DerivedMongoCollections(mongoComponent, dependencyGraphParser)
+  val derivedServiceDependenciesRepository = new DerivedServiceDependenciesRepository(mongoComponent)
+  val derivedCollectionGenerator = new DerivedMongoCollections(mongoComponent, dependencyGraphParser, derivedServiceDependenciesRepository)
 
   override implicit val patienceConfig = PatienceConfig(timeout = 30.seconds, interval = 100.millis)
 

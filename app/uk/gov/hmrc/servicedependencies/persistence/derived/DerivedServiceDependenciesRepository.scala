@@ -16,16 +16,19 @@
 
 package uk.gov.hmrc.servicedependencies.persistence.derived
 
-import javax.inject.Inject
+import javax.inject.{Inject, Singleton}
+import org.mongodb.scala.bson.BsonDocument
+import org.mongodb.scala.bson.conversions.Bson
 import org.mongodb.scala.model.Filters._
 import org.mongodb.scala.model.Indexes.{ascending, compoundIndex}
 import org.mongodb.scala.model.{IndexModel, IndexOptions}
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.play.json.PlayMongoRepository
-import uk.gov.hmrc.servicedependencies.model.{ApiServiceDependencyFormats, DependencyScopeFlag, ServiceDependency, SlugInfoFlag}
+import uk.gov.hmrc.servicedependencies.model.{ApiServiceDependencyFormats, DependencyScope, ServiceDependency, SlugInfoFlag}
 
 import scala.concurrent.{ExecutionContext, Future}
 
+@Singleton
 class DerivedServiceDependenciesRepository @Inject()(mongoComponent: MongoComponent)(implicit ec: ExecutionContext
 ) extends PlayMongoRepository[ServiceDependency](
   collectionName =  DerivedMongoCollections.slugDependencyLookup
@@ -48,9 +51,9 @@ class DerivedServiceDependenciesRepository @Inject()(mongoComponent: MongoCompon
                          IndexOptions().name("slugInfoFlagIdx").background(true)
                        ),
                        IndexModel(
-                         compoundIndex(DependencyScopeFlag.values.map(f => ascending(f.asString)) :_*),
-                         IndexOptions().name("dependencyScopeFlagIdx").background(true)
-                       ),
+                         compoundIndex(DependencyScope.values.map(f => ascending(f.asString)) :_*),
+                         IndexOptions().name("dependencyScopeIdx").background(true)
+                       )/*,
                        IndexModel(
                          compoundIndex(
                            ascending("slugName"),
@@ -60,7 +63,7 @@ class DerivedServiceDependenciesRepository @Inject()(mongoComponent: MongoCompon
                            ascending("version")
                          ),
                          IndexOptions().name("uniqueIdx").unique(true)
-                       )
+                       )*/
                      )
   , optSchema      = None
   //, replaceIndexes = true // TODO it doesn't support renaming an index (only changing the definition of an index)
@@ -69,20 +72,28 @@ class DerivedServiceDependenciesRepository @Inject()(mongoComponent: MongoCompon
   def findServicesWithDependency(
     flag    : SlugInfoFlag,
     group   : String,
-    artefact: String
+    artefact: String,
+    scope   : Option[DependencyScope]
   ): Future[Seq[ServiceDependency]] =
-    collection.find(and(
-      equal(flag.asString, true),
-      equal("group", group),
-      equal("artefact", artefact))
+    collection.find(
+      and(
+        equal(flag.asString, true),
+        equal("group", group),
+        equal("artefact", artefact),
+        scope.fold[Bson](BsonDocument())(s => equal(s.asString, true))
+      )
     ).toFuture()
 
-  def findDependenciesForService(name: String, flag: SlugInfoFlag): Future[Seq[ServiceDependency]] =
+  def findDependenciesForService(
+    name : String,
+    flag : SlugInfoFlag,
+    scope: Option[DependencyScope]
+  ): Future[Seq[ServiceDependency]] =
     collection.find(
       and(
         equal("slugName", name),
         equal(flag.asString, true),
-        equal("compile", true) // TODO make DependencyScopeFlag a parameter
+        scope.fold[Bson](BsonDocument())(sf => equal(sf.asString, true))
       )
     ).toFuture()
 }

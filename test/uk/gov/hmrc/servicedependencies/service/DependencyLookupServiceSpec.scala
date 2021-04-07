@@ -44,15 +44,6 @@ class DependencyLookupServiceSpec
 
   import ExecutionContext.Implicits.global
 
-  "slugToServiceDep" should "Convert a slug and dependency to a ServiceDependency" in {
-    val res = DependencyLookupService.slugToServiceDep(slug1, dep1)
-
-    res.depSemanticVersion shouldBe Some(Version(5,11,0))
-    res.slugName           shouldBe "test"
-    res.slugVersion        shouldBe "1.0.0"
-  }
-
-
   "BuildLookup" should "Build a map of dependencies showing which slug uses which version" in {
     val res = DependencyLookupService.buildLookup(Seq(slug11, slug1, slug12))
 
@@ -70,8 +61,8 @@ class DependencyLookupServiceSpec
 
     val slugLookup: Map[String, Map[Version, Set[ServiceDependency]]] = Map(
       "org.libs:mylib" -> Map(
-          Version(1,0,0) -> Set(ServiceDependency("test1", "1.99.3", List.empty, "org.libs", "mylib", "1.0.0"))
-        , Version(1,3,0) -> Set(ServiceDependency("test2", "2.0.1" , List.empty, "org.libs", "mylib", "1.3.0")))
+          Version(1,0,0) -> Set(ServiceDependency("test1", "1.99.3", List.empty, "org.libs", "mylib", "1.0.0", scalaVersion = None, scopes = Set.empty))
+        , Version(1,3,0) -> Set(ServiceDependency("test2", "2.0.1" , List.empty, "org.libs", "mylib", "1.3.0", scalaVersion = None, scopes = Set.empty)))
         )
 
     val res1 = DependencyLookupService.findSlugsUsing(

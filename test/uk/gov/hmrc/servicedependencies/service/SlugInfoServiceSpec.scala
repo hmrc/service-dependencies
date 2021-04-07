@@ -43,56 +43,60 @@ class SlugInfoServiceSpec
 
   val group        = "group"
   val artefact     = "artefact"
+  val scope        = DependencyScope.Compile
 
   val v100 =
     ServiceDependency(
-        slugName           = "service1"
-      , slugVersion        = "v1"
-      , teams              = List.empty
-      , depGroup           = group
-      , depArtefact        = artefact
-      , depVersion         = "1.0.0"
+        slugName     = "service1"
+      , slugVersion  = "v1"
+      , teams        = List.empty
+      , depGroup     = group
+      , depArtefact  = artefact
+      , depVersion   = "1.0.0"
+      , scalaVersion = None
+      , scopes       = Set(scope)
       )
 
   val v200 =
     ServiceDependency(
-        slugName           = "service1"
-      , slugVersion        = "v1"
-      , teams              = List.empty
-      , depGroup           = group
-      , depArtefact        = artefact
-      , depVersion         = "2.0.0"
+        slugName     = "service1"
+      , slugVersion  = "v1"
+      , teams        = List.empty
+      , depGroup     = group
+      , depArtefact  = artefact
+      , depVersion   = "2.0.0"
+      , scalaVersion = None
+      , scopes       = Set(scope)
       )
 
   val v205 =
     ServiceDependency(
-        slugName           = "service1"
-      , slugVersion        = "v1"
-      , teams              = List.empty
-      , depGroup           = group
-      , depArtefact        = artefact
-      , depVersion         = "2.0.5"
+        slugName     = "service1"
+      , slugVersion  = "v1"
+      , teams        = List.empty
+      , depGroup     = group
+      , depArtefact  = artefact
+      , depVersion   = "2.0.5"
+      , scalaVersion = None
+      , scopes       = Set(scope)
       )
 
   "SlugInfoService.findServicesWithDependency" should {
     "filter results by version" in {
       val boot = Boot.init
 
-      when(boot.mockedServiceDependenciesRepository.findServicesWithDependency(SlugInfoFlag.Latest, group, artefact))
+      when(boot.mockedServiceDependenciesRepository.findServicesWithDependency(SlugInfoFlag.Latest, group, artefact, Some(scope)))
         .thenReturn(Future(Seq(v100, v200, v205)))
 
       when(boot.mockedTeamsAndRepositoriesConnector.getTeamsForServices)
         .thenReturn(Future(TeamsForServices(Map.empty)))
 
-      whenReady(boot.service.findServicesWithDependency(SlugInfoFlag.Latest, group, artefact, BobbyVersionRange("[1.0.1,)"))){ f =>
-        f shouldBe Seq(v200, v205)
-      }
-      whenReady(boot.service.findServicesWithDependency(SlugInfoFlag.Latest, group, artefact, BobbyVersionRange("(,1.0.1]"))){ f =>
-        f shouldBe Seq(v100)
-      }
-      whenReady(boot.service.findServicesWithDependency(SlugInfoFlag.Latest, group, artefact, BobbyVersionRange("[2.0.0]"))){ f =>
-        f shouldBe Seq(v200)
-      }
+      boot.service.findServicesWithDependency(SlugInfoFlag.Latest, group, artefact, BobbyVersionRange("[1.0.1,)"), Some(scope))
+        .futureValue shouldBe Seq(v200, v205)
+      boot.service.findServicesWithDependency(SlugInfoFlag.Latest, group, artefact, BobbyVersionRange("(,1.0.1]"), Some(scope))
+        .futureValue shouldBe Seq(v100)
+      boot.service.findServicesWithDependency(SlugInfoFlag.Latest, group, artefact, BobbyVersionRange("[2.0.0]"), Some(scope))
+        .futureValue shouldBe Seq(v200)
     }
 
     "include non-parseable versions" in {
@@ -100,18 +104,16 @@ class SlugInfoServiceSpec
 
       val bad = v100.copy(depVersion  = "r938")
 
-      when(boot.mockedServiceDependenciesRepository.findServicesWithDependency(SlugInfoFlag.Latest, group, artefact))
+      when(boot.mockedServiceDependenciesRepository.findServicesWithDependency(SlugInfoFlag.Latest, group, artefact, Some(scope)))
         .thenReturn(Future(Seq(v100, v200, v205, bad)))
 
       when(boot.mockedTeamsAndRepositoriesConnector.getTeamsForServices)
         .thenReturn(Future(TeamsForServices(Map.empty)))
 
-      whenReady(boot.service.findServicesWithDependency(SlugInfoFlag.Latest, group, artefact, BobbyVersionRange("[1.0.1,)"))){ f =>
-        f shouldBe Seq(v200, v205, bad)
-      }
-      whenReady(boot.service.findServicesWithDependency(SlugInfoFlag.Latest, group, artefact, BobbyVersionRange("(,1.0.1]"))){ f =>
-        f shouldBe Seq(v100, bad)
-      }
+      boot.service.findServicesWithDependency(SlugInfoFlag.Latest, group, artefact, BobbyVersionRange("[1.0.1,)"), Some(scope))
+        .futureValue shouldBe Seq(v200, v205, bad)
+      boot.service.findServicesWithDependency(SlugInfoFlag.Latest, group, artefact, BobbyVersionRange("(,1.0.1]"), Some(scope))
+        .futureValue shouldBe Seq(v100, bad)
     }
   }
 
