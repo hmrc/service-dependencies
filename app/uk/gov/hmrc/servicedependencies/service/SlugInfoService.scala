@@ -24,7 +24,7 @@ import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.servicedependencies.connector.{GithubRawConnector, ReleasesApiConnector, TeamsAndRepositoriesConnector}
 import uk.gov.hmrc.servicedependencies.model._
 import uk.gov.hmrc.servicedependencies.persistence.derived.{DerivedGroupArtefactRepository, DerivedServiceDependenciesRepository}
-import uk.gov.hmrc.servicedependencies.persistence.{JdkVersionRepository, SlugInfoRepository}
+import uk.gov.hmrc.servicedependencies.persistence.{DeploymentRepository, JdkVersionRepository, SlugInfoRepository}
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -34,9 +34,10 @@ class SlugInfoService @Inject()(
   serviceDependencyRepository   : DerivedServiceDependenciesRepository,
   jdkVersionRepository          : JdkVersionRepository,
   groupArtefactRepository       : DerivedGroupArtefactRepository,
+  deploymentRepository          : DeploymentRepository,
   teamsAndRepositoriesConnector : TeamsAndRepositoriesConnector,
   releasesApiConnector          : ReleasesApiConnector,
-  githubRawConnector             : GithubRawConnector,
+  githubRawConnector            : GithubRawConnector,
 )(implicit ec: ExecutionContext
 ) extends Logging {
   def addSlugInfo(slug: SlugInfo): Future[Boolean] =
@@ -50,7 +51,7 @@ class SlugInfoService @Inject()(
                                        logger.info(s"Slug ${slug.name} ${slug.version} isLatest=$isLatest (out of: ${nonempty.map(_.version).sorted})")
                                        isLatest
                     }
-      _        <- if (isLatest) slugInfoRepository.markLatest(slug.name, slug.version) else Future(())
+      _        <- if (isLatest) deploymentRepository.markLatest(slug.name, slug.version) else Future(())
     } yield added
 
   def getSlugInfos(name: String, version: Option[String]): Future[Seq[SlugInfo]] =
@@ -111,13 +112,13 @@ class SlugInfoService @Inject()(
                                 }
       _                      <- allServiceDeployments.toList.traverse { case (serviceName, deployments) =>
                                   deployments.traverse {
-                                    case (flag, None         ) => slugInfoRepository.clearFlag(flag, serviceName)
-                                    case (flag, Some(version)) => slugInfoRepository.setFlag(flag, serviceName, version)
+                                    case (flag, None         ) => deploymentRepository.clearFlag(flag, serviceName)
+                                    case (flag, Some(version)) => deploymentRepository.setFlag(flag, serviceName, version)
                                   }
                                 }
-      _                      <- slugInfoRepository.clearFlags(SlugInfoFlag.values, decomissionedServices)
+      _                      <- deploymentRepository.clearFlags(SlugInfoFlag.values, decomissionedServices)
       _                      <- // we have found some "archived" projects which are still deployed, we will only remove the latest flag for them
-                                slugInfoRepository.clearFlags(List(SlugInfoFlag.Latest), inactiveServices)
+                                deploymentRepository.clearFlags(List(SlugInfoFlag.Latest), inactiveServices)
     } yield ()
   }
 

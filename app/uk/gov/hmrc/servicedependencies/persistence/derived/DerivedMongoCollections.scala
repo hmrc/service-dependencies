@@ -19,6 +19,7 @@ package uk.gov.hmrc.servicedependencies.persistence.derived
 import javax.inject.{Inject, Singleton}
 import org.mongodb.scala.SingleObservable
 import org.mongodb.scala.bson.{BsonDocument, BsonString}
+import org.mongodb.scala.model.{ReplaceOneModel, ReplaceOptions}
 import org.mongodb.scala.model.Accumulators._
 import org.mongodb.scala.model.Aggregates._
 import org.mongodb.scala.model.Filters._
@@ -27,7 +28,7 @@ import org.mongodb.scala.model.Projections._
 import org.mongodb.scala.model.Sorts._
 import play.api.Logging
 import uk.gov.hmrc.mongo.MongoComponent
-import uk.gov.hmrc.mongo.play.json.PlayMongoRepository
+import uk.gov.hmrc.mongo.play.json.CollectionFactory
 import uk.gov.hmrc.servicedependencies.model.{DependencyScope, ServiceDependencyWrite, SlugInfoFlag}
 import uk.gov.hmrc.servicedependencies.persistence.SlugDenylist
 import uk.gov.hmrc.servicedependencies.service.DependencyGraphParser
@@ -37,7 +38,6 @@ import scala.concurrent.{ExecutionContext, Future}
 object DerivedMongoCollections {
   val artefactLookup       = "DERIVED-artefact-lookup"
   val slugDependencyLookup = "DERIVED-slug-dependencies"
-  val slugDependencyLookupTemp = "DERIVED-slug-dependencies-temp"
 }
 
 @Singleton
@@ -87,19 +87,10 @@ class DerivedMongoCollections @Inject()(
     */
   def generateSlugDependencyLookup(): Future[Unit] = {
     // TODO we should process the dependencyDot off the queue - it's immutable data.
-    // it requires that we move the environment/latest flag out first (e.g. collection join?), or, if the value stays in the same collection, at least maintain the value in a separate process.
     logger.info(s"Running generateSlugDependencyLookup")
 
-    // create temp repo to replace derivedServiceDependenciesRepository - it needs to copy the indices
-    // then replace the collection once the temp has finished being populated
-    // this emulates the behaviour of the $out aggregation https://docs.mongodb.com/manual/reference/operator/aggregation/out/#replace-existing-collection
-    val tempRepo =
-      new PlayMongoRepository[ServiceDependencyWrite](
-        mongoComponent = mongoComponent,
-        collectionName = DerivedMongoCollections.slugDependencyLookupTemp,
-        domainFormat   = ServiceDependencyWrite.format,
-        indexes        = derivedServiceDependenciesRepository.indexes
-      )
+    val targetCollection =
+      CollectionFactory.collection(mongoComponent.database, DerivedMongoCollections.slugDependencyLookup, ServiceDependencyWrite.format)
 
     mongoComponent.database.getCollection("slugInfos")
       .aggregate(
@@ -122,30 +113,15 @@ class DerivedMongoCollections @Inject()(
               computed("slugVersion", "$version"),
               include("dependencyDot.compile"),
               include("dependencyDot.test"),
-              include("dependencyDot.build"),
-              include("production"),
-              include("qa"),
-              include("staging"),
-              include("development"),
-              include("external test"),
-              include("integration"),
-              include("latest")
+              include("dependencyDot.build")
             )
           )
         )
       )
       .map { res =>
           logger.info(s"Processing results")
-          //val doc = res.toBsonDocument
-          val slugName         = res.getString("slugName"   )
-          val slugVersion      = res.getString("slugVersion")
-          val productionFlag   = res.getBoolean("production"   , false)
-          val qaFlag           = res.getBoolean("qa"           , false)
-          val stagingFlag      = res.getBoolean("staging"      , false)
-          val developmentFlag  = res.getBoolean("development"  , false)
-          val externalTestFlag = res.getBoolean("external test", false)
-          val integrationFlag  = res.getBoolean("integration"  , false)
-          val latestFlag       = res.getBoolean("latest"       , false)
+          val slugName    = res.getString("slugName"   )
+          val slugVersion = res.getString("slugVersion")
 
           val dependencyDot: BsonDocument = res.get[BsonDocument]("dependencyDot").getOrElse(BsonDocument())
           val compile = dependencyGraphParser.parse(dependencyDot.getString("compile", BsonString("")).getValue.split("\n")).dependencies.map((_, DependencyScope.Compile))
@@ -169,14 +145,7 @@ class DerivedMongoCollections @Inject()(
                 scalaVersion     = node.scalaVersion,
                 compileFlag      = scopes.contains(DependencyScope.Compile),
                 testFlag         = scopes.contains(DependencyScope.Test),
-                buildFlag        = scopes.contains(DependencyScope.Build),
-                productionFlag   = productionFlag,
-                qaFlag           = qaFlag,
-                stagingFlag      = stagingFlag,
-                developmentFlag  = developmentFlag,
-                externalTestFlag = externalTestFlag,
-                integrationFlag  = integrationFlag,
-                latestFlag       = latestFlag
+                buildFlag        = scopes.contains(DependencyScope.Build)
               )
             }
           logger.info(s"Found ${dependencies.size} for $slugName $slugVersion")
@@ -187,23 +156,27 @@ class DerivedMongoCollections @Inject()(
              SingleObservable(0)
            else {
              logger.info(s"Inserting ${group.size}}")
-             tempRepo.collection
-               .insertMany(group.toSeq).map { _ =>
-                 logger.info(s"Inserted ${group.size}")
-                 group.size
-               }
+             targetCollection
+               .bulkWrite(
+                 group.map(d =>
+                   ReplaceOneModel(
+                     filter      = and(
+                                     equal("slugName"   , d.slugName),
+                                     equal("slugVersion", d.slugVersion),
+                                     equal("group"      , d.depGroup),
+                                     equal("artefact"   , d.depArtefact),
+                                     equal("version"    , d.depVersion),
+                                   ),
+                     replacement = d
+                   )
+                  ).toSeq
+               ).map(_ => group.size)
            }
          )
-         // toFuture here is important, since it waits for the observable above to complete, ensuring the collection rename happens at the end
-         .toFuture
-         .flatMap(res =>
-           mongoComponent.client.getDatabase("admin").runCommand(
-             BsonDocument(
-               "renameCollection" -> ("service-dependencies." + DerivedMongoCollections.slugDependencyLookupTemp),
-               "to"               -> ("service-dependencies." + derivedServiceDependenciesRepository.collectionName),
-               "dropTarget"       -> true
-             )
-           ).toFuture.map(_ => ())
-         ).map(_ => ())
+         .toFuture()
+         .map { res =>
+           logger.info(s"Finished running generateSlugDependencyLookup - added ${res.sum}")
+           ()
+         }
     }
 }

@@ -25,20 +25,25 @@ import uk.gov.hmrc.servicedependencies.persistence.TestSlugInfos._
 import scala.concurrent.ExecutionContext.Implicits.global
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpecLike
+import org.scalatest.concurrent.IntegrationPatience
 
 class JdkVersionRepositorySpec
     extends AnyWordSpecLike
        with Matchers
       with MockitoSugar
-      with DefaultPlayMongoRepositorySupport[JDKVersion] {
+      //with DefaultPlayMongoRepositorySupport[JDKVersion] { // TODO currently not using index...
+      with uk.gov.hmrc.mongo.test.PlayMongoRepositorySupport[JDKVersion]
+      with uk.gov.hmrc.mongo.test.CleanMongoCollectionSupport with IntegrationPatience {
 
-  override protected lazy val repository = new JdkVersionRepository(mongoComponent)
+  lazy val deploymentRepository = new DeploymentRepository(mongoComponent)
+  override protected lazy val repository = new JdkVersionRepository(mongoComponent, deploymentRepository)
 
-  lazy val slugInfoRepo  = new SlugInfoRepository(mongoComponent)
+  lazy val slugInfoRepo  = new SlugInfoRepository(mongoComponent, deploymentRepository)
 
   "JdkVersionRepository.findJDKUsage" should {
     "find all the jdk version for a given environment" in {
       slugInfoRepo.add(slugInfo).futureValue
+      deploymentRepository.markLatest(slugInfo.name, slugInfo.version).futureValue
 
       val result = repository.findJDKUsage(Latest).futureValue
 
@@ -52,6 +57,8 @@ class JdkVersionRepositorySpec
     "ignore non-java slugs" in {
       slugInfoRepo.add(slugInfo).futureValue
       slugInfoRepo.add(nonJavaSlugInfo).futureValue
+      deploymentRepository.markLatest(slugInfo.name, slugInfo.version).futureValue
+      deploymentRepository.markLatest(nonJavaSlugInfo.name, nonJavaSlugInfo.version).futureValue
 
       val result = repository.findJDKUsage(Latest).futureValue
 

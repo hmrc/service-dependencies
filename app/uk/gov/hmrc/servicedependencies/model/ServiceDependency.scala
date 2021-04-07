@@ -46,15 +46,7 @@ case class ServiceDependencyWrite(
   // scope flag
   compileFlag     : Boolean,
   testFlag        : Boolean,
-  buildFlag       : Boolean,
-  // env flags
-  productionFlag  : Boolean,
-  qaFlag          : Boolean,
-  stagingFlag     : Boolean,
-  developmentFlag : Boolean,
-  externalTestFlag: Boolean,
-  integrationFlag : Boolean,
-  latestFlag      : Boolean
+  buildFlag       : Boolean
 )
 
 object ServiceDependencyWrite {
@@ -68,13 +60,6 @@ object ServiceDependencyWrite {
     ~ (__ \ "compile"      ).format[Boolean]
     ~ (__ \ "test"         ).format[Boolean]
     ~ (__ \ "build"        ).format[Boolean]
-    ~ (__ \ "production"   ).format[Boolean]
-    ~ (__ \ "qa"           ).format[Boolean]
-    ~ (__ \ "staging"      ).format[Boolean]
-    ~ (__ \ "development"  ).format[Boolean]
-    ~ (__ \ "external test").format[Boolean]
-    ~ (__ \ "integration"  ).format[Boolean]
-    ~ (__ \ "latest"       ).format[Boolean]
     )(ServiceDependencyWrite.apply _, unlift(ServiceDependencyWrite.unapply _))
 }
 
