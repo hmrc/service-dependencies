@@ -93,15 +93,17 @@ case class DependencyConfig(
   )
 
 trait MongoSlugInfoFormats {
-  implicit val sdFormat: OFormat[SlugDependency] =
+  val slugDependencyFormat: OFormat[SlugDependency] =
     Json.format[SlugDependency]
 
-  implicit val javaFormat: OFormat[JavaInfo] =
+  val javaInfoFormat: OFormat[JavaInfo] =
     Json.format[JavaInfo]
 
   def ignore[A] = OWrites[A](_ => Json.obj())
 
-  implicit val slugInfoFormat: OFormat[SlugInfo] =
+  val slugInfoFormat: OFormat[SlugInfo] = {
+    implicit val sd  = slugDependencyFormat
+    implicit val jif = javaInfoFormat
     ( (__ \ "uri"              ).format[String]
     ~ (__ \ "created"          ).format[LocalDateTime]
     ~ (__ \ "name"             ).format[String]
@@ -126,20 +128,21 @@ trait MongoSlugInfoFormats {
     ~ (__ \ "external test"    ).format[Boolean]
     ~ (__ \ "integration"      ).format[Boolean]
     )(SlugInfo.apply, unlift(SlugInfo.unapply))
+  }
 
-  implicit val jdkVersionFormat: OFormat[JDKVersion] =
+  val jdkVersionFormat: OFormat[JDKVersion] =
     ( (__ \ "name"             ).format[String]
     ~ (__ \ "version"          ).format[String]
     ~ (__ \ "vendor"           ).formatWithDefault[String]("Oracle")
     ~ (__ \ "kind"             ).formatWithDefault[String]("JDK")
     )(JDKVersion.apply, unlift(JDKVersion.unapply))
 
-  implicit val groupArtefactsFormat: OFormat[GroupArtefacts] =
+  val groupArtefactsFormat: OFormat[GroupArtefacts] =
     ( (__ \ "_id"              ).format[String]
     ~ (__ \ "artifacts"        ).format[List[String]]
     )(GroupArtefacts.apply, unlift(GroupArtefacts.unapply))
 
-  val dcFormat: OFormat[DependencyConfig] =
+  val dependencyConfigFormat: OFormat[DependencyConfig] =
     ( (__ \ "group"   ).format[String]
     ~ (__ \ "artefact").format[String]
     ~ (__ \ "version" ).format[String]
@@ -212,13 +215,15 @@ trait MongoSlugInfoFormats {
 object MongoSlugInfoFormats extends MongoSlugInfoFormats
 
 trait ApiSlugInfoFormats {
-  implicit val sdFormat: OFormat[SlugDependency] =
+  val slugDependencyFormat: OFormat[SlugDependency] =
     Json.format[SlugDependency]
 
-  implicit val javaFormat: OFormat[JavaInfo] =
+  val javaInfoFormat: OFormat[JavaInfo] =
     Json.format[JavaInfo]
 
-  implicit val siFormat: OFormat[SlugInfo] = {
+  val slugInfoFormat: OFormat[SlugInfo] = {
+    implicit val jif = javaInfoFormat
+    implicit val sd  = slugDependencyFormat
     ( (__ \ "uri"              ).format[String]
     ~ (__ \ "created"          ).format[LocalDateTime]
     ~ (__ \ "name"             ).format[String]
@@ -243,14 +248,16 @@ trait ApiSlugInfoFormats {
     )(SlugInfo.apply, unlift(SlugInfo.unapply))
   }
 
-  val dcFormat: OFormat[DependencyConfig] =
+  val dependencyConfigFormat: OFormat[DependencyConfig] =
     ( (__ \ "group"   ).format[String]
     ~ (__ \ "artefact").format[String]
     ~ (__ \ "version" ).format[String]
     ~ (__ \ "configs" ).format[Map[String, String]]
     )(DependencyConfig.apply, unlift(DependencyConfig.unapply))
 
-  val slugReads: Reads[SlugInfo] =
+  val slugInfoReads: Reads[SlugInfo] = {
+    implicit val jif = javaInfoFormat
+    implicit val sd  = slugDependencyFormat
     ( (__ \ "uri"              ).read[String]
     ~ (__ \ "created"          ).read[LocalDateTime]
     ~ (__ \ "name"             ).read[String]
@@ -273,6 +280,7 @@ trait ApiSlugInfoFormats {
     ~ Reads.pure(false)
     ~ Reads.pure(false)
     )(SlugInfo.apply _)
+  }
 }
 
 object ApiSlugInfoFormats extends ApiSlugInfoFormats

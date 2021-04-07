@@ -19,15 +19,20 @@ package uk.gov.hmrc.servicedependencies.model
 import play.api.libs.json.{__, OFormat}
 import play.api.libs.functional.syntax._
 
-case class JDKVersion(name:String, version: String, vendor: String, kind: String)
+case class JDKVersion(
+  name   : String,
+  version: String,
+  vendor : String,
+  kind   : String
+)
 
 trait JDKVersionFormats {
 
-  val jdkFormat: OFormat[JDKVersion] =
-    ( (__ \ "name"       ).format[String]
-    ~ (__ \ "version" ).format[String]
-    ~ (__ \ "vendor"     ).format[String]
-    ~ (__ \ "kind"       ).format[String]
+  val jdkVersionFormat: OFormat[JDKVersion] =
+    ( (__ \ "name"   ).format[String]
+    ~ (__ \ "version").format[String]
+    ~ (__ \ "vendor" ).format[String]
+    ~ (__ \ "kind"   ).format[String]
     )(JDKVersion.apply, unlift(JDKVersion.unapply))
 }
 

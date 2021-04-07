@@ -80,7 +80,7 @@ class SlugInfoUpdatedHandler @Inject()(
                        .decompress(message.body)
                        .map(decompressed =>
                          Json.parse(decompressed)
-                           .validate(ApiSlugInfoFormats.slugReads)
+                           .validate(ApiSlugInfoFormats.slugInfoReads)
                            .asEither.left.map(error => s"Could not parse message with ID '${message.messageId}'.  Reason: " + error.toString)
                        )
                    )

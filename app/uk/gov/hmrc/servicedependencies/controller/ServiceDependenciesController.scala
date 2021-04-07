@@ -97,7 +97,7 @@ class ServiceDependenciesController @Inject()(
 
   def slugInfos(name: String, version: Option[String]): Action[AnyContent] =
     Action.async {
-      implicit val format = ApiSlugInfoFormats.siFormat
+      implicit val format = ApiSlugInfoFormats.slugInfoFormat
       slugInfoService
         .getSlugInfos(name, version)
         .map(res => Ok(Json.toJson(res)))
@@ -109,7 +109,7 @@ class ServiceDependenciesController @Inject()(
          f        <- EitherT.fromOption[Future](SlugInfoFlag.parse(flag), BadRequest(s"invalid flag '$flag'"))
          slugInfo <- EitherT.fromOptionF(slugInfoService.getSlugInfo(name, f), NotFound(""))
        } yield {
-         implicit val sif = ApiSlugInfoFormats.siFormat
+         implicit val sif = ApiSlugInfoFormats.slugInfoFormat
          Ok(Json.toJson(slugInfo))
        }
       ).merge
@@ -149,7 +149,7 @@ class ServiceDependenciesController @Inject()(
                   slugInfoService.findJDKVersions(f)
                 )
        } yield {
-         implicit val jdkvf = JDKVersionFormats.jdkFormat
+         implicit val jdkvf = JDKVersionFormats.jdkVersionFormat
          Ok(Json.toJson(res))
        }
       ).merge
