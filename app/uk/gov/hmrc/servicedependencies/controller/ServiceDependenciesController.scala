@@ -69,17 +69,22 @@ class ServiceDependenciesController @Inject()(
       } yield Ok(Json.toJson(depsWithRules))
   }
 
-  def getServicesWithDependency(flag: String, group: String, artefact: String, versionRange: String): Action[AnyContent] =
+  def getServicesWithDependency(flag: String, group: String, artefact: String, versionRange: String, scope: Option[String]): Action[AnyContent] =
     Action.async { implicit request =>
       implicit val format = ApiServiceDependencyFormats.sdFormat
       (for {
          f   <- EitherT.fromOption[Future](SlugInfoFlag.parse(flag), BadRequest(s"invalid flag '$flag'"))
+         sc  <- scope match {
+                  case None     => EitherT.pure[Future, Result](None)
+                  case Some(sc) => EitherT.fromEither[Future](DependencyScope.parse(sc))
+                                     .bimap(BadRequest(_), Some.apply)
+                }
          vr  <- EitherT.fromOption[Future](BobbyVersionRange.parse(versionRange), BadRequest(s"invalid versionRange '$versionRange'"))
          res <- EitherT.right[Result] {
                   slugInfoService
-                    .findServicesWithDependency(f, group, artefact, vr)
+                    .findServicesWithDependency(f, group, artefact, vr, sc)
                 }
-      } yield Ok( Json.toJson(res) )
+       } yield Ok(Json.toJson(res))
       ).merge
     }
 

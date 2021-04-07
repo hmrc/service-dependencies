@@ -67,9 +67,10 @@ class SlugInfoService @Inject()(
     , group       : String
     , artefact    : String
     , versionRange: BobbyVersionRange
+    , scope       : Option[DependencyScope]
     )(implicit hc: HeaderCarrier): Future[Seq[ServiceDependency]] =
       for {
-        services            <- serviceDependencyRepository.findServicesWithDependency(flag, group, artefact)
+        services            <- serviceDependencyRepository.findServicesWithDependency(flag, group, artefact, scope)
         servicesWithinRange =  services.filter(_.depSemanticVersion.map(versionRange.includes).getOrElse(true)) // include invalid semanticVersion in results
         teamsForServices    <- teamsAndRepositoriesConnector.getTeamsForServices
       } yield servicesWithinRange.map { r =>

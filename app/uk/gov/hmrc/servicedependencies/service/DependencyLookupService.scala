@@ -70,22 +70,6 @@ class DependencyLookupService @Inject() (
   def getHistoricBobbyRuleViolations: Future[HistoricBobbyRulesSummary] =
     bobbyRulesSummaryRepo.getHistoric
       .map(combineBobbyRulesSummaries)
-
-  /**
-    * A alternative version of SlugInfoService's findServicesWithDependency.
-    * Likely faster, especially if the lookup table is cached.
-    */
-  def findServicesWithDependency(
-      env         : SlugInfoFlag
-    , group       : String
-    , artefact    : String
-    , versionRange: BobbyVersionRange
-    ): Future[Seq[ServiceDependency]] =
-      for {
-        slugs  <- slugRepo.getSlugsForEnv(env)
-        lookup =  buildLookup(slugs)
-        result =  findSlugsUsing(lookup, group, artefact, versionRange)
-      } yield result
 }
 
 
@@ -102,14 +86,19 @@ object DependencyLookupService {
       )
 
 
+  // TODO we don't need the scalaVersion and scopes here
+  // but we can probably move the calculateCounts to the database (against the DerivedServiceDependenciesRepository)
   def slugToServiceDep(slug: SlugInfo, dep: SlugDependency): ServiceDependency =
     ServiceDependency(
-      slugName    = slug.name,
-      slugVersion = slug.version.toString,
-      teams       = List.empty,
-      depGroup    = dep.group,
-      depArtefact = dep.artifact,
-      depVersion  = dep.version.toString)
+      slugName     = slug.name,
+      slugVersion  = slug.version.toString,
+      teams        = List.empty,
+      depGroup     = dep.group,
+      depArtefact  = dep.artifact,
+      depVersion   = dep.version.toString,
+      scalaVersion = None,
+      scopes       = Set.empty
+    )
 
 
   def findSlugsUsing(

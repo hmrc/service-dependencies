@@ -28,7 +28,7 @@ import org.mongodb.scala.model.Sorts._
 import play.api.Logging
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.play.json.PlayMongoRepository
-import uk.gov.hmrc.servicedependencies.model.{DependencyScopeFlag, ServiceDependencyWrite, SlugInfoFlag}
+import uk.gov.hmrc.servicedependencies.model.{DependencyScope, ServiceDependencyWrite, SlugInfoFlag}
 import uk.gov.hmrc.servicedependencies.persistence.SlugDenylist
 import uk.gov.hmrc.servicedependencies.service.DependencyGraphParser
 
@@ -148,18 +148,18 @@ class DerivedMongoCollections @Inject()(
           val latestFlag       = res.getBoolean("latest"       , false)
 
           val dependencyDot: BsonDocument = res.get[BsonDocument]("dependencyDot").getOrElse(BsonDocument())
-          val compile = dependencyGraphParser.parse(dependencyDot.getString("compile", BsonString("")).getValue.split("\n")).dependencies.map((_, DependencyScopeFlag.Compile))
-          val test    = dependencyGraphParser.parse(dependencyDot.getString("test"   , BsonString("")).getValue.split("\n")).dependencies.map((_, DependencyScopeFlag.Test   ))
-          val build   = dependencyGraphParser.parse(dependencyDot.getString("build"  , BsonString("")).getValue.split("\n")).dependencies.map((_, DependencyScopeFlag.Build  ))
+          val compile = dependencyGraphParser.parse(dependencyDot.getString("compile", BsonString("")).getValue.split("\n")).dependencies.map((_, DependencyScope.Compile))
+          val test    = dependencyGraphParser.parse(dependencyDot.getString("test"   , BsonString("")).getValue.split("\n")).dependencies.map((_, DependencyScope.Test   ))
+          val build   = dependencyGraphParser.parse(dependencyDot.getString("build"  , BsonString("")).getValue.split("\n")).dependencies.map((_, DependencyScope.Build  ))
 
-          val dependencies: Map[DependencyGraphParser.Node, Set[DependencyScopeFlag]] =
+          val dependencies: Map[DependencyGraphParser.Node, Set[DependencyScope]] =
             (compile ++ test ++ build)
-              .foldLeft(Map.empty[DependencyGraphParser.Node, Set[DependencyScopeFlag]]){ case (acc, (n, flag)) =>
+              .foldLeft(Map.empty[DependencyGraphParser.Node, Set[DependencyScope]]){ case (acc, (n, flag)) =>
                 acc + (n -> (acc.getOrElse(n, Set.empty) + flag))
               }
 
           val deps =
-            dependencies.map { case (node, scopeFlags) =>
+            dependencies.map { case (node, scopes) =>
               ServiceDependencyWrite(
                 slugName         = slugName,
                 slugVersion      = slugVersion,
@@ -167,9 +167,9 @@ class DerivedMongoCollections @Inject()(
                 depArtefact      = node.artefact,
                 depVersion       = node.version,
                 scalaVersion     = node.scalaVersion,
-                compileFlag      = scopeFlags.contains(DependencyScopeFlag.Compile),
-                testFlag         = scopeFlags.contains(DependencyScopeFlag.Test),
-                buildFlag        = scopeFlags.contains(DependencyScopeFlag.Build),
+                compileFlag      = scopes.contains(DependencyScope.Compile),
+                testFlag         = scopes.contains(DependencyScope.Test),
+                buildFlag        = scopes.contains(DependencyScope.Build),
                 productionFlag   = productionFlag,
                 qaFlag           = qaFlag,
                 stagingFlag      = stagingFlag,
