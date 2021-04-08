@@ -18,13 +18,14 @@ package uk.gov.hmrc.servicedependencies.service
 
 import javax.inject.{Inject, Singleton}
 import play.api.Logging
-import uk.gov.hmrc.servicedependencies.persistence.derived.DerivedMongoCollections
+import uk.gov.hmrc.servicedependencies.persistence.derived.{DerivedMongoCollections, DerivedServiceDependenciesRepository}
 
 import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
 class DerivedViewsService @Inject()(
-  derivedMongoCollections: DerivedMongoCollections
+  derivedMongoCollections: DerivedMongoCollections,
+  derivedServiceDependenciesRepository: DerivedServiceDependenciesRepository
 )(implicit
   ec: ExecutionContext
 ) extends Logging{
@@ -32,7 +33,7 @@ class DerivedViewsService @Inject()(
   def generateAllViews() : Future[Unit] = {
     for {
        _ <- derivedMongoCollections.generateArtefactLookup()
-       _ <- derivedMongoCollections.generateSlugDependencyLookup()
+       _ <- derivedServiceDependenciesRepository.populate()
     } yield ()
   }.recover {
     case e => logger.error("Failed to update derived collections", e)

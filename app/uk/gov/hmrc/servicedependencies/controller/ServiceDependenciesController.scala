@@ -69,6 +69,7 @@ class ServiceDependenciesController @Inject()(
       } yield Ok(Json.toJson(depsWithRules))
   }
 
+  // TODO client needs to send scope=compile for backward compatibility
   def getServicesWithDependency(flag: String, group: String, artefact: String, versionRange: String, scope: Option[String]): Action[AnyContent] =
     Action.async { implicit request =>
       implicit val format = ApiServiceDependencyFormats.sdFormat
