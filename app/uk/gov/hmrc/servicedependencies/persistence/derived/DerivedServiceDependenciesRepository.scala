@@ -58,10 +58,6 @@ class DerivedServiceDependenciesRepository @Inject()(
                          IndexOptions().name("groupArtefactIdx")
                        ),
                        IndexModel(
-                         compoundIndex(SlugInfoFlag.values.map(f => ascending(f.asString)) :_*),
-                         IndexOptions().name("slugInfoFlagIdx").background(true)
-                       ),
-                       IndexModel(
                          compoundIndex(DependencyScope.values.map(f => ascending(f.asString)) :_*),
                          IndexOptions().name("dependencyScopeIdx").background(true)
                        ),

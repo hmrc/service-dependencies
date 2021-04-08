@@ -126,7 +126,7 @@ trait ApiServiceDependencyFormats {
       f => JsString(f.asString)
     )
 
-  val sdFormat: OFormat[ServiceDependency] = {
+  val serviceDependencyFormat: OFormat[ServiceDependency] = {
     implicit val dsf = dependencyScopeFormat
     ( (__ \ "slugName"    ).format[String]
     ~ (__ \ "slugVersion" ).format[String]

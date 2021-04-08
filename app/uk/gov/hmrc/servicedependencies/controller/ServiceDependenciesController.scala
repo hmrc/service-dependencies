@@ -72,7 +72,7 @@ class ServiceDependenciesController @Inject()(
   // TODO client needs to send scope=compile for backward compatibility
   def getServicesWithDependency(flag: String, group: String, artefact: String, versionRange: String, scope: Option[String]): Action[AnyContent] =
     Action.async { implicit request =>
-      implicit val format = ApiServiceDependencyFormats.sdFormat
+      implicit val format = ApiServiceDependencyFormats.serviceDependencyFormat
       (for {
          f   <- EitherT.fromOption[Future](SlugInfoFlag.parse(flag), BadRequest(s"invalid flag '$flag'"))
          sc  <- scope match {
