@@ -70,6 +70,7 @@ case class SlugInfo(
   dependencyDotBuild  : String,
   applicationConfig   : String,
   slugConfig          : String,
+  // TODO these fields are not being maintained in the collection anymore - do we need to return them in the API?
   latest              : Boolean,
   production          : Boolean,
   qa                  : Boolean,

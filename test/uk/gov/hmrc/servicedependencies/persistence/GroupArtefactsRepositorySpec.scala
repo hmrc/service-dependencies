@@ -43,8 +43,8 @@ class GroupArtefactsRepositorySpec
   lazy val deploymentRepository = new DeploymentRepository(mongoComponent)
   lazy val slugInfoRepo = new SlugInfoRepository(mongoComponent, deploymentRepository)
   val dependencyGraphParser = new DependencyGraphParser
-  val derivedServiceDependenciesRepository = new DerivedServiceDependenciesRepository(mongoComponent, deploymentRepository)
-  val derivedCollectionGenerator = new DerivedMongoCollections(mongoComponent, dependencyGraphParser, derivedServiceDependenciesRepository)
+  val derivedServiceDependenciesRepository = new DerivedServiceDependenciesRepository(mongoComponent, dependencyGraphParser, deploymentRepository)
+  val derivedCollectionGenerator = new DerivedMongoCollections(mongoComponent, derivedServiceDependenciesRepository)
 
   override implicit val patienceConfig = PatienceConfig(timeout = 30.seconds, interval = 100.millis)
 

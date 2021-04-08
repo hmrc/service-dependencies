@@ -108,7 +108,10 @@ class DeploymentRepository @Inject()(
       .aggregate(
         List(
           `match`(
-            deploymentsFilter
+            and(
+              deploymentsFilter,
+              nin("name", SlugDenylist.denylistedSlugs)
+            )
           ),
           lookup(
             from     = collectionName,

@@ -17,8 +17,8 @@
 package uk.gov.hmrc.servicedependencies.persistence
 
 import com.google.inject.{Inject, Singleton}
-import org.mongodb.scala.model.Aggregates.{`match`, project}
-import org.mongodb.scala.model.Filters.{and, equal, nin, notEqual}
+import org.mongodb.scala.model.Aggregates.project
+import org.mongodb.scala.model.Filters.{equal, notEqual}
 import org.mongodb.scala.model.Projections.{computed, fields}
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.servicedependencies.model._
@@ -42,10 +42,7 @@ class JdkVersionRepository @Inject()(
       slugNameField    = "name",
       slugVersionField = "version"
     )(
-      deploymentsFilter = and(
-                            equal(flag.asString, true),
-                            nin("name", SlugDenylist.denylistedSlugs) // TODO should this be added to the other lookup queries?,
-                          ),
+      deploymentsFilter = equal(flag.asString, true),
       domainFilter      = notEqual("java.version", ""),
       pipeline          = Seq(
                             project(
