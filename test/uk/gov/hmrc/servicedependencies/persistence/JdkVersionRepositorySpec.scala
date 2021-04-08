@@ -17,28 +17,32 @@
 package uk.gov.hmrc.servicedependencies.persistence
 
 import org.mockito.MockitoSugar
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpecLike
+import uk.gov.hmrc.mongo.MongoUtils
 import uk.gov.hmrc.mongo.test.DefaultPlayMongoRepositorySupport
 import uk.gov.hmrc.servicedependencies.model.JDKVersion
 import uk.gov.hmrc.servicedependencies.model.SlugInfoFlag.Latest
 import uk.gov.hmrc.servicedependencies.persistence.TestSlugInfos._
 
 import scala.concurrent.ExecutionContext.Implicits.global
-import org.scalatest.matchers.should.Matchers
-import org.scalatest.wordspec.AnyWordSpecLike
-import org.scalatest.concurrent.IntegrationPatience
 
 class JdkVersionRepositorySpec
-    extends AnyWordSpecLike
-       with Matchers
-      with MockitoSugar
-      //with DefaultPlayMongoRepositorySupport[JDKVersion] { // TODO currently not using index...
-      with uk.gov.hmrc.mongo.test.PlayMongoRepositorySupport[JDKVersion]
-      with uk.gov.hmrc.mongo.test.CleanMongoCollectionSupport with IntegrationPatience {
+  extends AnyWordSpecLike
+    with Matchers
+    with MockitoSugar
+    with DefaultPlayMongoRepositorySupport[JDKVersion] {
 
   lazy val deploymentRepository = new DeploymentRepository(mongoComponent)
   override protected lazy val repository = new JdkVersionRepository(mongoComponent, deploymentRepository)
 
   lazy val slugInfoRepo  = new SlugInfoRepository(mongoComponent, deploymentRepository)
+
+  override protected def beforeEach(): Unit = {
+    super.beforeEach()
+    MongoUtils.ensureIndexes(deploymentRepository.collection, deploymentRepository.indexes, replaceIndexes = false)
+      .futureValue
+  }
 
   "JdkVersionRepository.findJDKUsage" should {
     "find all the jdk version for a given environment" in {

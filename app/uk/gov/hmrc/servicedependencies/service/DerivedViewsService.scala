@@ -18,13 +18,13 @@ package uk.gov.hmrc.servicedependencies.service
 
 import javax.inject.{Inject, Singleton}
 import play.api.Logging
-import uk.gov.hmrc.servicedependencies.persistence.derived.{DerivedMongoCollections, DerivedServiceDependenciesRepository}
+import uk.gov.hmrc.servicedependencies.persistence.derived.{DerivedGroupArtefactRepository, DerivedServiceDependenciesRepository}
 
 import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
 class DerivedViewsService @Inject()(
-  derivedMongoCollections: DerivedMongoCollections,
+  derivedGroupArtefactRepository      : DerivedGroupArtefactRepository,
   derivedServiceDependenciesRepository: DerivedServiceDependenciesRepository
 )(implicit
   ec: ExecutionContext
@@ -32,7 +32,7 @@ class DerivedViewsService @Inject()(
 
   def generateAllViews() : Future[Unit] = {
     for {
-       _ <- derivedMongoCollections.generateArtefactLookup()
+       _ <- derivedGroupArtefactRepository.populate()
        _ <- derivedServiceDependenciesRepository.populate()
     } yield ()
   }.recover {

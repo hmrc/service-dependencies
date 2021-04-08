@@ -14,44 +14,40 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.servicedependencies.persistence
+package uk.gov.hmrc.servicedependencies.persistence.derived
 
 import org.mockito.MockitoSugar
 import org.scalatest.OptionValues
 import uk.gov.hmrc.mongo.test.{CleanMongoCollectionSupport, PlayMongoRepositorySupport}
 import uk.gov.hmrc.servicedependencies.model.GroupArtefacts
-import uk.gov.hmrc.servicedependencies.persistence.TestSlugInfos._
-import uk.gov.hmrc.servicedependencies.service.DependencyGraphParser
+import uk.gov.hmrc.servicedependencies.persistence.TestSlugInfos.slugInfo
+import uk.gov.hmrc.servicedependencies.persistence.{DeploymentRepository, SlugInfoRepository}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration.DurationInt
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpecLike
-import uk.gov.hmrc.servicedependencies.persistence.derived.{DerivedGroupArtefactRepository, DerivedMongoCollections, DerivedServiceDependenciesRepository}
 
-class GroupArtefactsRepositorySpec
-    extends AnyWordSpecLike
-      with Matchers
-      with OptionValues
-      with MockitoSugar
-      // We don't mixin IndexedMongoQueriesSupport here, as this repo makes use of queries not satisfied by an index
-      with PlayMongoRepositorySupport[GroupArtefacts]
-      with CleanMongoCollectionSupport {
+class DerivedGroupArtefactRepositorySpec
+  extends AnyWordSpecLike
+    with Matchers
+    with OptionValues
+    with MockitoSugar
+    // We don't mixin IndexedMongoQueriesSupport here, as this repo makes use of queries not satisfied by an index
+    with PlayMongoRepositorySupport[GroupArtefacts]
+    with CleanMongoCollectionSupport {
 
   override lazy val repository = new DerivedGroupArtefactRepository(mongoComponent)
 
   lazy val deploymentRepository = new DeploymentRepository(mongoComponent)
   lazy val slugInfoRepo = new SlugInfoRepository(mongoComponent, deploymentRepository)
-  val dependencyGraphParser = new DependencyGraphParser
-  val derivedServiceDependenciesRepository = new DerivedServiceDependenciesRepository(mongoComponent, dependencyGraphParser, deploymentRepository)
-  val derivedCollectionGenerator = new DerivedMongoCollections(mongoComponent, derivedServiceDependenciesRepository)
 
   override implicit val patienceConfig = PatienceConfig(timeout = 30.seconds, interval = 100.millis)
 
   "GroupArtefactsRepository.findGroupsArtefacts" should {
     "return a map of artefact group to list of found artefacts" in {
       slugInfoRepo.add(slugInfo).futureValue
-      derivedCollectionGenerator.generateArtefactLookup().futureValue
+      repository.populate().futureValue
 
       val result = repository.findGroupsArtefacts.futureValue
 

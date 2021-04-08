@@ -35,6 +35,7 @@ import scala.concurrent.{ExecutionContext, Future}
 import scala.reflect.ClassTag
 import org.mongodb.scala.model.UpdateOptions
 
+// TODO would a model of name, version, flag - be better?
 @Singleton
 class DeploymentRepository @Inject()(
   mongoComponent: MongoComponent
@@ -47,6 +48,10 @@ class DeploymentRepository @Inject()(
                      IndexModel(
                        compoundIndex(ascending("name"), ascending("version")),
                        IndexOptions().name("nameVersionIdx")
+                     ),
+                     IndexModel(
+                       compoundIndex(SlugInfoFlag.values.map(f => ascending(f.asString)) :_*),
+                       IndexOptions().name("slugInfoFlagIdx").background(true)
                      )
                    )
 ) {
