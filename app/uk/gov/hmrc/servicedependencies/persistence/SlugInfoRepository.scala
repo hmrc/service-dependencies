@@ -18,14 +18,12 @@ package uk.gov.hmrc.servicedependencies.persistence
 
 import com.google.inject.{Inject, Singleton}
 import org.bson.conversions.Bson
-import org.mongodb.scala.bson.{BsonArray, BsonDocument}
-import org.mongodb.scala.model.Filters.{and, equal, expr}
+import org.mongodb.scala.bson.BsonDocument
+import org.mongodb.scala.model.Filters.{and, equal}
 import org.mongodb.scala.model.ReplaceOptions
 import org.mongodb.scala.model.Aggregates._
-import org.mongodb.scala.model.Variable
 import play.api.Logging
 import uk.gov.hmrc.mongo.MongoComponent
-import uk.gov.hmrc.mongo.play.json.CollectionFactory
 import uk.gov.hmrc.servicedependencies.model._
 
 import scala.concurrent.{ExecutionContext, Future}

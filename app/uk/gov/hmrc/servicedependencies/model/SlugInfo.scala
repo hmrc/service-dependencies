@@ -70,14 +70,6 @@ case class SlugInfo(
   dependencyDotBuild  : String,
   applicationConfig   : String,
   slugConfig          : String,
-  // TODO these fields are not being maintained in the collection anymore - do we need to return them in the API?
-  latest              : Boolean,
-  production          : Boolean,
-  qa                  : Boolean,
-  staging             : Boolean,
-  development         : Boolean,
-  externalTest        : Boolean,
-  integration         : Boolean
 ) {
   lazy val classpathOrderedDependencies: List[SlugDependency] =
     classpath.split(":")
@@ -121,13 +113,6 @@ trait MongoSlugInfoFormats {
     ~ (__ \ "dependencyDot" \ "build"  ).formatWithDefault[String]("")
     ~ (__ \ "applicationConfig").formatWithDefault[String]("")
     ~ (__ \ "slugConfig"       ).formatWithDefault[String]("")
-    ~ (__ \ "latest"           ).format[Boolean]
-    ~ (__ \ "production"       ).format[Boolean]
-    ~ (__ \ "qa"               ).format[Boolean]
-    ~ (__ \ "staging"          ).format[Boolean]
-    ~ (__ \ "development"      ).format[Boolean]
-    ~ (__ \ "external test"    ).format[Boolean]
-    ~ (__ \ "integration"      ).format[Boolean]
     )(SlugInfo.apply, unlift(SlugInfo.unapply))
   }
 
@@ -164,13 +149,6 @@ trait MongoSlugInfoFormats {
                 , "classpath"
                 , "java"
                 , "dependencies"
-                , "latest"
-                , "production"
-                , "qa"
-                , "staging"
-                , "development"
-                , "external test"
-                , "integration"
                 ]
     , properties:
       { uri              : { bsonType: "string" }
@@ -201,13 +179,6 @@ trait MongoSlugInfoFormats {
                            }
       , applicationConfig: { bsonType: "string" }
       , slugConfig       : { bsonType: "string" }
-      , latest           : { bsonType: "bool" }
-      , production       : { bsonType: "bool" }
-      , qa               : { bsonType: "bool" }
-      , staging          : { bsonType: "bool" }
-      , development      : { bsonType: "bool" }
-      , "external test"  : { bsonType: "bool" }
-      , integration      : { bsonType: "bool" }
       }
     }
     """
@@ -239,13 +210,6 @@ trait ApiSlugInfoFormats {
     ~ (__ \ "dependencyDot" \ "build"  ).format[String]
     ~ (__ \ "applicationConfig").format[String]
     ~ (__ \ "slugConfig"       ).format[String]
-    ~ (__ \ "latest"           ).format[Boolean]
-    ~ (__ \ "production"       ).format[Boolean]
-    ~ (__ \ "qa"               ).format[Boolean]
-    ~ (__ \ "staging"          ).format[Boolean]
-    ~ (__ \ "development"      ).format[Boolean]
-    ~ (__ \ "external test"    ).format[Boolean]
-    ~ (__ \ "integration"      ).format[Boolean]
     )(SlugInfo.apply, unlift(SlugInfo.unapply))
   }
 
@@ -259,27 +223,20 @@ trait ApiSlugInfoFormats {
   val slugInfoReads: Reads[SlugInfo] = {
     implicit val jif = javaInfoFormat
     implicit val sd  = slugDependencyFormat
-    ( (__ \ "uri"              ).read[String]
-    ~ (__ \ "created"          ).read[LocalDateTime]
-    ~ (__ \ "name"             ).read[String]
-    ~ (__ \ "version"          ).read[String].map(Version.apply)
-    ~ (__ \ "teams"            ).read[List[String]]
-    ~ (__ \ "runnerVersion"    ).read[String]
-    ~ (__ \ "classpath"        ).read[String]
-    ~ (__ \ "java"             ).read[JavaInfo]
-    ~ (__ \ "dependencies"     ).read[List[SlugDependency]]
+    ( (__ \ "uri"                      ).read[String]
+    ~ (__ \ "created"                  ).read[LocalDateTime]
+    ~ (__ \ "name"                     ).read[String]
+    ~ (__ \ "version"                  ).read[String].map(Version.apply)
+    ~ (__ \ "teams"                    ).read[List[String]]
+    ~ (__ \ "runnerVersion"            ).read[String]
+    ~ (__ \ "classpath"                ).read[String]
+    ~ (__ \ "java"                     ).read[JavaInfo]
+    ~ (__ \ "dependencies"             ).read[List[SlugDependency]]
     ~ (__ \ "dependencyDot" \ "compile").read[String]
     ~ (__ \ "dependencyDot" \ "test"   ).read[String]
     ~ (__ \ "dependencyDot" \ "build"  ).read[String]
-    ~ (__ \ "applicationConfig").read[String]
-    ~ (__ \ "slugConfig"       ).read[String]
-    ~ (__ \ "latest"           ).read[Boolean]
-    ~ Reads.pure(false)
-    ~ Reads.pure(false)
-    ~ Reads.pure(false)
-    ~ Reads.pure(false)
-    ~ Reads.pure(false)
-    ~ Reads.pure(false)
+    ~ (__ \ "applicationConfig"        ).read[String]
+    ~ (__ \ "slugConfig"               ).read[String]
     )(SlugInfo.apply _)
   }
 }
