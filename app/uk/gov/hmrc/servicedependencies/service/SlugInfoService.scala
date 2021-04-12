@@ -78,9 +78,9 @@ class SlugInfoService @Inject()(
           r.copy(teams = teamsForServices.getTeams(r.slugName).toList.sorted)
         }
 
-  def findGroupsArtefacts: Future[Seq[GroupArtefacts]] =
+  def findGroupsArtefacts(scope: DependencyScope): Future[Seq[GroupArtefacts]] =
     groupArtefactRepository
-      .findGroupsArtefacts
+      .findGroupsArtefacts(scope)
 
   def updateMetadata()(implicit hc: HeaderCarrier): Future[Unit] = {
     import ReleasesApiConnector._

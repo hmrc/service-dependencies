@@ -17,6 +17,8 @@
 package uk.gov.hmrc.servicedependencies.persistence.derived
 
 import javax.inject.{Inject, Singleton}
+import org.mongodb.scala.bson.BsonDocument
+import org.mongodb.scala.bson.conversions.Bson
 import org.mongodb.scala.model.Accumulators._
 import org.mongodb.scala.model.Aggregates._
 import org.mongodb.scala.model.Filters._
@@ -44,34 +46,47 @@ class DerivedGroupArtefactRepository @Inject()(
 ){
   private val logger = Logger(getClass)
 
+  // not currently supporting no scope - we'd get duplicate groups
+  def findGroupsArtefacts(scope: DependencyScope): Future[Seq[GroupArtefacts]] =
+    collection
+      .find(equal(scope.asString, true))
+      .toFuture()
+
   def populate(): Future[Unit] = {
     logger.info(s"Running DerivedGroupArtefactRepository.populate")
-    mongoComponent.database.getCollection("slugInfos")
+    mongoComponent.database.getCollection("DERIVED-slug-dependencies")
       .aggregate(
         List(
-          // Pull out any slug infos that are present in any environment (or latest)
-          // TODO we can't filter like this anymore, since env flags have been moved off slugInfos
-          // Could we just run a query on DERIVED-service-dependencies?
-          // or populate DERIVED-artefact-lookup as we process dependencies off the queue?
-          // TODO this needs to be addressed to pick up non-compile scope dependencies (and support querying by scope)
-          /*`match`(
-            or(
-              SlugInfoFlag.values.map(f => equal(f.asString, true)): _* // filter for reachable data
-            )
-          ),*/
-          // Pull out just the dependencies array
+          // Exclude slug internals
+          `match`(regex("version", "^(?!.*-assets$)(?!.*-sans-externalized$).*$")),
           project(
             fields(
-              computed("dependencies", "$dependencies")
+              excludeId(),
+              include("group", "artefact", "compile", "test", "build")
             )
           ),
-          // Create a new document for each dependency
-          unwind("$dependencies"),
-          // Exclude slug internals
-          `match`(regex("dependencies.version", "^(?!.*-assets$)(?!.*-sans-externalized$).*$")),
-          // Group by artefact group id
-          group("$dependencies.group", addToSet("artifacts",  "$dependencies.artifact")),
-          sort(orderBy(ascending("_id"))),
+          BsonDocument("$group" ->
+            BsonDocument(
+              "_id" ->
+                BsonDocument(
+                  "group"   -> "$group",
+                  "compile" -> "$compile",
+                  "test"    -> "$test",
+                  "build"   -> "$build"
+                ),
+              "artifacts" ->
+                BsonDocument("$addToSet" -> "$artefact")
+            )
+          ),
+          // reproject the result so fields are at the root level
+          project(fields(
+            computed("group"  , "$_id.group"),
+            computed("compile", "$_id.compile"),
+            computed("test"   , "$_id.test"),
+            computed("build"  , "$_id.build"),
+            include("artifacts"),
+            exclude("_id")
+          )),
           // replace content of target collection
           out("DERIVED-artefact-lookup")
         )
@@ -82,7 +97,4 @@ class DerivedGroupArtefactRepository @Inject()(
         logger.info(s"Finished running DerivedGroupArtefactRepository.populate")
       )
   }
-
-  def findGroupsArtefacts: Future[Seq[GroupArtefacts]] =
-    collection.find().toFuture()
 }
