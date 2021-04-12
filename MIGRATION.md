@@ -33,6 +33,7 @@ db.getCollection("deployments").update({}, { $unset: { uri: "", created: "", run
 
 * poplate legacy data once, on command line:
 
+```
 db.getCollection("slugInfos").aggregate([
   {$match: {"dependencyDot": {$exists: false}}},
   {$project: {
@@ -53,13 +54,14 @@ db.getCollection("slugInfos").aggregate([
   }}},
   {$replaceRoot: { "newRoot": "$_id"}},
   {$addFields: {
-    "compile": true,
-    "test": false,
-    "build": false
+    "scope_compile": true,
+    "scope_test"   : false,
+    "scope_build"  : false
   }},
   {$out: "DERIVED-slug-dependencies"}
 ], {allowDiskUse:true})
+```
 
-
-
-(or remove duplicates from current DERIVED-slug-dependencies, and keep...)
+```
+db.getCollection('DERIVED-slug-dependencies').deleteMany({"version": { $regex: "^.*(-assets)|(-sans-externalized)$"}})
+```
