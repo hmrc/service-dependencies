@@ -62,7 +62,7 @@ class DerivedServiceDependenciesRepository @Inject()(
                          IndexOptions().name("group_artefact_idx")
                        ),
                        IndexModel(
-                         compoundIndex(DependencyScope.values.map(f => ascending(f.asString)) :_*),
+                         compoundIndex(DependencyScope.values.map(s => ascending("scope_" + s.asString)) :_*),
                          IndexOptions().name("dependencyScope_idx").background(true)
                        ),
                        IndexModel(
@@ -91,7 +91,7 @@ class DerivedServiceDependenciesRepository @Inject()(
       dependencyFilter  = and(
                             equal("group", group),
                             equal("artefact", artefact),
-                            scope.fold[Bson](BsonDocument())(s => equal(s.asString, true))
+                            scope.fold[Bson](BsonDocument())(s => equal("scope_" + s.asString, true))
                           )
     )
 
@@ -105,7 +105,7 @@ class DerivedServiceDependenciesRepository @Inject()(
                             equal("slugName", name),
                             equal(flag.asString, true)
                           ),
-      dependencyFilter  = scope.fold[Bson](BsonDocument())(sf => equal(sf.asString, true))
+      dependencyFilter  = scope.fold[Bson](BsonDocument())(s => equal("scope_" + s.asString, true))
     )
 
   private def findServiceDependenciesFromDeployments(
@@ -137,13 +137,37 @@ class DerivedServiceDependenciesRepository @Inject()(
         ServiceDependencyWrite.format
       )
 
-    mongoComponent.database.getCollection("slugInfos")
+/*
+
+ mongoComponent.database.getCollection(DerivedServiceDependenciesRepository.collectionName)
       .aggregate(
         List(
-          // TODO filter by those that are not already in DERIVED-slug-dependencies (just to make the execution quicker - this can be removed if we parse all data off queue)
-          `match`(
-            exists("dependencyDot", true)
+          lookup(
+            from     = "slugInfos",
+            let      = Seq(
+                         Variable("sn", "$name"),
+                         Variable("sv", "$version")
+                       ),
+            pipeline = List(
+                         `match`(
+                           and(
+                             expr(
+                               and(
+                                 // can't use Filters.eq which strips the $eq out, and thus complains about $name/$version not being operators
+                                 BsonDocument("$eq" -> BsonArray("$name"   , "$$sn")),
+                                 BsonDocument("$eq" -> BsonArray("$version", "$$sv")),
+                                 // Exclude slug internals
+                                 `match`(regex("version", "^(?!.*-assets$)(?!.*-sans-externalized$).*$"))
+                               )
+                             ),
+                             domainFilter
+                           )
+                         )
+                       ),
+            as       = "res"
           ),
+          unwind("$res"),
+          replaceRoot("$res"),
           // project relevant fields including the dependencies list
           project(
             fields(
@@ -187,6 +211,96 @@ class DerivedServiceDependenciesRepository @Inject()(
                 buildFlag        = scopes.contains(DependencyScope.Build)
               )
             }
+          logger.info(s"Found ${dependencies.size} for $slugName $slugVersion")
+          deps
+        }
+         .flatMap(group =>
+           if (group.isEmpty)
+             SingleObservable(0)
+           else {
+             logger.info(s"Inserting ${group.size}}")
+             targetCollection
+               .bulkWrite(
+                 group.map(d =>
+                   ReplaceOneModel(
+                     filter         = and(
+                                        equal("slugName"   , d.slugName),
+                                        equal("slugVersion", d.slugVersion),
+                                        equal("group"      , d.depGroup),
+                                        equal("artefact"   , d.depArtefact),
+                                        equal("version"    , d.depVersion),
+                                      ),
+                     replacement    = d,
+                     replaceOptions = ReplaceOptions().upsert(true)
+                   )
+                  ).toSeq
+               ).map(_ => group.size)
+           }
+         )
+         .toFuture()
+         .map(res =>
+           logger.info(s"Finished running DerivedServiceDependenciesRepository.populate - added ${res.sum}")
+         )
+    }
+
+
+*/
+
+
+
+
+    mongoComponent.database.getCollection("slugInfos")
+      .aggregate(
+        List(
+          // TODO filter by those that are not already in DERIVED-slug-dependencies (just to make the execution quicker - this can be removed if we parse all data off queue)
+          `match`(
+            exists("dependencyDot", true)
+          ),
+          // project relevant fields including the dependencies list
+          project(
+            fields(
+              excludeId(),
+              computed("slugName", "$name"),
+              computed("slugVersion", "$version"),
+              include("dependencyDot.compile"),
+              include("dependencyDot.test"),
+              include("dependencyDot.build")
+            )
+          )
+        )
+      )
+      .map { res =>
+          logger.info(s"Processing results")
+          val slugName    = res.getString("slugName"   )
+          val slugVersion = res.getString("slugVersion")
+
+          val dependencyDot: BsonDocument = res.get[BsonDocument]("dependencyDot").getOrElse(BsonDocument())
+          val compile = dependencyGraphParser.parse(dependencyDot.getString("compile", BsonString("")).getValue.split("\n")).dependencies.map((_, DependencyScope.Compile))
+          val test    = dependencyGraphParser.parse(dependencyDot.getString("test"   , BsonString("")).getValue.split("\n")).dependencies.map((_, DependencyScope.Test   ))
+          val build   = dependencyGraphParser.parse(dependencyDot.getString("build"  , BsonString("")).getValue.split("\n")).dependencies.map((_, DependencyScope.Build  ))
+
+          val dependencies: Map[DependencyGraphParser.Node, Set[DependencyScope]] =
+            (compile ++ test ++ build)
+              .foldLeft(Map.empty[DependencyGraphParser.Node, Set[DependencyScope]]){ case (acc, (n, flag)) =>
+                acc + (n -> (acc.getOrElse(n, Set.empty) + flag))
+              }
+
+          val deps =
+            dependencies
+              .filter { case (node, _) => node.group != "default" || node.artefact != "project" }
+              .map { case (node, scopes) =>
+                ServiceDependencyWrite(
+                  slugName         = slugName,
+                  slugVersion      = slugVersion,
+                  depGroup         = node.group,
+                  depArtefact      = node.artefact,
+                  depVersion       = node.version,
+                  scalaVersion     = node.scalaVersion,
+                  compileFlag      = scopes.contains(DependencyScope.Compile),
+                  testFlag         = scopes.contains(DependencyScope.Test),
+                  buildFlag        = scopes.contains(DependencyScope.Build)
+                )
+              }
           logger.info(s"Found ${dependencies.size} for $slugName $slugVersion")
           deps
         }
@@ -268,9 +382,9 @@ class DerivedServiceDependenciesRepository @Inject()(
             addToSet("_id", "$_id")),*/
           replaceRoot("$_id"),
           addFields(
-            Field("compile", true ),
-            Field("test"   , false),
-            Field("build"  , false)
+            Field("scope_compile", true ),
+            Field("scope_test"   , false),
+            Field("scope_build"  , false)
           ),
           // replace content of target collection
           out(DerivedServiceDependenciesRepository.collectionName)

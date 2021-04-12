@@ -57,9 +57,9 @@ object ServiceDependencyWrite {
     ~ (__ \ "artefact"     ).format[String]
     ~ (__ \ "version"      ).format[String]
     ~ (__ \ "scalaVersion" ).formatNullable[String]
-    ~ (__ \ "compile"      ).format[Boolean]
-    ~ (__ \ "test"         ).format[Boolean]
-    ~ (__ \ "build"        ).format[Boolean]
+    ~ (__ \ "scope_compile").format[Boolean]
+    ~ (__ \ "scope_test"   ).format[Boolean]
+    ~ (__ \ "scope_build"  ).format[Boolean]
     )(ServiceDependencyWrite.apply _, unlift(ServiceDependencyWrite.unapply _))
 }
 
@@ -79,15 +79,15 @@ case class ServiceDependency(
 
 trait ApiServiceDependencyFormats {
   val derivedMongoFormat: OFormat[ServiceDependency] =
-    ( (__ \ "slugName"    ).format[String]
-    ~ (__ \ "slugVersion" ).format[String]
-    ~ (__ \ "group"       ).format[String]
-    ~ (__ \ "artefact"    ).format[String]
-    ~ (__ \ "version"     ).format[String]
-    ~ (__ \ "scalaVersion").formatNullable[String]
-    ~ (__ \ "compile"     ).format[Boolean]
-    ~ (__ \ "test"        ).format[Boolean]
-    ~ (__ \ "build"       ).format[Boolean]
+    ( (__ \ "slugName"     ).format[String]
+    ~ (__ \ "slugVersion"  ).format[String]
+    ~ (__ \ "group"        ).format[String]
+    ~ (__ \ "artefact"     ).format[String]
+    ~ (__ \ "version"      ).format[String]
+    ~ (__ \ "scalaVersion" ).formatNullable[String]
+    ~ (__ \ "scope_compile").format[Boolean]
+    ~ (__ \ "scope_test"   ).format[Boolean]
+    ~ (__ \ "scope_build"  ).format[Boolean]
     )( (sn, sv, g, a, v, scv, c, t, b) =>
          ServiceDependency(
            slugName     = sn,

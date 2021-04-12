@@ -49,7 +49,7 @@ class DerivedGroupArtefactRepository @Inject()(
   // not currently supporting no scope - we'd get duplicate groups
   def findGroupsArtefacts(scope: DependencyScope): Future[Seq[GroupArtefacts]] =
     collection
-      .find(equal(scope.asString, true))
+      .find(equal("scope_" + scope.asString, true))
       .toFuture()
 
   def populate(): Future[Unit] = {
@@ -57,22 +57,20 @@ class DerivedGroupArtefactRepository @Inject()(
     mongoComponent.database.getCollection("DERIVED-slug-dependencies")
       .aggregate(
         List(
-          // Exclude slug internals
-          `match`(regex("version", "^(?!.*-assets$)(?!.*-sans-externalized$).*$")),
           project(
             fields(
               excludeId(),
-              include("group", "artefact", "compile", "test", "build")
+              include("group", "artefact", "scope_compile", "scope_test", "scope_build")
             )
           ),
           BsonDocument("$group" ->
             BsonDocument(
               "_id" ->
                 BsonDocument(
-                  "group"   -> "$group",
-                  "compile" -> "$compile",
-                  "test"    -> "$test",
-                  "build"   -> "$build"
+                  "group"         -> "$group",
+                  "scope_compile" -> "$scope_compile",
+                  "scope_test"    -> "$scope_test",
+                  "scope_build"   -> "$scope_build"
                 ),
               "artifacts" ->
                 BsonDocument("$addToSet" -> "$artefact")
@@ -81,9 +79,9 @@ class DerivedGroupArtefactRepository @Inject()(
           // reproject the result so fields are at the root level
           project(fields(
             computed("group"  , "$_id.group"),
-            computed("compile", "$_id.compile"),
-            computed("test"   , "$_id.test"),
-            computed("build"  , "$_id.build"),
+            computed("scope_compile", "$_id.scope_compile"),
+            computed("scope_test"   , "$_id.scope_test"),
+            computed("scope_build"  , "$_id.scope_build"),
             include("artifacts"),
             exclude("_id")
           )),
