@@ -23,6 +23,7 @@ import org.mongodb.scala.model.Filters._
 import org.mongodb.scala.model.Indexes.ascending
 import org.mongodb.scala.model.Projections._
 import org.mongodb.scala.model.Sorts._
+import play.api.Logger
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.play.json.PlayMongoRepository
 import uk.gov.hmrc.servicedependencies.model._
@@ -41,16 +42,23 @@ class DerivedGroupArtefactRepository @Inject()(
   indexes        = Seq.empty,
   optSchema      = None
 ){
-  def populate(): Future[Unit] =
+  private val logger = Logger(getClass)
+
+  def populate(): Future[Unit] = {
+    logger.info(s"Running DerivedGroupArtefactRepository.populate")
     mongoComponent.database.getCollection("slugInfos")
       .aggregate(
         List(
           // Pull out any slug infos that are present in any environment (or latest)
-          `match`(
+          // TODO we can't filter like this anymore, since env flags have been moved off slugInfos
+          // Could we just run a query on DERIVED-service-dependencies?
+          // or populate DERIVED-artefact-lookup as we process dependencies off the queue?
+          // TODO this needs to be addressed to pick up non-compile scope dependencies (and support querying by scope)
+          /*`match`(
             or(
               SlugInfoFlag.values.map(f => equal(f.asString, true)): _* // filter for reachable data
             )
-          ),
+          ),*/
           // Pull out just the dependencies array
           project(
             fields(
@@ -70,7 +78,10 @@ class DerivedGroupArtefactRepository @Inject()(
       )
       .allowDiskUse(true)
       .toFuture
-      .map(_ => Unit)
+      .map(_ =>
+        logger.info(s"Finished running DerivedGroupArtefactRepository.populate")
+      )
+  }
 
   def findGroupsArtefacts: Future[Seq[GroupArtefacts]] =
     collection.find().toFuture()

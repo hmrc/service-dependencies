@@ -20,7 +20,8 @@ import javax.inject.{Inject, Singleton}
 import org.mongodb.scala.SingleObservable
 import org.mongodb.scala.bson.{BsonDocument, BsonString}
 import org.mongodb.scala.bson.conversions.Bson
-import org.mongodb.scala.model.{IndexModel, IndexOptions, ReplaceOneModel}
+import org.mongodb.scala.model.{IndexModel, IndexOptions, ReplaceOneModel, ReplaceOptions, Field}
+import org.mongodb.scala.model.Accumulators._
 import org.mongodb.scala.model.Aggregates._
 import org.mongodb.scala.model.Filters._
 import org.mongodb.scala.model.Indexes.{ascending, compoundIndex}
@@ -34,6 +35,9 @@ import uk.gov.hmrc.servicedependencies.service.DependencyGraphParser
 
 import scala.concurrent.{ExecutionContext, Future}
 
+/** A flattened version of slugInfo containing only slugs deployed + latest
+  * One document per dependency in the slug
+  */
 @Singleton
 class DerivedServiceDependenciesRepository @Inject()(
   mongoComponent       : MongoComponent,
@@ -45,21 +49,21 @@ class DerivedServiceDependenciesRepository @Inject()(
     collectionName = DerivedServiceDependenciesRepository.collectionName
   , mongoComponent = mongoComponent
   , domainFormat   = ApiServiceDependencyFormats.derivedMongoFormat
-  , indexes        = Seq( // TODO Indices have changed, will need to drop in order to deploy (we can't use replaceIndexes for index rename)
+  , indexes        = Seq(
                        IndexModel(
                          ascending("slugName"),
-                         IndexOptions().name("slugNameIdx")
+                         IndexOptions().name("slugName_idx")
                        ),
                        IndexModel(
                          compoundIndex(
                            ascending("group"),
                            ascending("artefact")
                          ),
-                         IndexOptions().name("groupArtefactIdx")
+                         IndexOptions().name("group_artefact_idx")
                        ),
                        IndexModel(
                          compoundIndex(DependencyScope.values.map(f => ascending(f.asString)) :_*),
-                         IndexOptions().name("dependencyScopeIdx").background(true)
+                         IndexOptions().name("dependencyScope_idx").background(true)
                        ),
                        IndexModel(
                          compoundIndex(
@@ -74,7 +78,6 @@ class DerivedServiceDependenciesRepository @Inject()(
                      )
   , optSchema      = None
 ){
-
   private val logger = Logger(getClass)
 
   def findServicesWithDependency(
@@ -119,10 +122,8 @@ class DerivedServiceDependenciesRepository @Inject()(
       domainFilter      = dependencyFilter
     )
 
-  /**
-    * A flattened version of slugInfo containing only slugs deployed + latest
-    * One document per dependency in the slug
-    * @return
+  /** Populates the target collection with the data from dependencyDot.
+    * This can be run regularly to keep the collection up-to-date.
     */
   def populate(): Future[Unit] = {
     // TODO we should process the dependencyDot off the queue - it's immutable data.
@@ -139,11 +140,9 @@ class DerivedServiceDependenciesRepository @Inject()(
     mongoComponent.database.getCollection("slugInfos")
       .aggregate(
         List(
-          // filter slugs to just those deployed in any environment, or tagged as latest (just to make the execution quicker - this can be removed if we parse all data off queue)
+          // TODO filter by those that are not already in DERIVED-slug-dependencies (just to make the execution quicker - this can be removed if we parse all data off queue)
           `match`(
-            or(
-              SlugInfoFlag.values.map(f => equal(f.asString, true)): _* // filter for reachable data
-            )
+            exists("dependencyDot", true)
           ),
           // project relevant fields including the dependencies list
           project(
@@ -200,25 +199,159 @@ class DerivedServiceDependenciesRepository @Inject()(
                .bulkWrite(
                  group.map(d =>
                    ReplaceOneModel(
-                     filter      = and(
-                                     equal("slugName"   , d.slugName),
-                                     equal("slugVersion", d.slugVersion),
-                                     equal("group"      , d.depGroup),
-                                     equal("artefact"   , d.depArtefact),
-                                     equal("version"    , d.depVersion),
-                                   ),
-                     replacement = d
+                     filter         = and(
+                                        equal("slugName"   , d.slugName),
+                                        equal("slugVersion", d.slugVersion),
+                                        equal("group"      , d.depGroup),
+                                        equal("artefact"   , d.depArtefact),
+                                        equal("version"    , d.depVersion),
+                                      ),
+                     replacement    = d,
+                     replaceOptions = ReplaceOptions().upsert(true)
                    )
                   ).toSeq
                ).map(_ => group.size)
            }
          )
          .toFuture()
-         .map { res =>
+         .map(res =>
            logger.info(s"Finished running DerivedServiceDependenciesRepository.populate - added ${res.sum}")
-           ()
-         }
+         )
     }
+
+
+  /** Populates the target collection with the data from the dependencies field.
+    * This is legacy, and will wipes the current target collection data. `populate` will need to be run afterwards.
+    * It should only need to be called once to regenerate the collection, since all new data should have dependencyDot data.
+    */
+  def populateLegacy() :Future[Unit] = {
+    logger.info(s"Running DerivedServiceDependenciesRepository.populateLegacy")
+    mongoComponent.database.getCollection("slugInfos")
+      .aggregate(
+        List(
+          `match`(
+            exists("dependencyDot", false)
+          ),
+          // project relevant fields including the dependencies list
+          project(
+            fields(
+              excludeId(),
+              computed("slugName"   , "$name"),
+              computed("slugVersion", "$version"),
+              include("dependencies.group"),
+              include("dependencies.artifact"),
+              include("dependencies.version")
+            )
+          ),
+          // unwind the dependencies into 1 record per depdencies
+          unwind("$dependencies"),
+          // dedupe (some dependencies are included twice)
+          BsonDocument("$group" ->
+            BsonDocument("_id" ->
+              BsonDocument(
+                "slugName"    -> "$slugName",
+                "slugVersion" -> "$slugVersion",
+                "group"       -> "$dependencies.group",
+                "artefact"    -> "$dependencies.artifact",
+                "version"     -> "$dependencies.version"
+              )
+            )
+          ),
+          /*group(
+            BsonDocument(
+              "slugName"    -> "$slugName",
+              "slugVersion" -> "$slugVersion",
+              "group"       -> "$group",
+              "artefact"    -> "$artifact",
+              "version"     -> "$version"
+            ),
+            addToSet("_id", "$_id")),*/
+          replaceRoot("$_id"),
+          addFields(
+            Field("compile", true ),
+            Field("test"   , false),
+            Field("build"  , false)
+          ),
+          // replace content of target collection
+          out(DerivedServiceDependenciesRepository.collectionName)
+        )
+      )
+      .allowDiskUse(true)
+      .toFuture()
+      .map(_ =>
+        logger.info(s"Finished running DerivedServiceDependenciesRepository.populateLegacy")
+      )
+  }
+
+  /** Populates the collection with dependencies not in dependencyDot format (legacy data).
+    * Note, this only needs to be run once.
+    * @return
+    */
+  /*def populateLegacy(): Future[Unit] =
+    mongoComponent.database.getCollection("slugInfos")
+      .aggregate(
+        List(
+          `match`(
+            exists("dependencyDot", false)
+          ),
+          // project relevant fields including the dependencies list
+          project(
+            fields(
+              excludeId(),
+              computed("slugName", "$name"),
+              computed("slugVersion", "$version"),
+              include("dependencies.group"),
+              include("dependencies.artifact"),
+              include("dependencies.version")
+            )
+          ),
+          // unwind the dependencies into 1 record per depdencies
+          unwind("$dependencies"),
+          // reproject the result so dependencies are at the root level
+          project(fields(
+            computed("group", "$dependencies.group"),
+            computed("artefact", "$dependencies.artifact"),
+            computed("version", "$dependencies.version"),
+            include("slugName"),
+            include("slugVersion")
+          ))
+        )
+      )
+      .map { res =>
+        val slugName    = res.getString("slugName"   )
+        val slugVersion = res.getString("slugVersion")
+        val group       = res.getString("group")
+        val artefact    = res.getString("artefact")
+        val version     = res.getString("version")
+
+        ServiceDependencyWrite(
+                slugName         = slugName,
+                slugVersion      = slugVersion,
+                depGroup         = group,
+                depArtefact      = artefact,
+                depVersion       = version,
+                scalaVersion     = None, // can we get this?
+                compileFlag      = true,
+                testFlag         = false,
+                buildFlag        = false
+              )
+       }
+       // TODO bulk write... It's very slow!
+       .map(d =>
+         ReplaceOneModel(
+           filter      = and(
+                           equal("slugName"   , d.slugName),
+                           equal("slugVersion", d.slugVersion),
+                           equal("group"      , d.depGroup),
+                           equal("artefact"   , d.depArtefact),
+                           equal("version"    , d.depVersion),
+                         ),
+           replacement = d
+         )
+      )
+      .toFuture
+      .map(_ => ())
+      */
 }
 
 object DerivedServiceDependenciesRepository {
