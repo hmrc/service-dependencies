@@ -200,6 +200,7 @@ class DerivedServiceDependenciesRepository @Inject()(
                                val deps =
                                  dependencies
                                    .filter { case (node, _) => node.group != "default" || node.artefact != "project" }
+                                   .filter { case (node, _) => node.group != "uk.gov.hmrc" || node.artefact != slugName }
                                    .map { case (node, scopes) =>
                                      ServiceDependencyWrite(
                                        slugName         = slugName,
@@ -220,7 +221,7 @@ class DerivedServiceDependenciesRepository @Inject()(
                                if (group.isEmpty)
                                  SingleObservable(0)
                                else {
-                                 logger.info(s"Inserting ${group.size}}")
+                                 logger.info(s"Inserting ${group.size} dependencies")
                                  targetCollection
                                    .bulkWrite(
                                      group.map(d =>
