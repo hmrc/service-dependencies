@@ -22,7 +22,7 @@ import org.mongodb.scala.model.Accumulators._
 import org.mongodb.scala.model.Aggregates._
 import org.mongodb.scala.model.Filters._
 import org.mongodb.scala.model.Projections._
-import org.mongodb.scala.model.Sorts
+import org.mongodb.scala.model.{Field, Sorts}
 import play.api.Logger
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.play.json.PlayMongoRepository
@@ -67,10 +67,10 @@ class DerivedGroupArtefactRepository @Inject()(
             BsonDocument(
               "_id" ->
                 BsonDocument(
-                  "group"         -> "$group",
-                  "scope_compile" -> "$scope_compile",
-                  "scope_test"    -> "$scope_test",
-                  "scope_build"   -> "$scope_build"
+                  "group"         -> "$group"//,
+                  //"scope_compile" -> "$scope_compile",
+                  //"scope_test"    -> "$scope_test",
+                  //"scope_build"   -> "$scope_build"
                 ),
               "artifacts" ->
                 BsonDocument("$addToSet" -> "$artefact")
@@ -79,12 +79,17 @@ class DerivedGroupArtefactRepository @Inject()(
           // reproject the result so fields are at the root level
           project(fields(
             computed("group"  , "$_id.group"),
-            computed("scope_compile", "$_id.scope_compile"),
-            computed("scope_test"   , "$_id.scope_test"),
-            computed("scope_build"  , "$_id.scope_build"),
+            //computed("scope_compile", "$_id.scope_compile"),
+            //computed("scope_test"   , "$_id.scope_test"),
+            //computed("scope_build"  , "$_id.scope_build"),
             include("artifacts"),
             exclude("_id")
           )),
+          addFields(
+            Field("scope_compile", true),
+            Field("scope_test", true),
+            Field("scope_build", true)
+          ),
           // replace content of target collection
           out("DERIVED-artefact-lookup")
         )
