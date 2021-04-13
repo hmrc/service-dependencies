@@ -18,10 +18,9 @@ package uk.gov.hmrc.servicedependencies.persistence.derived
 
 import javax.inject.{Inject, Singleton}
 import org.mongodb.scala.SingleObservable
-import org.mongodb.scala.bson.{BsonDocument, BsonString}
+import org.mongodb.scala.bson.{BsonArray, BsonDocument, BsonString}
 import org.mongodb.scala.bson.conversions.Bson
-import org.mongodb.scala.model.{IndexModel, IndexOptions, ReplaceOneModel, ReplaceOptions, Field}
-import org.mongodb.scala.model.Accumulators._
+import org.mongodb.scala.model.{IndexModel, IndexOptions, ReplaceOneModel, ReplaceOptions}
 import org.mongodb.scala.model.Aggregates._
 import org.mongodb.scala.model.Filters._
 import org.mongodb.scala.model.Indexes.{ascending, compoundIndex}
@@ -125,347 +124,124 @@ class DerivedServiceDependenciesRepository @Inject()(
   /** Populates the target collection with the data from dependencyDot.
     * This can be run regularly to keep the collection up-to-date.
     */
-  def populate(): Future[Unit] = {
+  def populate(): Future[Unit] =
     // TODO we should process the dependencyDot off the queue - it's immutable data.
-    logger.info(s"Running DerivedServiceDependenciesRepository.populate")
+    for {
+      _                <- Future.successful(logger.info(s"Running DerivedServiceDependenciesRepository.populate"))
+      // collect the processed slugs to avoid re-processing them
+      processedSlugs   <- mongoComponent.database.getCollection(DerivedServiceDependenciesRepository.collectionName)
+                            .aggregate(
+                              List(
+                                group(
+                                  BsonDocument(
+                                    "slugName"    -> "$slugName",
+                                    "slugVersion" -> "$slugVersion"
+                                  )
+                                ),
+                                replaceRoot("$_id")
+                              )
+                            )
+                            .map(res => (res.getString("slugName"), res.getString("slugVersion")))
+                            .toFuture()
 
-    // use a different collection to register a different format
-    val targetCollection =
-      CollectionFactory.collection(
-        mongoComponent.database,
-        DerivedServiceDependenciesRepository.collectionName,
-        ServiceDependencyWrite.format
-      )
-
-/*
-
- mongoComponent.database.getCollection(DerivedServiceDependenciesRepository.collectionName)
-      .aggregate(
-        List(
-          lookup(
-            from     = "slugInfos",
-            let      = Seq(
-                         Variable("sn", "$name"),
-                         Variable("sv", "$version")
-                       ),
-            pipeline = List(
-                         `match`(
-                           and(
-                             expr(
-                               and(
-                                 // can't use Filters.eq which strips the $eq out, and thus complains about $name/$version not being operators
-                                 BsonDocument("$eq" -> BsonArray("$name"   , "$$sn")),
-                                 BsonDocument("$eq" -> BsonArray("$version", "$$sv")),
-                                 // Exclude slug internals
-                                 `match`(regex("version", "^(?!.*-assets$)(?!.*-sans-externalized$).*$"))
+      // use a different collection to register a different format
+      targetCollection =  CollectionFactory.collection(
+                            mongoComponent.database,
+                            DerivedServiceDependenciesRepository.collectionName,
+                            ServiceDependencyWrite.format
+                          )
+      res              <- mongoComponent.database.getCollection("slugInfos")
+                           .aggregate(
+                             List(
+                               // just to make the execution quicker - the filter can be removed if we parse all data off queue
+                               project(
+                                 fields(
+                                   BsonDocument("name_version" -> BsonDocument("$concat" -> BsonArray("$name", "_", "$version"))),
+                                   include("name", "version", "dependencyDot")
+                                 )
+                               ),
+                               `match`(
+                                 and(
+                                   exists("dependencyDot", true),
+                                   // this feeds a VERY large list of slugs (82k) in
+                                   // we should be able to replace all of this once we process off the queue directly, rather than on a scheduler.
+                                   nin("name_version"   , processedSlugs.map(a => a._1 + "_" + a._2):_ *)
+                                 )
+                               ),
+                               // project relevant fields including the dependencies list
+                               project(
+                                 fields(
+                                   excludeId(),
+                                   computed("slugName", "$name"),
+                                   computed("slugVersion", "$version"),
+                                   include("dependencyDot.compile"),
+                                   include("dependencyDot.test"),
+                                   include("dependencyDot.build")
+                                 )
                                )
-                             ),
-                             domainFilter
+                             )
                            )
-                         )
-                       ),
-            as       = "res"
-          ),
-          unwind("$res"),
-          replaceRoot("$res"),
-          // project relevant fields including the dependencies list
-          project(
-            fields(
-              excludeId(),
-              computed("slugName", "$name"),
-              computed("slugVersion", "$version"),
-              include("dependencyDot.compile"),
-              include("dependencyDot.test"),
-              include("dependencyDot.build")
-            )
-          )
-        )
-      )
-      .map { res =>
-          logger.info(s"Processing results")
-          val slugName    = res.getString("slugName"   )
-          val slugVersion = res.getString("slugVersion")
+                           .map { res =>
+                               logger.info(s"Processing results")
+                               val slugName    = res.getString("slugName"   )
+                               val slugVersion = res.getString("slugVersion")
 
-          val dependencyDot: BsonDocument = res.get[BsonDocument]("dependencyDot").getOrElse(BsonDocument())
-          val compile = dependencyGraphParser.parse(dependencyDot.getString("compile", BsonString("")).getValue.split("\n")).dependencies.map((_, DependencyScope.Compile))
-          val test    = dependencyGraphParser.parse(dependencyDot.getString("test"   , BsonString("")).getValue.split("\n")).dependencies.map((_, DependencyScope.Test   ))
-          val build   = dependencyGraphParser.parse(dependencyDot.getString("build"  , BsonString("")).getValue.split("\n")).dependencies.map((_, DependencyScope.Build  ))
+                               val dependencyDot: BsonDocument = res.get[BsonDocument]("dependencyDot").getOrElse(BsonDocument())
+                               val compile = dependencyGraphParser.parse(dependencyDot.getString("compile", BsonString("")).getValue).dependencies.map((_, DependencyScope.Compile))
+                               val test    = dependencyGraphParser.parse(dependencyDot.getString("test"   , BsonString("")).getValue).dependencies.map((_, DependencyScope.Test   ))
+                               val build   = dependencyGraphParser.parse(dependencyDot.getString("build"  , BsonString("")).getValue).dependencies.map((_, DependencyScope.Build  ))
 
-          val dependencies: Map[DependencyGraphParser.Node, Set[DependencyScope]] =
-            (compile ++ test ++ build)
-              .foldLeft(Map.empty[DependencyGraphParser.Node, Set[DependencyScope]]){ case (acc, (n, flag)) =>
-                acc + (n -> (acc.getOrElse(n, Set.empty) + flag))
-              }
+                               val dependencies: Map[DependencyGraphParser.Node, Set[DependencyScope]] =
+                                 (compile ++ test ++ build)
+                                   .foldLeft(Map.empty[DependencyGraphParser.Node, Set[DependencyScope]]){ case (acc, (n, flag)) =>
+                                     acc + (n -> (acc.getOrElse(n, Set.empty) + flag))
+                                   }
 
-          val deps =
-            dependencies.map { case (node, scopes) =>
-              ServiceDependencyWrite(
-                slugName         = slugName,
-                slugVersion      = slugVersion,
-                depGroup         = node.group,
-                depArtefact      = node.artefact,
-                depVersion       = node.version,
-                scalaVersion     = node.scalaVersion,
-                compileFlag      = scopes.contains(DependencyScope.Compile),
-                testFlag         = scopes.contains(DependencyScope.Test),
-                buildFlag        = scopes.contains(DependencyScope.Build)
-              )
-            }
-          logger.info(s"Found ${dependencies.size} for $slugName $slugVersion")
-          deps
-        }
-         .flatMap(group =>
-           if (group.isEmpty)
-             SingleObservable(0)
-           else {
-             logger.info(s"Inserting ${group.size}}")
-             targetCollection
-               .bulkWrite(
-                 group.map(d =>
-                   ReplaceOneModel(
-                     filter         = and(
-                                        equal("slugName"   , d.slugName),
-                                        equal("slugVersion", d.slugVersion),
-                                        equal("group"      , d.depGroup),
-                                        equal("artefact"   , d.depArtefact),
-                                        equal("version"    , d.depVersion),
-                                      ),
-                     replacement    = d,
-                     replaceOptions = ReplaceOptions().upsert(true)
-                   )
-                  ).toSeq
-               ).map(_ => group.size)
-           }
-         )
-         .toFuture()
-         .map(res =>
-           logger.info(s"Finished running DerivedServiceDependenciesRepository.populate - added ${res.sum}")
-         )
-    }
-
-
-*/
-
-
-
-
-    mongoComponent.database.getCollection("slugInfos")
-      .aggregate(
-        List(
-          // TODO filter by those that are not already in DERIVED-slug-dependencies (just to make the execution quicker - this can be removed if we parse all data off queue)
-          `match`(
-            exists("dependencyDot", true)
-          ),
-          // project relevant fields including the dependencies list
-          project(
-            fields(
-              excludeId(),
-              computed("slugName", "$name"),
-              computed("slugVersion", "$version"),
-              include("dependencyDot.compile"),
-              include("dependencyDot.test"),
-              include("dependencyDot.build")
-            )
-          )
-        )
-      )
-      .map { res =>
-          logger.info(s"Processing results")
-          val slugName    = res.getString("slugName"   )
-          val slugVersion = res.getString("slugVersion")
-
-          val dependencyDot: BsonDocument = res.get[BsonDocument]("dependencyDot").getOrElse(BsonDocument())
-          val compile = dependencyGraphParser.parse(dependencyDot.getString("compile", BsonString("")).getValue.split("\n")).dependencies.map((_, DependencyScope.Compile))
-          val test    = dependencyGraphParser.parse(dependencyDot.getString("test"   , BsonString("")).getValue.split("\n")).dependencies.map((_, DependencyScope.Test   ))
-          val build   = dependencyGraphParser.parse(dependencyDot.getString("build"  , BsonString("")).getValue.split("\n")).dependencies.map((_, DependencyScope.Build  ))
-
-          val dependencies: Map[DependencyGraphParser.Node, Set[DependencyScope]] =
-            (compile ++ test ++ build)
-              .foldLeft(Map.empty[DependencyGraphParser.Node, Set[DependencyScope]]){ case (acc, (n, flag)) =>
-                acc + (n -> (acc.getOrElse(n, Set.empty) + flag))
-              }
-
-          val deps =
-            dependencies
-              .filter { case (node, _) => node.group != "default" || node.artefact != "project" }
-              .map { case (node, scopes) =>
-                ServiceDependencyWrite(
-                  slugName         = slugName,
-                  slugVersion      = slugVersion,
-                  depGroup         = node.group,
-                  depArtefact      = node.artefact,
-                  depVersion       = node.version,
-                  scalaVersion     = node.scalaVersion,
-                  compileFlag      = scopes.contains(DependencyScope.Compile),
-                  testFlag         = scopes.contains(DependencyScope.Test),
-                  buildFlag        = scopes.contains(DependencyScope.Build)
-                )
-              }
-          logger.info(s"Found ${dependencies.size} for $slugName $slugVersion")
-          deps
-        }
-         .flatMap(group =>
-           if (group.isEmpty)
-             SingleObservable(0)
-           else {
-             logger.info(s"Inserting ${group.size}}")
-             targetCollection
-               .bulkWrite(
-                 group.map(d =>
-                   ReplaceOneModel(
-                     filter         = and(
-                                        equal("slugName"   , d.slugName),
-                                        equal("slugVersion", d.slugVersion),
-                                        equal("group"      , d.depGroup),
-                                        equal("artefact"   , d.depArtefact),
-                                        equal("version"    , d.depVersion),
-                                      ),
-                     replacement    = d,
-                     replaceOptions = ReplaceOptions().upsert(true)
-                   )
-                  ).toSeq
-               ).map(_ => group.size)
-           }
-         )
-         .toFuture()
-         .map(res =>
-           logger.info(s"Finished running DerivedServiceDependenciesRepository.populate - added ${res.sum}")
-         )
-    }
-
-
-  /** Populates the target collection with the data from the dependencies field.
-    * This is legacy, and will wipes the current target collection data. `populate` will need to be run afterwards.
-    * It should only need to be called once to regenerate the collection, since all new data should have dependencyDot data.
-    */
-  def populateLegacy() :Future[Unit] = {
-    logger.info(s"Running DerivedServiceDependenciesRepository.populateLegacy")
-    mongoComponent.database.getCollection("slugInfos")
-      .aggregate(
-        List(
-          `match`(
-            exists("dependencyDot", false)
-          ),
-          // project relevant fields including the dependencies list
-          project(
-            fields(
-              excludeId(),
-              computed("slugName"   , "$name"),
-              computed("slugVersion", "$version"),
-              include("dependencies.group"),
-              include("dependencies.artifact"),
-              include("dependencies.version")
-            )
-          ),
-          // unwind the dependencies into 1 record per depdencies
-          unwind("$dependencies"),
-          // dedupe (some dependencies are included twice)
-          BsonDocument("$group" ->
-            BsonDocument("_id" ->
-              BsonDocument(
-                "slugName"    -> "$slugName",
-                "slugVersion" -> "$slugVersion",
-                "group"       -> "$dependencies.group",
-                "artefact"    -> "$dependencies.artifact",
-                "version"     -> "$dependencies.version"
-              )
-            )
-          ),
-          /*group(
-            BsonDocument(
-              "slugName"    -> "$slugName",
-              "slugVersion" -> "$slugVersion",
-              "group"       -> "$group",
-              "artefact"    -> "$artifact",
-              "version"     -> "$version"
-            ),
-            addToSet("_id", "$_id")),*/
-          replaceRoot("$_id"),
-          addFields(
-            Field("scope_compile", true ),
-            Field("scope_test"   , false),
-            Field("scope_build"  , false)
-          ),
-          // replace content of target collection
-          out(DerivedServiceDependenciesRepository.collectionName)
-        )
-      )
-      .allowDiskUse(true)
-      .toFuture()
-      .map(_ =>
-        logger.info(s"Finished running DerivedServiceDependenciesRepository.populateLegacy")
-      )
-  }
-
-  /** Populates the collection with dependencies not in dependencyDot format (legacy data).
-    * Note, this only needs to be run once.
-    * @return
-    */
-  /*def populateLegacy(): Future[Unit] =
-    mongoComponent.database.getCollection("slugInfos")
-      .aggregate(
-        List(
-          `match`(
-            exists("dependencyDot", false)
-          ),
-          // project relevant fields including the dependencies list
-          project(
-            fields(
-              excludeId(),
-              computed("slugName", "$name"),
-              computed("slugVersion", "$version"),
-              include("dependencies.group"),
-              include("dependencies.artifact"),
-              include("dependencies.version")
-            )
-          ),
-          // unwind the dependencies into 1 record per depdencies
-          unwind("$dependencies"),
-          // reproject the result so dependencies are at the root level
-          project(fields(
-            computed("group", "$dependencies.group"),
-            computed("artefact", "$dependencies.artifact"),
-            computed("version", "$dependencies.version"),
-            include("slugName"),
-            include("slugVersion")
-          ))
-        )
-      )
-      .map { res =>
-        val slugName    = res.getString("slugName"   )
-        val slugVersion = res.getString("slugVersion")
-        val group       = res.getString("group")
-        val artefact    = res.getString("artefact")
-        val version     = res.getString("version")
-
-        ServiceDependencyWrite(
-                slugName         = slugName,
-                slugVersion      = slugVersion,
-                depGroup         = group,
-                depArtefact      = artefact,
-                depVersion       = version,
-                scalaVersion     = None, // can we get this?
-                compileFlag      = true,
-                testFlag         = false,
-                buildFlag        = false
-              )
-       }
-       // TODO bulk write... It's very slow!
-       .map(d =>
-         ReplaceOneModel(
-           filter      = and(
-                           equal("slugName"   , d.slugName),
-                           equal("slugVersion", d.slugVersion),
-                           equal("group"      , d.depGroup),
-                           equal("artefact"   , d.depArtefact),
-                           equal("version"    , d.depVersion),
-                         ),
-           replacement = d
-         )
-      )
-      .toFuture
-      .map(_ => ())
-      */
+                               val deps =
+                                 dependencies
+                                   .filter { case (node, _) => node.group != "default" || node.artefact != "project" }
+                                   .map { case (node, scopes) =>
+                                     ServiceDependencyWrite(
+                                       slugName         = slugName,
+                                       slugVersion      = slugVersion,
+                                       depGroup         = node.group,
+                                       depArtefact      = node.artefact,
+                                       depVersion       = node.version,
+                                       scalaVersion     = node.scalaVersion,
+                                       compileFlag      = scopes.contains(DependencyScope.Compile),
+                                       testFlag         = scopes.contains(DependencyScope.Test),
+                                       buildFlag        = scopes.contains(DependencyScope.Build)
+                                     )
+                                   }
+                               logger.info(s"Found ${dependencies.size} for $slugName $slugVersion")
+                               deps
+                             }
+                             .flatMap(group =>
+                               if (group.isEmpty)
+                                 SingleObservable(0)
+                               else {
+                                 logger.info(s"Inserting ${group.size}}")
+                                 targetCollection
+                                   .bulkWrite(
+                                     group.map(d =>
+                                       ReplaceOneModel(
+                                         filter         = and(
+                                                             equal("slugName"   , d.slugName),
+                                                             equal("slugVersion", d.slugVersion),
+                                                             equal("group"      , d.depGroup),
+                                                             equal("artefact"   , d.depArtefact),
+                                                             equal("version"    , d.depVersion),
+                                                           ),
+                                         replacement    = d,
+                                         replaceOptions = ReplaceOptions().upsert(true)
+                                       )
+                                       ).toSeq
+                                   ).map(_ => group.size)
+                               }
+                             )
+                             .toFuture()
+      _             =  logger.info(s"Finished running DerivedServiceDependenciesRepository.populate - added ${res.sum}")
+    } yield ()
 }
 
 object DerivedServiceDependenciesRepository {
