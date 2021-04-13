@@ -23,41 +23,33 @@ import uk.gov.hmrc.servicedependencies.model._
 object TestSlugInfos {
   val slugInfo =
     SlugInfo(
-      created       = LocalDateTime.of(2019, 6, 28, 11, 51, 23),
-      uri           = "https://store/slugs/my-slug/my-slug_0.27.0_0.5.2.tgz",
-      name          = "my-slug",
-      version       = Version.apply("0.27.0"),
-      teams         = List.empty,
-      runnerVersion = "0.5.2",
-      classpath     = "",
-      java          = JavaInfo("1.181.0", "OpenJDK", "JRE"),
-      dependencies  = List(
-                        SlugDependency(
-                          path     = "lib1",
-                          version  = "1.2.0",
-                          group    = "com.test.group",
-                          artifact = "lib1"
-                        ),
-                        SlugDependency(path = "lib2", version = "0.66", group = "com.test.group", artifact = "lib2")
-                      ),
+      created              = LocalDateTime.of(2019, 6, 28, 11, 51, 23),
+      uri                  = "https://store/slugs/my-slug/my-slug_0.27.0_0.5.2.tgz",
+      name                 = "my-slug",
+      version              = Version.apply("0.27.0"),
+      teams                = List.empty,
+      runnerVersion        = "0.5.2",
+      classpath            = "",
+      java                 = JavaInfo("1.181.0", "OpenJDK", "JRE"),
+      dependencies         = List(
+                               SlugDependency(
+                                 path     = "lib1",
+                                 version  = "1.2.0",
+                                 group    = "com.test.group",
+                                 artifact = "lib1"
+                               ),
+                               SlugDependency(path = "lib2", version = "0.66", group = "com.test.group", artifact = "lib2")
+                             ),
       dependencyDotCompile = "",
       dependencyDotTest    = "",
       dependencyDotBuild   = "",
-      applicationConfig = "",
-      slugConfig        = "",
-      latest            = true,
-      production        = true,
-      qa                = true,
-      staging           = true,
-      development       = true,
-      externalTest      = true,
-      integration       = true
+      applicationConfig    = "",
+      slugConfig           = ""
     )
 
   val oldSlugInfo = slugInfo.copy(
     uri     = "https://store/slugs/my-slug/my-slug_0.26.0_0.5.2.tgz",
-    version = Version.apply("0.26.0"),
-    latest  = false
+    version = Version.apply("0.26.0")
   )
 
   val otherSlug =
@@ -82,14 +74,7 @@ object TestSlugInfos {
       dependencyDotTest    = "",
       dependencyDotBuild   = "",
       applicationConfig = "",
-      slugConfig        = "",
-      latest            = true,
-      production        = true,
-      qa                = true,
-      staging           = true,
-      development       = true,
-      externalTest      = true,
-      integration       = true
+      slugConfig        = ""
     )
 
   val nonJavaSlugInfo = slugInfo.copy(

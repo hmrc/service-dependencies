@@ -18,13 +18,11 @@ package uk.gov.hmrc.servicedependencies.persistence.derived
 
 import javax.inject.{Inject, Singleton}
 import org.mongodb.scala.bson.BsonDocument
-import org.mongodb.scala.bson.conversions.Bson
 import org.mongodb.scala.model.Accumulators._
 import org.mongodb.scala.model.Aggregates._
 import org.mongodb.scala.model.Filters._
-import org.mongodb.scala.model.Indexes.ascending
 import org.mongodb.scala.model.Projections._
-import org.mongodb.scala.model.Sorts._
+import org.mongodb.scala.model.Sorts
 import play.api.Logger
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.play.json.PlayMongoRepository
@@ -50,6 +48,8 @@ class DerivedGroupArtefactRepository @Inject()(
   def findGroupsArtefacts(scope: DependencyScope): Future[Seq[GroupArtefacts]] =
     collection
       .find(equal("scope_" + scope.asString, true))
+      .sort(Sorts.ascending("group"))
+      .map(g => g.copy(artefacts = g.artefacts.sorted))
       .toFuture()
 
   def populate(): Future[Unit] = {

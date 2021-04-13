@@ -29,7 +29,7 @@ class DependencyGraphParserSpec
   "DependencyGraphParser.parse" should {
     "return dependencies with evictions applied" in {
       val source = scala.io.Source.fromResource("slugs/dependencies-compile.dot")
-      val graph = dependencyGraphParser.parse(source.getLines.toSeq)
+      val graph = dependencyGraphParser.parse(source.mkString)
       graph.dependencies shouldBe List(
         Node("com.typesafe.play:filters-helpers_2.12:2.7.5"),
         Node("org.typelevel:cats-core_2.12:2.2.0"),
@@ -42,7 +42,7 @@ class DependencyGraphParserSpec
   "DependencyGraphParser.pathToRoot" should {
     "return path to root" in {
       val source = scala.io.Source.fromResource("slugs/dependencies-compile.dot")
-      val graph = dependencyGraphParser.parse(source.getLines.toSeq)
+      val graph = dependencyGraphParser.parse(source.mkString)
       graph.pathToRoot(Node("org.typelevel:cats-kernel_2.12:2.2.0")) shouldBe List(
         Node("org.typelevel:cats-kernel_2.12:2.2.0"),
         Node("org.typelevel:cats-core_2.12:2.2.0"),

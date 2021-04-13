@@ -19,9 +19,10 @@ package uk.gov.hmrc.servicedependencies.persistence.derived
 import org.mockito.MockitoSugar
 import org.scalatest.OptionValues
 import uk.gov.hmrc.mongo.test.{CleanMongoCollectionSupport, PlayMongoRepositorySupport}
-import uk.gov.hmrc.servicedependencies.model.GroupArtefacts
+import uk.gov.hmrc.servicedependencies.model.{DependencyScope, GroupArtefacts}
 import uk.gov.hmrc.servicedependencies.persistence.TestSlugInfos.slugInfo
 import uk.gov.hmrc.servicedependencies.persistence.{DeploymentRepository, SlugInfoRepository}
+import uk.gov.hmrc.servicedependencies.service.DependencyGraphParser
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration.DurationInt
@@ -39,21 +40,33 @@ class DerivedGroupArtefactRepositorySpec
 
   override lazy val repository = new DerivedGroupArtefactRepository(mongoComponent)
 
-  lazy val deploymentRepository = new DeploymentRepository(mongoComponent)
-  lazy val slugInfoRepo = new SlugInfoRepository(mongoComponent, deploymentRepository)
+  lazy val deploymentRepository  = new DeploymentRepository(mongoComponent)
+  lazy val slugInfoRepo          = new SlugInfoRepository(mongoComponent, deploymentRepository)
+  lazy val dependencyGraphParser = new DependencyGraphParser()
+  lazy val derivedServiceDependenciesRepository =
+    new DerivedServiceDependenciesRepository(
+      mongoComponent,
+      dependencyGraphParser,
+      deploymentRepository
+    )
 
   override implicit val patienceConfig = PatienceConfig(timeout = 30.seconds, interval = 100.millis)
 
   "GroupArtefactsRepository.findGroupsArtefacts" should {
     "return a map of artefact group to list of found artefacts" in {
-      slugInfoRepo.add(slugInfo).futureValue
+      val slugWithDependencies = slugInfo.copy(dependencyDotCompile = scala.io.Source.fromResource("slugs/dependencies-compile.dot").mkString)
+      slugInfoRepo.add(slugWithDependencies).futureValue
+      derivedServiceDependenciesRepository.populate().futureValue
       repository.populate().futureValue
 
-      val result = repository.findGroupsArtefacts.futureValue
+      val result = repository.findGroupsArtefacts(DependencyScope.Compile).futureValue
 
-      result should have size 1
-      result.head.group           shouldBe "com.test.group"
-      result.head.artefacts.toSet shouldBe Set("lib1", "lib2")
+      result should have size 3
+      result shouldEqual List(
+        GroupArtefacts("com.typesafe.play", List("filters-helpers")),
+        GroupArtefacts("org.typelevel",     List("cats-core", "cats-kernel")),
+        GroupArtefacts("uk.gov.hmrc",       List("file-upload"))
+      )
     }
   }
 }

@@ -166,27 +166,20 @@ object DependencyLookupServiceTestData {
   val dep2: SlugDependency = SlugDependency("", "5.12.0", "org.libs", "mylib")
 
   val slug1 = SlugInfo(
-      uri           = "http://slugs.com/test/test-1.0.0.tgz"
-    , created       = LocalDateTime.of(2019, 6, 28, 11, 51,23)
-    , name          = "test"
-    , version       = Version("1.0.0")
-    , teams         = List.empty
-    , runnerVersion = "0.5.2"
-    , classpath     = "classpath="
-    , java          = JavaInfo("1.8.0", "Oracle", "JDK")
-    , dependencies  = List(dep1)
+      uri                  = "http://slugs.com/test/test-1.0.0.tgz"
+    , created              = LocalDateTime.of(2019, 6, 28, 11, 51,23)
+    , name                 = "test"
+    , version              = Version("1.0.0")
+    , teams                = List.empty
+    , runnerVersion        = "0.5.2"
+    , classpath            = "classpath="
+    , java                 = JavaInfo("1.8.0", "Oracle", "JDK")
+    , dependencies         = List(dep1)
     , dependencyDotCompile = ""
     , dependencyDotTest    = ""
     , dependencyDotBuild   = ""
-    , applicationConfig = "config"
-    , ""
-    , latest       = true
-    , production   = false
-    , qa           = false
-    , staging      = false
-    , development  = false
-    , externalTest = false
-    , integration  = false
+    , applicationConfig    = "config"
+    , slugConfig           = ""
     )
 
   val slug11 = slug1.copy(version = Version(1,1,0), uri = "http://slugs.com/test/test-1.1.0.tgz")
