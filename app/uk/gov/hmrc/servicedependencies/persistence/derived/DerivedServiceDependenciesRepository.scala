@@ -51,14 +51,14 @@ class DerivedServiceDependenciesRepository @Inject()(
   , indexes        = Seq(
                        IndexModel(
                          ascending("slugName"),
-                         IndexOptions().name("slugName_idx")
+                         IndexOptions().name("slugName_idx").background(true)
                        ),
                        IndexModel(
                          compoundIndex(
                            ascending("group"),
                            ascending("artefact")
                          ),
-                         IndexOptions().name("group_artefact_idx")
+                         IndexOptions().name("group_artefact_idx").background(true)
                        ),
                        IndexModel(
                          compoundIndex(DependencyScope.values.map(s => ascending("scope_" + s.asString)) :_*),
@@ -72,7 +72,7 @@ class DerivedServiceDependenciesRepository @Inject()(
                            ascending("artefact"),
                            ascending("version")
                          ),
-                         IndexOptions().name("uniqueIdx").unique(true)
+                         IndexOptions().name("uniqueIdx").unique(true).background(true)
                        )
                      )
   , optSchema      = None
