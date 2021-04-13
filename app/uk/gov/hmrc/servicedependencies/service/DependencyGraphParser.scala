@@ -24,8 +24,8 @@ import scala.annotation.tailrec
 class DependencyGraphParser {
   import DependencyGraphParser._
 
-  def parse(input: Seq[String]): DependencyGraph =
-    lexer(input)
+  def parse(input: String): DependencyGraph =
+    lexer(input.split("\n"))
       .foldLeft(DependencyGraph.empty){ (graph, t)  =>
         t match {
           case n: Node     => graph.copy(nodes     = graph.nodes      + n)

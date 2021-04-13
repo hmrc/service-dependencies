@@ -251,14 +251,7 @@ private object SlugDependenciesServiceSpec {
       dependencyDotTest    = "",
       dependencyDotBuild   = "",
       applicationConfig = "some-application-config",
-      slugConfig        = "some-slug-config",
-      latest            = false,
-      production        = true,
-      qa                = false,
-      staging           = true,
-      development       = false,
-      externalTest      = false,
-      integration       = false
+      slugConfig        = "some-slug-config"
     )
 
   def aCuratedDependencyConfig(withLibraries: List[DependencyConfig]) =

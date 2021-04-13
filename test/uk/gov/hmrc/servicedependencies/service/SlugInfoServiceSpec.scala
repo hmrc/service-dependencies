@@ -192,7 +192,7 @@ class SlugInfoServiceSpec
 
       boot.service.addSlugInfo(slugv1).futureValue
 
-      verify(boot.mockedSlugInfoRepository, times(1)).add(slugv1.copy(latest = false))
+      verify(boot.mockedSlugInfoRepository, times(1)).add(slugv1)
       verifyNoMoreInteractions(boot.mockedSlugInfoRepository)
     }
 
@@ -341,14 +341,8 @@ class SlugInfoServiceSpec
       dependencyDotTest    = "",
       dependencyDotBuild   = "",
       applicationConfig = "sample-applcation-config",
-      slugConfig        = "sample-slug-config",
-      latest            = true,
-      production        = false,
-      qa                = true,
-      staging           = false,
-      development       = true,
-      externalTest      = false,
-      integration       = false)
+      slugConfig        = "sample-slug-config"
+    )
 
     val boot = Boot.init
   }
