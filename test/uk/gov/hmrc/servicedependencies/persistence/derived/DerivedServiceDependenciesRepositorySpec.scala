@@ -19,7 +19,7 @@ package uk.gov.hmrc.servicedependencies.persistence.derived
 import org.mockito.MockitoSugar
 import org.scalatest.OptionValues
 import uk.gov.hmrc.mongo.test.{CleanMongoCollectionSupport, PlayMongoRepositorySupport}
-import uk.gov.hmrc.servicedependencies.model.GroupArtefacts
+import uk.gov.hmrc.servicedependencies.model.{DependencyScope, ServiceDependency}
 import uk.gov.hmrc.servicedependencies.persistence.TestSlugInfos.slugInfo
 import uk.gov.hmrc.servicedependencies.persistence.{DeploymentRepository, SlugInfoRepository}
 import uk.gov.hmrc.servicedependencies.service.DependencyGraphParser
@@ -29,21 +29,19 @@ import scala.concurrent.duration.DurationInt
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpecLike
 
-class DerivedGroupArtefactRepositorySpec
+class DerivedServiceDependenciesRepositorySpec
   extends AnyWordSpecLike
     with Matchers
     with OptionValues
     with MockitoSugar
     // We don't mixin IndexedMongoQueriesSupport here, as this repo makes use of queries not satisfied by an index
-    with PlayMongoRepositorySupport[GroupArtefacts]
+    with PlayMongoRepositorySupport[ServiceDependency]
     with CleanMongoCollectionSupport {
-
-  override lazy val repository = new DerivedGroupArtefactRepository(mongoComponent)
 
   lazy val deploymentRepository  = new DeploymentRepository(mongoComponent)
   lazy val slugInfoRepo          = new SlugInfoRepository(mongoComponent, deploymentRepository)
   lazy val dependencyGraphParser = new DependencyGraphParser()
-  lazy val derivedServiceDependenciesRepository =
+  override lazy val repository =
     new DerivedServiceDependenciesRepository(
       mongoComponent,
       dependencyGraphParser,
@@ -52,20 +50,57 @@ class DerivedGroupArtefactRepositorySpec
 
   override implicit val patienceConfig = PatienceConfig(timeout = 30.seconds, interval = 100.millis)
 
-  "GroupArtefactsRepository.findGroupsArtefacts" should {
-    "return a map of artefact group to list of found artefacts" in {
+  "DerivedServiceDependenciesRepository.populate" should {
+    "populate dependencies from dependencyDot file" in {
       val slugWithDependencies = slugInfo.copy(dependencyDotCompile = scala.io.Source.fromResource("slugs/dependencies-compile.dot").mkString)
       slugInfoRepo.add(slugWithDependencies).futureValue
-      derivedServiceDependenciesRepository.populate(Seq.empty).futureValue
-      repository.populate().futureValue
 
-      val result = repository.findGroupsArtefacts.futureValue
+      repository.populate(Seq.empty).futureValue
 
-      result should have size 3
+      val result = repository.collection.find().toFuture.futureValue
+
+      result should have size 4
       result shouldEqual List(
-        GroupArtefacts("com.typesafe.play", List("filters-helpers")),
-        GroupArtefacts("org.typelevel",     List("cats-core", "cats-kernel")),
-        GroupArtefacts("uk.gov.hmrc",       List("file-upload"))
+        ServiceDependency(
+          slugName     = "my-slug",
+          slugVersion  = "0.27.0",
+          teams        = List.empty,
+          depGroup     = "com.typesafe.play",
+          depArtefact  = "filters-helpers",
+          depVersion   = "2.7.5",
+          scalaVersion = Some("2.12"),
+          scopes       = Set(DependencyScope.Compile)
+        ),
+        ServiceDependency(
+          slugName     = "my-slug",
+          slugVersion  = "0.27.0",
+          teams        = List.empty,
+          depGroup     = "org.typelevel",
+          depArtefact  = "cats-core",
+          depVersion   = "2.2.0",
+          scalaVersion = Some("2.12"),
+          scopes       = Set(DependencyScope.Compile)
+        ),
+        ServiceDependency(
+          slugName     = "my-slug",
+          slugVersion  = "0.27.0",
+          teams        = List.empty,
+          depGroup     = "org.typelevel",
+          depArtefact  = "cats-kernel",
+          depVersion   = "2.2.0",
+          scalaVersion = Some("2.12"),
+          scopes       = Set(DependencyScope.Compile)
+        ),
+        ServiceDependency(
+          slugName     = "my-slug",
+          slugVersion  = "0.27.0",
+          teams        = List.empty,
+          depGroup     = "uk.gov.hmrc",
+          depArtefact  = "file-upload",
+          depVersion   = "2.22.0",
+          scalaVersion = Some("2.12"),
+          scopes       = Set(DependencyScope.Compile)
+        )
       )
     }
   }

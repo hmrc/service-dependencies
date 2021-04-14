@@ -1,4 +1,4 @@
-# Migration from 1.161.0
+# Migration to 2.0.0
 
 ## Backup
 
@@ -77,7 +77,7 @@ db.getCollection('DERIVED-slug-dependencies').deleteMany({"version": { $regex: "
 ```
 
 
-## Rollback (to 1.161.0 and before)
+## Rollback (to 1.x.x)
 
 * Rollback
 

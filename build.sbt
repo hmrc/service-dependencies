@@ -8,7 +8,7 @@ val silencerVersion = "1.7.2"
 lazy val microservice = Project(appName, file("."))
   .enablePlugins(play.sbt.PlayScala, SbtAutoBuildPlugin, SbtGitVersioning, SbtDistributablesPlugin)
   .disablePlugins(JUnitXmlReportPlugin) //Required to prevent https://github.com/scalatest/scalatest/issues/1427
-  .settings(majorVersion := 1)
+  .settings(majorVersion := 2)
   .settings(SbtDistributablesPlugin.publishingSettings: _*)
   .settings(PlayKeys.devSettings += "play.server.netty.maxInitialLineLength" -> "65536")
   .settings(PlayKeys.playDefaultPort := 8459)
