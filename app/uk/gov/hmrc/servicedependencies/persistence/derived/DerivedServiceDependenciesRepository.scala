@@ -214,7 +214,7 @@ class DerivedServiceDependenciesRepository @Inject()(
                                        buildFlag        = scopes.contains(DependencyScope.Build)
                                      )
                                    }
-                               logger.info(s"Found ${dependencies.size} for $slugName $slugVersion")
+                               logger.info(s"Found ${dependencies.size} dependencies for $slugName $slugVersion")
                                deps
                              }
                              .flatMap(group =>

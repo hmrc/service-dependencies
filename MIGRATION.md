@@ -1,3 +1,8 @@
+
+db.getCollection("slugInfos").copyTo("slugInfos-bak")
+
+---------------------
+
 * Need to drop updated indices:
 ```
 db.getCollection("slugInfos").dropIndexes()
