@@ -32,8 +32,10 @@ class DerivedViewsService @Inject()(
 
   def generateAllViews() : Future[Unit] = {
     for {
-      _ <- derivedServiceDependenciesRepository.populate()
-      _ <- derivedGroupArtefactRepository.populate()
+      processed <- derivedServiceDependenciesRepository.findProcessedSlugs()
+      _         <- derivedServiceDependenciesRepository.populate(processed)
+      _         <- derivedServiceDependenciesRepository.populateLegacy(processed)
+      _         <- derivedGroupArtefactRepository.populate()
     } yield ()
   }.recover {
     case e => logger.error("Failed to update derived collections", e)
