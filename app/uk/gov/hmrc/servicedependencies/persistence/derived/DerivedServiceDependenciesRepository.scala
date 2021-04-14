@@ -34,7 +34,7 @@ import uk.gov.hmrc.servicedependencies.service.DependencyGraphParser
 
 import scala.concurrent.{ExecutionContext, Future}
 
-/** A flattened version of slugInfo containing only slugs deployed + latest
+/** A flattened version of slugInfo.dependencies for efficient usage.
   * One document per dependency in the slug
   */
 @Singleton

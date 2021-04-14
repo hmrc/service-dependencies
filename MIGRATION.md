@@ -1,7 +1,12 @@
+# Migration from 1.161.0
 
+## Backup
+
+```
 db.getCollection("slugInfos").copyTo("slugInfos-bak")
+```
 
----------------------
+## Upgrade collections
 
 * Need to drop updated indices:
 ```
@@ -70,3 +75,15 @@ db.getCollection("slugInfos").aggregate([
 ```
 db.getCollection('DERIVED-slug-dependencies').deleteMany({"version": { $regex: "^.*(-assets)|(-sans-externalized)$"}})
 ```
+
+
+## Rollback (to 1.161.0 and before)
+
+* Rollback
+
+db.getCollection("slugInfos").drop()
+db.getCollection("deployments").drop()
+db.getCollection("DERIVED-slug-dependencies").drop()
+db.getCollection("DERIVED-artefact-lookup").drop()
+
+db.getCollection("slugInfos-bak").copyTo("slugInfos")

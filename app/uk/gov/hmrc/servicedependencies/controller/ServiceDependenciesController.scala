@@ -88,18 +88,11 @@ class ServiceDependenciesController @Inject()(
       ).merge
     }
 
-  def getGroupArtefacts(scope: String): Action[AnyContent] =
+  def getGroupArtefacts: Action[AnyContent] =
     Action.async {
       implicit val format = GroupArtefacts.apiFormat
-      (for {
-        sc  <- EitherT.fromEither[Future](DependencyScope.parse(scope))
-                 .leftMap(BadRequest(_))
-        res <- EitherT.right[Result] {
-                  slugInfoService
-                    .findGroupsArtefacts(sc)
-                }
-       } yield Ok(Json.toJson(res))
-      ).merge
+      slugInfoService.findGroupsArtefacts
+        .map(res => Ok(Json.toJson(res)))
     }
 
   def slugInfos(name: String, version: Option[String]): Action[AnyContent] =

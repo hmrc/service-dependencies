@@ -35,7 +35,7 @@ import scala.concurrent.{ExecutionContext, Future}
 import scala.reflect.ClassTag
 import org.mongodb.scala.model.UpdateOptions
 
-// TODO would a model of name, version, flag - be better?
+// TODO would a model of name, version, flag=compile/test/build - be better?
 @Singleton
 class DeploymentRepository @Inject()(
   mongoComponent: MongoComponent

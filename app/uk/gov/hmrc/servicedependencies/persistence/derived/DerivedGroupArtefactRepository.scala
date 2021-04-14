@@ -20,7 +20,6 @@ import javax.inject.{Inject, Singleton}
 import org.mongodb.scala.bson.BsonDocument
 import org.mongodb.scala.model.Accumulators._
 import org.mongodb.scala.model.Aggregates._
-import org.mongodb.scala.model.Filters._
 import org.mongodb.scala.model.Projections._
 import org.mongodb.scala.model.{Field, Sorts}
 import play.api.Logger
@@ -44,10 +43,9 @@ class DerivedGroupArtefactRepository @Inject()(
 ){
   private val logger = Logger(getClass)
 
-  // not currently supporting no scope - we'd get duplicate groups
-  def findGroupsArtefacts(scope: DependencyScope): Future[Seq[GroupArtefacts]] =
+  def findGroupsArtefacts: Future[Seq[GroupArtefacts]] =
     collection
-      .find(equal("scope_" + scope.asString, true))
+      .find()
       .sort(Sorts.ascending("group"))
       .map(g => g.copy(artefacts = g.artefacts.sorted))
       .toFuture()
@@ -65,23 +63,13 @@ class DerivedGroupArtefactRepository @Inject()(
           ),
           BsonDocument("$group" ->
             BsonDocument(
-              "_id" ->
-                BsonDocument(
-                  "group"         -> "$group"//,
-                  //"scope_compile" -> "$scope_compile",
-                  //"scope_test"    -> "$scope_test",
-                  //"scope_build"   -> "$scope_build"
-                ),
-              "artifacts" ->
-                BsonDocument("$addToSet" -> "$artefact")
+              "_id"       -> BsonDocument("group"     -> "$group"),
+              "artifacts" -> BsonDocument("$addToSet" -> "$artefact")
             )
           ),
           // reproject the result so fields are at the root level
           project(fields(
             computed("group"  , "$_id.group"),
-            //computed("scope_compile", "$_id.scope_compile"),
-            //computed("scope_test"   , "$_id.scope_test"),
-            //computed("scope_build"  , "$_id.scope_build"),
             include("artifacts"),
             exclude("_id")
           )),

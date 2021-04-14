@@ -107,7 +107,7 @@ trait MongoSlugInfoFormats {
     ~ (__ \ "runnerVersion"            ).format[String]
     ~ (__ \ "classpath"                ).format[String]
     ~ (__ \ "java"                     ).format[JavaInfo]
-    ~ (__ \ "dependencies"             ).format[List[SlugDependency]] // TODO remove this once dependendencyDot\compile is proven to be a replacement
+    ~ (__ \ "dependencies"             ).format[List[SlugDependency]] // this has been replaced by dependencyDot, but is still needed for Java slugs
     ~ (__ \ "dependencyDot" \ "compile").formatWithDefault[String]("")
     ~ (__ \ "dependencyDot" \ "test"   ).formatWithDefault[String]("")
     ~ (__ \ "dependencyDot" \ "build"  ).formatWithDefault[String]("")

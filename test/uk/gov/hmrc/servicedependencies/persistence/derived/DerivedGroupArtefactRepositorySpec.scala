@@ -19,7 +19,7 @@ package uk.gov.hmrc.servicedependencies.persistence.derived
 import org.mockito.MockitoSugar
 import org.scalatest.OptionValues
 import uk.gov.hmrc.mongo.test.{CleanMongoCollectionSupport, PlayMongoRepositorySupport}
-import uk.gov.hmrc.servicedependencies.model.{DependencyScope, GroupArtefacts}
+import uk.gov.hmrc.servicedependencies.model.GroupArtefacts
 import uk.gov.hmrc.servicedependencies.persistence.TestSlugInfos.slugInfo
 import uk.gov.hmrc.servicedependencies.persistence.{DeploymentRepository, SlugInfoRepository}
 import uk.gov.hmrc.servicedependencies.service.DependencyGraphParser
@@ -59,7 +59,7 @@ class DerivedGroupArtefactRepositorySpec
       derivedServiceDependenciesRepository.populate().futureValue
       repository.populate().futureValue
 
-      val result = repository.findGroupsArtefacts(DependencyScope.Compile).futureValue
+      val result = repository.findGroupsArtefacts.futureValue
 
       result should have size 3
       result shouldEqual List(
