@@ -19,7 +19,7 @@ package uk.gov.hmrc.servicedependencies.persistence.derived
 import org.mockito.MockitoSugar
 import org.scalatest.OptionValues
 import uk.gov.hmrc.mongo.test.{CleanMongoCollectionSupport, PlayMongoRepositorySupport}
-import uk.gov.hmrc.servicedependencies.model.{DependencyScope, ServiceDependency}
+import uk.gov.hmrc.servicedependencies.model.{DependencyScope, ServiceDependency, SlugDependency}
 import uk.gov.hmrc.servicedependencies.persistence.TestSlugInfos.slugInfo
 import uk.gov.hmrc.servicedependencies.persistence.{DeploymentRepository, SlugInfoRepository}
 import uk.gov.hmrc.servicedependencies.service.DependencyGraphParser
@@ -50,12 +50,60 @@ class DerivedServiceDependenciesRepositorySpec
 
   override implicit val patienceConfig = PatienceConfig(timeout = 30.seconds, interval = 100.millis)
 
-  "DerivedServiceDependenciesRepository.populate" should {
+  "DerivedServiceDependenciesRepository.populateDependencies" should {
+    "populate dependencies from dependencies" in {
+      val slugWithDependencies = slugInfo.copy(dependencies =
+        List(
+          SlugDependency(
+            path       = "./my-slug-0.27.0/lib/com.typesafe.play.filters-helpers-2.7.5.jar",
+            version    = "2.7.5",
+            group      = "com.typesafe.play",
+            artifact   = "filters-helpers",
+            meta       = ""
+         ),
+         SlugDependency(
+            path       = "./my-slug-0.27.0/lib/org.typelevel.cats-core_2.12-2.2.0.jar",
+            version    = "2.2.0",
+            group      = "org.typelevel",
+            artifact   = "cats-core",
+            meta       = ""
+         )
+        )
+      )
+
+      repository.populateDependencies(slugWithDependencies).futureValue
+
+      val result = repository.collection.find().toFuture.futureValue
+
+      result should have size 2
+      result shouldEqual List(
+        ServiceDependency(
+          slugName     = "my-slug",
+          slugVersion  = "0.27.0",
+          teams        = List.empty,
+          depGroup     = "com.typesafe.play",
+          depArtefact  = "filters-helpers",
+          depVersion   = "2.7.5",
+          scalaVersion = None,
+          scopes       = Set(DependencyScope.Compile)
+        ),
+        ServiceDependency(
+          slugName     = "my-slug",
+          slugVersion  = "0.27.0",
+          teams        = List.empty,
+          depGroup     = "org.typelevel",
+          depArtefact  = "cats-core",
+          depVersion   = "2.2.0",
+          scalaVersion = None,
+          scopes       = Set(DependencyScope.Compile)
+        )
+      )
+    }
+
     "populate dependencies from dependencyDot file" in {
       val slugWithDependencies = slugInfo.copy(dependencyDotCompile = scala.io.Source.fromResource("slugs/dependencies-compile.dot").mkString)
-      slugInfoRepo.add(slugWithDependencies).futureValue
 
-      repository.populate(Seq.empty).futureValue
+      repository.populateDependencies(slugWithDependencies).futureValue
 
       val result = repository.collection.find().toFuture.futureValue
 

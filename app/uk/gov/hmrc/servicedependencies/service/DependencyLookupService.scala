@@ -78,7 +78,7 @@ object DependencyLookupService {
   def buildLookup(slugs: Seq[SlugInfo]): Map[String, Map[Version, Set[ServiceDependency]]] =
     slugs
       .filterNot(slug => SlugDenylist.denylistedSlugsSet.contains(slug.name))
-      .flatMap(slug => slug.dependencies.map(deps => (slug, deps)))
+      .flatMap(slug => slug.dependencies.map(deps => (slug, deps))) // if we look at dependencyDot (or serviceDependency collection), we could check for violations in test and build scope too
       .groupBy { case (_, dep) => s"${dep.group}:${dep.artifact}" }
       .mapValues(
         _.groupBy { case (_, dep)  => Version(dep.version) }
@@ -86,9 +86,7 @@ object DependencyLookupService {
       )
 
 
-  // TODO we don't need the scalaVersion and scopes here
-  // but we can probably move the calculateCounts to the database (against the DerivedServiceDependenciesRepository)
-  def slugToServiceDep(slug: SlugInfo, dep: SlugDependency): ServiceDependency =
+  private def slugToServiceDep(slug: SlugInfo, dep: SlugDependency): ServiceDependency =
     ServiceDependency(
       slugName     = slug.name,
       slugVersion  = slug.version.toString,
@@ -97,7 +95,7 @@ object DependencyLookupService {
       depArtefact  = dep.artifact,
       depVersion   = dep.version.toString,
       scalaVersion = None,
-      scopes       = Set.empty
+      scopes       = Set(DependencyScope.Compile) // we're only looking at compile scope at the moment
     )
 
 
