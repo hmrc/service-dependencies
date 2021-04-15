@@ -157,6 +157,8 @@ class SlugInfoServiceSpec
         .thenReturn(Future.successful(true))
       when(boot.mockedDeploymentRepository.markLatest(any, any))
         .thenReturn(Future.successful(()))
+      when(boot.mockedServiceDependenciesRepository.populateDependencies(any))
+        .thenReturn(Future.successful(()))
 
       boot.service.addSlugInfo(sampleSlugInfo).futureValue
 
@@ -174,6 +176,8 @@ class SlugInfoServiceSpec
         .thenReturn(Future.successful(true))
       when(boot.mockedDeploymentRepository.markLatest(any, any))
         .thenReturn(Future.successful(()))
+      when(boot.mockedServiceDependenciesRepository.populateDependencies(any))
+        .thenReturn(Future.successful(()))
 
       boot.service.addSlugInfo(slugv2).futureValue
       verify(boot.mockedDeploymentRepository, times(1)).markLatest(slugv2.name, Version("2.0.0"))
@@ -189,6 +193,8 @@ class SlugInfoServiceSpec
         .thenReturn(Future.successful(List(slugv2)))
       when(boot.mockedSlugInfoRepository.add(any))
         .thenReturn(Future.successful(true))
+      when(boot.mockedServiceDependenciesRepository.populateDependencies(any))
+        .thenReturn(Future.successful(()))
 
       boot.service.addSlugInfo(slugv1).futureValue
 
@@ -204,6 +210,8 @@ class SlugInfoServiceSpec
         .thenReturn(Future.successful(List(slugv2)))
       when(boot.mockedSlugInfoRepository.add(any))
         .thenReturn(Future.successful(true))
+      when(boot.mockedServiceDependenciesRepository.populateDependencies(any))
+        .thenReturn(Future.successful(()))
 
       boot.service.addSlugInfo(slugv1).futureValue
 

@@ -29,7 +29,7 @@ import org.mongodb.scala.model.Projections._
 import play.api.Logger
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.play.json.{CollectionFactory, PlayMongoRepository}
-import uk.gov.hmrc.servicedependencies.model.{ApiServiceDependencyFormats, DependencyScope, ServiceDependency, ServiceDependencyWrite, SlugInfoFlag}
+import uk.gov.hmrc.servicedependencies.model.{ApiServiceDependencyFormats, DependencyScope, ServiceDependency, ServiceDependencyWrite, SlugInfo, SlugInfoFlag}
 import uk.gov.hmrc.servicedependencies.persistence.DeploymentRepository
 import uk.gov.hmrc.servicedependencies.service.DependencyGraphParser
 
@@ -51,8 +51,11 @@ class DerivedServiceDependenciesRepository @Inject()(
   , domainFormat   = ApiServiceDependencyFormats.derivedMongoFormat
   , indexes        = Seq(
                        IndexModel(
-                         ascending("slugName"),
-                         IndexOptions().name("slugName_idx").background(true)
+                         compoundIndex(
+                           ascending("slugName"),
+                           ascending("slugVersion")
+                         ),
+                         IndexOptions().name("slugName_slugVersion_idx").background(true)
                        ),
                        IndexModel(
                          compoundIndex(
@@ -152,6 +155,76 @@ class DerivedServiceDependenciesRepository @Inject()(
       DerivedServiceDependenciesRepository.collectionName,
       ServiceDependencyWrite.format
     )
+
+  def populateDependencies(slugInfo: SlugInfo): Future[Unit] = {
+    val writes =
+      if (slugInfo.dependencyDotCompile.isEmpty) // legacy java slug
+            slugInfo.dependencies
+              .map(d =>
+                ServiceDependencyWrite(
+                  slugName         = slugInfo.name,
+                  slugVersion      = slugInfo.version.toString,
+                  depGroup         = d.group,
+                  depArtefact      = d.artifact,
+                  depVersion       = d.version,
+                  scalaVersion     = None,
+                  compileFlag      = true,
+                  testFlag         = false,
+                  buildFlag        = false
+                )
+              )
+      else {
+        val compile = dependencyGraphParser.parse(slugInfo.dependencyDotCompile).dependencies.map((_, DependencyScope.Compile))
+        val test    = dependencyGraphParser.parse(slugInfo.dependencyDotTest   ).dependencies.map((_, DependencyScope.Test   ))
+        val build   = dependencyGraphParser.parse(slugInfo.dependencyDotBuild  ).dependencies.map((_, DependencyScope.Build  ))
+
+        val dependencies: Map[DependencyGraphParser.Node, Set[DependencyScope]] =
+          (compile ++ test ++ build)
+            .foldLeft(Map.empty[DependencyGraphParser.Node, Set[DependencyScope]]){ case (acc, (n, flag)) =>
+              acc + (n -> (acc.getOrElse(n, Set.empty) + flag))
+            }
+
+        dependencies
+          .filter { case (node, _) => node.group != "default" || node.artefact != "project" }
+          .filter { case (node, _) => node.group != "uk.gov.hmrc" || node.artefact != slugInfo.name }
+          .map { case (node, scopes) =>
+            ServiceDependencyWrite(
+              slugName         = slugInfo.name,
+              slugVersion      = slugInfo.version.toString,
+              depGroup         = node.group,
+              depArtefact      = node.artefact,
+              depVersion       = node.version,
+              scalaVersion     = node.scalaVersion,
+              compileFlag      = scopes.contains(DependencyScope.Compile),
+              testFlag         = scopes.contains(DependencyScope.Test),
+              buildFlag        = scopes.contains(DependencyScope.Build)
+            )
+          }
+      }
+
+    if (writes.isEmpty)
+      Future.successful(())
+    else {
+      logger.info(s"Inserting ${writes.size} dependencies for ${slugInfo.name} ${slugInfo.version}")
+      targetCollection
+        .bulkWrite(
+          writes.map(d =>
+            ReplaceOneModel(
+              filter         = and(
+                                  equal("slugName"   , d.slugName),
+                                  equal("slugVersion", d.slugVersion),
+                                  equal("group"      , d.depGroup),
+                                  equal("artefact"   , d.depArtefact),
+                                  equal("version"    , d.depVersion),
+                                ),
+              replacement    = d,
+              replaceOptions = ReplaceOptions().upsert(true)
+            )
+          ).toSeq
+        ).toFuture()
+        .map(_ => ())
+    }
+  }
 
   /** Populates the target collection with the data from dependencyDot.
     * This can be run regularly to keep the collection up-to-date.
