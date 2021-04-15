@@ -17,8 +17,8 @@
 package uk.gov.hmrc.servicedependencies.persistence
 
 import com.google.inject.{Inject, Singleton}
-import org.mongodb.scala.model.Aggregates.{`match`, project}
-import org.mongodb.scala.model.Filters.{and, equal, nin, notEqual}
+import org.mongodb.scala.model.Aggregates.project
+import org.mongodb.scala.model.Filters.{equal, notEqual}
 import org.mongodb.scala.model.Projections.{computed, fields}
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.servicedependencies.model._
@@ -27,35 +27,36 @@ import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
 class JdkVersionRepository @Inject()(
-    mongoComponent: MongoComponent
-  )(implicit ec: ExecutionContext
-  ) extends SlugInfoRepositoryBase[JDKVersion](
-    mongoComponent
-  , domainFormat = MongoSlugInfoFormats.jdkVersionFormat
-  ) {
-
-  def findJDKUsage(flag: SlugInfoFlag): Future[Seq[JDKVersion]] = {
-    val agg = List(
-      `match`(
-        and(
-          equal(flag.asString, true),
-          notEqual("java.version", ""),
-          nin("name", SlugDenylist.denylistedSlugs)
-        )
-      ),
-      project(
-        fields(
-          computed("name", "$name"),
-          //Using the f interpolator below to prevent a false positive warning on 'missing interpolator', which is detected
-          //by the 'java' keyword, which is 'plausible' enough as a real package for the compiler to give us the warning
-          //See: https://github.com/scala/scala/pull/5053/files/275305a3d291cca49163903b5b6fe1d496b507a6#diff-4eab1aad4533a31c10565971e90f73eaR5209
-          //And: https://stackoverflow.com/questions/39401213/disable-false-warning-possible-missing-interpolator
-          computed("version", f"$$java.version"),
-          computed("vendor", f"$$java.vendor"),
-          computed("kind", f"$$java.kind")
-        ))
+  mongoComponent      : MongoComponent,
+  deploymentRepository: DeploymentRepository
+)(implicit
+  ec: ExecutionContext
+) extends SlugInfoRepositoryBase[JDKVersion](
+  mongoComponent,
+  domainFormat = MongoSlugInfoFormats.jdkVersionFormat
+) {
+  def findJDKUsage(flag: SlugInfoFlag): Future[Seq[JDKVersion]] =
+    deploymentRepository.lookupAgainstDeployments(
+      collectionName   = "slugInfos",
+      domainFormat     = MongoSlugInfoFormats.jdkVersionFormat,
+      slugNameField    = "name",
+      slugVersionField = "version"
+    )(
+      deploymentsFilter = equal(flag.asString, true),
+      domainFilter      = notEqual("java.version", ""),
+      pipeline          = Seq(
+                            project(
+                              fields(
+                                computed("name", "$name"),
+                                //Using the f interpolator below to prevent a false positive warning on 'missing interpolator', which is detected
+                                //by the 'java' keyword, which is 'plausible' enough as a real package for the compiler to give us the warning
+                                //See: https://github.com/scala/scala/pull/5053/files/275305a3d291cca49163903b5b6fe1d496b507a6#diff-4eab1aad4533a31c10565971e90f73eaR5209
+                                //And: https://stackoverflow.com/questions/39401213/disable-false-warning-possible-missing-interpolator
+                                computed("version", f"$$java.version"),
+                                computed("vendor", f"$$java.vendor"),
+                                computed("kind", f"$$java.kind")
+                              )
+                            )
+                          )
     )
-    collection.aggregate(agg)
-      .toFuture
-  }
 }

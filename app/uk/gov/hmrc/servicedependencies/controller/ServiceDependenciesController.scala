@@ -69,17 +69,22 @@ class ServiceDependenciesController @Inject()(
       } yield Ok(Json.toJson(depsWithRules))
   }
 
-  def getServicesWithDependency(flag: String, group: String, artefact: String, versionRange: String): Action[AnyContent] =
+  def getServicesWithDependency(flag: String, group: String, artefact: String, versionRange: String, scope: Option[String]): Action[AnyContent] =
     Action.async { implicit request =>
-      implicit val format = ApiServiceDependencyFormats.sdFormat
+      implicit val format = ApiServiceDependencyFormats.serviceDependencyFormat
       (for {
          f   <- EitherT.fromOption[Future](SlugInfoFlag.parse(flag), BadRequest(s"invalid flag '$flag'"))
+         sc  <- scope match {
+                  case None     => EitherT.pure[Future, Result](None)
+                  case Some(sc) => EitherT.fromEither[Future](DependencyScope.parse(sc))
+                                     .bimap(BadRequest(_), Some.apply)
+                }
          vr  <- EitherT.fromOption[Future](BobbyVersionRange.parse(versionRange), BadRequest(s"invalid versionRange '$versionRange'"))
          res <- EitherT.right[Result] {
                   slugInfoService
-                    .findServicesWithDependency(f, group, artefact, vr)
+                    .findServicesWithDependency(f, group, artefact, vr, sc)
                 }
-      } yield Ok( Json.toJson(res) )
+       } yield Ok(Json.toJson(res))
       ).merge
     }
 
@@ -92,7 +97,7 @@ class ServiceDependenciesController @Inject()(
 
   def slugInfos(name: String, version: Option[String]): Action[AnyContent] =
     Action.async {
-      implicit val format = ApiSlugInfoFormats.siFormat
+      implicit val format = ApiSlugInfoFormats.slugInfoFormat
       slugInfoService
         .getSlugInfos(name, version)
         .map(res => Ok(Json.toJson(res)))
@@ -104,7 +109,7 @@ class ServiceDependenciesController @Inject()(
          f        <- EitherT.fromOption[Future](SlugInfoFlag.parse(flag), BadRequest(s"invalid flag '$flag'"))
          slugInfo <- EitherT.fromOptionF(slugInfoService.getSlugInfo(name, f), NotFound(""))
        } yield {
-         implicit val sif = ApiSlugInfoFormats.siFormat
+         implicit val sif = ApiSlugInfoFormats.slugInfoFormat
          Ok(Json.toJson(slugInfo))
        }
       ).merge
@@ -144,7 +149,7 @@ class ServiceDependenciesController @Inject()(
                   slugInfoService.findJDKVersions(f)
                 )
        } yield {
-         implicit val jdkvf = JDKVersionFormats.jdkFormat
+         implicit val jdkvf = JDKVersionFormats.jdkVersionFormat
          Ok(Json.toJson(res))
        }
       ).merge

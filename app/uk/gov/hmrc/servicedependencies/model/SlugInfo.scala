@@ -70,13 +70,6 @@ case class SlugInfo(
   dependencyDotBuild  : String,
   applicationConfig   : String,
   slugConfig          : String,
-  latest              : Boolean,
-  production          : Boolean,
-  qa                  : Boolean,
-  staging             : Boolean,
-  development         : Boolean,
-  externalTest        : Boolean,
-  integration         : Boolean
 ) {
   lazy val classpathOrderedDependencies: List[SlugDependency] =
     classpath.split(":")
@@ -93,15 +86,17 @@ case class DependencyConfig(
   )
 
 trait MongoSlugInfoFormats {
-  implicit val sdFormat: OFormat[SlugDependency] =
+  val slugDependencyFormat: OFormat[SlugDependency] =
     Json.format[SlugDependency]
 
-  implicit val javaFormat: OFormat[JavaInfo] =
+  val javaInfoFormat: OFormat[JavaInfo] =
     Json.format[JavaInfo]
 
   def ignore[A] = OWrites[A](_ => Json.obj())
 
-  implicit val slugInfoFormat: OFormat[SlugInfo] =
+  val slugInfoFormat: OFormat[SlugInfo] = {
+    implicit val sd  = slugDependencyFormat
+    implicit val jif = javaInfoFormat
     ( (__ \ "uri"              ).format[String]
     ~ (__ \ "created"          ).format[LocalDateTime]
     ~ (__ \ "name"             ).format[String]
@@ -109,46 +104,31 @@ trait MongoSlugInfoFormats {
     ~ OFormat( Reads.pure(List.empty[String])
              , ignore[List[String]]
              )
-    ~ (__ \ "runnerVersion"    ).format[String]
-    ~ (__ \ "classpath"        ).format[String]
-    ~ (__ \ "java"             ).format[JavaInfo]
-    ~ (__ \ "dependencies"     ).format[List[SlugDependency]]
+    ~ (__ \ "runnerVersion"            ).format[String]
+    ~ (__ \ "classpath"                ).format[String]
+    ~ (__ \ "java"                     ).format[JavaInfo]
+    ~ (__ \ "dependencies"             ).format[List[SlugDependency]] // this has been replaced by dependencyDot, but is still needed for Java slugs
     ~ (__ \ "dependencyDot" \ "compile").formatWithDefault[String]("")
     ~ (__ \ "dependencyDot" \ "test"   ).formatWithDefault[String]("")
     ~ (__ \ "dependencyDot" \ "build"  ).formatWithDefault[String]("")
-    ~ (__ \ "applicationConfig").formatWithDefault[String]("")
-    ~ (__ \ "slugConfig"       ).formatWithDefault[String]("")
-    ~ (__ \ "latest"           ).format[Boolean]
-    ~ (__ \ "production"       ).format[Boolean]
-    ~ (__ \ "qa"               ).format[Boolean]
-    ~ (__ \ "staging"          ).format[Boolean]
-    ~ (__ \ "development"      ).format[Boolean]
-    ~ (__ \ "external test"    ).format[Boolean]
-    ~ (__ \ "integration"      ).format[Boolean]
+    ~ (__ \ "applicationConfig"        ).formatWithDefault[String]("")
+    ~ (__ \ "slugConfig"               ).formatWithDefault[String]("")
     )(SlugInfo.apply, unlift(SlugInfo.unapply))
+  }
 
-  implicit val serviceDependencyFormat: OFormat[ServiceDependency] =
-    ( (__ \ "slugName"         ).format[String]
-    ~ (__ \ "slugVersion"      ).format[String]
-    ~ (__ \ "teams"            ).formatWithDefault[List[String]](List.empty)
-    ~ (__ \ "depGroup"         ).format[String]
-    ~ (__ \ "depArtifact"      ).format[String]
-    ~ (__ \ "depVersion"       ).format[String]
-    )(ServiceDependency.apply, unlift(ServiceDependency.unapply))
-
-  implicit val jdkVersionFormat: OFormat[JDKVersion] =
-    ( (__ \ "name"             ).format[String]
-    ~ (__ \ "version"          ).format[String]
-    ~ (__ \ "vendor"           ).formatWithDefault[String]("Oracle")
-    ~ (__ \ "kind"             ).formatWithDefault[String]("JDK")
+  val jdkVersionFormat: OFormat[JDKVersion] =
+    ( (__ \ "name"   ).format[String]
+    ~ (__ \ "version").format[String]
+    ~ (__ \ "vendor" ).formatWithDefault[String]("Oracle")
+    ~ (__ \ "kind"   ).formatWithDefault[String]("JDK")
     )(JDKVersion.apply, unlift(JDKVersion.unapply))
 
-  implicit val groupArtefactsFormat: OFormat[GroupArtefacts] =
-    ( (__ \ "_id"              ).format[String]
-    ~ (__ \ "artifacts"        ).format[List[String]]
+  val groupArtefactsFormat: OFormat[GroupArtefacts] =
+    ( (__ \ "group"    ).format[String]
+    ~ (__ \ "artifacts").format[List[String]]
     )(GroupArtefacts.apply, unlift(GroupArtefacts.unapply))
 
-  val dcFormat: OFormat[DependencyConfig] =
+  val dependencyConfigFormat: OFormat[DependencyConfig] =
     ( (__ \ "group"   ).format[String]
     ~ (__ \ "artefact").format[String]
     ~ (__ \ "version" ).format[String]
@@ -169,13 +149,6 @@ trait MongoSlugInfoFormats {
                 , "classpath"
                 , "java"
                 , "dependencies"
-                , "latest"
-                , "production"
-                , "qa"
-                , "staging"
-                , "development"
-                , "external test"
-                , "integration"
                 ]
     , properties:
       { uri              : { bsonType: "string" }
@@ -206,13 +179,6 @@ trait MongoSlugInfoFormats {
                            }
       , applicationConfig: { bsonType: "string" }
       , slugConfig       : { bsonType: "string" }
-      , latest           : { bsonType: "bool" }
-      , production       : { bsonType: "bool" }
-      , qa               : { bsonType: "bool" }
-      , staging          : { bsonType: "bool" }
-      , development      : { bsonType: "bool" }
-      , "external test"  : { bsonType: "bool" }
-      , integration      : { bsonType: "bool" }
       }
     }
     """
@@ -221,13 +187,15 @@ trait MongoSlugInfoFormats {
 object MongoSlugInfoFormats extends MongoSlugInfoFormats
 
 trait ApiSlugInfoFormats {
-  implicit val sdFormat: OFormat[SlugDependency] =
+  val slugDependencyFormat: OFormat[SlugDependency] =
     Json.format[SlugDependency]
 
-  implicit val javaFormat: OFormat[JavaInfo] =
+  val javaInfoFormat: OFormat[JavaInfo] =
     Json.format[JavaInfo]
 
-  implicit val siFormat: OFormat[SlugInfo] = {
+  val slugInfoFormat: OFormat[SlugInfo] = {
+    implicit val jif = javaInfoFormat
+    implicit val sd  = slugDependencyFormat
     ( (__ \ "uri"              ).format[String]
     ~ (__ \ "created"          ).format[LocalDateTime]
     ~ (__ \ "name"             ).format[String]
@@ -242,46 +210,35 @@ trait ApiSlugInfoFormats {
     ~ (__ \ "dependencyDot" \ "build"  ).format[String]
     ~ (__ \ "applicationConfig").format[String]
     ~ (__ \ "slugConfig"       ).format[String]
-    ~ (__ \ "latest"           ).format[Boolean]
-    ~ (__ \ "production"       ).format[Boolean]
-    ~ (__ \ "qa"               ).format[Boolean]
-    ~ (__ \ "staging"          ).format[Boolean]
-    ~ (__ \ "development"      ).format[Boolean]
-    ~ (__ \ "external test"    ).format[Boolean]
-    ~ (__ \ "integration"      ).format[Boolean]
     )(SlugInfo.apply, unlift(SlugInfo.unapply))
   }
 
-  val dcFormat: OFormat[DependencyConfig] =
+  val dependencyConfigFormat: OFormat[DependencyConfig] =
     ( (__ \ "group"   ).format[String]
     ~ (__ \ "artefact").format[String]
     ~ (__ \ "version" ).format[String]
     ~ (__ \ "configs" ).format[Map[String, String]]
     )(DependencyConfig.apply, unlift(DependencyConfig.unapply))
 
-  val slugReads: Reads[SlugInfo] =
-    ( (__ \ "uri"              ).read[String]
-    ~ (__ \ "created"          ).read[LocalDateTime]
-    ~ (__ \ "name"             ).read[String]
-    ~ (__ \ "version"          ).read[String].map(Version.apply)
-    ~ (__ \ "teams"            ).read[List[String]]
-    ~ (__ \ "runnerVersion"    ).read[String]
-    ~ (__ \ "classpath"        ).read[String]
-    ~ (__ \ "java"             ).read[JavaInfo]
-    ~ (__ \ "dependencies"     ).read[List[SlugDependency]]
+  val slugInfoReads: Reads[SlugInfo] = {
+    implicit val jif = javaInfoFormat
+    implicit val sd  = slugDependencyFormat
+    ( (__ \ "uri"                      ).read[String]
+    ~ (__ \ "created"                  ).read[LocalDateTime]
+    ~ (__ \ "name"                     ).read[String]
+    ~ (__ \ "version"                  ).read[String].map(Version.apply)
+    ~ (__ \ "teams"                    ).read[List[String]]
+    ~ (__ \ "runnerVersion"            ).read[String]
+    ~ (__ \ "classpath"                ).read[String]
+    ~ (__ \ "java"                     ).read[JavaInfo]
+    ~ (__ \ "dependencies"             ).read[List[SlugDependency]]
     ~ (__ \ "dependencyDot" \ "compile").read[String]
     ~ (__ \ "dependencyDot" \ "test"   ).read[String]
     ~ (__ \ "dependencyDot" \ "build"  ).read[String]
-    ~ (__ \ "applicationConfig").read[String]
-    ~ (__ \ "slugConfig"       ).read[String]
-    ~ (__ \ "latest"           ).read[Boolean]
-    ~ Reads.pure(false)
-    ~ Reads.pure(false)
-    ~ Reads.pure(false)
-    ~ Reads.pure(false)
-    ~ Reads.pure(false)
-    ~ Reads.pure(false)
+    ~ (__ \ "applicationConfig"        ).read[String]
+    ~ (__ \ "slugConfig"               ).read[String]
     )(SlugInfo.apply _)
+  }
 }
 
 object ApiSlugInfoFormats extends ApiSlugInfoFormats

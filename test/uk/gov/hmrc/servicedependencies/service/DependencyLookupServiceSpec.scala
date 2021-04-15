@@ -44,15 +44,6 @@ class DependencyLookupServiceSpec
 
   import ExecutionContext.Implicits.global
 
-  "slugToServiceDep" should "Convert a slug and dependency to a ServiceDependency" in {
-    val res = DependencyLookupService.slugToServiceDep(slug1, dep1)
-
-    res.depSemanticVersion shouldBe Some(Version(5,11,0))
-    res.slugName           shouldBe "test"
-    res.slugVersion        shouldBe "1.0.0"
-  }
-
-
   "BuildLookup" should "Build a map of dependencies showing which slug uses which version" in {
     val res = DependencyLookupService.buildLookup(Seq(slug11, slug1, slug12))
 
@@ -70,8 +61,8 @@ class DependencyLookupServiceSpec
 
     val slugLookup: Map[String, Map[Version, Set[ServiceDependency]]] = Map(
       "org.libs:mylib" -> Map(
-          Version(1,0,0) -> Set(ServiceDependency("test1", "1.99.3", List.empty, "org.libs", "mylib", "1.0.0"))
-        , Version(1,3,0) -> Set(ServiceDependency("test2", "2.0.1" , List.empty, "org.libs", "mylib", "1.3.0")))
+          Version(1,0,0) -> Set(ServiceDependency("test1", "1.99.3", List.empty, "org.libs", "mylib", "1.0.0", scalaVersion = None, scopes = Set.empty))
+        , Version(1,3,0) -> Set(ServiceDependency("test2", "2.0.1" , List.empty, "org.libs", "mylib", "1.3.0", scalaVersion = None, scopes = Set.empty)))
         )
 
     val res1 = DependencyLookupService.findSlugsUsing(
@@ -175,27 +166,20 @@ object DependencyLookupServiceTestData {
   val dep2: SlugDependency = SlugDependency("", "5.12.0", "org.libs", "mylib")
 
   val slug1 = SlugInfo(
-      uri           = "http://slugs.com/test/test-1.0.0.tgz"
-    , created       = LocalDateTime.of(2019, 6, 28, 11, 51,23)
-    , name          = "test"
-    , version       = Version("1.0.0")
-    , teams         = List.empty
-    , runnerVersion = "0.5.2"
-    , classpath     = "classpath="
-    , java          = JavaInfo("1.8.0", "Oracle", "JDK")
-    , dependencies  = List(dep1)
+      uri                  = "http://slugs.com/test/test-1.0.0.tgz"
+    , created              = LocalDateTime.of(2019, 6, 28, 11, 51,23)
+    , name                 = "test"
+    , version              = Version("1.0.0")
+    , teams                = List.empty
+    , runnerVersion        = "0.5.2"
+    , classpath            = "classpath="
+    , java                 = JavaInfo("1.8.0", "Oracle", "JDK")
+    , dependencies         = List(dep1)
     , dependencyDotCompile = ""
     , dependencyDotTest    = ""
     , dependencyDotBuild   = ""
-    , applicationConfig = "config"
-    , ""
-    , latest       = true
-    , production   = false
-    , qa           = false
-    , staging      = false
-    , development  = false
-    , externalTest = false
-    , integration  = false
+    , applicationConfig    = "config"
+    , slugConfig           = ""
     )
 
   val slug11 = slug1.copy(version = Version(1,1,0), uri = "http://slugs.com/test/test-1.1.0.tgz")

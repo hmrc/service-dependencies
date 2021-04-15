@@ -24,8 +24,8 @@ import scala.annotation.tailrec
 class DependencyGraphParser {
   import DependencyGraphParser._
 
-  def parse(input: Seq[String]): DependencyGraph =
-    lexer(input)
+  def parse(input: String): DependencyGraph =
+    lexer(input.split("\n"))
       .foldLeft(DependencyGraph.empty){ (graph, t)  =>
         t match {
           case n: Node     => graph.copy(nodes     = graph.nodes      + n)
@@ -48,9 +48,26 @@ class DependencyGraphParser {
 }
 
 object DependencyGraphParser {
+  private val artefactRegex = """(.*)_(\d+\.\d*)""".r
+
   sealed trait Token
-  case class Node(name: String) extends Token
+
+  case class Node(name: String) extends Token {
+    private lazy val Array(g, a1, v) =
+      name.split(":")
+    private lazy val (a, sv) =
+      a1 match {
+        case artefactRegex(a, sv) => (a, Some(sv))
+        case _                    => (a1, None)
+      }
+    def group        = g
+    def artefact     = a
+    def version      = v
+    def scalaVersion = sv
+  }
+
   case class Arrow(from: Node, to: Node) extends Token
+
   case class Eviction(old: Node, by: Node, reason: String) extends Token
 
   case class DependencyGraph(

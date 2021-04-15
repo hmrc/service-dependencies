@@ -39,15 +39,14 @@ abstract class SlugInfoRepositoryBase[A: ClassTag] @Inject()(
   , domainFormat   = domainFormat
   , indexes        = Seq(
                        IndexModel(ascending("uri"),
-                         IndexOptions().name("slugInfoUniqueIdx").unique(true)),
+                         IndexOptions().name("uniqueIdx").unique(true)
+                       ),
                        IndexModel(hashed("name"),
-                         IndexOptions().name("slugInfoIdx").background(true)),
-                       IndexModel(hashed("latest"),
-                         IndexOptions().name("slugInfoLatestIdx").background(true)),
+                         IndexOptions().name("name_idx").background(true)
+                       ),
                        IndexModel(compoundIndex(ascending("name"), descending("version")),
-                         IndexOptions().name("slugInfoNameVersionIdx").background(true)),
-                       IndexModel(compoundIndex(ascending("name"), descending("latest")),
-                         IndexOptions().name("slugInfoNameLatestIdx").background(true))
-  )
+                         IndexOptions().name("name_version_idx").background(true)
+                       )
+                     )
   , optSchema      = Some(BsonDocument(MongoSlugInfoFormats.schema))
   )
