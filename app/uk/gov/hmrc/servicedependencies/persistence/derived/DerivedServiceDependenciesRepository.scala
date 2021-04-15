@@ -109,6 +109,15 @@ class DerivedServiceDependenciesRepository @Inject()(
       dependencyFilter  = scope.fold[Bson](BsonDocument())(s => equal("scope_" + s.asString, true))
     )
 
+  def findDependencies(
+    flag: SlugInfoFlag,
+    scope: Option[DependencyScope]
+  ): Future[Seq[ServiceDependency]] =
+    findServiceDependenciesFromDeployments(
+      deploymentsFilter = equal(flag.asString, true),
+      dependencyFilter  = scope.fold[Bson](BsonDocument())(s => equal("scope_" + s.asString, true))
+    )
+
   private def findServiceDependenciesFromDeployments(
     deploymentsFilter: Bson,
     dependencyFilter : Bson

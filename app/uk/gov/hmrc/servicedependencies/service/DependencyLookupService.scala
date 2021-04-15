@@ -21,19 +21,22 @@ import java.time.LocalDate
 import java.time.temporal.ChronoUnit
 
 import cats.implicits._
-import javax.inject.Inject
+import javax.inject.{Inject, Singleton}
 import play.api.Logging
 import uk.gov.hmrc.servicedependencies.connector.ServiceConfigsConnector
 import uk.gov.hmrc.servicedependencies.model._
-import uk.gov.hmrc.servicedependencies.persistence.{BobbyRulesSummaryRepository, SlugDenylist, SlugInfoRepository}
+import uk.gov.hmrc.servicedependencies.persistence.{BobbyRulesSummaryRepository, SlugInfoRepository}
+import uk.gov.hmrc.servicedependencies.persistence.derived.DerivedServiceDependenciesRepository
 
 import scala.concurrent.{ExecutionContext, Future}
 
 
+@Singleton
 class DependencyLookupService @Inject() (
   serviceConfigs       : ServiceConfigsConnector
 , slugRepo             : SlugInfoRepository
 , bobbyRulesSummaryRepo: BobbyRulesSummaryRepository
+, derivedServiceDependenciesRepository: DerivedServiceDependenciesRepository
 )(implicit ec: ExecutionContext
 ) extends Logging {
 
@@ -47,9 +50,14 @@ class DependencyLookupService @Inject() (
     def calculateCounts(rules: Seq[BobbyRule])(env: SlugInfoFlag): Future[Seq[((BobbyRule, SlugInfoFlag), Int)]] = {
       logger.debug(s"calculateCounts($env)")
       for {
-        slugs      <- slugRepo.getSlugsForEnv(env)
-        _          =  logger.debug(s"Found ${slugs.size} slugs for $env")
-        lookup     =  buildLookup(slugs)
+        lookup     <- derivedServiceDependenciesRepository.findDependencies(env, Some(DependencyScope.Compile)) // we could look for violations in all scopes (but number will not align to results when drilling down in catalogue)
+                        .map(_
+                          .groupBy(d => s"${d.depGroup}:${d.depArtefact}")
+                          .mapValues(
+                            _.groupBy(d => Version(d.depVersion))
+                            .mapValues(_.map(d => s"${d.slugName}:${d.slugVersion}").toSet)
+                          )
+                        )
         violations =  rules.map(rule => ((rule, env), findSlugsUsing(lookup, rule.organisation, rule.name, rule.range).length))
       } yield violations
     }
@@ -75,36 +83,12 @@ class DependencyLookupService @Inject() (
 
 object DependencyLookupService {
 
-  def buildLookup(slugs: Seq[SlugInfo]): Map[String, Map[Version, Set[ServiceDependency]]] =
-    slugs
-      .filterNot(slug => SlugDenylist.denylistedSlugsSet.contains(slug.name))
-      .flatMap(slug => slug.dependencies.map(deps => (slug, deps))) // if we look at dependencyDot (or serviceDependency collection), we could check for violations in test and build scope too
-      .groupBy { case (_, dep) => s"${dep.group}:${dep.artifact}" }
-      .mapValues(
-        _.groupBy { case (_, dep)  => Version(dep.version) }
-         .mapValues(_.map { case (slug, dep) => slugToServiceDep(slug, dep) }.toSet)
-      )
-
-
-  private def slugToServiceDep(slug: SlugInfo, dep: SlugDependency): ServiceDependency =
-    ServiceDependency(
-      slugName     = slug.name,
-      slugVersion  = slug.version.toString,
-      teams        = List.empty,
-      depGroup     = dep.group,
-      depArtefact  = dep.artifact,
-      depVersion   = dep.version.toString,
-      scalaVersion = None,
-      scopes       = Set(DependencyScope.Compile) // we're only looking at compile scope at the moment
-    )
-
-
   def findSlugsUsing(
-      lookup  : Map[String, Map[Version, Set[ServiceDependency]]]
+      lookup  : Map[String, Map[Version, Set[String]]]
     , group   : String
     , artifact: String
     , range   : BobbyVersionRange
-    ): Seq[ServiceDependency] =
+    ): Seq[String] =
       lookup
         .getOrElse(s"$group:$artifact", Map.empty)
         .filterKeys(v => range.includes(v))
