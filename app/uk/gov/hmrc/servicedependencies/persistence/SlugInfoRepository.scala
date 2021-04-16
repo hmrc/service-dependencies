@@ -39,28 +39,28 @@ class SlugInfoRepository @Inject()(
   domainFormat   = MongoSlugInfoFormats.slugInfoFormat
 ) with Logging {
 
-  def add(slugInfo: SlugInfo): Future[Boolean] =
+  def add(slugInfo: SlugInfo): Future[Unit] =
     collection
       .replaceOne(
           filter      = equal("uri", slugInfo.uri)
         , replacement = slugInfo
         , options     = ReplaceOptions().upsert(true)
         )
-      .toFuture
-      .map(_.wasAcknowledged())
+      .toFuture()
+      .map(_ => ())
 
   def getAllEntries: Future[Seq[SlugInfo]] =
     collection.find()
       .toFuture
 
-  def clearAllData: Future[Boolean] =
+  def clearAllData: Future[Unit] =
     collection.deleteMany(BsonDocument())
-      .toFuture
-      .map(_.wasAcknowledged())
+      .toFuture()
+      .map(_ => ())
 
   def getUniqueSlugNames: Future[Seq[String]] =
     collection.distinct[String]("name")
-      .toFuture
+      .toFuture()
 
  def getSlugInfos(name: String, optVersion: Option[String]): Future[Seq[SlugInfo]] = {
     val filter =
@@ -71,7 +71,7 @@ class SlugInfoRepository @Inject()(
                                  )
       }
     collection.find(filter)
-      .toFuture
+      .toFuture()
   }
 
   def getSlugInfo(name: String, flag: SlugInfoFlag): Future[Option[SlugInfo]] =

@@ -40,10 +40,10 @@ class SlugInfoService @Inject()(
   githubRawConnector            : GithubRawConnector,
 )(implicit ec: ExecutionContext
 ) extends Logging {
-  def addSlugInfo(slug: SlugInfo): Future[Boolean] =
+  def addSlugInfo(slug: SlugInfo): Future[Unit] =
     for {
       // Determine which slug is latest from the existing collection
-      added    <- slugInfoRepository.add(slug)
+      _        <- slugInfoRepository.add(slug)
       isLatest <- slugInfoRepository.getSlugInfos(name = slug.name, optVersion = None)
                     .map {
                       case Nil      => true
@@ -52,7 +52,8 @@ class SlugInfoService @Inject()(
                                        isLatest
                     }
       _        <- if (isLatest) deploymentRepository.markLatest(slug.name, slug.version) else Future(())
-    } yield added
+      _        <- serviceDependencyRepository.populateDependencies(slug)
+    } yield ()
 
   def getSlugInfos(name: String, version: Option[String]): Future[Seq[SlugInfo]] =
     slugInfoRepository.getSlugInfos(name, version)

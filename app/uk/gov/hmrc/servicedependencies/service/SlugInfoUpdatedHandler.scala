@@ -86,10 +86,7 @@ class SlugInfoUpdatedHandler @Inject()(
                    )
        _        <- EitherT(
                      slugInfoService.addSlugInfo(slugInfo)
-                       .map(saveResult =>
-                          if (saveResult) Right(())
-                          else Left(s"SlugInfo for message (ID '${message.messageId()}') was sent on but not saved.")
-                       )
+                       .map(Right.apply)
                        .recover {
                          case e =>
                            val errorMessage = s"Could not store slug info for message with ID '${message.messageId()}'"

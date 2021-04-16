@@ -41,11 +41,11 @@ class SlugInfoRepositorySpec
     }
 
     "replace existing" in {
-      repository.add(slugInfo).futureValue shouldBe true
+      repository.add(slugInfo).futureValue
       repository.getAllEntries.futureValue should have size 1
 
       val duplicate = slugInfo.copy(name = "my-slug-2")
-      repository.add(duplicate).futureValue shouldBe true
+      repository.add(duplicate).futureValue
       repository.getAllEntries.futureValue shouldBe Seq(duplicate)
     }
   }

@@ -25,6 +25,7 @@ import uk.gov.hmrc.mongo.test.MongoSupport
 import uk.gov.hmrc.servicedependencies.connector.ServiceConfigsConnector
 import uk.gov.hmrc.servicedependencies.model._
 import uk.gov.hmrc.servicedependencies.persistence.{BobbyRulesSummaryRepository, SlugInfoRepository}
+import uk.gov.hmrc.servicedependencies.persistence.derived.DerivedServiceDependenciesRepository
 
 import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.duration.DurationInt
@@ -44,26 +45,14 @@ class DependencyLookupServiceSpec
 
   import ExecutionContext.Implicits.global
 
-  "BuildLookup" should "Build a map of dependencies showing which slug uses which version" in {
-    val res = DependencyLookupService.buildLookup(Seq(slug11, slug1, slug12))
-
-    res("org.libs:mylib").keySet.contains(Version(5, 11, 0))
-    res("org.libs:mylib").keySet.contains(Version(5, 12, 0))
-    res("org.libs:mylib")(Version(5, 11, 0)).size shouldBe 2
-    res("org.libs:mylib")(Version(5, 11, 0)).exists(_.slugVersion == "1.0.0") shouldBe true
-    res("org.libs:mylib")(Version(5, 11, 0)).exists(_.slugVersion == "1.1.0") shouldBe true
-    res("org.libs:mylib")(Version(5, 12, 0)).size shouldBe 1
-    res("org.libs:mylib")(Version(5, 12, 0)).exists(_.slugVersion == "1.2.0") shouldBe true
-  }
-
-
   "findSlugsUsing" should "return a list of slugs inside the version range" in {
 
-    val slugLookup: Map[String, Map[Version, Set[ServiceDependency]]] = Map(
+    val slugLookup: Map[String, Map[Version, Set[String]]] = Map(
       "org.libs:mylib" -> Map(
-          Version(1,0,0) -> Set(ServiceDependency("test1", "1.99.3", List.empty, "org.libs", "mylib", "1.0.0", scalaVersion = None, scopes = Set.empty))
-        , Version(1,3,0) -> Set(ServiceDependency("test2", "2.0.1" , List.empty, "org.libs", "mylib", "1.3.0", scalaVersion = None, scopes = Set.empty)))
+          Version(1,0,0) -> Set("test1:1.99.3")
+        , Version(1,3,0) -> Set("test2:2.0.1" )
         )
+    )
 
     val res1 = DependencyLookupService.findSlugsUsing(
       lookup   = slugLookup,
@@ -93,27 +82,32 @@ class DependencyLookupServiceSpec
       private val store = new AtomicReference(List[BobbyRulesSummary]())
 
       override def add(summary: BobbyRulesSummary): Future[Unit] =
-        Future {
+        Future.successful {
           store.updateAndGet(((l: List[BobbyRulesSummary]) => l ++ List(summary)).asJava)
         }
 
       override def getLatest: Future[Option[BobbyRulesSummary]] =
-        Future(store.get.sortBy(_.date.toEpochDay).headOption)
+        Future.successful(store.get.sortBy(_.date.toEpochDay).headOption)
 
       override def getHistoric: Future[List[BobbyRulesSummary]] =
-        Future(store.get)
+        Future.successful(store.get)
 
       override def clearAllData: Future[Boolean] = {
         store.set(List.empty)
-        Future(true)
+        Future.successful(true)
       }
     }
 
-    when(configService.getBobbyRules).thenReturn(Future(BobbyRules(Map(("uk.gov.hmrc", "libs") -> List(bobbyRule)))))
-    when(slugInfoRepository.getSlugsForEnv(any[SlugInfoFlag])).thenReturn(Future(Seq.empty))
-    when(slugInfoRepository.getSlugsForEnv(SlugInfoFlag.Production)).thenReturn(Future(Seq(slug1, slug11, slug12)))
+    val derivedServiceDependenciesRepository = mock[DerivedServiceDependenciesRepository]
 
-    val lookupService = new DependencyLookupService(configService, slugInfoRepository, bobbyRulesSummaryRepo)
+    when(configService.getBobbyRules)
+      .thenReturn(Future(BobbyRules(Map(("uk.gov.hmrc", "libs") -> List(bobbyRule)))))
+    when(derivedServiceDependenciesRepository.findDependencies(any[SlugInfoFlag], any[Option[DependencyScope]]))
+      .thenReturn(Future.successful(Seq.empty))
+    when(derivedServiceDependenciesRepository.findDependencies(SlugInfoFlag.Production, Some(DependencyScope.Compile)))
+      .thenReturn(Future.successful(Seq(serviceDep1, serviceDep11, serviceDep12)))
+
+    val lookupService = new DependencyLookupService(configService, slugInfoRepository, bobbyRulesSummaryRepo, derivedServiceDependenciesRepository)
 
     lookupService.updateBobbyRulesSummary.futureValue
     val res = lookupService.getLatestBobbyRuleViolations.futureValue
@@ -165,28 +159,37 @@ object DependencyLookupServiceTestData {
   val dep1: SlugDependency = SlugDependency("", "5.11.0", "org.libs", "mylib")
   val dep2: SlugDependency = SlugDependency("", "5.12.0", "org.libs", "mylib")
 
-  val slug1 = SlugInfo(
-      uri                  = "http://slugs.com/test/test-1.0.0.tgz"
-    , created              = LocalDateTime.of(2019, 6, 28, 11, 51,23)
-    , name                 = "test"
-    , version              = Version("1.0.0")
-    , teams                = List.empty
-    , runnerVersion        = "0.5.2"
-    , classpath            = "classpath="
-    , java                 = JavaInfo("1.8.0", "Oracle", "JDK")
-    , dependencies         = List(dep1)
-    , dependencyDotCompile = ""
-    , dependencyDotTest    = ""
-    , dependencyDotBuild   = ""
-    , applicationConfig    = "config"
-    , slugConfig           = ""
+  val serviceDep1 = ServiceDependency(
+      slugName     = "test"
+    , slugVersion  = "1.0.0"
+    , teams        = List.empty
+    , depGroup     = dep1.group
+    , depArtefact  = dep1.artifact
+    , depVersion   = dep1.version
+    , scalaVersion = None
+    , scopes       = Set(DependencyScope.Compile)
     )
 
-  val slug11 = slug1.copy(version = Version(1,1,0), uri = "http://slugs.com/test/test-1.1.0.tgz")
+  val serviceDep11 = serviceDep1.copy(slugVersion = "1.1.0")
 
-  val slug12 = slug1.copy(version = Version(1,2,0), uri = "http://slugs.com/test/test-1.2.0.tgz", dependencies = List(dep2))
+  val serviceDep12 = ServiceDependency(
+      slugName     = "test"
+    , slugVersion  = "1.2.0"
+    , teams        = List.empty
+    , depGroup     = dep2.group
+    , depArtefact  = dep2.artifact
+    , depVersion   = dep2.version
+    , scalaVersion = None
+    , scopes       = Set(DependencyScope.Compile)
+    )
 
-  val bobbyRule = BobbyRule(organisation = dep1.group, name = dep1.artifact, range = BobbyVersionRange.parse("(5.11.0,]").get, "testing", LocalDate.of(2000,1,1))
+  val bobbyRule = BobbyRule(
+    organisation = dep1.group,
+    name         = dep1.artifact,
+    range        = BobbyVersionRange.parse("(5.11.0,]").get,
+    "testing",
+    LocalDate.of(2000,1,1)
+  )
 
   def bobbyRulesSummary(date: LocalDate, i: Int, j: Int, bobbyRule: BobbyRule = bobbyRule) =
     BobbyRulesSummary(date, Map(
