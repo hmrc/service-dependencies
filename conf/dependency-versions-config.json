@@ -31,12 +31,12 @@
     { "group": "uk.gov.hmrc", "name": "autobars-xsd" },
     { "group": "uk.gov.hmrc", "name": "aws-gateway-proxied-request-lambda" },
     { "group": "uk.gov.hmrc", "name": "batch-updater" },
-    { "group": "uk.gov.hmrc", "name": "bootstrap-backend-play-26", "latestVersion": "3.4.0" },
-    { "group": "uk.gov.hmrc", "name": "bootstrap-backend-play-27", "latestVersion": "3.4.0" },
-    { "group": "uk.gov.hmrc", "name": "bootstrap-frontend-play-26", "latestVersion": "3.4.0" },
-    { "group": "uk.gov.hmrc", "name": "bootstrap-frontend-play-27", "latestVersion": "3.4.0" },
+    { "group": "uk.gov.hmrc", "name": "bootstrap-backend-play-26" },
+    { "group": "uk.gov.hmrc", "name": "bootstrap-backend-play-27" },
+    { "group": "uk.gov.hmrc", "name": "bootstrap-frontend-play-26" },
+    { "group": "uk.gov.hmrc", "name": "bootstrap-frontend-play-27" },
     { "group": "uk.gov.hmrc", "name": "bootstrap-play-25" },
-    { "group": "uk.gov.hmrc", "name": "bootstrap-play-26", "latestVersion": "2.3.0" },
+    { "group": "uk.gov.hmrc", "name": "bootstrap-play-26" },
     { "group": "uk.gov.hmrc", "name": "browser-test" },
     { "group": "uk.gov.hmrc", "name": "business-rates-values" },
     { "group": "uk.gov.hmrc", "name": "clamav-client" },
@@ -66,10 +66,10 @@
     { "group": "uk.gov.hmrc", "name": "http-core" },
     { "group": "uk.gov.hmrc", "name": "http-exceptions" },
     { "group": "uk.gov.hmrc", "name": "http-metrics" },
-    { "group": "uk.gov.hmrc", "name": "http-verbs", "latestVersion": "12.3.0" },
-    { "group": "uk.gov.hmrc", "name": "http-verbs-play-25", "latestVersion": "12.3.0" },
-    { "group": "uk.gov.hmrc", "name": "http-verbs-play-26", "latestVersion": "12.3.0" },
-    { "group": "uk.gov.hmrc", "name": "http-verbs-play-27", "latestVersion": "12.3.0" },
+    { "group": "uk.gov.hmrc", "name": "http-verbs" },
+    { "group": "uk.gov.hmrc", "name": "http-verbs-play-25" },
+    { "group": "uk.gov.hmrc", "name": "http-verbs-play-26" },
+    { "group": "uk.gov.hmrc", "name": "http-verbs-play-27" },
     { "group": "uk.gov.hmrc", "name": "http-verbs-test" },
     { "group": "uk.gov.hmrc", "name": "init-app-configs" },
     { "group": "uk.gov.hmrc", "name": "init-repository" },
@@ -164,7 +164,7 @@
     {
       "name": "sbt",
       "group": "org.scala-sbt",
-      "latestVersion": "1.3.13"
+      "latestVersion": "1.4.9"
     }
   ]
 }
