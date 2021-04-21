@@ -144,6 +144,11 @@ class DeploymentRepository @Inject()(
           replaceRoot("$res")
         ) ++ pipeline
       ).toFuture
+
+  def clearAllData: Future[Boolean] =
+    collection.deleteMany(BsonDocument())
+      .toFuture
+      .map(_.wasAcknowledged())
 }
 
 

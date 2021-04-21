@@ -23,16 +23,18 @@ import uk.gov.hmrc.mongo.play.json.formats.MongoJavatimeFormats
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 import uk.gov.hmrc.servicedependencies.model._
 import uk.gov.hmrc.servicedependencies.persistence._
-import uk.gov.hmrc.servicedependencies.service.DerivedViewsService
+import uk.gov.hmrc.servicedependencies.service.{DerivedViewsService, SlugInfoService}
 
 import scala.concurrent.{ExecutionContext, Future}
 
 class IntegrationTestController @Inject()(
     latestVersionRepository         : LatestVersionRepository
   , repositoryDependenciesRepository: RepositoryDependenciesRepository
-  , sluginfoRepo                    : SlugInfoRepository
+  , slugInfoRepo                    : SlugInfoRepository
+  , slugInfoService                 : SlugInfoService
   , bobbyRulesSummaryRepo           : BobbyRulesSummaryRepository
   , derivedViewsService             : DerivedViewsService
+  , deploymentsRepo                 : DeploymentRepository
   , cc                              : ControllerComponents
   )(implicit ec: ExecutionContext
   ) extends BackendController(cc) {
@@ -66,8 +68,10 @@ class IntegrationTestController @Inject()(
 
   def addSluginfos =
     Action.async(validateJson[Seq[SlugInfo]]) { implicit request =>
-      Future.sequence(request.body.map(sluginfoRepo.add))
-        .map(_ => NoContent)
+      for {
+        _ <- Future.sequence(request.body.map(slugInfoService.addSlugInfo))
+        _ <- slugInfoService.updateMetadata()
+      } yield NoContent
     }
 
   def addBobbyRulesSummaries =
@@ -90,7 +94,7 @@ class IntegrationTestController @Inject()(
 
   def deleteSluginfos =
     Action.async {
-      sluginfoRepo.clearAllData
+      slugInfoRepo.clearAllData
         .map(_ => NoContent)
     }
 
@@ -105,8 +109,9 @@ class IntegrationTestController @Inject()(
       Future.sequence(List(
           latestVersionRepository.clearAllData
         , repositoryDependenciesRepository.clearAllData
-        , sluginfoRepo.clearAllData
+        , slugInfoRepo.clearAllData
         , bobbyRulesSummaryRepo.clearAllData
+        , deploymentsRepo.clearAllData
         )).map(_ => NoContent)
     }
 
