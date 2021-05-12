@@ -36,8 +36,8 @@ class SlugVersionRepository  @Inject()(mongoComponent: MongoComponent)(implicit 
       .find(equal("name", name))
       .projection(include("version"))
       .foldLeft(Option.empty[Version]){
-        case (None, version) => Some(version)
-        case (sv @ Some(v), version) => if (v.compare(version) > 0) sv else Some(version)
+        case (optMax, version) if optMax.exists(_ > version) => optMax
+        case (_, version) => Some(version)
       }.toFuture()
   }
 
