@@ -17,7 +17,6 @@
 package uk.gov.hmrc.servicedependencies.service
 
 import java.time.{Instant, LocalDateTime}
-
 import org.mockito.scalatest.MockitoSugar
 import org.scalatest.concurrent.{IntegrationPatience, ScalaFutures}
 import org.scalatest.matchers.should.Matchers
@@ -27,7 +26,7 @@ import uk.gov.hmrc.servicedependencies.connector.{GithubRawConnector, ReleasesAp
 import uk.gov.hmrc.servicedependencies.connector.model.RepositoryInfo
 import uk.gov.hmrc.servicedependencies.model._
 import uk.gov.hmrc.servicedependencies.persistence.derived.{DerivedGroupArtefactRepository, DerivedServiceDependenciesRepository}
-import uk.gov.hmrc.servicedependencies.persistence.{DeploymentRepository, JdkVersionRepository, SlugInfoRepository}
+import uk.gov.hmrc.servicedependencies.persistence.{DeploymentRepository, JdkVersionRepository, SlugInfoRepository, SlugVersionRepository}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
@@ -151,8 +150,8 @@ class SlugInfoServiceSpec
 
   "SlugInfoService.addSlugInfo" should {
     "mark the slug as latest if it is the first slug with that name" in new GetSlugInfoFixture {
-      when(boot.mockedSlugInfoRepository.getSlugInfos(sampleSlugInfo.name, None))
-        .thenReturn(Future.successful(List.empty))
+      when(boot.mockedSlugVersionRepository.getMaxVersion(sampleSlugInfo.name))
+        .thenReturn(Future.successful(None))
       when(boot.mockedSlugInfoRepository.add(any))
         .thenReturn(Future.successful(true))
       when(boot.mockedDeploymentRepository.markLatest(any, any))
@@ -170,8 +169,8 @@ class SlugInfoServiceSpec
       val slugv1 = sampleSlugInfo.copy(version = Version("1.0.0"), uri = "uri1")
       val slugv2 = slugv1.copy(version = Version("2.0.0"), uri = "uri2")
 
-      when(boot.mockedSlugInfoRepository.getSlugInfos(sampleSlugInfo.name, None))
-        .thenReturn(Future.successful(List(slugv1, slugv2)))
+      when(boot.mockedSlugVersionRepository.getMaxVersion(sampleSlugInfo.name))
+        .thenReturn(Future.successful(Some(slugv2.version)))
       when(boot.mockedSlugInfoRepository.add(any))
         .thenReturn(Future.successful(true))
       when(boot.mockedDeploymentRepository.markLatest(any, any))
@@ -189,8 +188,8 @@ class SlugInfoServiceSpec
       val slugv1 = sampleSlugInfo.copy(version = Version("1.0.0"), uri = "uri1")
       val slugv2 = slugv1.copy(version = Version("2.0.0"), uri = "uri2")
 
-      when(boot.mockedSlugInfoRepository.getSlugInfos(sampleSlugInfo.name, None))
-        .thenReturn(Future.successful(List(slugv2)))
+      when(boot.mockedSlugVersionRepository.getMaxVersion(sampleSlugInfo.name))
+        .thenReturn(Future.successful(Some(slugv2.version)))
       when(boot.mockedSlugInfoRepository.add(any))
         .thenReturn(Future.successful(true))
       when(boot.mockedServiceDependenciesRepository.populateDependencies(any))
@@ -206,8 +205,8 @@ class SlugInfoServiceSpec
       val slugv1 = sampleSlugInfo.copy(version = Version("1.0.0"), uri = "uri1")
       val slugv2 = slugv1.copy(version = Version("2.0.0"), uri = "uri2")
 
-      when(boot.mockedSlugInfoRepository.getSlugInfos(sampleSlugInfo.name, None))
-        .thenReturn(Future.successful(List(slugv2)))
+      when(boot.mockedSlugVersionRepository.getMaxVersion(sampleSlugInfo.name))
+        .thenReturn(Future.successful(Some(slugv2.version)))
       when(boot.mockedSlugInfoRepository.add(any))
         .thenReturn(Future.successful(true))
       when(boot.mockedServiceDependenciesRepository.populateDependencies(any))
@@ -288,6 +287,7 @@ class SlugInfoServiceSpec
 
   case class Boot(
     mockedSlugInfoRepository            : SlugInfoRepository
+  , mockedSlugVersionRepository         : SlugVersionRepository
   , mockedServiceDependenciesRepository : DerivedServiceDependenciesRepository
   , mockedJdkVersionRespository         : JdkVersionRepository
   , mockedGroupArtefactRepository       : DerivedGroupArtefactRepository
@@ -301,6 +301,7 @@ class SlugInfoServiceSpec
   object Boot {
     def init: Boot = {
       val mockedSlugInfoRepository                = mock[SlugInfoRepository]
+      val mockedSlugVersionRepository             = mock[SlugVersionRepository]
       val mockedDerivedSlugDependenciesRepository = mock[DerivedServiceDependenciesRepository]
       val mockedJdkVersionRepository              = mock[JdkVersionRepository]
       val mockedGroupArtefactRepository           = mock[DerivedGroupArtefactRepository]
@@ -311,6 +312,7 @@ class SlugInfoServiceSpec
 
       val service = new SlugInfoService(
             mockedSlugInfoRepository
+          , mockedSlugVersionRepository
           , mockedDerivedSlugDependenciesRepository
           , mockedJdkVersionRepository
           , mockedGroupArtefactRepository
@@ -321,6 +323,7 @@ class SlugInfoServiceSpec
           )
       Boot(
           mockedSlugInfoRepository
+        , mockedSlugVersionRepository
         , mockedDerivedSlugDependenciesRepository
         , mockedJdkVersionRepository
         , mockedGroupArtefactRepository
