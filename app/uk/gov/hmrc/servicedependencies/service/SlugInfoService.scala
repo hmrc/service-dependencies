@@ -24,13 +24,14 @@ import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.servicedependencies.connector.{GithubRawConnector, ReleasesApiConnector, TeamsAndRepositoriesConnector}
 import uk.gov.hmrc.servicedependencies.model._
 import uk.gov.hmrc.servicedependencies.persistence.derived.{DerivedGroupArtefactRepository, DerivedServiceDependenciesRepository}
-import uk.gov.hmrc.servicedependencies.persistence.{DeploymentRepository, JdkVersionRepository, SlugInfoRepository}
+import uk.gov.hmrc.servicedependencies.persistence.{DeploymentRepository, JdkVersionRepository, SlugInfoRepository, SlugVersionRepository}
 
 import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
 class SlugInfoService @Inject()(
   slugInfoRepository            : SlugInfoRepository,
+  slugVersionRepository         : SlugVersionRepository,
   serviceDependencyRepository   : DerivedServiceDependenciesRepository,
   jdkVersionRepository          : JdkVersionRepository,
   groupArtefactRepository       : DerivedGroupArtefactRepository,
@@ -44,12 +45,12 @@ class SlugInfoService @Inject()(
     for {
       // Determine which slug is latest from the existing collection
       _        <- slugInfoRepository.add(slug)
-      isLatest <- slugInfoRepository.getSlugInfos(name = slug.name, optVersion = None)
+      isLatest <- slugVersionRepository.getMaxVersion(name = slug.name)
                     .map {
-                      case Nil      => true
-                      case nonempty => val isLatest = nonempty.map(_.version).max == slug.version
-                                       logger.info(s"Slug ${slug.name} ${slug.version} isLatest=$isLatest (out of: ${nonempty.map(_.version).sorted})")
-                                       isLatest
+                      case None             => true
+                      case Some(maxVersion) => val isLatest = maxVersion == slug.version
+                                               logger.info(s"Slug ${slug.name} ${slug.version} isLatest=$isLatest (latest is: ${maxVersion})")
+                                               isLatest
                     }
       _        <- if (isLatest) deploymentRepository.markLatest(slug.name, slug.version) else Future(())
       _        <- serviceDependencyRepository.populateDependencies(slug)

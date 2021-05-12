@@ -94,6 +94,7 @@ object Version {
     ~ (__ \ "original").write[String]
     )(v => (v.major, v.minor, v.patch, v.original))
 
+  val mongoVersionRepositoryFormat:OFormat[Version] = (__ \ "version" ).format[Version](mongoFormat)
 
   def apply(version: String): Version =
     parse(version).getOrElse(sys.error(s"Could not parse version $version"))
