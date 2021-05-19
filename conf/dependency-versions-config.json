@@ -105,6 +105,7 @@
     { "group": "uk.gov.hmrc", "name": "play-filters-java" },
     { "group": "uk.gov.hmrc", "name": "play-frontend-govuk" },
     { "group": "uk.gov.hmrc", "name": "play-frontend-govuk-examples" },
+    { "group": "uk.gov.hmrc", "name": "play-frontend-hmrc" },
     { "group": "uk.gov.hmrc", "name": "play-fsm" },
     { "group": "uk.gov.hmrc", "name": "play-graphite" },
     { "group": "uk.gov.hmrc", "name": "play-hal" },
