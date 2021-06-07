@@ -55,16 +55,21 @@ class SlugVersionRepositorySpec  extends AnyWordSpecLike
 
   def sampleSlugInfo(version: Version, uri: String): SlugInfo =
     SlugInfo(
-      created = LocalDateTime.of(2019, 6, 28, 11, 51, 23),
-      uri = uri,
-      name = "my-slug",
-      version = version,
-      teams = List.empty,
-      runnerVersion = "0.5.2",
-      classpath = "",
-      dependencies = List.empty,
-      java = JavaInfo("1.8.1", "OpenJDK", "JRE"),
-      dependencyDotBuild = "",
-      applicationConfig = "",
-      slugConfig = "", dependencyDotTest = "", dependencyDotCompile = "")
+      created              = LocalDateTime.of(2019, 6, 28, 11, 51, 23),
+      uri                  = uri,
+      name                 = "my-slug",
+      version              = version,
+      teams                = List.empty,
+      runnerVersion        = "0.5.2",
+      classpath            = "",
+      dependencies         = List.empty,
+      java                 = JavaInfo("1.8.1", "OpenJDK", "JRE"),
+      sbtVersion           = Some("1.4.9"),
+      repoUrl              = Some("https://github.com/hmrc/test.git"),
+      dependencyDotBuild   = "",
+      dependencyDotTest    = "",
+      dependencyDotCompile = "",
+      applicationConfig    = "",
+      slugConfig           = ""
+    )
 }

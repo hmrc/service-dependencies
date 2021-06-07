@@ -347,6 +347,8 @@ class SlugInfoServiceSpec
       runnerVersion     = "sample-runner-version",
       classpath         = "sample-classpath",
       java              = JavaInfo(version = "sample-java-version", vendor = "sample-java-vendor", kind = "sample-java-kind"),
+      sbtVersion        = Some("1.4.9"),
+      repoUrl           = Some("https://github.com/hmrc/test.git"),
       dependencies      = Nil,
       dependencyDotCompile = "",
       dependencyDotTest    = "",

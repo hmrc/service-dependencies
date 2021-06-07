@@ -1,11 +1,9 @@
 import play.sbt.PlayImport.PlayKeys
 import uk.gov.hmrc.sbtdistributables.SbtDistributablesPlugin
 
-val appName = "service-dependencies"
+val silencerVersion = "1.7.5"
 
-val silencerVersion = "1.7.2"
-
-lazy val microservice = Project(appName, file("."))
+lazy val microservice = Project("service-dependencies", file("."))
   .enablePlugins(play.sbt.PlayScala, SbtAutoBuildPlugin, SbtGitVersioning, SbtDistributablesPlugin)
   .disablePlugins(JUnitXmlReportPlugin) //Required to prevent https://github.com/scalatest/scalatest/issues/1427
   .settings(majorVersion := 2)
@@ -14,7 +12,7 @@ lazy val microservice = Project(appName, file("."))
   .settings(PlayKeys.playDefaultPort := 8459)
   .settings(libraryDependencies ++= AppDependencies.compile ++ AppDependencies.test)
   .settings(resolvers += Resolver.jcenterRepo)
-  .settings(scalaVersion := "2.12.13")
+  .settings(scalaVersion := "2.12.14")
   .settings(
     // Use the silencer plugin to suppress warnings from unused imports in routes etc.
     scalacOptions += "-P:silencer:pathFilters=routes;resources",

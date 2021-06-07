@@ -64,6 +64,8 @@ case class SlugInfo(
   runnerVersion       : String,
   classpath           : String,
   java                : JavaInfo,
+  sbtVersion          : Option[String],
+  repoUrl             : Option[String],
   dependencies        : List[SlugDependency],
   dependencyDotCompile: String,
   dependencyDotTest   : String,
@@ -107,6 +109,8 @@ trait MongoSlugInfoFormats {
     ~ (__ \ "runnerVersion"            ).format[String]
     ~ (__ \ "classpath"                ).format[String]
     ~ (__ \ "java"                     ).format[JavaInfo]
+    ~ (__ \ "sbtVersion"               ).formatNullable[String]
+    ~ (__ \ "repoUrl"                  ).formatNullable[String]
     ~ (__ \ "dependencies"             ).format[List[SlugDependency]] // this has been replaced by dependencyDot, but is still needed for Java slugs
     ~ (__ \ "dependencyDot" \ "compile").formatWithDefault[String]("")
     ~ (__ \ "dependencyDot" \ "test"   ).formatWithDefault[String]("")
@@ -204,6 +208,8 @@ trait ApiSlugInfoFormats {
     ~ (__ \ "runnerVersion"    ).format[String]
     ~ (__ \ "classpath"        ).format[String]
     ~ (__ \ "java"             ).format[JavaInfo]
+    ~ (__ \ "sbtVersion"       ).formatNullable[String]
+    ~ (__ \ "repoUrl"          ).formatNullable[String]
     ~ (__ \ "dependencies"     ).format[List[SlugDependency]]
     ~ (__ \ "dependencyDot" \ "compile").format[String]
     ~ (__ \ "dependencyDot" \ "test"   ).format[String]
@@ -231,6 +237,8 @@ trait ApiSlugInfoFormats {
     ~ (__ \ "runnerVersion"            ).read[String]
     ~ (__ \ "classpath"                ).read[String]
     ~ (__ \ "java"                     ).read[JavaInfo]
+    ~ (__ \ "sbtVersion"               ).readNullable[String]
+    ~ (__ \ "repoUrl"                  ).readNullable[String]
     ~ (__ \ "dependencies"             ).read[List[SlugDependency]]
     ~ (__ \ "dependencyDot" \ "compile").read[String]
     ~ (__ \ "dependencyDot" \ "test"   ).read[String]
