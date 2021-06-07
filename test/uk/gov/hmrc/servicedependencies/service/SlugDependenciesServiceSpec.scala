@@ -246,6 +246,8 @@ private object SlugDependenciesServiceSpec {
       runnerVersion     = "some-runner-version",
       classpath         = "some-classpath",
       java              = JavaInfo("some-java-version", "some-java-vendor", "some-java-kind"),
+      sbtVersion        = Some("1.4.9"),
+      repoUrl           = Some("https://github.com/hmrc/test.git"),
       dependencies      = withDependencies,
       dependencyDotCompile = "",
       dependencyDotTest    = "",

@@ -31,6 +31,8 @@ object TestSlugInfos {
       runnerVersion        = "0.5.2",
       classpath            = "",
       java                 = JavaInfo("1.181.0", "OpenJDK", "JRE"),
+      sbtVersion           = Some("1.4.9"),
+      repoUrl              = Some("https://github.com/hmrc/test.git"),
       dependencies         = List(
                                SlugDependency(
                                  path     = "lib1",
@@ -62,6 +64,8 @@ object TestSlugInfos {
       runnerVersion = "0.5.2",
       classpath     = "",
       java          = JavaInfo("1.191.0", "Oracle", "JDK"),
+      sbtVersion    = Some("1.4.9"),
+      repoUrl       = Some("https://github.com/hmrc/test.git"),
       dependencies  = List(
                         SlugDependency(
                           path     = "lib3",

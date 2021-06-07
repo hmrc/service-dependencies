@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.servicedependencies.service
 
-import java.time.{LocalDate, LocalDateTime}
+import java.time.LocalDate
 import java.util.concurrent.atomic.AtomicReference
 
 import org.mockito.ArgumentMatchers.any
