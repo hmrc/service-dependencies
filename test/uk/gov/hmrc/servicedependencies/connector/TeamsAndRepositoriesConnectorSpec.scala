@@ -20,33 +20,33 @@ import java.time.Instant
 
 import com.github.tomakehurst.wiremock.client.WireMock._
 import org.mockito.MockitoSugar
-import org.scalatest.concurrent.{IntegrationPatience, ScalaFutures}
 import org.scalatest.BeforeAndAfterAll
+import org.scalatest.concurrent.{IntegrationPatience, ScalaFutures}
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpec
 import org.scalatestplus.play.guice.GuiceOneAppPerSuite
 import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
-import uk.gov.hmrc.http._
-import uk.gov.hmrc.servicedependencies.WireMockConfig
+import uk.gov.hmrc.http.HeaderCarrier
+import uk.gov.hmrc.http.test.WireMockSupport
 import uk.gov.hmrc.servicedependencies.connector.model.RepositoryInfo
-import org.scalatest.freespec.AnyFreeSpec
-import org.scalatest.matchers.must.Matchers
 
 class TeamsAndRepositoriesConnectorSpec
-    extends AnyFreeSpec
-    with Matchers
-    with ScalaFutures
-    with IntegrationPatience
-    with BeforeAndAfterAll
-    with GuiceOneAppPerSuite
-    with MockitoSugar {
+  extends AnyWordSpec
+     with Matchers
+     with ScalaFutures
+     with IntegrationPatience
+     with BeforeAndAfterAll
+     with GuiceOneAppPerSuite
+     with MockitoSugar
+     with WireMockSupport {
 
   implicit val hc = HeaderCarrier()
 
-  val wireMock = new WireMockConfig()
-
+  override lazy val resetWireMockMappings = false
 
   override protected def beforeAll(): Unit = {
-    wireMock.start()
+    super.beforeAll()
 
     stubRepositories("test-repo")
     stubRepositoriesWith404("non-existing-test-repo")
@@ -54,13 +54,11 @@ class TeamsAndRepositoriesConnectorSpec
     stubServices()
   }
 
-  override protected def afterAll(): Unit =
-    wireMock.stop()
-
   override def fakeApplication(): Application =
     new GuiceApplicationBuilder()
       .configure(
-        "microservice.services.teams-and-repositories.port" -> wireMock.stubPort,
+        "microservice.services.teams-and-repositories.host" -> wireMockHost,
+        "microservice.services.teams-and-repositories.port" -> wireMockPort,
         "play.http.requestHandler" -> "play.api.http.DefaultHttpRequestHandler",
         "metrics.jvm" -> false
       ).build()
@@ -68,29 +66,29 @@ class TeamsAndRepositoriesConnectorSpec
   private val connector = app.injector.instanceOf[TeamsAndRepositoriesConnector]
 
 
-  "Retrieving a repository" - {
+  "Retrieving a repository" should {
     "correctly parse json response" in {
       val repository = connector.getRepository("test-repo").futureValue
-      repository.get.teamNames mustBe Seq("PlatOps", "Webops")
+      repository.get.teamNames shouldBe Seq("PlatOps", "Webops")
     }
 
     "handle 404 - repository not found" in {
       val repository = connector.getRepository("non-existing-test-repo").futureValue
-      repository mustBe None
+      repository shouldBe None
     }
   }
 
-  "Retrieving a list of teams for all services" - {
+  "Retrieving a list of teams for all services" should {
     "correctly parse json response" in {
       val teams = connector.getTeamsForServices.futureValue
-      teams mustBe TeamsForServices(Map("test-repo" -> Seq("PlatOps", "WebOps"), "another-repo" -> Seq("PlatOps")))
+      teams shouldBe TeamsForServices(Map("test-repo" -> Seq("PlatOps", "WebOps"), "another-repo" -> Seq("PlatOps")))
     }
   }
 
-  "Retrieving a list of all repositories" - {
+  "Retrieving a list of all repositories" should {
     "correctly parse json response" in {
       val repositories = connector.getAllRepositories(archived = None).futureValue
-      repositories mustBe List(
+      repositories shouldBe List(
         RepositoryInfo(
             name          = "test-repo"
           , createdAt     = Instant.parse("2015-09-15T16:27:38.000Z")
@@ -109,36 +107,30 @@ class TeamsAndRepositoriesConnectorSpec
     }
   }
 
-  private def loadFileAsString(filename: String): String =
-    scala.io.Source.fromInputStream(getClass.getResourceAsStream(filename)).mkString
-
   private def stubRepositories(repositoryName: String) =
-    wireMock.stub(
+    stubFor(
       get(urlEqualTo(s"/api/repositories/$repositoryName"))
-        .willReturn(
-          aResponse()
-            .withStatus(200)
-            .withBody(loadFileAsString(s"/teams-and-repositories/repository.json"))))
+        .willReturn(aResponse().withBodyFile("/teams-and-repositories/repository.json"))
+    )
 
   private def stubRepositoriesWith404(repositoryName: String) =
-    wireMock.stub(
+    stubFor(
       get(urlEqualTo(s"/api/repositories/$repositoryName"))
-        .willReturn(aResponse()
-          .withStatus(404)))
+        .willReturn(
+          aResponse()
+            .withStatus(404)
+        )
+    )
 
   private def stubAllRepositories() =
-    wireMock.stub(
-      get(urlEqualTo(s"/api/repositories"))
-        .willReturn(
-          aResponse()
-            .withStatus(200)
-            .withBody(loadFileAsString(s"/teams-and-repositories/repositories.json"))))
+    stubFor(
+      get(urlEqualTo("/api/repositories"))
+        .willReturn(aResponse().withBodyFile("/teams-and-repositories/repositories.json"))
+    )
 
   private def stubServices() =
-    wireMock.stub(
-      get(urlEqualTo(s"/api/repository_teams"))
-        .willReturn(
-          aResponse()
-            .withStatus(200)
-            .withBody(loadFileAsString(s"/teams-and-repositories/service-teams.json"))))
+    stubFor(
+      get(urlEqualTo("/api/repository_teams"))
+        .willReturn(aResponse().withBodyFile("/teams-and-repositories/service-teams.json"))
+    )
 }

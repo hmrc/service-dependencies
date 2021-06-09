@@ -20,7 +20,8 @@ import java.time.{Instant, LocalDate}
 
 import org.mockito.ArgumentMatchers.any
 import org.mockito.{Mockito, MockitoSugar}
-import org.scalatest._
+import org.scalatest.wordspec.AnyWordSpec
+import org.scalatest.matchers.should.Matchers
 import org.scalatest.concurrent.{IntegrationPatience, ScalaFutures}
 import play.api.libs.json.Json
 import play.api.test.FakeRequest
@@ -32,20 +33,16 @@ import uk.gov.hmrc.servicedependencies.service._
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
-import org.scalatest.freespec.AnyFreeSpec
-import org.scalatest.matchers.should.Matchers
 
 class ServiceDependenciesControllerSpec
-    extends AnyFreeSpec
-    with BeforeAndAfterEach
-    with Matchers
-    with MockitoSugar
-    with ScalaFutures
-    with IntegrationPatience
-    with OptionValues {
+  extends AnyWordSpec
+     with Matchers
+     with MockitoSugar
+     with ScalaFutures
+     with IntegrationPatience {
 
-  "getDependencyVersionsForRepository" - {
-    "should get dependency versions for a repository using the service" in {
+  "getDependencyVersionsForRepository" should {
+    "get dependency versions for a repository using the service" in {
       val boot                   = Boot.init
       val repoName               = "repo1"
       val now                    = Instant.now()
@@ -69,8 +66,8 @@ class ServiceDependenciesControllerSpec
     }
   }
 
-  "get dependencies" - {
-    "should get all dependencies using the service" in {
+  "get dependencies" should {
+    "get all dependencies using the service" in {
       val boot                = Boot.init
       val now                 = Instant.now()
       val repo1               = Dependencies("repo1", Seq(), Seq(), Seq(), now)
@@ -94,9 +91,8 @@ class ServiceDependenciesControllerSpec
     }
   }
 
-  "dependenciesOfSlug" - {
-
-    "should get dependencies for a SlugInfoFlag" in new GetDependenciesOfSlugFixture {
+  "dependenciesOfSlug" should {
+    "get dependencies for a SlugInfoFlag" in new GetDependenciesOfSlugFixture {
       val flag = SlugInfoFlag.Latest
       when(boot.mockSlugDependenciesService.curatedLibrariesOfSlug(slugName, flag)).thenReturn(
         Future.successful(
@@ -111,7 +107,7 @@ class ServiceDependenciesControllerSpec
       )
     }
 
-    "should return Not Found when the requested slug is not recognised" in new GetDependenciesOfSlugFixture {
+    "return Not Found when the requested slug is not recognised" in new GetDependenciesOfSlugFixture {
       val flag = SlugInfoFlag.Latest
       when(boot.mockSlugDependenciesService.curatedLibrariesOfSlug(slugName, flag)).thenReturn(
         Future.successful(None)
@@ -122,7 +118,7 @@ class ServiceDependenciesControllerSpec
       status(result) shouldBe NOT_FOUND
     }
 
-    "should reject an invalid flag descriptor" in new GetDependenciesOfSlugFixture {
+    "reject an invalid flag descriptor" in new GetDependenciesOfSlugFixture {
       val invalidFlag = "an-invalid-flag"
 
       val result = boot.controller.dependenciesOfSlug(slugName, invalidFlag).apply(FakeRequest())

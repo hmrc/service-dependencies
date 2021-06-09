@@ -16,30 +16,31 @@
 
 package uk.gov.hmrc.servicedependencies.connector
 
-import com.typesafe.config.ConfigFactory
-import org.mockito.ArgumentMatchers.any
+import com.github.tomakehurst.wiremock.client.WireMock._
 import org.mockito.MockitoSugar
 import org.scalatest.concurrent.{IntegrationPatience, ScalaFutures}
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 import play.api.Configuration
-import uk.gov.hmrc.http.{HeaderCarrier, HttpClient, HttpResponse, UpstreamErrorResponse}
+import uk.gov.hmrc.http.HeaderCarrier
+import uk.gov.hmrc.http.test.{HttpClientSupport, WireMockSupport}
 import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
 import uk.gov.hmrc.servicedependencies.config.ServiceDependenciesConfig
 
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.ExecutionContext
 
 class GithubRawConnectorSpec
   extends AnyWordSpec
      with Matchers
      with MockitoSugar
      with ScalaFutures
-     with IntegrationPatience {
+     with IntegrationPatience
+     with WireMockSupport
+     with HttpClientSupport {
 
   import ExecutionContext.Implicits.global
 
   "GithubRawConnector" should {
-
     "parse decommissioned services" in {
       val boot = Boot.init
 
@@ -52,8 +53,10 @@ class GithubRawConnectorSpec
            |  ticket_id: SUP-11286
            """.stripMargin
 
-      when(boot.mockHttpClient.GET[Either[UpstreamErrorResponse, HttpResponse]](any(), any())(any(), any(), any()))
-        .thenReturn(Future.successful(Right(HttpResponse(200, body))))
+      stubFor(
+        get(urlEqualTo("/github/raw/hmrc/deploy-with-docktor/master/decommissioning/microservices-to-decommission.yaml"))
+          .willReturn(aResponse().withBody(body))
+      )
 
       boot.githubRawConnector.decomissionedServices(HeaderCarrier()).futureValue shouldBe
         List(
@@ -64,25 +67,27 @@ class GithubRawConnectorSpec
   }
 
   case class Boot(
-    mockHttpClient    : HttpClient
-  , githubRawConnector: GithubRawConnector
+    githubRawConnector: GithubRawConnector
   )
 
   object Boot {
     def init(): Boot = {
-      val mockHttpClient     = mock[HttpClient]
       val mockServicesConfig = mock[ServicesConfig]
 
-      val serviceDependenciesConfig = new ServiceDependenciesConfig(Configuration(ConfigFactory.load()), mockServicesConfig)
+      val serviceDependenciesConfig = new ServiceDependenciesConfig(
+        Configuration.from(Map(
+          "github.open.api.rawurl" -> s"$wireMockUrl/github/raw"
+        )),
+        mockServicesConfig
+      )
 
       val githubRawConnector = new GithubRawConnector(
-          mockHttpClient
-        , serviceDependenciesConfig
+          httpClient,
+          serviceDependenciesConfig
         )
 
       Boot(
-        mockHttpClient
-      , githubRawConnector
+        githubRawConnector
       )
     }
   }

@@ -19,19 +19,20 @@ package uk.gov.hmrc.servicedependencies.config
 import com.typesafe.config.ConfigFactory
 import org.mockito.ArgumentMatchers.any
 import org.mockito.MockitoSugar
-import org.scalatest.OptionValues
-import org.scalatest.funspec.AnyFunSpec
 import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpec
 import play.api.Configuration
 import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
 import uk.gov.hmrc.servicedependencies.config.model.{CuratedDependencyConfig, DependencyConfig}
 import uk.gov.hmrc.servicedependencies.model.Version
 
-class ServiceDependenciesConfigTest extends AnyFunSpec with Matchers with MockitoSugar with OptionValues {
+class ServiceDependenciesConfigTest
+  extends AnyWordSpec
+     with Matchers
+     with MockitoSugar {
 
-  describe("ServiceDependenciesConfig") {
-
-    it("should load github credentials from config, when available") {
+  "ServiceDependenciesConfig" should {
+    "load github credentials from config, when available" in {
       val config =
         Configuration(
           "github.open.api.host" -> "https://api.test.url",
@@ -44,12 +45,12 @@ class ServiceDependenciesConfigTest extends AnyFunSpec with Matchers with Mockit
 
       val sdc = new ServiceDependenciesConfig(config, serviceConfig)
 
-      sdc.githubApiOpenConfig.key shouldBe "key123"
-      sdc.githubApiOpenConfig.user shouldBe "testuser"
+      sdc.githubApiOpenConfig.key    shouldBe "key123"
+      sdc.githubApiOpenConfig.user   shouldBe "testuser"
       sdc.githubApiOpenConfig.apiUrl shouldBe "https://api.test.url"
     }
 
-    it("should load the curatedDependencyConfig") {
+    "load the curatedDependencyConfig" in {
       val config =
         Configuration(
           "curated.config.path" -> "/config/test-config.json"
