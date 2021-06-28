@@ -21,12 +21,12 @@ import javax.inject.Inject
 import org.mongodb.scala.bson.BsonDocument
 import play.api.libs.json._
 import play.api.mvc.ControllerComponents
-import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.play.json.formats.MongoJavatimeFormats
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 import uk.gov.hmrc.servicedependencies.model._
 import uk.gov.hmrc.servicedependencies.persistence._
 import uk.gov.hmrc.servicedependencies.service.{DerivedViewsService, SlugInfoService}
+import uk.gov.hmrc.servicedependencies.persistence.derived.DerivedServiceDependenciesRepository
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -38,7 +38,7 @@ class IntegrationTestController @Inject()(
   , bobbyRulesSummaryRepo           : BobbyRulesSummaryRepository
   , derivedViewsService             : DerivedViewsService
   , deploymentsRepo                 : DeploymentRepository
-  , mongoComponent                  : MongoComponent
+  , derivedServiceDependenciesRepository: DerivedServiceDependenciesRepository
   , cc                              : ControllerComponents
   )(implicit ec: ExecutionContext
   ) extends BackendController(cc) {
@@ -61,9 +61,21 @@ class IntegrationTestController @Inject()(
         .map(_ => NoContent)
     }
 
+  def deleteLatestVersions =
+    Action.async {
+      latestVersionRepository.clearAllData
+        .map(_ => NoContent)
+    }
+
   def addDependencies =
     Action.async(validateJson[List[MongoRepositoryDependencies]]) { implicit request =>
       request.body.traverse(repositoryDependenciesRepository.update)
+        .map(_ => NoContent)
+    }
+
+ def deleteDependencies =
+    Action.async {
+      repositoryDependenciesRepository.clearAllData
         .map(_ => NoContent)
     }
 
@@ -84,32 +96,22 @@ class IntegrationTestController @Inject()(
           _ <- updateFlag(slugInfoWithFlag, SlugInfoFlag.Development , _.development )
           _ <- updateFlag(slugInfoWithFlag, SlugInfoFlag.ExternalTest, _.externalTest)
           _ <- updateFlag(slugInfoWithFlag, SlugInfoFlag.Integration , _.integration )
-          //_ <- derivedViewsService.generateAllViews()
+          _ <- derivedViewsService.generateAllViews()
         } yield ()
       }.map(_ => NoContent)
+    }
+
+  def deleteSluginfos =
+    Action.async {
+      for {
+        _ <- slugInfoRepo.clearAllData
+        _ <- derivedServiceDependenciesRepository.collection.deleteMany(BsonDocument()).toFuture
+      } yield NoContent
     }
 
   def addBobbyRulesSummaries =
     Action.async(validateJson[List[BobbyRulesSummary]]) { implicit request =>
       request.body.traverse(bobbyRulesSummaryRepo.add)
-        .map(_ => NoContent)
-    }
-
-  def deleteLatestVersions =
-    Action.async {
-      latestVersionRepository.clearAllData
-        .map(_ => NoContent)
-    }
-
-  def deleteDependencies =
-    Action.async {
-      repositoryDependenciesRepository.clearAllData
-        .map(_ => NoContent)
-    }
-
-  def deleteSluginfos =
-    Action.async {
-      slugInfoRepo.clearAllData
         .map(_ => NoContent)
     }
 
@@ -127,14 +129,9 @@ class IntegrationTestController @Inject()(
         , slugInfoRepo.clearAllData
         , bobbyRulesSummaryRepo.clearAllData
         , deploymentsRepo.clearAllData
-        , mongoComponent.database.getCollection("DERIVED-slug-dependencies").deleteMany(BsonDocument()).toFuture
+        , derivedServiceDependenciesRepository.collection.deleteMany(BsonDocument()).toFuture
         ).sequence
          .map(_ => NoContent)
-    }
-
-  def createDerivedViews =
-    Action.async {
-      derivedViewsService.generateAllViews().map(_ => NoContent)
     }
 
   case class SlugInfoWithFlags(

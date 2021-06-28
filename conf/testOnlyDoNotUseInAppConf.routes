@@ -15,7 +15,6 @@ POST       /test-only/latestVersions        uk.gov.hmrc.servicedependencies.test
 POST       /test-only/dependencies          uk.gov.hmrc.servicedependencies.testonly.IntegrationTestController.addDependencies
 POST       /test-only/sluginfos             uk.gov.hmrc.servicedependencies.testonly.IntegrationTestController.addSluginfos
 POST       /test-only/bobbyrulesummmary     uk.gov.hmrc.servicedependencies.testonly.IntegrationTestController.addBobbyRulesSummaries
-POST       /test-only/derivedviews          uk.gov.hmrc.servicedependencies.testonly.IntegrationTestController.createDerivedViews
 DELETE     /test-only/latestVersions        uk.gov.hmrc.servicedependencies.testonly.IntegrationTestController.deleteLatestVersions
 DELETE     /test-only/dependencies          uk.gov.hmrc.servicedependencies.testonly.IntegrationTestController.deleteDependencies
 DELETE     /test-only/sluginfos             uk.gov.hmrc.servicedependencies.testonly.IntegrationTestController.deleteSluginfos
