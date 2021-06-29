@@ -16,7 +16,9 @@
 
 package uk.gov.hmrc.servicedependencies.testonly
 
+import cats.implicits._
 import javax.inject.Inject
+import org.mongodb.scala.bson.BsonDocument
 import play.api.libs.json._
 import play.api.mvc.ControllerComponents
 import uk.gov.hmrc.mongo.play.json.formats.MongoJavatimeFormats
@@ -24,6 +26,7 @@ import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 import uk.gov.hmrc.servicedependencies.model._
 import uk.gov.hmrc.servicedependencies.persistence._
 import uk.gov.hmrc.servicedependencies.service.{DerivedViewsService, SlugInfoService}
+import uk.gov.hmrc.servicedependencies.persistence.derived.DerivedServiceDependenciesRepository
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -35,6 +38,7 @@ class IntegrationTestController @Inject()(
   , bobbyRulesSummaryRepo           : BobbyRulesSummaryRepository
   , derivedViewsService             : DerivedViewsService
   , deploymentsRepo                 : DeploymentRepository
+  , derivedServiceDependenciesRepository: DerivedServiceDependenciesRepository
   , cc                              : ControllerComponents
   )(implicit ec: ExecutionContext
   ) extends BackendController(cc) {
@@ -43,11 +47,8 @@ class IntegrationTestController @Inject()(
   implicit val vf                 = Version.apiFormat
   implicit val latestVersionReads = Json.using[Json.WithDefaultValues].reads[MongoLatestVersion]
   implicit val dependenciesReads  = Json.using[Json.WithDefaultValues].reads[MongoRepositoryDependencies]
-  implicit val sluginfoReads      = { implicit val sdr = Json.using[Json.WithDefaultValues].reads[SlugDependency]
-                                      implicit val jir = Json.using[Json.WithDefaultValues].reads[JavaInfo]
-                                      Json.using[Json.WithDefaultValues].reads[SlugInfo]
-                                    }
-  implicit val bobbyRulesSummaryReads = BobbyRulesSummary.apiFormat
+  implicit val siwfr              = SlugInfoWithFlags.reads
+  implicit val brsf               = BobbyRulesSummary.apiFormat
 
   private def validateJson[A : Reads] =
     parse.json.validate(
@@ -55,28 +56,8 @@ class IntegrationTestController @Inject()(
     )
 
   def addLatestVersions =
-    Action.async(validateJson[Seq[MongoLatestVersion]]) { implicit request =>
-      Future.sequence(request.body.map(latestVersionRepository.update))
-        .map(_ => NoContent)
-    }
-
-  def addDependencies =
-    Action.async(validateJson[Seq[MongoRepositoryDependencies]]) { implicit request =>
-      Future.sequence(request.body.map(repositoryDependenciesRepository.update))
-        .map(_ => NoContent)
-    }
-
-  def addSluginfos =
-    Action.async(validateJson[Seq[SlugInfo]]) { implicit request =>
-      for {
-        _ <- Future.sequence(request.body.map(slugInfoService.addSlugInfo))
-        _ <- slugInfoService.updateMetadata()
-      } yield NoContent
-    }
-
-  def addBobbyRulesSummaries =
-    Action.async(validateJson[Seq[BobbyRulesSummary]]) { implicit request =>
-      Future.sequence(request.body.map(bobbyRulesSummaryRepo.add))
+    Action.async(validateJson[List[MongoLatestVersion]]) { implicit request =>
+      request.body.traverse(latestVersionRepository.update)
         .map(_ => NoContent)
     }
 
@@ -86,15 +67,51 @@ class IntegrationTestController @Inject()(
         .map(_ => NoContent)
     }
 
-  def deleteDependencies =
+  def addDependencies =
+    Action.async(validateJson[List[MongoRepositoryDependencies]]) { implicit request =>
+      request.body.traverse(repositoryDependenciesRepository.update)
+        .map(_ => NoContent)
+    }
+
+ def deleteDependencies =
     Action.async {
       repositoryDependenciesRepository.clearAllData
         .map(_ => NoContent)
     }
 
+  def addSluginfos =
+    Action.async(validateJson[List[SlugInfoWithFlags]]) { implicit request =>
+      request.body.traverse { slugInfoWithFlag =>
+        def updateFlag(slugInfoWithFlag: SlugInfoWithFlags, flag: SlugInfoFlag, toSet: SlugInfoWithFlags => Boolean): Future[Unit] =
+          if (toSet(slugInfoWithFlag))
+            deploymentsRepo.setFlag(flag, slugInfoWithFlag.slugInfo.name, slugInfoWithFlag.slugInfo.version)
+          else
+            Future(())
+        for {
+          _ <- slugInfoService.addSlugInfo(slugInfoWithFlag.slugInfo)
+          _ <- updateFlag(slugInfoWithFlag, SlugInfoFlag.Latest      , _.latest      )
+          _ <- updateFlag(slugInfoWithFlag, SlugInfoFlag.Production  , _.production  )
+          _ <- updateFlag(slugInfoWithFlag, SlugInfoFlag.QA          , _.qa          )
+          _ <- updateFlag(slugInfoWithFlag, SlugInfoFlag.Staging     , _.staging     )
+          _ <- updateFlag(slugInfoWithFlag, SlugInfoFlag.Development , _.development )
+          _ <- updateFlag(slugInfoWithFlag, SlugInfoFlag.ExternalTest, _.externalTest)
+          _ <- updateFlag(slugInfoWithFlag, SlugInfoFlag.Integration , _.integration )
+          _ <- derivedViewsService.generateAllViews()
+        } yield ()
+      }.map(_ => NoContent)
+    }
+
   def deleteSluginfos =
     Action.async {
-      slugInfoRepo.clearAllData
+      for {
+        _ <- slugInfoRepo.clearAllData
+        _ <- derivedServiceDependenciesRepository.collection.deleteMany(BsonDocument()).toFuture
+      } yield NoContent
+    }
+
+  def addBobbyRulesSummaries =
+    Action.async(validateJson[List[BobbyRulesSummary]]) { implicit request =>
+      request.body.traverse(bobbyRulesSummaryRepo.add)
         .map(_ => NoContent)
     }
 
@@ -106,17 +123,43 @@ class IntegrationTestController @Inject()(
 
   def deleteAll =
     Action.async {
-      Future.sequence(List(
+      List(
           latestVersionRepository.clearAllData
         , repositoryDependenciesRepository.clearAllData
         , slugInfoRepo.clearAllData
         , bobbyRulesSummaryRepo.clearAllData
         , deploymentsRepo.clearAllData
-        )).map(_ => NoContent)
+        , derivedServiceDependenciesRepository.collection.deleteMany(BsonDocument()).toFuture
+        ).sequence
+         .map(_ => NoContent)
     }
 
-  def createDerivedViews =
-    Action.async {
-      derivedViewsService.generateAllViews().map(_ => NoContent)
+  case class SlugInfoWithFlags(
+    slugInfo    : SlugInfo,
+    latest      : Boolean,
+    production  : Boolean,
+    qa          : Boolean,
+    staging     : Boolean,
+    development : Boolean,
+    externalTest: Boolean,
+    integration : Boolean
+  )
+
+  object SlugInfoWithFlags {
+    import play.api.libs.functional.syntax._
+    import play.api.libs.json.__
+
+    val reads: Reads[SlugInfoWithFlags] = {
+        implicit val sif = ApiSlugInfoFormats.slugInfoFormat
+        ( (__                 ).read[SlugInfo]
+        ~ (__ \ "latest"      ).read[Boolean]
+        ~ (__ \ "production"  ).read[Boolean]
+        ~ (__ \ "qa"          ).read[Boolean]
+        ~ (__ \ "staging"     ).read[Boolean]
+        ~ (__ \ "development" ).read[Boolean]
+        ~ (__ \ "externalTest").read[Boolean]
+        ~ (__ \ "integration" ).read[Boolean]
+        )(SlugInfoWithFlags.apply _)
     }
+  }
 }
