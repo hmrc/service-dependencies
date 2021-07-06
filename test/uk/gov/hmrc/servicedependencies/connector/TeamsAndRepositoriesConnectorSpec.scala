@@ -136,7 +136,7 @@ class TeamsAndRepositoriesConnectorSpec
 
   private def stubServices() =
     wireMock.stub(
-      get(urlEqualTo(s"/api/services?teamDetails=true"))
+      get(urlEqualTo(s"/api/repository_teams"))
         .willReturn(
           aResponse()
             .withStatus(200)
