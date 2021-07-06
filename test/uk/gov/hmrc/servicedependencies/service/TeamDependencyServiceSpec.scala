@@ -75,7 +75,7 @@ class TeamDependencyServiceSpec extends AnyWordSpec with Matchers with MockitoSu
       implicit val hc: HeaderCarrier = new HeaderCarrier()
       val team = new Team("foo", Map("Service" -> Seq("foo-service")))
 
-      when(mockTeamsAndReposConnector.getTeamDetails("foo"))
+      when(mockTeamsAndReposConnector.getTeam("foo"))
         .thenReturn(Future.successful(team))
 
       when(mockLatestVersionRepository.getAllEntries)

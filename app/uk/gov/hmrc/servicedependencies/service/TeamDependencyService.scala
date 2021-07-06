@@ -39,13 +39,13 @@ class TeamDependencyService @Inject()(
 
   def findAllDepsForTeam(teamName: String)(implicit hc: HeaderCarrier): Future[Seq[Dependencies]] =
     for {
-      (teamDetails, githubDeps) <- ( teamsAndReposConnector.getTeamDetails(teamName)
-                                   , repositoryDependenciesService.getDependencyVersionsForAllRepositories
-        ).mapN { case (td, gh) => (td, gh) }
-      libs                      =  teamDetails.libraries.flatMap(l => githubDeps.find(_.repositoryName == l))
-      services                  =  teamDetails.services.flatMap(s => githubDeps.find(_.repositoryName == s))
-      latestVersions            <- latestVersionRepository.getAllEntries
-      updatedServices           <- services.toList.traverse(dep => replaceServiceDependencies(dep, latestVersions))
+      (team, githubDeps) <- ( teamsAndReposConnector.getTeam(teamName)
+                            , repositoryDependenciesService.getDependencyVersionsForAllRepositories
+                            ).mapN { case (t, gh) => (t, gh) }
+      libs               =  team.libraries.flatMap(l => githubDeps.find(_.repositoryName == l))
+      services           =  team.services.flatMap(s => githubDeps.find(_.repositoryName == s))
+      latestVersions     <- latestVersionRepository.getAllEntries
+      updatedServices    <- services.toList.traverse(dep => replaceServiceDependencies(dep, latestVersions))
     } yield libs  ++ updatedServices
 
   protected[service] def replaceServiceDependencies(dependencies: Dependencies, latestVersions: Seq[MongoLatestVersion]): Future[Dependencies] =
@@ -60,11 +60,11 @@ class TeamDependencyService @Inject()(
   )(implicit hc: HeaderCarrier
   ): Future[Map[String, Seq[Dependency]]] =
     for {
-      teamDetails <- teamsAndReposConnector.getTeamDetails(teamName)
+      team           <- teamsAndReposConnector.getTeam(teamName)
       latestVersions <- latestVersionRepository.getAllEntries
-      res         <- teamDetails.services.toList.traverse { serviceName =>
-                       slugDependenciesService.curatedLibrariesOfSlug(serviceName, flag, latestVersions)
-                         .map(_.map(serviceName -> _))
-                     }
+      res            <- team.services.toList.traverse { serviceName =>
+                          slugDependenciesService.curatedLibrariesOfSlug(serviceName, flag, latestVersions)
+                            .map(_.map(serviceName -> _))
+                        }
     } yield res.collect { case Some(kv) => kv }.toMap
 }
