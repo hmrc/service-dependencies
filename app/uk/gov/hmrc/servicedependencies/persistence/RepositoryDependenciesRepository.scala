@@ -65,7 +65,7 @@ class RepositoryDependenciesRepository @Inject()(
           .replaceOne(
               filter      = equal("repositoryName", repositoryLibraryDependencies.repositoryName)
             , replacement = repositoryLibraryDependencies
-            , options     = ReplaceOptions().upsert(true)
+            , options     = ReplaceOptions().upsert(true).collation(caseInsensitiveCollation)
             )
           .toFuture
           .map(_ => repositoryLibraryDependencies)
