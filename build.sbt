@@ -4,7 +4,7 @@ import uk.gov.hmrc.sbtdistributables.SbtDistributablesPlugin
 val silencerVersion = "1.7.5"
 
 lazy val microservice = Project("service-dependencies", file("."))
-  .enablePlugins(play.sbt.PlayScala, SbtAutoBuildPlugin, SbtGitVersioning, SbtDistributablesPlugin)
+  .enablePlugins(play.sbt.PlayScala, SbtDistributablesPlugin)
   .disablePlugins(JUnitXmlReportPlugin) //Required to prevent https://github.com/scalatest/scalatest/issues/1427
   .settings(majorVersion := 2)
   .settings(SbtDistributablesPlugin.publishingSettings: _*)

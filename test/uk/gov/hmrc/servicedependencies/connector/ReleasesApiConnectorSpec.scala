@@ -21,10 +21,9 @@ import org.scalatest.BeforeAndAfterAll
 import org.scalatest.concurrent.{IntegrationPatience, ScalaFutures}
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
-import org.scalatestplus.play.guice.GuiceOneAppPerSuite
 import play.api.libs.json.{JsSuccess, Json}
-import uk.gov.hmrc.http.{HeaderCarrier, HttpClient}
-import uk.gov.hmrc.servicedependencies.WireMockConfig
+import uk.gov.hmrc.http.HeaderCarrier
+import uk.gov.hmrc.http.test.{HttpClientSupport, WireMockSupport}
 import uk.gov.hmrc.servicedependencies.config.ReleasesApiConfig
 import uk.gov.hmrc.servicedependencies.connector.ReleasesApiConnector.Environment
 
@@ -32,31 +31,29 @@ import scala.concurrent.ExecutionContext.Implicits.global
 
 class ReleasesApiConnectorSpec
   extends AnyWordSpec
-  with Matchers
-  with ScalaFutures
-  with BeforeAndAfterAll
-  with GuiceOneAppPerSuite
-  with IntegrationPatience {
+     with Matchers
+     with ScalaFutures
+     with BeforeAndAfterAll
+     with IntegrationPatience
+     with WireMockSupport
+     with HttpClientSupport {
 
   implicit val hc = HeaderCarrier()
 
-  val wireMock = new WireMockConfig()
-  println(wireMock.stubPort)
-
-  private val httpClient = app.injector.instanceOf[HttpClient]
-
   val config = new ReleasesApiConfig(null) {
-    override lazy val serviceUrl: String = s"http://localhost:${wireMock.stubPort}"
+    override lazy val serviceUrl: String = wireMockUrl
   }
   val connector = new ReleasesApiConnector(httpClient, config)
 
+  override lazy val resetWireMockMappings = false
+
   override protected def beforeAll(): Unit = {
-    wireMock.start()
+    super.beforeAll()
     stubWhatsRunningWhere()
   }
 
   "Retrieving whatsrunningwhere" should {
-    "download whatsrunning where data " in {
+    "download whatsrunning where data" in {
       val res = connector.getWhatIsRunningWhere.futureValue
       res.length shouldBe 5
     }
@@ -76,16 +73,8 @@ class ReleasesApiConnectorSpec
   }
 
   def stubWhatsRunningWhere() =
-    wireMock.stub(
+    stubFor(
       get(urlEqualTo("/releases-api/whats-running-where"))
-        .willReturn(
-          aResponse()
-            .withStatus(200)
-            .withBody(loadFileAsString(s"/releases-api/whatsrunningwhere.json"))
-        )
+        .willReturn(aResponse().withBodyFile("/releases-api/whatsrunningwhere.json"))
     )
-
-  private def loadFileAsString(filename: String): String =
-    scala.io.Source.fromInputStream(getClass.getResourceAsStream(filename)).mkString
-
 }

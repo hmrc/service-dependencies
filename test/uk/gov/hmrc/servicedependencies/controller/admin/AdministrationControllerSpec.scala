@@ -19,7 +19,8 @@ package uk.gov.hmrc.servicedependencies.controller.admin
 import org.mockito.ArgumentMatchers.any
 import org.mockito.MockitoSugar
 import org.scalatest.concurrent.{IntegrationPatience, ScalaFutures}
-import org.scalatest.{BeforeAndAfterEach, OptionValues}
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpec
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
 import uk.gov.hmrc.servicedependencies.model.MongoRepositoryDependencies
@@ -28,20 +29,16 @@ import uk.gov.hmrc.servicedependencies.service.DependencyDataUpdatingService
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
-import org.scalatest.freespec.AnyFreeSpec
-import org.scalatest.matchers.should.Matchers
 
 class AdministrationControllerSpec
-    extends AnyFreeSpec
-    with BeforeAndAfterEach
-    with Matchers
-    with MockitoSugar
-    with ScalaFutures
-    with IntegrationPatience
-    with OptionValues {
+  extends AnyWordSpec
+     with Matchers
+     with MockitoSugar
+     with ScalaFutures
+     with IntegrationPatience {
 
-  "reloadLibraryDependenciesForAllRepositories" - {
-    "should call the reloadLibraryDependencyDataForAllRepositories on the service" in {
+  "reloadLibraryDependenciesForAllRepositories" should {
+    "call the reloadLibraryDependencyDataForAllRepositories on the service" in {
       val boot = Boot.init
 
       when(boot.mockDependencyDataUpdatingService.reloadCurrentDependenciesDataForAllRepositories(any()))

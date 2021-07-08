@@ -22,41 +22,40 @@ import com.github.tomakehurst.wiremock.client.WireMock._
 import org.mockito.MockitoSugar
 import org.scalatest.concurrent.{IntegrationPatience, ScalaFutures}
 import org.scalatest.BeforeAndAfterAll
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpec
 import org.scalatestplus.play.guice.GuiceOneAppPerSuite
 import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
 import uk.gov.hmrc.http.HeaderCarrier
-import uk.gov.hmrc.servicedependencies.WireMockConfig
+import uk.gov.hmrc.http.test.WireMockSupport
 import uk.gov.hmrc.servicedependencies.model.{BobbyRule, BobbyVersionRange}
-import org.scalatest.freespec.AnyFreeSpec
-import org.scalatest.matchers.must.Matchers
 
 class ServiceConfigsConnectorSpec
-    extends AnyFreeSpec
-    with Matchers
-    with ScalaFutures
-    with IntegrationPatience
-    with BeforeAndAfterAll
-    with GuiceOneAppPerSuite
-    with MockitoSugar {
+  extends AnyWordSpec
+     with Matchers
+     with ScalaFutures
+     with IntegrationPatience
+     with BeforeAndAfterAll
+     with GuiceOneAppPerSuite
+     with MockitoSugar
+     with WireMockSupport {
 
   implicit val hc: HeaderCarrier = HeaderCarrier()
 
-  val wireMock = new WireMockConfig()
+  override lazy val resetWireMockMappings = false
 
   override protected def beforeAll(): Unit = {
-    wireMock.start()
+    super.beforeAll()
 
     stubGetBobbyRules()
   }
 
-  override protected def afterAll(): Unit =
-    wireMock.stop()
-
   override def fakeApplication(): Application =
     new GuiceApplicationBuilder()
       .configure(
-        "microservice.services.service-configs.port" -> wireMock.stubPort,
+        "microservice.services.service-configs.host" -> wireMockHost,
+        "microservice.services.service-configs.port" -> wireMockPort,
         "play.http.requestHandler"                   -> "play.api.http.DefaultHttpRequestHandler",
         "metrics.jvm"                                -> false
       )
@@ -64,7 +63,7 @@ class ServiceConfigsConnectorSpec
 
   private val connector = app.injector.instanceOf[ServiceConfigsConnector]
 
-  "Retrieving bobby rules" - {
+  "Retrieving bobby rules" should {
     "correctly parse json response" in {
       val deprecatedDependencies = connector.getBobbyRules.futureValue
 
@@ -84,20 +83,16 @@ class ServiceConfigsConnectorSpec
         from         = LocalDate.of(2017, 5, 1)
       )
 
-      deprecatedDependencies.asMap must contain theSameElementsAs Map(
+      deprecatedDependencies.asMap should contain theSameElementsAs Map(
         (sbtAutoBuild.organisation, sbtAutoBuild.name) -> List(sbtAutoBuild),
-        (playFrontend.organisation, playFrontend.name) -> List(playFrontend))
+        (playFrontend.organisation, playFrontend.name) -> List(playFrontend)
+      )
     }
   }
 
-  private def loadFileAsString(filename: String): String =
-    scala.io.Source.fromInputStream(getClass.getResourceAsStream(filename)).mkString
-
   private def stubGetBobbyRules(): Unit =
-    wireMock.stub(
+    stubFor(
       get(urlEqualTo(s"/bobby/rules"))
-        .willReturn(
-          aResponse()
-            .withStatus(200)
-            .withBody(loadFileAsString(s"/service-configs/bobby-rules.json"))))
+        .willReturn(aResponse().withBodyFile(s"/service-configs/bobby-rules.json"))
+    )
 }

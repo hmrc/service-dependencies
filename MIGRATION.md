@@ -81,9 +81,11 @@ db.getCollection('DERIVED-slug-dependencies').deleteMany({"version": { $regex: "
 
 * Rollback
 
+```javascript
 db.getCollection("slugInfos").drop()
 db.getCollection("deployments").drop()
 db.getCollection("DERIVED-slug-dependencies").drop()
 db.getCollection("DERIVED-artefact-lookup").drop()
 
 db.getCollection("slugInfos-bak").copyTo("slugInfos")
+```
