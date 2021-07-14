@@ -61,6 +61,7 @@ class SlugDependenciesServiceSpec extends AnyFreeSpec with MockitoSugar with Mat
         , mockServiceDependenciesConfig
         , mockLatestVersionRepository
         , mockServiceConfigsConnector
+        , new DependencyGraphParser()
         )
 
     def stubCuratedLibrariesOf(libraryNames: DependencyConfig*): Unit =

@@ -19,8 +19,8 @@ package uk.gov.hmrc.servicedependencies.model
 import play.api.libs.json.{__, JsError, JsResult, JsString, JsSuccess, Format, OFormat}
 import play.api.libs.functional.syntax._
 
-
 sealed trait DependencyScope { def asString: String }
+
 object DependencyScope {
   case object Compile extends DependencyScope { val asString = "compile" }
   case object Test    extends DependencyScope { val asString = "test"    }

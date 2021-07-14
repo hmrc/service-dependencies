@@ -52,9 +52,9 @@ object DependencyGraphParser {
 
   sealed trait Token
 
-  case class Node(name: String) extends Token {
+  case class Node(value: String) extends Token {
     private lazy val Array(g, a1, v) =
-      name.split(":")
+      value.split(":")
     private lazy val (a, sv) =
       a1 match {
         case artefactRegex(a, sv) => (a, Some(sv))
@@ -78,7 +78,7 @@ object DependencyGraphParser {
     def dependencies: Seq[Node] =
       nodes.toList
         .filterNot(n => evictions.exists(_.old == n))
-        .sortBy(_.name)
+        .sortBy(_.value)
 
     private lazy val arrowsMap: Map[Node, Node] =
       arrows.map(a => a.to -> a.from).toMap

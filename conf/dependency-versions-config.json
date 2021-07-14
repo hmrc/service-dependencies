@@ -162,7 +162,9 @@
     { "group": "uk.gov.hmrc", "name": "worldpay-report-generator" },
     { "group": "uk.gov.hmrc", "name": "zap-automation" },
     { "group": "uk.gov.hmrc.rehoming", "name": "java-auth-filter" },
-    { "group": "uk.gov.hmrc.rehoming", "name": "java-spring-filters" }
+    { "group": "uk.gov.hmrc.rehoming", "name": "java-spring-filters" },
+    { "group": "uk.gov.hmrc.mongo", "name":  "hmrc-mongo-play-27" },
+    { "group": "uk.gov.hmrc.mongo", "name":  "hmrc-mongo-play-28" }
   ],
   "others": [
     {
