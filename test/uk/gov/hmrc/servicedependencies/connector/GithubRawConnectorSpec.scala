@@ -54,7 +54,7 @@ class GithubRawConnectorSpec
            """.stripMargin
 
       stubFor(
-        get(urlEqualTo("/github/raw/hmrc/deploy-with-docktor/master/decommissioning/microservices-to-decommission.yaml"))
+        get(urlEqualTo("/github/raw/hmrc/decommissioning/blob/main/decommissioned-microservices.yaml"))
           .willReturn(aResponse().withBody(body))
       )
 
