@@ -112,7 +112,7 @@ class SlugDependenciesService @Inject()(
 
         Version.parse(graphDependency.version).map { currentVersion =>
           Dependency(
-              name           = graphDependency.artefact // graphDependency.name is the full unparsed string, not the artifact's name
+              name           = graphDependency.artefact
             , group          = graphDependency.group
             , currentVersion = currentVersion
             , latestVersion  = latestVersion

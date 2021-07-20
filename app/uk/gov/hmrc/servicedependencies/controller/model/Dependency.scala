@@ -33,10 +33,6 @@ case class Dependency(
 
 object Dependency {
 
-  private val scopeWrites = new Writes[DependencyScope] {
-    override def writes(s: DependencyScope): JsValue = JsString(s.asString)
-  }
-
   val writes: OWrites[Dependency] =
     ( (__ \ "name"               ).write[String]
     ~ (__ \ "group"              ).write[String]
@@ -44,7 +40,7 @@ object Dependency {
     ~ (__ \ "latestVersion"      ).writeNullable[Version](Version.legacyApiWrites)
     ~ (__ \ "bobbyRuleViolations").lazyWrite(Writes.seq[DependencyBobbyRule](DependencyBobbyRule.writes))
     ~ (__ \ "importBy"           ).writeNullable[ImportedBy](ImportedBy.writes)
-    ~ (__ \ "scope"              ).writeNullable[DependencyScope](scopeWrites)
+    ~ (__ \ "scope"              ).writeNullable[DependencyScope](DependencyScope.dependencyScopeFormat)
     )(unlift(Dependency.unapply))
       .transform( js =>
         js + ("isExternal" -> JsBoolean(!js("group").as[String].startsWith("uk.gov.hmrc")))
