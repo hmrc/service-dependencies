@@ -17,8 +17,8 @@
 package uk.gov.hmrc.servicedependencies.service
 
 import java.time.{LocalDate, LocalDateTime}
-
 import akka.Done
+import org.mockito.ArgumentMatchers.any
 import org.mockito.MockitoSugar
 import org.scalatest.OptionValues
 import org.scalatest.concurrent.ScalaFutures
@@ -29,8 +29,10 @@ import uk.gov.hmrc.servicedependencies.config.ServiceDependenciesConfig
 import uk.gov.hmrc.servicedependencies.config.model.{CuratedDependencyConfig, DependencyConfig}
 import uk.gov.hmrc.servicedependencies.connector.ServiceConfigsConnector
 import uk.gov.hmrc.servicedependencies.controller.model.{Dependency, DependencyBobbyRule}
+import uk.gov.hmrc.servicedependencies.model.DependencyScope.Compile
 import uk.gov.hmrc.servicedependencies.model._
 import uk.gov.hmrc.servicedependencies.persistence.LatestVersionRepository
+import uk.gov.hmrc.servicedependencies.service.DependencyGraphParser.{Arrow, DependencyGraph, Node}
 
 import scala.concurrent.Future
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -46,6 +48,7 @@ class SlugDependenciesServiceSpec extends AnyFreeSpec with MockitoSugar with Mat
     val mockServiceDependenciesConfig = mock[ServiceDependenciesConfig]
     val mockLatestVersionRepository   = mock[LatestVersionRepository]
     val mockServiceConfigsConnector   = mock[ServiceConfigsConnector]
+    val mockGraphParser               = mock[DependencyGraphParser]
 
     val mockCache = new AsyncCacheApi {
       override def set(key: String, value: Any, expiration: Duration): Future[Done] = Future.successful(Done)
@@ -61,6 +64,7 @@ class SlugDependenciesServiceSpec extends AnyFreeSpec with MockitoSugar with Mat
         , mockServiceDependenciesConfig
         , mockLatestVersionRepository
         , mockServiceConfigsConnector
+        , mockGraphParser
         )
 
     def stubCuratedLibrariesOf(libraryNames: DependencyConfig*): Unit =
@@ -119,8 +123,8 @@ class SlugDependenciesServiceSpec extends AnyFreeSpec with MockitoSugar with Mat
         )
 
       underTest.curatedLibrariesOfSlug(SlugName, flag).futureValue.value should contain theSameElementsAs Seq(
-        Dependency(name = Dependency1.artifact, group = Dependency1.group, currentVersion = Version(Dependency1.version), latestVersion = None, bobbyRuleViolations = Nil),
-        Dependency(name = Dependency3.artifact, group = Dependency3.group, currentVersion = Version(Dependency3.version), latestVersion = None, bobbyRuleViolations = Nil)
+        Dependency(name = Dependency1.artifact, group = Dependency1.group, currentVersion = Version(Dependency1.version), latestVersion = None, bobbyRuleViolations = Nil, scope = Some(Compile)),
+        Dependency(name = Dependency3.artifact, group = Dependency3.group, currentVersion = Version(Dependency3.version), latestVersion = None, bobbyRuleViolations = Nil, scope = Some(Compile))
       )
     }
 
@@ -165,9 +169,9 @@ class SlugDependenciesServiceSpec extends AnyFreeSpec with MockitoSugar with Mat
           )
 
         underTest.curatedLibrariesOfSlug(SlugName, flag).futureValue.value should contain theSameElementsAs Seq(
-          Dependency(name = Dependency1.artifact, group = Dependency1.group, currentVersion = Version(Dependency1.version), latestVersion = Some(LatestVersionOfDependency1), bobbyRuleViolations = Nil),
-          Dependency(name = Dependency2.artifact, group = Dependency2.group, currentVersion = Version(Dependency2.version), latestVersion = None, bobbyRuleViolations = Nil),
-          Dependency(name = Dependency3.artifact, group = Dependency3.group, currentVersion = Version(Dependency3.version), latestVersion = Some(LatestVersionOfDependency3), bobbyRuleViolations = Nil)
+          Dependency(name = Dependency1.artifact, group = Dependency1.group, currentVersion = Version(Dependency1.version), latestVersion = Some(LatestVersionOfDependency1), bobbyRuleViolations = Nil, scope = Some(Compile)),
+          Dependency(name = Dependency2.artifact, group = Dependency2.group, currentVersion = Version(Dependency2.version), latestVersion = None, bobbyRuleViolations = Nil, scope = Some(Compile)),
+          Dependency(name = Dependency3.artifact, group = Dependency3.group, currentVersion = Version(Dependency3.version), latestVersion = Some(LatestVersionOfDependency3), bobbyRuleViolations = Nil, scope = Some(Compile))
         )
       }
 
@@ -218,12 +222,51 @@ class SlugDependenciesServiceSpec extends AnyFreeSpec with MockitoSugar with Mat
           )
 
         underTest.curatedLibrariesOfSlug(SlugName, flag).futureValue.value should contain theSameElementsAs Seq(
-          Dependency(name = Dependency1.artifact, group = Dependency1.group, currentVersion = Version(Dependency1.version), latestVersion = None, bobbyRuleViolations = List(bobbyRuleViolation1)),
-          Dependency(name = Dependency2.artifact, group = Dependency2.group, currentVersion = Version(Dependency2.version), latestVersion = None, bobbyRuleViolations = Nil),
-          Dependency(name = Dependency3.artifact, group = Dependency3.group, currentVersion = Version(Dependency3.version), latestVersion = None, bobbyRuleViolations = List(bobbyRuleViolation1, bobbyRuleViolation2))
+          Dependency(name = Dependency1.artifact, group = Dependency1.group, currentVersion = Version(Dependency1.version), latestVersion = None, bobbyRuleViolations = List(bobbyRuleViolation1), scope = Some(Compile)),
+          Dependency(name = Dependency2.artifact, group = Dependency2.group, currentVersion = Version(Dependency2.version), latestVersion = None, bobbyRuleViolations = Nil, scope = Some(Compile)),
+          Dependency(name = Dependency3.artifact, group = Dependency3.group, currentVersion = Version(Dependency3.version), latestVersion = None, bobbyRuleViolations = List(bobbyRuleViolation1, bobbyRuleViolation2), scope = Some(Compile))
         )
       }
     }
+  }
+
+  "gets dependencies from graphs where available" in new Fixture {
+
+    val nodeHmrc       = Node("uk.gov.hmrc:hmrc-mongo:1.1.0")
+    val nodeNonHmrc    = Node("org.foo:bar:1.0.6")
+    val nodeTransitive = Node("org.foo:baz:1.1.1")
+
+    val nodes = Set(nodeHmrc, nodeNonHmrc, nodeTransitive)
+    val arrows = Set(
+      Arrow(from = nodeNonHmrc, to = nodeTransitive)
+    )
+
+    val graph = new DependencyGraph(nodes, arrows, Set.empty)
+    when(mockGraphParser.parse(any[String])).thenReturn(graph)
+
+    stubLatestLibraryVersionLookupSuccessfullyReturns(Seq.empty)
+
+    val bobbyRuleViolation1 = DependencyBobbyRule(reason = "a reason", from = LocalDate.now(), range = BobbyVersionRange("(,6.6.6)"))
+    stubBobbyRulesViolations(Map(
+      (nodeTransitive.group, nodeTransitive.artefact) -> List(bobbyRuleViolation1)
+    ))
+
+    when(mockSlugInfoService.getSlugInfo(SlugName, SlugInfoFlag.Latest))
+      .thenReturn(
+        Future.successful(
+          Some(slugInfo(
+              withName         = SlugName
+            , withVersion      = SlugVersion
+            , withDependencies = List.empty
+            ).copy(dependencyDotCompile = "non-blank value, wont actually be parsed as we're mocking the response")
+          )
+        )
+      )
+
+    underTest.curatedLibrariesOfSlug(SlugName, SlugInfoFlag.Latest).futureValue.value.filter(_.scope.contains(Compile)) should contain theSameElementsAs Seq(
+        Dependency(name = nodeHmrc.artefact, group = nodeHmrc.group, currentVersion = Version(nodeHmrc.version), latestVersion = None, bobbyRuleViolations = Nil, importBy = None, scope = Some(Compile))
+      , Dependency(name = nodeTransitive.artefact, group = nodeTransitive.group, currentVersion = Version(nodeTransitive.version), latestVersion = None, bobbyRuleViolations = List(bobbyRuleViolation1), scope = Some(Compile))
+    )
   }
 }
 

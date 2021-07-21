@@ -20,8 +20,8 @@ import javax.inject.{Inject, Singleton}
 import uk.gov.hmrc.servicedependencies.config.ServiceDependenciesConfig
 import uk.gov.hmrc.servicedependencies.config.model.CuratedDependencyConfig
 import uk.gov.hmrc.servicedependencies.connector.ServiceConfigsConnector
-import uk.gov.hmrc.servicedependencies.controller.model.Dependency
-import uk.gov.hmrc.servicedependencies.model.{MongoLatestVersion, SlugInfo, SlugInfoFlag, Version}
+import uk.gov.hmrc.servicedependencies.controller.model.{Dependency, ImportedBy}
+import uk.gov.hmrc.servicedependencies.model.{BobbyRules, DependencyScope, MongoLatestVersion, SlugInfo, SlugInfoFlag, Version}
 import uk.gov.hmrc.servicedependencies.persistence.LatestVersionRepository
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -33,6 +33,7 @@ class SlugDependenciesService @Inject()(
 , serviceDependenciesConfig: ServiceDependenciesConfig
 , latestVersionRepository  : LatestVersionRepository
 , serviceConfigsConnector  : ServiceConfigsConnector
+, graphParser              : DependencyGraphParser
 )(implicit ec: ExecutionContext
 ) {
 
@@ -50,8 +51,9 @@ class SlugDependenciesService @Inject()(
 
   def curatedLibrariesOfSlug(name: String, flag: SlugInfoFlag, latestVersions: Seq[MongoLatestVersion]): Future[Option[List[Dependency]]] =
     slugInfoService.getSlugInfo(name, flag).flatMap {
-      case None           => Future.successful(None)
-      case Some(slugInfo) => curatedLibrariesOfSlugInfo(slugInfo, latestVersions).map(Some.apply)
+      case None                                                   => Future.successful(None)
+      case Some(slugInfo) if(slugInfo.dependencyDotCompile == "") => curatedLibrariesOfSlugInfo(slugInfo, latestVersions).map(Some.apply)
+      case Some(slugInfo)                                         => curatedLibrariesOfSlugInfoFromGraph(slugInfo, latestVersions).map(Some.apply)
     }
 
   private def curatedLibrariesOfSlugInfo(slugInfo: SlugInfo, latestVersions: Seq[MongoLatestVersion]): Future[List[Dependency]] =
@@ -75,6 +77,7 @@ class SlugDependenciesService @Inject()(
                                                             , name    = slugDependency.artifact
                                                             , version = currentVersion
                                                             )
+                                  , scope                = Some(DependencyScope.Compile)
                                   )
                               }
                           }
@@ -86,4 +89,56 @@ class SlugDependenciesService @Inject()(
                             dependency.bobbyRuleViolations.nonEmpty
                           )
     } yield filtered
+
+  private def curatedLibrariesOfSlugInfoFromGraph(slugInfo: SlugInfo, latestVersions: Seq[MongoLatestVersion]) : Future[List[Dependency]] = {
+    for {
+      bobbyRules <- serviceConfigsConnector.getBobbyRules
+      compile    =  curatedLibrariesOfSlugInfoFromGraph(slugInfo, latestVersions, bobbyRules, DependencyScope.Compile)
+      test       =  curatedLibrariesOfSlugInfoFromGraph(slugInfo, latestVersions, bobbyRules, DependencyScope.Test).filterNot(n => compile.exists(_.name == n.name))
+      build      =  curatedLibrariesOfSlugInfoFromGraph(slugInfo, latestVersions, bobbyRules, DependencyScope.Build)
+    } yield compile ++ test ++ build
+  }
+
+  private def curatedLibrariesOfSlugInfoFromGraph(slugInfo: SlugInfo, latestVersions: Seq[MongoLatestVersion], bobbyRules: BobbyRules, scope: DependencyScope = DependencyScope.Compile): List[Dependency] = {
+    val graph = graphParser.parse(dotFileForScope(slugInfo, scope))
+    graph
+      .dependencies
+      .filterNot(_.artefact == slugInfo.name)
+      .flatMap { graphDependency =>
+
+        val latestVersion = latestVersions
+            .find(v => v.group == graphDependency.group && v.name == graphDependency.artefact)
+            .map(_.version)
+
+        Version.parse(graphDependency.version).map { currentVersion =>
+          Dependency(
+              name           = graphDependency.artefact
+            , group          = graphDependency.group
+            , currentVersion = currentVersion
+            , latestVersion  = latestVersion
+            , bobbyRuleViolations = bobbyRules.violationsFor(
+                group   = graphDependency.group
+              , name    = graphDependency.artefact
+              , version = currentVersion
+            )
+            , importBy = graph.pathToRoot(graphDependency)
+              .dropRight(1) // drop root node as its just the service jar itself
+              .lastOption.map(n => ImportedBy(n.artefact, n.group, Version(n.version))) // the top level dep that imported it
+              .filterNot(d => d.name == graphDependency.artefact && d.group == graphDependency.group) // filter out non-transient deps
+            , scope = Some(scope)
+          )
+        }
+      }
+      .filter(dependency =>
+        // any hmrc library directly imported or any lib violation bobby rules anywhere in the graph
+        (dependency.importBy.isEmpty && dependency.group.startsWith("uk.gov.hmrc")) || dependency.bobbyRuleViolations.nonEmpty
+      ).toList
+  }
+
+  private def dotFileForScope(slugInfo: SlugInfo, scope: DependencyScope) : String =
+    scope match {
+      case DependencyScope.Compile => slugInfo.dependencyDotCompile
+      case DependencyScope.Test    => slugInfo.dependencyDotTest
+      case DependencyScope.Build   => slugInfo.dependencyDotBuild
+    }
 }

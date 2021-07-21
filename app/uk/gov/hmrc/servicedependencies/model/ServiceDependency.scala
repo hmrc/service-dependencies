@@ -19,8 +19,8 @@ package uk.gov.hmrc.servicedependencies.model
 import play.api.libs.json.{__, JsError, JsResult, JsString, JsSuccess, Format, OFormat}
 import play.api.libs.functional.syntax._
 
-
 sealed trait DependencyScope { def asString: String }
+
 object DependencyScope {
   case object Compile extends DependencyScope { val asString = "compile" }
   case object Test    extends DependencyScope { val asString = "test"    }
@@ -33,6 +33,12 @@ object DependencyScope {
     values
       .find(_.asString == s)
       .toRight(s"Invalid dependency scope - should be one of: ${values.map(_.asString).mkString(", ")}")
+
+  val dependencyScopeFormat: Format[DependencyScope] = Format(
+       _.validate[String].flatMap(DependencyScope.parse(_).fold(err => JsError(__, err), ds => JsSuccess(ds)))
+    ,  f => JsString(f.asString)
+  )
+
 }
 
 
@@ -120,14 +126,8 @@ trait ApiServiceDependencyFormats {
       case Left(l)  => JsError(__, l)
     }
 
-  lazy val dependencyScopeFormat: Format[DependencyScope] =
-    Format(
-      _.validate[String].flatMap(s => toResult(DependencyScope.parse(s))),
-      f => JsString(f.asString)
-    )
-
   val serviceDependencyFormat: OFormat[ServiceDependency] = {
-    implicit val dsf = dependencyScopeFormat
+    implicit val dsf = DependencyScope.dependencyScopeFormat
     ( (__ \ "slugName"    ).format[String]
     ~ (__ \ "slugVersion" ).format[String]
     ~ (__ \ "teams"       ).format[List[String]]

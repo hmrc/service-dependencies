@@ -119,7 +119,7 @@ class ServiceDependenciesController @Inject()(
     Action.async {
       (for {
          f    <- EitherT.fromOption[Future](SlugInfoFlag.parse(flag), BadRequest(s"invalid flag '$flag'"))
-         deps <- EitherT.fromOptionF(slugDependenciesService.curatedLibrariesOfSlug(name, f), NotFound(""))
+         deps <- EitherT.fromOptionF(slugDependenciesService.curatedLibrariesOfSlug(name, f), NotFound("") )
        } yield {
          implicit val dw = Dependency.writes
          Ok(Json.toJson(deps))
