@@ -92,7 +92,8 @@ class SlugInfoService @Inject()(
       activeRepos            <- teamsAndRepositoriesConnector.getAllRepositories(archived = Some(false))
                                   .map(_.map(_.name))
       decomissionedServices  <- githubRawConnector.decomissionedServices
-      inactiveServices       =  serviceNames.diff(activeRepos).toList
+      latestServices         <- deploymentRepository.getNames(SlugInfoFlag.Latest)
+      inactiveServices       =  latestServices.diff(activeRepos).toList
       allServiceDeployments  =  serviceNames.map { serviceName =>
                                   val deployments       = serviceDeploymentInfos.find(_.serviceName == serviceName).map(_.deployments)
                                   val deploymentsByFlag = List( (SlugInfoFlag.Production    , Environment.Production)

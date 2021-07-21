@@ -233,6 +233,9 @@ class SlugInfoServiceSpec
       when(boot.mockedRawGithubConnector.decomissionedServices)
         .thenReturn(Future.successful(decomissionedServices))
 
+      when(boot.mockedDeploymentRepository.getNames(SlugInfoFlag.Latest))
+        .thenReturn(Future.successful(Seq.empty))
+
       when(boot.mockedTeamsAndRepositoriesConnector.getAllRepositories(eqTo(Some(false)))(any[HeaderCarrier]))
         .thenReturn(Future.successful(Seq.empty))
 
@@ -269,6 +272,9 @@ class SlugInfoServiceSpec
 
       when(boot.mockedRawGithubConnector.decomissionedServices)
         .thenReturn(Future.successful(List.empty))
+
+      when(boot.mockedDeploymentRepository.getNames(SlugInfoFlag.Latest))
+        .thenReturn(Future.successful(knownSlugs))
 
       when(boot.mockedTeamsAndRepositoriesConnector.getAllRepositories(eqTo(Some(false)))(any[HeaderCarrier]))
         .thenReturn(Future.successful(activeServices))
