@@ -174,12 +174,12 @@ object Deployment {
   val mongoFormat: Format[Deployment] =
     ( (__ \ "name"          ).format[String]
     ~ (__ \ "version"       ).format[String]
-    ~ (__ \ "latest"        ).format[Boolean]
-    ~ (__ \ "production"    ).format[Boolean]
-    ~ (__ \ "qa"            ).format[Boolean]
-    ~ (__ \ "staging"       ).format[Boolean]
-    ~ (__ \ "development"   ).format[Boolean]
-    ~ (__ \ "external test" ).format[Boolean]
-    ~ (__ \ "integration"   ).format[Boolean]
+    ~ (__ \ "latest"        ).formatWithDefault[Boolean](false)
+    ~ (__ \ "production"    ).formatWithDefault[Boolean](false)
+    ~ (__ \ "qa"            ).formatWithDefault[Boolean](false)
+    ~ (__ \ "staging"       ).formatWithDefault[Boolean](false)
+    ~ (__ \ "development"   ).formatWithDefault[Boolean](false)
+    ~ (__ \ "external test" ).formatWithDefault[Boolean](false)
+    ~ (__ \ "integration"   ).formatWithDefault[Boolean](false)
     )(Deployment.apply, unlift(Deployment.unapply))
 }
