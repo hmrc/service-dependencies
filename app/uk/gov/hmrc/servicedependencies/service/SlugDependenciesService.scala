@@ -90,7 +90,10 @@ class SlugDependenciesService @Inject()(
                           )
     } yield filtered
 
-  private def curatedLibrariesOfSlugInfoFromGraph(slugInfo: SlugInfo, latestVersions: Seq[MongoLatestVersion]) : Future[List[Dependency]] = {
+  private def curatedLibrariesOfSlugInfoFromGraph(
+    slugInfo: SlugInfo,
+    latestVersions: Seq[MongoLatestVersion]
+  ): Future[List[Dependency]] = {
     for {
       bobbyRules <- serviceConfigsConnector.getBobbyRules
       compile    =  curatedLibrariesOfSlugInfoFromGraph(slugInfo, latestVersions, bobbyRules, DependencyScope.Compile)
@@ -99,7 +102,12 @@ class SlugDependenciesService @Inject()(
     } yield compile ++ test ++ build
   }
 
-  private def curatedLibrariesOfSlugInfoFromGraph(slugInfo: SlugInfo, latestVersions: Seq[MongoLatestVersion], bobbyRules: BobbyRules, scope: DependencyScope = DependencyScope.Compile): List[Dependency] = {
+  private def curatedLibrariesOfSlugInfoFromGraph(
+    slugInfo      : SlugInfo,
+    latestVersions: Seq[MongoLatestVersion],
+    bobbyRules    : BobbyRules,
+    scope         : DependencyScope
+  ): List[Dependency] = {
     val graph = graphParser.parse(dotFileForScope(slugInfo, scope))
     graph
       .dependencies
