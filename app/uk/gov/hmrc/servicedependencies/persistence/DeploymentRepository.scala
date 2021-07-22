@@ -172,8 +172,8 @@ case class Deployment(
 
 object Deployment {
   val mongoFormat: Format[Deployment] =
-    ( (__ \ "slugName"      ).format[String]
-    ~ (__ \ "slugVersion"   ).format[String]
+    ( (__ \ "name"          ).format[String]
+    ~ (__ \ "version"       ).format[String]
     ~ (__ \ "latest"        ).format[Boolean]
     ~ (__ \ "production"    ).format[Boolean]
     ~ (__ \ "qa"            ).format[Boolean]
