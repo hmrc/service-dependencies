@@ -79,6 +79,12 @@ class DeploymentRepository @Inject()(
       .map(_ => ())
   }
 
+  def getNames(flag: SlugInfoFlag): Future[Seq[String]] =
+    collection
+      .find(equal(flag.asString, true))
+      .map(_.slugName)
+      .toFuture()
+
   def markLatest(name: String, version: Version): Future[Unit] =
     setFlag(SlugInfoFlag.Latest, name, version)
 
