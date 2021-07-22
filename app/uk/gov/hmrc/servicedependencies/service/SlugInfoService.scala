@@ -120,6 +120,7 @@ class SlugInfoService @Inject()(
                                   }
                                 }
       _                      <- deploymentRepository.clearFlags(SlugInfoFlag.values, decomissionedServices)
+      _                      = if (inactiveServices.nonEmpty) logger.info(s"Removing latest flag from the following inactive services: ${inactiveServices.mkString(", ")}")
       _                      <- // we have found some "archived" projects which are still deployed, we will only remove the latest flag for them
                                 deploymentRepository.clearFlags(List(SlugInfoFlag.Latest), inactiveServices)
     } yield ()

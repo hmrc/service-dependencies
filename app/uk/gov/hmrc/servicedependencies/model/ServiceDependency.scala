@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.servicedependencies.model
 
-import play.api.libs.json.{__, JsError, JsResult, JsString, JsSuccess, Format, OFormat}
+import play.api.libs.json.{__, JsError, JsString, JsSuccess, Format, OFormat}
 import play.api.libs.functional.syntax._
 
 sealed trait DependencyScope { def asString: String }
@@ -119,12 +119,6 @@ trait ApiServiceDependencyFormats {
           sd.scopes.contains(DependencyScope.Build)
          )
      )
-
-  private def toResult[A](e: Either[String, A]): JsResult[A] =
-    e match {
-      case Right(r) => JsSuccess(r)
-      case Left(l)  => JsError(__, l)
-    }
 
   val serviceDependencyFormat: OFormat[ServiceDependency] = {
     implicit val dsf = DependencyScope.dependencyScopeFormat

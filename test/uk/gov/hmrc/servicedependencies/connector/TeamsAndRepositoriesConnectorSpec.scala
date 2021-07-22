@@ -19,8 +19,7 @@ package uk.gov.hmrc.servicedependencies.connector
 import java.time.Instant
 
 import com.github.tomakehurst.wiremock.client.WireMock._
-import org.mockito.MockitoSugar
-import org.scalatest.BeforeAndAfterAll
+import org.scalatest.OptionValues
 import org.scalatest.concurrent.{IntegrationPatience, ScalaFutures}
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
@@ -34,25 +33,15 @@ import uk.gov.hmrc.servicedependencies.connector.model.RepositoryInfo
 class TeamsAndRepositoriesConnectorSpec
   extends AnyWordSpec
      with Matchers
+     with OptionValues
      with ScalaFutures
      with IntegrationPatience
-     with BeforeAndAfterAll
      with GuiceOneAppPerSuite
-     with MockitoSugar
      with WireMockSupport {
 
   implicit val hc = HeaderCarrier()
 
   override lazy val resetWireMockMappings = false
-
-  override protected def beforeAll(): Unit = {
-    super.beforeAll()
-
-    stubRepositories("test-repo")
-    stubRepositoriesWith404("non-existing-test-repo")
-    stubAllRepositories()
-    stubServices()
-  }
 
   override def fakeApplication(): Application =
     new GuiceApplicationBuilder()
@@ -65,28 +54,46 @@ class TeamsAndRepositoriesConnectorSpec
 
   private val connector = app.injector.instanceOf[TeamsAndRepositoriesConnector]
 
-
-  "Retrieving a repository" should {
+  "TeamsAndRepositoriesConnector.getRepository" should {
     "correctly parse json response" in {
+      stubFor(
+        get(urlEqualTo(s"/api/repositories/test-repo"))
+          .willReturn(aResponse().withBodyFile("/teams-and-repositories/repository.json"))
+      )
       val repository = connector.getRepository("test-repo").futureValue
-      repository.get.teamNames shouldBe Seq("PlatOps", "Webops")
+      repository.value.teamNames shouldBe Seq("PlatOps", "Webops")
     }
 
     "handle 404 - repository not found" in {
+      stubFor(
+        get(urlEqualTo(s"/api/repositories/non-existing-test-repo"))
+          .willReturn(aResponse().withStatus(404))
+      )
+
       val repository = connector.getRepository("non-existing-test-repo").futureValue
       repository shouldBe None
     }
   }
 
-  "Retrieving a list of teams for all services" should {
+  "TeamsAndRepositoriesConnector.getTeamsForService" should {
     "correctly parse json response" in {
+      stubFor(
+        get(urlEqualTo("/api/repository_teams"))
+          .willReturn(aResponse().withBodyFile("/teams-and-repositories/service-teams.json"))
+      )
+
       val teams = connector.getTeamsForServices.futureValue
       teams shouldBe TeamsForServices(Map("test-repo" -> Seq("PlatOps", "WebOps"), "another-repo" -> Seq("PlatOps")))
     }
   }
 
-  "Retrieving a list of all repositories" should {
+  "TeamsAndRepositoriesConnector.getAllRepositories" should {
     "correctly parse json response" in {
+      stubFor(
+        get(urlEqualTo("/api/repositories"))
+          .willReturn(aResponse().withBodyFile("/teams-and-repositories/repositories.json"))
+      )
+
       val repositories = connector.getAllRepositories(archived = None).futureValue
       repositories shouldBe List(
         RepositoryInfo(
@@ -104,33 +111,19 @@ class TeamsAndRepositoriesConnectorSpec
           , language      = None
           )
         )
+
+      verify(getRequestedFor(urlEqualTo("/api/repositories")))
+    }
+
+    "correctly pass query parameter" in {
+      stubFor(
+        get(urlEqualTo("/api/repositories?archived=false"))
+          .willReturn(aResponse().withBodyFile("/teams-and-repositories/repositories.json"))
+      )
+
+      connector.getAllRepositories(archived = Some(false)).futureValue
+
+      verify(getRequestedFor(urlEqualTo("/api/repositories?archived=false")))
     }
   }
-
-  private def stubRepositories(repositoryName: String) =
-    stubFor(
-      get(urlEqualTo(s"/api/repositories/$repositoryName"))
-        .willReturn(aResponse().withBodyFile("/teams-and-repositories/repository.json"))
-    )
-
-  private def stubRepositoriesWith404(repositoryName: String) =
-    stubFor(
-      get(urlEqualTo(s"/api/repositories/$repositoryName"))
-        .willReturn(
-          aResponse()
-            .withStatus(404)
-        )
-    )
-
-  private def stubAllRepositories() =
-    stubFor(
-      get(urlEqualTo("/api/repositories"))
-        .willReturn(aResponse().withBodyFile("/teams-and-repositories/repositories.json"))
-    )
-
-  private def stubServices() =
-    stubFor(
-      get(urlEqualTo("/api/repository_teams"))
-        .willReturn(aResponse().withBodyFile("/teams-and-repositories/service-teams.json"))
-    )
 }
