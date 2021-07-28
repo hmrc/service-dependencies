@@ -69,7 +69,13 @@ class ServiceDependenciesController @Inject()(
       } yield Ok(Json.toJson(depsWithRules))
   }
 
-  def getServicesWithDependency(flag: String, group: String, artefact: String, versionRange: String, scope: Option[String]): Action[AnyContent] =
+  def getServicesWithDependency(
+    flag        : String,
+    group       : String,
+    artefact    : String,
+    versionRange: String,
+    scope       : Option[String]
+  ): Action[AnyContent] =
     Action.async { implicit request =>
       implicit val format = ApiServiceDependencyFormats.serviceDependencyFormat
       (for {
@@ -99,7 +105,7 @@ class ServiceDependenciesController @Inject()(
     Action.async {
       implicit val format = ApiSlugInfoFormats.slugInfoFormat
       slugInfoService
-        .getSlugInfos(name, version)
+        .getSlugInfos(name, version.map(Version.apply))
         .map(res => Ok(Json.toJson(res)))
     }
 

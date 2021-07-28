@@ -44,10 +44,10 @@ object DependencyScope {
 
 case class ServiceDependencyWrite(
   slugName        : String,
-  slugVersion     : String,
+  slugVersion     : Version,
   depGroup        : String,
   depArtefact     : String,
-  depVersion      : String,
+  depVersion      : Version,
   scalaVersion    : Option[String],
   // scope flag
   compileFlag     : Boolean,
@@ -56,40 +56,40 @@ case class ServiceDependencyWrite(
 )
 
 object ServiceDependencyWrite {
-  val format: OFormat[ServiceDependencyWrite] =
+  val format: OFormat[ServiceDependencyWrite] = {
+    implicit val vf = Version.format
     ( (__ \ "slugName"     ).format[String]
-    ~ (__ \ "slugVersion"  ).format[String]
+    ~ (__ \ "slugVersion"  ).format[Version]
     ~ (__ \ "group"        ).format[String]
     ~ (__ \ "artefact"     ).format[String]
-    ~ (__ \ "version"      ).format[String]
+    ~ (__ \ "version"      ).format[Version]
     ~ (__ \ "scalaVersion" ).formatNullable[String]
     ~ (__ \ "scope_compile").format[Boolean]
     ~ (__ \ "scope_test"   ).format[Boolean]
     ~ (__ \ "scope_build"  ).format[Boolean]
     )(ServiceDependencyWrite.apply _, unlift(ServiceDependencyWrite.unapply _))
+  }
 }
 
 case class ServiceDependency(
   slugName    : String,
-  slugVersion : String,
+  slugVersion : Version,
   teams       : List[String], // not stored in db
   depGroup    : String,
   depArtefact : String,
-  depVersion  : String,
+  depVersion  : Version,
   scalaVersion: Option[String],
   scopes      : Set[DependencyScope]
-) {
-  lazy val depSemanticVersion: Option[Version] =
-    Version.parse(depVersion)
-}
+)
 
 trait ApiServiceDependencyFormats {
+  implicit val vf = Version.format
   val derivedMongoFormat: OFormat[ServiceDependency] =
     ( (__ \ "slugName"     ).format[String]
-    ~ (__ \ "slugVersion"  ).format[String]
+    ~ (__ \ "slugVersion"  ).format[Version]
     ~ (__ \ "group"        ).format[String]
     ~ (__ \ "artefact"     ).format[String]
-    ~ (__ \ "version"      ).format[String]
+    ~ (__ \ "version"      ).format[Version]
     ~ (__ \ "scalaVersion" ).formatNullable[String]
     ~ (__ \ "scope_compile").format[Boolean]
     ~ (__ \ "scope_test"   ).format[Boolean]
@@ -121,13 +121,14 @@ trait ApiServiceDependencyFormats {
      )
 
   val serviceDependencyFormat: OFormat[ServiceDependency] = {
+    implicit val vf  = Version.format
     implicit val dsf = DependencyScope.dependencyScopeFormat
     ( (__ \ "slugName"    ).format[String]
-    ~ (__ \ "slugVersion" ).format[String]
+    ~ (__ \ "slugVersion" ).format[Version]
     ~ (__ \ "teams"       ).format[List[String]]
     ~ (__ \ "depGroup"    ).format[String]
     ~ (__ \ "depArtefact" ).format[String]
-    ~ (__ \ "depVersion"  ).format[String]
+    ~ (__ \ "depVersion"  ).format[Version]
     ~ (__ \ "scalaVersion").formatNullable[String]
     ~ (__ \ "scopes"      ).format[List[DependencyScope]]
     )((sn, sv, tm, g, a, v, scv, scopes) =>

@@ -30,7 +30,7 @@ case class MongoRepositoryDependency(
 
 object MongoRepositoryDependency {
   implicit val format: Format[MongoRepositoryDependency] = {
-    implicit val vf = Version.mongoFormat
+    implicit val vf = Version.format
     ( (__ \ "name"          ).format[String]
     ~ (__ \ "group"         ).formatNullable[String]
     ~ (__ \ "currentVersion").format[Version]

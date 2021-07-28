@@ -54,8 +54,8 @@ class DependencyLookupService @Inject() (
                         .map(_
                           .groupBy(d => s"${d.depGroup}:${d.depArtefact}")
                           .mapValues(
-                            _.groupBy(d => Version(d.depVersion))
-                            .mapValues(_.map(d => s"${d.slugName}:${d.slugVersion}").toSet)
+                            _.groupBy(_.depVersion)
+                             .mapValues(_.map(d => s"${d.slugName}:${d.slugVersion}").toSet)
                           )
                         )
         violations =  rules.map(rule => ((rule, env), findSlugsUsing(lookup, rule.organisation, rule.name, rule.range).length))

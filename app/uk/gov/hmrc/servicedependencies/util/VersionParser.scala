@@ -23,7 +23,7 @@ object VersionParser {
   def parsePropertyFile(contents: String, key: String): Option[Version] = {
     val propertyRegex = ("""\s*""" + key.replaceAll("\\.", "\\\\.") + """\s*=\s*(\d+\.\d+\.\d+)\s*""").r.unanchored
     contents match {
-      case propertyRegex(version) => Version.parse(version.replaceAll("\"", ""))
+      case propertyRegex(version) => Some(Version(version.replaceAll("\"", "")))
       case _                      => None
     }
   }
@@ -32,17 +32,17 @@ object VersionParser {
     val stringVersion   = (""""([^"]+)"[\s%]*"([^"]+)"\s*%\s*"([^"]*)"""").r.unanchored
     val variableVersion = (""""([^"]+)"[\s%]*"([^"]+)"\s*%\s*(\w+)""").r.unanchored
 
-    val stringMatches = stringVersion.findAllMatchIn(fileContent).map { m =>
-      Version.parse(m.group(3)).map { v =>
-        GithubDependency(group = m.group(1), name = m.group(2), version = v)
-      }
-    }.flatten.toSeq
+    val stringMatches =
+      stringVersion.findAllMatchIn(fileContent).map { m =>
+        GithubDependency(group = m.group(1), name = m.group(2), version = Version(m.group(3)))
+      }.toSeq
 
-    val variableMatches = variableVersion.findAllMatchIn(fileContent).map { m =>
-      extractVersionInVariable(fileContent, m.group(3)).map { v =>
-        GithubDependency(group = m.group(1), name = m.group(2), version = v)
-      }
-    }.flatten.toSeq
+    val variableMatches =
+      variableVersion.findAllMatchIn(fileContent).map { m =>
+        extractVersionInVariable(fileContent, m.group(3)).map { v =>
+          GithubDependency(group = m.group(1), name = m.group(2), version = v)
+        }
+      }.flatten.toSeq
 
     stringMatches ++ variableMatches
   }
@@ -50,7 +50,7 @@ object VersionParser {
   private def extractVersionInVariable(file: String, variable: String): Option[Version] = {
     val variableRegex = (variable + """\s*=\s*"(\d+\.\d+\.\d+-?\S*)"""").r.unanchored
     file match {
-      case variableRegex(value) => Version.parse(value)
+      case variableRegex(value) => Some(Version(value))
       case _                    => None
     }
   }

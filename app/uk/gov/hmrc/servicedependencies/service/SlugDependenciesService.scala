@@ -51,9 +51,9 @@ class SlugDependenciesService @Inject()(
 
   def curatedLibrariesOfSlug(name: String, flag: SlugInfoFlag, latestVersions: Seq[MongoLatestVersion]): Future[Option[List[Dependency]]] =
     slugInfoService.getSlugInfo(name, flag).flatMap {
-      case None                                                   => Future.successful(None)
-      case Some(slugInfo) if(slugInfo.dependencyDotCompile == "") => curatedLibrariesOfSlugInfo(slugInfo, latestVersions).map(Some.apply)
-      case Some(slugInfo)                                         => curatedLibrariesOfSlugInfoFromGraph(slugInfo, latestVersions).map(Some.apply)
+      case None                                                  => Future.successful(None)
+      case Some(slugInfo) if slugInfo.dependencyDotCompile == "" => curatedLibrariesOfSlugInfo(slugInfo, latestVersions).map(Some.apply)
+      case Some(slugInfo)                                        => curatedLibrariesOfSlugInfoFromGraph(slugInfo, latestVersions).map(Some.apply)
     }
 
   private def curatedLibrariesOfSlugInfo(slugInfo: SlugInfo, latestVersions: Seq[MongoLatestVersion]): Future[List[Dependency]] =
@@ -61,25 +61,23 @@ class SlugDependenciesService @Inject()(
       bobbyRules     <- serviceConfigsConnector.getBobbyRules
       dependencies   =  slugInfo
                           .dependencies
-                          .flatMap { slugDependency =>
+                          .map { slugDependency =>
                               val latestVersion =
                                 latestVersions
                                   .find(v => v.group == slugDependency.group && v.name == slugDependency.artifact)
                                   .map(_.version)
-                              Version.parse(slugDependency.version).map { currentVersion =>
-                                Dependency(
-                                    name                = slugDependency.artifact
-                                  , group               = slugDependency.group
-                                  , currentVersion      = currentVersion
-                                  , latestVersion       = latestVersion
-                                  , bobbyRuleViolations = bobbyRules.violationsFor(
-                                                              group   = slugDependency.group
-                                                            , name    = slugDependency.artifact
-                                                            , version = currentVersion
-                                                            )
-                                  , scope                = Some(DependencyScope.Compile)
-                                  )
-                              }
+                              Dependency(
+                                  name                = slugDependency.artifact
+                                , group               = slugDependency.group
+                                , currentVersion      = slugDependency.version
+                                , latestVersion       = latestVersion
+                                , bobbyRuleViolations = bobbyRules.violationsFor(
+                                                            group   = slugDependency.group
+                                                          , name    = slugDependency.artifact
+                                                          , version = slugDependency.version
+                                                          )
+                                , scope                = Some(DependencyScope.Compile)
+                                )
                           }
       filtered       =  dependencies.filter(dependency =>
                             curatedDependencyConfig.allDependencies.exists(lib =>
@@ -112,30 +110,28 @@ class SlugDependenciesService @Inject()(
     graph
       .dependencies
       .filterNot(_.artefact == slugInfo.name)
-      .flatMap { graphDependency =>
+      .map { graphDependency =>
 
         val latestVersion = latestVersions
             .find(v => v.group == graphDependency.group && v.name == graphDependency.artefact)
             .map(_.version)
 
-        Version.parse(graphDependency.version).map { currentVersion =>
-          Dependency(
-              name           = graphDependency.artefact
-            , group          = graphDependency.group
-            , currentVersion = currentVersion
-            , latestVersion  = latestVersion
-            , bobbyRuleViolations = bobbyRules.violationsFor(
-                group   = graphDependency.group
-              , name    = graphDependency.artefact
-              , version = currentVersion
-            )
-            , importBy = graph.pathToRoot(graphDependency)
-              .dropRight(1) // drop root node as its just the service jar itself
-              .lastOption.map(n => ImportedBy(n.artefact, n.group, Version(n.version))) // the top level dep that imported it
-              .filterNot(d => d.name == graphDependency.artefact && d.group == graphDependency.group) // filter out non-transient deps
-            , scope = Some(scope)
-          )
-        }
+        Dependency(
+            name                = graphDependency.artefact
+          , group               = graphDependency.group
+          , currentVersion      = Version(graphDependency.version)
+          , latestVersion       = latestVersion
+          , bobbyRuleViolations = bobbyRules.violationsFor(
+                                      group   = graphDependency.group
+                                    , name    = graphDependency.artefact
+                                    , version = Version(graphDependency.version)
+                                  )
+          , importBy            = graph.pathToRoot(graphDependency)
+                                    .dropRight(1) // drop root node as its just the service jar itself
+                                    .lastOption.map(n => ImportedBy(n.artefact, n.group, Version(n.version))) // the top level dep that imported it
+                                    .filterNot(d => d.name == graphDependency.artefact && d.group == graphDependency.group) // filter out non-transient deps
+          , scope               = Some(scope)
+        )
       }
       .filter(dependency =>
         // any hmrc library directly imported or any lib violation bobby rules anywhere in the graph

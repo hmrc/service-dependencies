@@ -62,12 +62,12 @@ class SlugInfoRepository @Inject()(
     collection.distinct[String]("name")
       .toFuture()
 
- def getSlugInfos(name: String, optVersion: Option[String]): Future[Seq[SlugInfo]] = {
+ def getSlugInfos(name: String, optVersion: Option[Version]): Future[Seq[SlugInfo]] = {
     val filter =
       optVersion match {
         case None          => equal("name", name)
         case Some(version) => and( equal("name"   , name)
-                                 , equal("version", version)
+                                 , equal("version", version.original)
                                  )
       }
     collection.find(filter)

@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.servicedependencies.model
 
-import play.api.libs.json.{__, Format, JsError, JsString, JsSuccess, JsValue, OFormat, Writes}
+import play.api.libs.json.{__, Format, OFormat, Writes}
 import play.api.libs.functional.syntax._
 
 case class Version(
@@ -45,46 +45,8 @@ case class Version(
 }
 
 object Version {
-  // replace previous mongo version as object with string
-  // can drop previousMongoFormat once data has been updated
-  private val previousMongoFormat: OFormat[Version] = {
-    def toVersion(major: Int, minor: Int, patch: Int, suffix: Option[String]) =
-      Version(major, minor, patch, s"$major.$minor.$patch${suffix.map("-" + _).getOrElse("")}")
-
-    def fromVersion(v: Version) =
-      (v.major, v.minor, v.patch, None)
-
-    ( (__ \ "major" ).format[Int]
-    ~ (__ \ "minor" ).format[Int]
-    ~ (__ \ "patch" ).format[Int]
-    ~ (__ \ "suffix").formatNullable[String]
-    )(toVersion, fromVersion)
-  }
-
-  private val versionAsStringFormat: Format[Version] =
-    new Format[Version] {
-      override def reads(json: JsValue) =
-        json match {
-          case JsString(s) => Version.parse(s).map(v => JsSuccess(v)).getOrElse(JsError("Could not parse version"))
-          case _           => JsError("Not a string")
-        }
-
-      override def writes(v: Version) =
-        JsString(v.original)
-    }
-
-  val mongoFormat: Format[Version] =
-    new Format[Version] {
-      override def reads(json: JsValue) =
-        versionAsStringFormat.reads(json)
-          .orElse(previousMongoFormat.reads(json))
-
-      override def writes(v: Version) =
-        versionAsStringFormat.writes(v)
-    }
-
-  val apiFormat: Format[Version] =
-    versionAsStringFormat
+  val format: Format[Version] =
+    implicitly[Format[String]].inmap(Version.apply, _.toString)
 
   // for backward compatibility - non-catalogue apis require broken down version
   val legacyApiWrites: Writes[Version] =
@@ -94,28 +56,20 @@ object Version {
     ~ (__ \ "original").write[String]
     )(v => (v.major, v.minor, v.patch, v.original))
 
-  val mongoVersionRepositoryFormat:OFormat[Version] = (__ \ "version" ).format[Version](mongoFormat)
+  val mongoVersionRepositoryFormat:OFormat[Version] = (__ \ "version" ).format[Version](format)
 
-  def apply(version: String): Version =
-    parse(version).getOrElse(sys.error(s"Could not parse version $version"))
-
-  def apply(major: Int, minor: Int, patch: Int): Version =
-    Version(major, minor, patch, s"$major.$minor.$patch")
-
-  def parse(s: String): Option[Version] = {
+  def apply(version: String): Version = {
     val regex3 = """(\d+)\.(\d+)\.(\d+)(.*)""".r
     val regex2 = """(\d+)\.(\d+)(.*)""".r
     val regex1 = """(\d+)(.*)""".r
-    s match {
-      case regex3(maj, min, patch, _) => Some(Version(Integer.parseInt(maj), Integer.parseInt(min), Integer.parseInt(patch), s))
-      case regex2(maj, min,  _)       => Some(Version(Integer.parseInt(maj), Integer.parseInt(min), 0                      , s))
-      case regex1(patch,  _)          => Some(Version(0                    , 0                    , Integer.parseInt(patch), s))
-      case _                          => None
+    version match {
+      case regex3(maj, min, patch, _) => Version(Integer.parseInt(maj), Integer.parseInt(min), Integer.parseInt(patch), version)
+      case regex2(maj, min,  _)       => Version(Integer.parseInt(maj), Integer.parseInt(min), 0                      , version)
+      case regex1(patch,  _)          => Version(0                    , 0                    , Integer.parseInt(patch), version)
+      case _                          => Version(0                    , 0                    , 0                      , version)
     }
   }
 
-  implicit class VersionExtensions(v: String) {
-    def asVersion(): Version =
-      Version(v)
-  }
+  def apply(major: Int, minor: Int, patch: Int): Version =
+    Version(major, minor, patch, s"$major.$minor.$patch")
 }

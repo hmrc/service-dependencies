@@ -74,7 +74,7 @@ object ReleasesApiConnector extends Logging {
   object Deployment {
     val reads: Reads[Deployment] = {
       implicit val dr = Environment.reads
-      implicit val vr = Version.apiFormat
+      implicit val vr = Version.format
       ( (__ \ "environment"  ).read[Option[Environment]]
       ~ (__ \ "versionNumber").read[Version]
       )(Deployment.apply _)

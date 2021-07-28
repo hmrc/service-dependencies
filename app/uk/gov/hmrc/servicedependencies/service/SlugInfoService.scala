@@ -56,13 +56,13 @@ class SlugInfoService @Inject()(
       _        <- serviceDependencyRepository.populateDependencies(slug)
     } yield ()
 
-  def getSlugInfos(name: String, version: Option[String]): Future[Seq[SlugInfo]] =
+  def getSlugInfos(name: String, version: Option[Version]): Future[Seq[SlugInfo]] =
     slugInfoRepository.getSlugInfos(name, version)
 
   def getSlugInfo(name: String, flag: SlugInfoFlag): Future[Option[SlugInfo]] =
     slugInfoRepository.getSlugInfo(name, flag)
 
-  def getSlugInfo(name: String, version: String): Future[Option[SlugInfo]] =
+  def getSlugInfo(name: String, version: Version): Future[Option[SlugInfo]] =
     slugInfoRepository.getSlugInfos(name, Some(version)).map(_.headOption)
 
   def findServicesWithDependency(
@@ -74,7 +74,7 @@ class SlugInfoService @Inject()(
     )(implicit hc: HeaderCarrier): Future[Seq[ServiceDependency]] =
       for {
         services            <- serviceDependencyRepository.findServicesWithDependency(flag, group, artefact, scope)
-        servicesWithinRange =  services.filter(_.depSemanticVersion.map(versionRange.includes).getOrElse(true)) // include invalid semanticVersion in results
+        servicesWithinRange =  services.filter(s => versionRange.includes(s.depVersion))
         teamsForServices    <- teamsAndRepositoriesConnector.getTeamsForServices
       } yield servicesWithinRange.map { r =>
           r.copy(teams = teamsForServices.getTeams(r.slugName).toList.sorted)
