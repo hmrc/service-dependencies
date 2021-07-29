@@ -38,7 +38,6 @@ object SlugDenylist {
       , "customs-push-notification"
       , "digital-tariffs-s3"
       , "digital-tariffs-s3-admin"
-      , "eacd-master-switch"
       , "emac-amazon-s3-proxy"
       , "emac-migration-frontend"
       , "emac-migration-journal"
