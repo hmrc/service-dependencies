@@ -27,7 +27,7 @@ import org.mongodb.scala.model.Indexes.{ascending, compoundIndex}
 import play.api.Logger
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.play.json.{CollectionFactory, PlayMongoRepository}
-import uk.gov.hmrc.servicedependencies.model.{ApiServiceDependencyFormats, DependencyScope, ServiceDependency, ServiceDependencyWrite, SlugInfo, SlugInfoFlag}
+import uk.gov.hmrc.servicedependencies.model.{ApiServiceDependencyFormats, DependencyScope, ServiceDependency, ServiceDependencyWrite, SlugInfo, SlugInfoFlag, Version}
 import uk.gov.hmrc.servicedependencies.persistence.DeploymentRepository
 import uk.gov.hmrc.servicedependencies.service.DependencyGraphParser
 
@@ -147,7 +147,7 @@ class DerivedServiceDependenciesRepository @Inject()(
               .map(d =>
                 ServiceDependencyWrite(
                   slugName         = slugInfo.name,
-                  slugVersion      = slugInfo.version.toString,
+                  slugVersion      = slugInfo.version,
                   depGroup         = d.group,
                   depArtefact      = d.artifact,
                   depVersion       = d.version,
@@ -174,10 +174,10 @@ class DerivedServiceDependenciesRepository @Inject()(
           .map { case (node, scopes) =>
             ServiceDependencyWrite(
               slugName         = slugInfo.name,
-              slugVersion      = slugInfo.version.toString,
+              slugVersion      = slugInfo.version,
               depGroup         = node.group,
               depArtefact      = node.artefact,
-              depVersion       = node.version,
+              depVersion       = Version(node.version),
               scalaVersion     = node.scalaVersion,
               compileFlag      = scopes.contains(DependencyScope.Compile),
               testFlag         = scopes.contains(DependencyScope.Test),
@@ -196,10 +196,10 @@ class DerivedServiceDependenciesRepository @Inject()(
             ReplaceOneModel(
               filter         = and(
                                   equal("slugName"   , d.slugName),
-                                  equal("slugVersion", d.slugVersion),
+                                  equal("slugVersion", d.slugVersion.original),
                                   equal("group"      , d.depGroup),
                                   equal("artefact"   , d.depArtefact),
-                                  equal("version"    , d.depVersion),
+                                  equal("version"    , d.depVersion.original),
                                 ),
               replacement    = d,
               replaceOptions = ReplaceOptions().upsert(true)

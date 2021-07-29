@@ -144,18 +144,6 @@ class VersionParserSpec extends AnyFreeSpec with Matchers {
     )
   }
 
-  "Parsing non semantic version number returns None" in {
-    val buildFile = """  object Test {
-                      |    def apply() = new TestDependencies {
-                      |      override lazy val test = Seq(
-                      |        "uk.gov.hmrc" %% "library" % "x7.22-alpha",
-                      |      )
-                      |    }.test
-                      |  }""".stripMargin
-    VersionParser.parse(buildFile) mustBe Seq.empty
-  }
-
-
   "Parses sbt-plugin version in line" in {
     val fileContents = """addSbtPlugin("com.typesafe.play" % "sbt-plugin" % "2.3.10")}""".stripMargin
 

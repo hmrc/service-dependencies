@@ -47,11 +47,11 @@ class SlugInfoServiceSpec
   val v100 =
     ServiceDependency(
         slugName     = "service1"
-      , slugVersion  = "v1"
+      , slugVersion  = Version("v1")
       , teams        = List.empty
       , depGroup     = group
       , depArtefact  = artefact
-      , depVersion   = "1.0.0"
+      , depVersion   = Version("1.0.0")
       , scalaVersion = None
       , scopes       = Set(scope)
       )
@@ -59,11 +59,11 @@ class SlugInfoServiceSpec
   val v200 =
     ServiceDependency(
         slugName     = "service1"
-      , slugVersion  = "v1"
+      , slugVersion  = Version("v1")
       , teams        = List.empty
       , depGroup     = group
       , depArtefact  = artefact
-      , depVersion   = "2.0.0"
+      , depVersion   = Version("2.0.0")
       , scalaVersion = None
       , scopes       = Set(scope)
       )
@@ -71,11 +71,11 @@ class SlugInfoServiceSpec
   val v205 =
     ServiceDependency(
         slugName     = "service1"
-      , slugVersion  = "v1"
+      , slugVersion  = Version("v1")
       , teams        = List.empty
       , depGroup     = group
       , depArtefact  = artefact
-      , depVersion   = "2.0.5"
+      , depVersion   = Version("2.0.5")
       , scalaVersion = None
       , scopes       = Set(scope)
       )
@@ -98,10 +98,10 @@ class SlugInfoServiceSpec
         .futureValue shouldBe Seq(v200)
     }
 
-    "include non-parseable versions" in {
+    "treat non-parseable versions as 0.0.0" in {
       val boot = Boot.init
 
-      val bad = v100.copy(depVersion  = "r938")
+      val bad = v100.copy(depVersion = Version("r938"))
 
       when(boot.mockedServiceDependenciesRepository.findServicesWithDependency(SlugInfoFlag.Latest, group, artefact, Some(scope)))
         .thenReturn(Future(Seq(v100, v200, v205, bad)))
@@ -110,7 +110,7 @@ class SlugInfoServiceSpec
         .thenReturn(Future(TeamsForServices(Map.empty)))
 
       boot.service.findServicesWithDependency(SlugInfoFlag.Latest, group, artefact, BobbyVersionRange("[1.0.1,)"), Some(scope))
-        .futureValue shouldBe Seq(v200, v205, bad)
+        .futureValue shouldBe Seq(v200, v205)
       boot.service.findServicesWithDependency(SlugInfoFlag.Latest, group, artefact, BobbyVersionRange("(,1.0.1]"), Some(scope))
         .futureValue shouldBe Seq(v100, bad)
     }
@@ -132,7 +132,7 @@ class SlugInfoServiceSpec
     }
 
     "support retrieval of a SlugInfo by version" in new GetSlugInfoFixture {
-      val targetVersion = "1.2.3"
+      val targetVersion = Version("1.2.3")
       when(boot.mockedSlugInfoRepository.getSlugInfos(SlugName, Some(targetVersion)))
         .thenReturn(Future.successful(Seq(sampleSlugInfo)))
 
@@ -140,7 +140,7 @@ class SlugInfoServiceSpec
     }
 
     "return None when no SlugInfos are found matching the target name and version" in new GetSlugInfoFixture {
-      val targetVersion = "1.2.3"
+      val targetVersion = Version("1.2.3")
       when(boot.mockedSlugInfoRepository.getSlugInfos(SlugName, Some(targetVersion)))
         .thenReturn(Future.successful(Nil))
 

@@ -45,7 +45,7 @@ class ArtifactoryConnector @Inject()(
     implicit val hc = HeaderCarrier(authorization = authorization)
     httpClient.GET[Option[HttpResponse]](
       url"${config.artifactoryBase}/api/search/latestVersion?g=$group&a=$artefact${scalaVersion.asClassifier}"
-    ).map(_.map(_.body).flatMap(Version.parse))
+    ).map(_.map(_.body).map(Version.apply))
   }
 
   def findLatestVersion(

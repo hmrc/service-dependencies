@@ -156,12 +156,12 @@ class DependencyLookupServiceSpec
 
 object DependencyLookupServiceTestData {
 
-  val dep1: SlugDependency = SlugDependency("", "5.11.0", "org.libs", "mylib")
-  val dep2: SlugDependency = SlugDependency("", "5.12.0", "org.libs", "mylib")
+  val dep1: SlugDependency = SlugDependency("", Version("5.11.0"), "org.libs", "mylib")
+  val dep2: SlugDependency = SlugDependency("", Version("5.12.0"), "org.libs", "mylib")
 
   val serviceDep1 = ServiceDependency(
       slugName     = "test"
-    , slugVersion  = "1.0.0"
+    , slugVersion  = Version("1.0.0")
     , teams        = List.empty
     , depGroup     = dep1.group
     , depArtefact  = dep1.artifact
@@ -170,11 +170,11 @@ object DependencyLookupServiceTestData {
     , scopes       = Set(DependencyScope.Compile)
     )
 
-  val serviceDep11 = serviceDep1.copy(slugVersion = "1.1.0")
+  val serviceDep11 = serviceDep1.copy(slugVersion = Version("1.1.0"))
 
   val serviceDep12 = ServiceDependency(
       slugName     = "test"
-    , slugVersion  = "1.2.0"
+    , slugVersion  = Version("1.2.0")
     , teams        = List.empty
     , depGroup     = dep2.group
     , depArtefact  = dep2.artifact

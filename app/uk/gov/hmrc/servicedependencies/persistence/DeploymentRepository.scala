@@ -160,7 +160,7 @@ class DeploymentRepository @Inject()(
 
 case class Deployment(
   slugName     : String,
-  slugVersion  : String,
+  slugVersion  : Version,
   latest       : Boolean,
   production   : Boolean,
   qa           : Boolean,
@@ -171,9 +171,10 @@ case class Deployment(
 )
 
 object Deployment {
-  val mongoFormat: Format[Deployment] =
+  val mongoFormat: Format[Deployment] = {
+    implicit val vf = Version.format
     ( (__ \ "name"          ).format[String]
-    ~ (__ \ "version"       ).format[String]
+    ~ (__ \ "version"       ).format[Version]
     ~ (__ \ "latest"        ).formatWithDefault[Boolean](false)
     ~ (__ \ "production"    ).formatWithDefault[Boolean](false)
     ~ (__ \ "qa"            ).formatWithDefault[Boolean](false)
@@ -182,4 +183,5 @@ object Deployment {
     ~ (__ \ "external test" ).formatWithDefault[Boolean](false)
     ~ (__ \ "integration"   ).formatWithDefault[Boolean](false)
     )(Deployment.apply, unlift(Deployment.unapply))
+  }
 }

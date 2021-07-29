@@ -97,7 +97,7 @@ class SlugDependenciesServiceSpec extends AnyFreeSpec with MockitoSugar with Mat
       stubBobbyRulesViolations(Map.empty)
     }
 
-    def stubSlugVersionIsUnrecognised(name: String, version: String): Unit =
+    def stubSlugVersionIsUnrecognised(name: String, version: Version): Unit =
       when(mockSlugInfoService.getSlugInfo(name, version))
         .thenReturn(Future.successful(None))
   }
@@ -123,8 +123,8 @@ class SlugDependenciesServiceSpec extends AnyFreeSpec with MockitoSugar with Mat
         )
 
       underTest.curatedLibrariesOfSlug(SlugName, flag).futureValue.value should contain theSameElementsAs Seq(
-        Dependency(name = Dependency1.artifact, group = Dependency1.group, currentVersion = Version(Dependency1.version), latestVersion = None, bobbyRuleViolations = Nil, scope = Some(Compile)),
-        Dependency(name = Dependency3.artifact, group = Dependency3.group, currentVersion = Version(Dependency3.version), latestVersion = None, bobbyRuleViolations = Nil, scope = Some(Compile))
+        Dependency(name = Dependency1.artifact, group = Dependency1.group, currentVersion = Dependency1.version, latestVersion = None, bobbyRuleViolations = Nil, scope = Some(Compile)),
+        Dependency(name = Dependency3.artifact, group = Dependency3.group, currentVersion = Dependency3.version, latestVersion = None, bobbyRuleViolations = Nil, scope = Some(Compile))
       )
     }
 
@@ -169,14 +169,14 @@ class SlugDependenciesServiceSpec extends AnyFreeSpec with MockitoSugar with Mat
           )
 
         underTest.curatedLibrariesOfSlug(SlugName, flag).futureValue.value should contain theSameElementsAs Seq(
-          Dependency(name = Dependency1.artifact, group = Dependency1.group, currentVersion = Version(Dependency1.version), latestVersion = Some(LatestVersionOfDependency1), bobbyRuleViolations = Nil, scope = Some(Compile)),
-          Dependency(name = Dependency2.artifact, group = Dependency2.group, currentVersion = Version(Dependency2.version), latestVersion = None, bobbyRuleViolations = Nil, scope = Some(Compile)),
-          Dependency(name = Dependency3.artifact, group = Dependency3.group, currentVersion = Version(Dependency3.version), latestVersion = Some(LatestVersionOfDependency3), bobbyRuleViolations = Nil, scope = Some(Compile))
+          Dependency(name = Dependency1.artifact, group = Dependency1.group, currentVersion = Dependency1.version, latestVersion = Some(LatestVersionOfDependency1), bobbyRuleViolations = Nil, scope = Some(Compile)),
+          Dependency(name = Dependency2.artifact, group = Dependency2.group, currentVersion = Dependency2.version, latestVersion = None, bobbyRuleViolations = Nil, scope = Some(Compile)),
+          Dependency(name = Dependency3.artifact, group = Dependency3.group, currentVersion = Dependency3.version, latestVersion = Some(LatestVersionOfDependency3), bobbyRuleViolations = Nil, scope = Some(Compile))
         )
       }
 
       "failing when retrieval of the latest library versions encounters a failure" in new Fixture {
-        stubSlugVersionIsUnrecognised(SlugName, SlugVersion.toString)
+        stubSlugVersionIsUnrecognised(SlugName, SlugVersion)
         val failure = new RuntimeException("failed to retrieve latest library versions")
 
         when(mockSlugInfoService.getSlugInfo(SlugName, flag))
@@ -222,9 +222,9 @@ class SlugDependenciesServiceSpec extends AnyFreeSpec with MockitoSugar with Mat
           )
 
         underTest.curatedLibrariesOfSlug(SlugName, flag).futureValue.value should contain theSameElementsAs Seq(
-          Dependency(name = Dependency1.artifact, group = Dependency1.group, currentVersion = Version(Dependency1.version), latestVersion = None, bobbyRuleViolations = List(bobbyRuleViolation1), scope = Some(Compile)),
-          Dependency(name = Dependency2.artifact, group = Dependency2.group, currentVersion = Version(Dependency2.version), latestVersion = None, bobbyRuleViolations = Nil, scope = Some(Compile)),
-          Dependency(name = Dependency3.artifact, group = Dependency3.group, currentVersion = Version(Dependency3.version), latestVersion = None, bobbyRuleViolations = List(bobbyRuleViolation1, bobbyRuleViolation2), scope = Some(Compile))
+          Dependency(name = Dependency1.artifact, group = Dependency1.group, currentVersion = Dependency1.version, latestVersion = None, bobbyRuleViolations = List(bobbyRuleViolation1), scope = Some(Compile)),
+          Dependency(name = Dependency2.artifact, group = Dependency2.group, currentVersion = Dependency2.version, latestVersion = None, bobbyRuleViolations = Nil, scope = Some(Compile)),
+          Dependency(name = Dependency3.artifact, group = Dependency3.group, currentVersion = Dependency3.version, latestVersion = None, bobbyRuleViolations = List(bobbyRuleViolation1, bobbyRuleViolation2), scope = Some(Compile))
         )
       }
     }
@@ -273,9 +273,9 @@ class SlugDependenciesServiceSpec extends AnyFreeSpec with MockitoSugar with Mat
 private object SlugDependenciesServiceSpec {
   val SlugName = "a-slug-name"
   val SlugVersion = Version(major = 1, minor = 2, patch = 3)
-  val Dependency1 = SlugDependency(path = "/path/dep1", version = "1.1.1", group = "uk.gov.hmrc"   , artifact = "artifact1")
-  val Dependency2 = SlugDependency(path = "/path/dep2", version = "2.2.2", group = "com.test.group", artifact = "artifact2")
-  val Dependency3 = SlugDependency(path = "/path/dep3", version = "3.3.3", group = "uk.gov.hmrc"   , artifact = "artifact3")
+  val Dependency1 = SlugDependency(path = "/path/dep1", version = Version("1.1.1"), group = "uk.gov.hmrc"   , artifact = "artifact1")
+  val Dependency2 = SlugDependency(path = "/path/dep2", version = Version("2.2.2"), group = "com.test.group", artifact = "artifact2")
+  val Dependency3 = SlugDependency(path = "/path/dep3", version = Version("3.3.3"), group = "uk.gov.hmrc"   , artifact = "artifact3")
   val LatestVersionOfDependency1 = Version("1.2.0")
   val LatestVersionOfDependency3 = Version("3.4.0")
 

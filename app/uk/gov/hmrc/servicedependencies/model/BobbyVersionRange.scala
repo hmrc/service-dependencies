@@ -61,54 +61,46 @@ object BobbyVersionRange {
 
     PartialFunction.condOpt(trimmedRange) {
       case fixed(v) =>
-        Version.parse(v).map(BobbyVersion(_, inclusive = true))
-          .map { fixed =>
-            BobbyVersionRange(
-                lowerBound = Some(fixed)
-              , upperBound = Some(fixed)
-              , qualifier  = None
-              , range      = trimmedRange
-              )
-          }
+        val fixed = BobbyVersion(Version(v), inclusive = true)
+        BobbyVersionRange(
+            lowerBound = Some(fixed)
+          , upperBound = Some(fixed)
+          , qualifier  = None
+          , range      = trimmedRange
+          )
       case fixedUpper(v) =>
-        Version.parse(v).map(BobbyVersion(_, inclusive = trimmedRange.endsWith("]")))
-          .map { ub =>
-            BobbyVersionRange(
-                lowerBound = None
-              , upperBound = Some(ub)
-              , qualifier  = None
-              , range      = trimmedRange
-              )
-          }
+        val ub = BobbyVersion(Version(v), inclusive = trimmedRange.endsWith("]"))
+        BobbyVersionRange(
+            lowerBound = None
+          , upperBound = Some(ub)
+          , qualifier  = None
+          , range      = trimmedRange
+          )
       case fixedLower(v) =>
-        Version.parse(v).map(BobbyVersion(_, inclusive = trimmedRange.startsWith("[")))
-          .map { lb =>
-            BobbyVersionRange(
-                lowerBound = Some(lb)
-              , upperBound = None
-              , qualifier  = None
-              , range      = trimmedRange
-              )
-          }
+        val lb = BobbyVersion(Version(v), inclusive = trimmedRange.startsWith("["))
+        BobbyVersionRange(
+            lowerBound = Some(lb)
+          , upperBound = None
+          , qualifier  = None
+          , range      = trimmedRange
+          )
       case rangeRegex(v1, v2) =>
-        for {
-          lb <- Version.parse(v1).map(BobbyVersion(_, inclusive = trimmedRange.startsWith("[")))
-          ub <- Version.parse(v2).map(BobbyVersion(_, inclusive = trimmedRange.endsWith("]")))
-        } yield
-          BobbyVersionRange(
-              lowerBound = Some(lb)
-            , upperBound = Some(ub)
-            , qualifier  = None
-            , range      = trimmedRange
-            )
-      case qualifier(q) if q.length() > 1 =>
-        Some(BobbyVersionRange(
+        val lb = BobbyVersion(Version(v1), inclusive = trimmedRange.startsWith("["))
+        val ub = BobbyVersion(Version(v2), inclusive = trimmedRange.endsWith("]"))
+        BobbyVersionRange(
+            lowerBound = Some(lb)
+          , upperBound = Some(ub)
+          , qualifier  = None
+          , range      = trimmedRange
+          )
+      case qualifier(q) if q.length > 1 =>
+        BobbyVersionRange(
             lowerBound = None
           , upperBound = None
           , qualifier  = Some(q)
           , range      = trimmedRange
-          ))
-    }.flatten
+          )
+    }
   }
 
   def apply(range: String): BobbyVersionRange =

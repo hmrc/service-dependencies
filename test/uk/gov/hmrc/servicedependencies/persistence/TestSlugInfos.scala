@@ -26,7 +26,7 @@ object TestSlugInfos {
       created              = LocalDateTime.of(2019, 6, 28, 11, 51, 23),
       uri                  = "https://store/slugs/my-slug/my-slug_0.27.0_0.5.2.tgz",
       name                 = "my-slug",
-      version              = Version.apply("0.27.0"),
+      version              = Version("0.27.0"),
       teams                = List.empty,
       runnerVersion        = "0.5.2",
       classpath            = "",
@@ -36,11 +36,16 @@ object TestSlugInfos {
       dependencies         = List(
                                SlugDependency(
                                  path     = "lib1",
-                                 version  = "1.2.0",
+                                 version  = Version("1.2.0"),
                                  group    = "com.test.group",
                                  artifact = "lib1"
                                ),
-                               SlugDependency(path = "lib2", version = "0.66", group = "com.test.group", artifact = "lib2")
+                               SlugDependency(
+                                 path     = "lib2",
+                                 version  = Version("0.66"),
+                                 group    = "com.test.group",
+                                 artifact = "lib2"
+                               )
                              ),
       dependencyDotCompile = "",
       dependencyDotTest    = "",
@@ -51,7 +56,7 @@ object TestSlugInfos {
 
   val oldSlugInfo = slugInfo.copy(
     uri     = "https://store/slugs/my-slug/my-slug_0.26.0_0.5.2.tgz",
-    version = Version.apply("0.26.0")
+    version = Version("0.26.0")
   )
 
   val otherSlug =
@@ -59,7 +64,7 @@ object TestSlugInfos {
       created       = LocalDateTime.of(2019, 6, 28, 11, 51, 23),
       uri           = "https://store/slugs/other-slug/other-slug_0.55.0_0.5.2.tgz",
       name          = "other-slug",
-      version       = Version.apply("0.55.0"),
+      version       = Version("0.55.0"),
       teams         = List.empty,
       runnerVersion = "0.5.2",
       classpath     = "",
@@ -69,7 +74,7 @@ object TestSlugInfos {
       dependencies  = List(
                         SlugDependency(
                           path     = "lib3",
-                          version  = "1.66.1",
+                          version  = Version("1.66.1"),
                           group    = "io.stuff",
                           artifact = "lib3"
                         )
