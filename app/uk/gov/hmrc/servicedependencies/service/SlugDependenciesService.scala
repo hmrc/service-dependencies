@@ -107,7 +107,7 @@ class SlugDependenciesService @Inject()(
     scope         : DependencyScope
   ): List[Dependency] = {
     val graph = graphParser.parse(dotFileForScope(slugInfo, scope))
-    graph
+    val dependencies = graph
       .dependencies
       .filterNot(_.artefact == slugInfo.name)
       .map { graphDependency =>
@@ -132,11 +132,13 @@ class SlugDependenciesService @Inject()(
                                     .filterNot(d => d.name == graphDependency.artefact && d.group == graphDependency.group) // filter out non-transient deps
           , scope               = Some(scope)
         )
-      }
-      .filter(dependency =>
-        // any hmrc library directly imported or any lib violation bobby rules anywhere in the graph
-        (dependency.importBy.isEmpty && dependency.group.startsWith("uk.gov.hmrc")) || dependency.bobbyRuleViolations.nonEmpty
-      ).toList
+      }.toList
+    val parentDepsOfViolations  = dependencies.filter(d => d.importBy.nonEmpty && d.bobbyRuleViolations.nonEmpty).flatMap(_.importBy).toSet
+    dependencies.filter(dependency =>
+        (dependency.importBy.isEmpty && dependency.group.startsWith("uk.gov.hmrc")) ||                              // any directly imported HMRC dependency
+          dependency.bobbyRuleViolations.nonEmpty ||                                                                // or any dependency with a bobby rule violation
+          parentDepsOfViolations.contains(ImportedBy(dependency.name, dependency.group, dependency.currentVersion)) // or the parent that imported the violation
+    )
   }
 
   private def dotFileForScope(slugInfo: SlugInfo, scope: DependencyScope) : String =
