@@ -28,7 +28,7 @@ import play.api.cache.AsyncCacheApi
 import uk.gov.hmrc.servicedependencies.config.ServiceDependenciesConfig
 import uk.gov.hmrc.servicedependencies.config.model.{CuratedDependencyConfig, DependencyConfig}
 import uk.gov.hmrc.servicedependencies.connector.ServiceConfigsConnector
-import uk.gov.hmrc.servicedependencies.controller.model.{Dependency, DependencyBobbyRule}
+import uk.gov.hmrc.servicedependencies.controller.model.{Dependency, DependencyBobbyRule, ImportedBy}
 import uk.gov.hmrc.servicedependencies.model.DependencyScope.Compile
 import uk.gov.hmrc.servicedependencies.model._
 import uk.gov.hmrc.servicedependencies.persistence.LatestVersionRepository
@@ -230,15 +230,19 @@ class SlugDependenciesServiceSpec extends AnyFreeSpec with MockitoSugar with Mat
     }
   }
 
+
   "gets dependencies from graphs where available" in new Fixture {
 
+    val rootNode       = Node("root:root:1.0.0")
     val nodeHmrc       = Node("uk.gov.hmrc:hmrc-mongo:1.1.0")
     val nodeNonHmrc    = Node("org.foo:bar:1.0.6")
     val nodeTransitive = Node("org.foo:baz:1.1.1")
 
     val nodes = Set(nodeHmrc, nodeNonHmrc, nodeTransitive)
     val arrows = Set(
-      Arrow(from = nodeNonHmrc, to = nodeTransitive)
+      Arrow(from = rootNode, to = nodeHmrc),
+      Arrow(from = rootNode, to = nodeNonHmrc),
+      Arrow(from = nodeNonHmrc, to =  nodeTransitive)
     )
 
     val graph = new DependencyGraph(nodes, arrows, Set.empty)
@@ -248,7 +252,7 @@ class SlugDependenciesServiceSpec extends AnyFreeSpec with MockitoSugar with Mat
 
     val bobbyRuleViolation1 = DependencyBobbyRule(reason = "a reason", from = LocalDate.now(), range = BobbyVersionRange("(,6.6.6)"))
     stubBobbyRulesViolations(Map(
-      (nodeTransitive.group, nodeTransitive.artefact) -> List(bobbyRuleViolation1)
+      (nodeNonHmrc.group, nodeNonHmrc.artefact) -> List(bobbyRuleViolation1)
     ))
 
     when(mockSlugInfoService.getSlugInfo(SlugName, SlugInfoFlag.Latest))
@@ -265,7 +269,52 @@ class SlugDependenciesServiceSpec extends AnyFreeSpec with MockitoSugar with Mat
 
     underTest.curatedLibrariesOfSlug(SlugName, SlugInfoFlag.Latest).futureValue.value.filter(_.scope.contains(Compile)) should contain theSameElementsAs Seq(
         Dependency(name = nodeHmrc.artefact, group = nodeHmrc.group, currentVersion = Version(nodeHmrc.version), latestVersion = None, bobbyRuleViolations = Nil, importBy = None, scope = Some(Compile))
-      , Dependency(name = nodeTransitive.artefact, group = nodeTransitive.group, currentVersion = Version(nodeTransitive.version), latestVersion = None, bobbyRuleViolations = List(bobbyRuleViolation1), scope = Some(Compile))
+      , Dependency(name = nodeNonHmrc.artefact, group = nodeNonHmrc.group, currentVersion = Version(nodeNonHmrc.version), latestVersion = None, bobbyRuleViolations = List(bobbyRuleViolation1), scope = Some(Compile))
+    )
+  }
+
+
+  "include parent of transitive dependency that violation bobby rule" in new Fixture {
+
+    val rootNode       = Node("root:root:1.0.0")
+    val nodeHmrc       = Node("uk.gov.hmrc:hmrc-mongo:1.1.0")
+    val nodeNonHmrc    = Node("org.foo:bar:1.0.6")
+    val nodeTransitive = Node("org.foo:baz:1.1.1")
+
+    val nodes = Set(nodeHmrc, nodeNonHmrc, nodeTransitive)
+    val arrows = Set(
+      Arrow(from = rootNode, to = nodeHmrc),
+      Arrow(from = rootNode, to = nodeNonHmrc),
+      Arrow(from = nodeNonHmrc, to =  nodeTransitive)
+    )
+
+    val graph = new DependencyGraph(nodes, arrows, Set.empty)
+    when(mockGraphParser.parse(any[String])).thenReturn(graph)
+
+    stubLatestLibraryVersionLookupSuccessfullyReturns(Seq.empty)
+
+    val bobbyRuleViolation1 = DependencyBobbyRule(reason = "a reason", from = LocalDate.now(), range = BobbyVersionRange("(,6.6.6)"))
+    stubBobbyRulesViolations(Map(
+      (nodeTransitive.group, nodeTransitive.artefact) -> List(bobbyRuleViolation1)
+    ))
+
+    when(mockSlugInfoService.getSlugInfo(SlugName, SlugInfoFlag.Latest))
+      .thenReturn(
+        Future.successful(
+          Some(slugInfo(
+            withName         = SlugName
+            , withVersion      = SlugVersion
+            , withDependencies = List.empty
+          ).copy(dependencyDotCompile = "non-blank value, wont actually be parsed as we're mocking the response")
+          )
+        )
+      )
+
+    underTest.curatedLibrariesOfSlug(SlugName, SlugInfoFlag.Latest).futureValue.value.filter(_.scope.contains(Compile)) should contain theSameElementsAs Seq(
+      Dependency(name = nodeHmrc.artefact, group = nodeHmrc.group, currentVersion = Version(nodeHmrc.version), latestVersion = None, bobbyRuleViolations = Nil, importBy = None, scope = Some(Compile))
+      , Dependency(name = nodeNonHmrc.artefact, group = nodeNonHmrc.group, currentVersion = Version(nodeNonHmrc.version), latestVersion = None, bobbyRuleViolations = Nil, scope = Some(Compile))
+      , Dependency(name = nodeTransitive.artefact, group = nodeTransitive.group, currentVersion = Version(nodeTransitive.version), latestVersion = None, bobbyRuleViolations = List(bobbyRuleViolation1),
+        importBy = Some(ImportedBy(nodeNonHmrc.artefact, nodeNonHmrc.group, Version(nodeNonHmrc.version))), scope = Some(Compile))
     )
   }
 }
