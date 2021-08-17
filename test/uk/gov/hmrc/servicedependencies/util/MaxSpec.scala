@@ -37,6 +37,7 @@ class MaxSpec extends AnyFunSpec with Matchers {
 
     it("should be able to handle empty Seq") {
       Max.maxOf(Seq.empty[Version]) shouldBe None
+      Max.maxOf(Set.empty[Version]) shouldBe None
     }
   }
 }
