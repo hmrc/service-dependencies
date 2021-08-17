@@ -22,7 +22,7 @@ import org.mockito.ArgumentMatchers.{any, eq => eqTo}
 import org.mockito.{Mockito, MockitoSugar}
 import org.scalatest.OptionValues
 import org.scalatest.concurrent.IntegrationPatience
-import org.scalatest.funspec.AnyFunSpec
+import org.scalatest.wordspec.AnyWordSpec
 import org.scalatest.matchers.should.Matchers
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.mongo.test.MongoSupport
@@ -32,12 +32,13 @@ import uk.gov.hmrc.servicedependencies.connector.{ArtifactoryConnector, GithubCo
 import uk.gov.hmrc.servicedependencies.connector.model.RepositoryInfo
 import uk.gov.hmrc.servicedependencies.model._
 import uk.gov.hmrc.servicedependencies.persistence._
+import uk.gov.hmrc.servicedependencies.persistence.derived.DerivedGroupArtefactRepository
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
 class DependencyDataUpdatingServiceSpec
-  extends AnyFunSpec
+  extends AnyWordSpec
      with MockitoSugar
      with Matchers
      with OptionValues
@@ -46,8 +47,8 @@ class DependencyDataUpdatingServiceSpec
 
   private val timeForTest = Instant.now()
 
-  describe("reloadLatestVersions") {
-    it("should call the dependency version update function on the repository") {
+  "reloadLatestVersions" should {
+    "call the dependency version update function on the repository" in {
       val boot = new Boot(CuratedDependencyConfig(
         sbtPlugins = Nil
       , libraries  = List(DependencyConfig(name = "libYY", group= "uk.gov.hmrc", latestVersion = None))
@@ -64,11 +65,38 @@ class DependencyDataUpdatingServiceSpec
 
       verify(boot.mockLatestVersionRepository, times(1))
         .update(MongoLatestVersion(name = "libYY", group = "uk.gov.hmrc", version = Version("1.1.1"), updateDate = timeForTest))
+
       verifyZeroInteractions(boot.mockRepositoryDependenciesRepository)
     }
   }
 
-  describe("reloadMongoRepositoryDependencyDataForAllRepositories") {
+  "versionsToUpdate" should {
+    "merge static configuration with derived group artefacts" in {
+      val boot = new Boot(CuratedDependencyConfig(
+        sbtPlugins = Nil
+      , libraries  = List(
+                       DependencyConfig(name = "libYY", group= "uk.gov.hmrc", latestVersion = None),
+                       DependencyConfig(name = "lib2" , group= "uk.gov.hmrc", latestVersion = Some(Version("1.0.0")))
+                     )
+      , others     = Nil
+      ))
+
+      when(boot.derivedGroupArtefactRepository.findGroupsArtefacts)
+        .thenReturn(Future.successful(List(
+          GroupArtefacts("uk.gov.hmrc"    , List("lib1", "lib2")),
+          GroupArtefacts("uk.gov.hmrc.sub", List("lib3")),
+        )))
+
+      boot.dependencyUpdatingService.versionsToUpdate().futureValue shouldBe List(
+        DependencyConfig("lib1" , "uk.gov.hmrc"    , None),
+        DependencyConfig("lib2" , "uk.gov.hmrc"    , Some(Version("1.0.0"))),
+        DependencyConfig("lib3" , "uk.gov.hmrc.sub", None),
+        DependencyConfig("libYY", "uk.gov.hmrc"    , None)
+      )
+    }
+  }
+
+  "reloadMongoRepositoryDependencyDataForAllRepositories" should {
 
     def testReloadCurrentDependenciesDataForAllRepositories(
       repoLastUpdatedAt: Instant
@@ -126,14 +154,14 @@ class DependencyDataUpdatingServiceSpec
       }
     }
 
-    it("should call the dependency update function to persist the dependencies if repo has been modified") {
+    "call the dependency update function to persist the dependencies if repo has been modified" in {
       testReloadCurrentDependenciesDataForAllRepositories(
         repoLastUpdatedAt = timeForTest
       , shouldUpdate      = true
       )
     }
 
-    it("should not call the dependency update function to persist the dependencies if repo has not been modified") {
+    "not call the dependency update function to persist the dependencies if repo has not been modified" in {
       testReloadCurrentDependenciesDataForAllRepositories(
         repoLastUpdatedAt = Instant.EPOCH
       , shouldUpdate      = false
@@ -145,6 +173,7 @@ class DependencyDataUpdatingServiceSpec
     val mockServiceDependenciesConfig        = mock[ServiceDependenciesConfig]
     val mockRepositoryDependenciesRepository = mock[RepositoryDependenciesRepository]
     val mockLatestVersionRepository          = mock[LatestVersionRepository]
+    val derivedGroupArtefactRepository       = mock[DerivedGroupArtefactRepository]
     val mockTeamsAndRepositoriesConnector    = mock[TeamsAndRepositoriesConnector]
     val mockArtifactoryConnector             = mock[ArtifactoryConnector]
     val mockGithubConnector                  = mock[GithubConnector]
@@ -153,6 +182,9 @@ class DependencyDataUpdatingServiceSpec
     when(mockServiceDependenciesConfig.curatedDependencyConfig)
       .thenReturn(dependencyConfig)
 
+    when(derivedGroupArtefactRepository.findGroupsArtefacts)
+      .thenReturn(Future.successful(Seq.empty))
+
     when(mockServiceConfigsConnector.getBobbyRules)
       .thenReturn(Future.successful(BobbyRules(Map.empty)))
 
@@ -160,6 +192,7 @@ class DependencyDataUpdatingServiceSpec
         mockServiceDependenciesConfig
       , mockRepositoryDependenciesRepository
       , mockLatestVersionRepository
+      , derivedGroupArtefactRepository
       , mockTeamsAndRepositoriesConnector
       , mockArtifactoryConnector
       , mockGithubConnector
