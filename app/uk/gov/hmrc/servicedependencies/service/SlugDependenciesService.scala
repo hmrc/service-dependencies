@@ -80,6 +80,7 @@ class SlugDependenciesService @Inject()(
                                 )
                           }
       filtered       =  dependencies.filter(dependency =>
+                            dependency.group.startsWith("uk.gov.hmrc") ||
                             curatedDependencyConfig.allDependencies.exists(lib =>
                               lib.name  == dependency.name &&
                               lib.group == dependency.group
