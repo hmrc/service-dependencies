@@ -2,7 +2,7 @@ import sbt._
 
 private object AppDependencies {
   import play.core.PlayVersion
-  import play.sbt.PlayImport._
+  import play.sbt.PlayImport.{ehcache, ws}
 
   val bootstrapPlayVersion = "5.7.0"
   val hmrcMongoVersion     = "0.51.0"
@@ -17,8 +17,8 @@ private object AppDependencies {
     "org.apache.commons" %  "commons-compress"          % "1.20",
     "com.lightbend.akka" %% "akka-stream-alpakka-sns"   % "2.0.2",
     "com.lightbend.akka" %% "akka-stream-alpakka-sqs"   % "2.0.2",
-    // akka-stream-alpakka-sns depends on 10.1.11 which isn't compatible with play's akka version 10.1.13
-    "com.typesafe.akka"  %% "akka-http"                 % "10.1.13",
+    // akka-stream-alpakka-sns depends on 10.1.11 which isn't compatible with play's akka version
+    "com.typesafe.akka"  %% "akka-http"                 % PlayVersion.akkaHttpVersion,
     "org.yaml"           %  "snakeyaml"                 % "1.27"
   )
 
