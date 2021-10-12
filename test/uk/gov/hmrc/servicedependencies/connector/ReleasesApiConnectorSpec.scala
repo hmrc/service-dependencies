@@ -75,6 +75,6 @@ class ReleasesApiConnectorSpec
   def stubWhatsRunningWhere() =
     stubFor(
       get(urlEqualTo("/releases-api/whats-running-where"))
-        .willReturn(aResponse().withBodyFile("/releases-api/whatsrunningwhere.json"))
+        .willReturn(aResponse().withBodyFile("releases-api/whatsrunningwhere.json"))
     )
 }
