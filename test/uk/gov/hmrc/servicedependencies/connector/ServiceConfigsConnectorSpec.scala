@@ -93,6 +93,6 @@ class ServiceConfigsConnectorSpec
   private def stubGetBobbyRules(): Unit =
     stubFor(
       get(urlEqualTo(s"/bobby/rules"))
-        .willReturn(aResponse().withBodyFile(s"/service-configs/bobby-rules.json"))
+        .willReturn(aResponse().withBodyFile(s"service-configs/bobby-rules.json"))
     )
 }

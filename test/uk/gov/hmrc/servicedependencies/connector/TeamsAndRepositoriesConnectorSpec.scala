@@ -58,7 +58,7 @@ class TeamsAndRepositoriesConnectorSpec
     "correctly parse json response" in {
       stubFor(
         get(urlEqualTo(s"/api/repositories/test-repo"))
-          .willReturn(aResponse().withBodyFile("/teams-and-repositories/repository.json"))
+          .willReturn(aResponse().withBodyFile("teams-and-repositories/repository.json"))
       )
       val repository = connector.getRepository("test-repo").futureValue
       repository.value.teamNames shouldBe Seq("PlatOps", "Webops")
@@ -79,7 +79,7 @@ class TeamsAndRepositoriesConnectorSpec
     "correctly parse json response" in {
       stubFor(
         get(urlEqualTo("/api/repository_teams"))
-          .willReturn(aResponse().withBodyFile("/teams-and-repositories/service-teams.json"))
+          .willReturn(aResponse().withBodyFile("teams-and-repositories/service-teams.json"))
       )
 
       val teams = connector.getTeamsForServices.futureValue
@@ -91,7 +91,7 @@ class TeamsAndRepositoriesConnectorSpec
     "correctly parse json response" in {
       stubFor(
         get(urlEqualTo("/api/repositories"))
-          .willReturn(aResponse().withBodyFile("/teams-and-repositories/repositories.json"))
+          .willReturn(aResponse().withBodyFile("teams-and-repositories/repositories.json"))
       )
 
       val repositories = connector.getAllRepositories(archived = None).futureValue
@@ -118,7 +118,7 @@ class TeamsAndRepositoriesConnectorSpec
     "correctly pass query parameter" in {
       stubFor(
         get(urlEqualTo("/api/repositories?archived=false"))
-          .willReturn(aResponse().withBodyFile("/teams-and-repositories/repositories.json"))
+          .willReturn(aResponse().withBodyFile("teams-and-repositories/repositories.json"))
       )
 
       connector.getAllRepositories(archived = Some(false)).futureValue
