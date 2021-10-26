@@ -17,15 +17,14 @@
 package uk.gov.hmrc.servicedependencies.service
 
 import javax.inject.Singleton
-
 import scala.annotation.tailrec
 
 @Singleton
 class DependencyGraphParser {
   import DependencyGraphParser._
 
-  def parse(input: String): DependencyGraph =
-    lexer(input.split("\n"))
+  def parse(input: String): DependencyGraph = {
+    val graph = lexer(input.split("\n"))
       .foldLeft(DependencyGraph.empty){ (graph, t)  =>
         t match {
           case n: Node     => graph.copy(nodes     = graph.nodes      + n)
@@ -34,8 +33,17 @@ class DependencyGraphParser {
         }
       }
 
+    // maven generated digraphs don't add nodes, but the main dependency is named the same as the digraph
+    if (graph.nodes.isEmpty) {
+      val nodesFromRoot = graph.arrows.map(_.to) ++ graph.arrows.map(_.from)
+      graph.copy(nodes = nodesFromRoot)
+    } else {
+      graph
+    }
+  }
+
   private val eviction = """\s*"(.+)" -> "(.+)" \[(.+)\]""".r
-  private val arrow    = """\s*"(.+)" -> "(.+)"""".r
+  private val arrow    = """\s*"(.+)" -> "(.+)"\s*;?""".r
   private val node     = """\s*"(.+)"\[(.+)\]""".r
 
   private def lexer(lines: Seq[String]): Seq[Token] =
@@ -48,22 +56,18 @@ class DependencyGraphParser {
 }
 
 object DependencyGraphParser {
-  private val artefactRegex = """(.*)_(\d+\.\d*)""".r
+  private val nodeRegex = """([^:]+):([^:]+?)(?:_(\d+\.\d+))?(?::(?:jar|war))?:([^:]*)(?::[^:]*)?""".r
 
   sealed trait Token
 
   case class Node(value: String) extends Token {
-    private lazy val Array(g, a1, v) =
-      value.split(":")
-    private lazy val (a, sv) =
-      a1 match {
-        case artefactRegex(a, sv) => (a, Some(sv))
-        case _                    => (a1, None)
-      }
+
+    private lazy val nodeRegex(g, a, sv, v) = value
+
     def group        = g
     def artefact     = a
     def version      = v
-    def scalaVersion = sv
+    def scalaVersion = Option(sv)
   }
 
   case class Arrow(from: Node, to: Node) extends Token
