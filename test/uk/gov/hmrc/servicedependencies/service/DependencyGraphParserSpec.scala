@@ -80,6 +80,12 @@ class DependencyGraphParserSpec
         Node("uk.gov.hmrc.jdc:emcs:war:3.226.0")
       )
     }
+
+    "work with emcs dependencies" in {
+      val source = scala.io.Source.fromResource("slugs/dependencies-emcs.dot")
+      val graph = dependencyGraphParser.parse(source.mkString)
+      graph.dependencies.map(d => (d.group, d.artefact, d.version, d.scalaVersion)) should not be empty
+    }
   }
 
   "Node" should {
@@ -99,7 +105,15 @@ class DependencyGraphParserSpec
       n.scalaVersion shouldBe Some("2.12")
     }
 
-    "parse name with packaging" in {
+    "parse name with scalaVersion and underscores" in {
+      val n = Node("org.test.modules:test_artefact_2.12:1.0.0")
+      n.group shouldBe "org.test.modules"
+      n.artefact shouldBe "test_artefact"
+      n.version shouldBe "1.0.0"
+      n.scalaVersion shouldBe Some("2.12")
+    }
+
+    "parse name with type" in {
       val n = Node("uk.gov.hmrc.jdc:emcs:war:3.226.0")
       n.group shouldBe "uk.gov.hmrc.jdc"
       n.artefact shouldBe "emcs"
@@ -107,7 +121,7 @@ class DependencyGraphParserSpec
       n.scalaVersion shouldBe None
     }
 
-    "parse name with classifier" in {
+    "parse name with scope" in {
       val n = Node("javax.xml.stream:stax-api:1.0-2:compile")
       n.group shouldBe "javax.xml.stream"
       n.artefact shouldBe "stax-api"
@@ -115,11 +129,35 @@ class DependencyGraphParserSpec
       n.scalaVersion shouldBe None
     }
 
-    "parse name with packaging and classifier" in {
+    "parse name with type and scope" in {
       val n = Node("javax.xml.stream:stax-api:jar:1.0-2:compile")
       n.group shouldBe "javax.xml.stream"
       n.artefact shouldBe "stax-api"
       n.version shouldBe "1.0-2"
+      n.scalaVersion shouldBe None
+    }
+
+    "parse name with type and classifier and scope" in {
+      val n = Node("io.netty:netty-transport-native-epoll:jar:linux-x86_64:4.0.51.Final:compile")
+      n.group shouldBe "io.netty"
+      n.artefact shouldBe "netty-transport-native-epoll"
+      n.version shouldBe "4.0.51.Final"
+      n.scalaVersion shouldBe None
+    }
+
+    "parse name with type and classifier" in {
+      val n = Node("io.netty:netty-transport-native-epoll:jar:linux-x86_64:4.0.51.Final")
+      n.group shouldBe "io.netty"
+      n.artefact shouldBe "netty-transport-native-epoll"
+      n.version shouldBe "4.0.51.Final"
+      n.scalaVersion shouldBe None
+    }
+
+    "parse a version that does not start with a number" in {
+      val n = Node("ir.middleware:middleware-utils:jar:J22_2.9:compile")
+      n.group shouldBe "ir.middleware"
+      n.artefact shouldBe "middleware-utils"
+      n.version shouldBe "J22_2.9"
       n.scalaVersion shouldBe None
     }
   }
