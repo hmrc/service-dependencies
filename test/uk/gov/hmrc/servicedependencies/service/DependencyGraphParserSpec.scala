@@ -172,5 +172,13 @@ class DependencyGraphParserSpec
       n.version shouldBe "J22_2.9"
       n.scalaVersion shouldBe None
     }
+
+    "parse alternative type" in {
+      val n = Node("uk.gov.hmrc.jdc.rsa:framework-core:test-jar:tests:7.69.0:test")
+      n.group shouldBe "uk.gov.hmrc.jdc.rsa"
+      n.artefact shouldBe "framework-core"
+      n.version shouldBe "7.69.0"
+      n.scalaVersion shouldBe None
+    }
   }
 }
