@@ -86,6 +86,18 @@ class DependencyGraphParserSpec
       val graph = dependencyGraphParser.parse(source.mkString)
       graph.dependencies.map(d => (d.group, d.artefact, d.version, d.scalaVersion)) should not be empty
     }
+
+    "work with trailing spaces" in {
+      // note the trailing spaces and tabs
+      val input = "digraph \"uk.gov.hmrc.jdc:platops-example-classic-service:war:0.53.0\" { \n" +
+        "\t\"uk.gov.hmrc.jdc:platops-example-classic-service:war:0.53.0\" -> \"uk.gov.hmrc.jdc:platops-example-classic-service-business:jar:0.53.0:compile\" ; \n" +
+        " } "
+      val graph = dependencyGraphParser.parse(input)
+      graph.dependencies should contain allOf(
+        Node("uk.gov.hmrc.jdc:platops-example-classic-service:war:0.53.0"),
+        Node("uk.gov.hmrc.jdc:platops-example-classic-service-business:jar:0.53.0:compile"),
+      )
+    }
   }
 
   "Node" should {
