@@ -16,8 +16,7 @@
 
 package uk.gov.hmrc.servicedependencies.service
 
-import java.time.Instant
-
+import java.time.{Instant, LocalDate}
 import org.mockito.ArgumentMatchers.{any, eq => eqTo}
 import org.mockito.{Mockito, MockitoSugar}
 import org.scalatest.OptionValues
@@ -92,6 +91,44 @@ class DependencyDataUpdatingServiceSpec
         DependencyConfig("lib2" , "uk.gov.hmrc"    , Some(Version("1.0.0"))),
         DependencyConfig("lib3" , "uk.gov.hmrc.sub", None),
         DependencyConfig("libYY", "uk.gov.hmrc"    , None)
+      )
+    }
+    "include any non HMRC dependencies with bobby rules" in {
+      val boot = new Boot(CuratedDependencyConfig(sbtPlugins = Nil, libraries  = Nil, others     = Nil))
+
+      when(boot.mockServiceConfigsConnector.getBobbyRules)
+        .thenReturn(
+          Future.successful(BobbyRules(Map(
+          ("com.other", "lib4") -> List(BobbyRule("com.other", "lib4",
+            BobbyVersionRange.parse("(1.1.0,1.3.0]").get,
+            "naughty lib",
+            LocalDate.of(2020,1,1)))
+        ))))
+
+      boot.dependencyUpdatingService.versionsToUpdate().futureValue shouldBe List(
+        DependencyConfig("lib4", "com.other", None)
+      )
+    }
+    "override non HMRC dependencies version with curated list" in {
+      val boot = new Boot(CuratedDependencyConfig(
+        sbtPlugins = Nil,
+        libraries = List(
+          DependencyConfig(name = "lib4" , group= "com.other", latestVersion = Some(Version("1.5.0"))),
+        ),
+        others = Nil
+      ))
+
+      when(boot.mockServiceConfigsConnector.getBobbyRules)
+        .thenReturn(
+          Future.successful(BobbyRules(Map(
+            ("com.other", "lib4") -> List(BobbyRule("com.other", "lib4",
+              BobbyVersionRange.parse("(1.1.0,1.3.0]").get,
+              "naughty lib",
+              LocalDate.of(2020,1,1)))
+          ))))
+
+      boot.dependencyUpdatingService.versionsToUpdate().futureValue shouldBe List(
+        DependencyConfig("lib4", "com.other", Some(Version("1.5.0")))
       )
     }
   }
