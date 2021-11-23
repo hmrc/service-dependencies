@@ -45,7 +45,6 @@ class DeadLetterHandler @Inject()(
     logger.debug("DeadLetterHandler is disabled.")
   }
 
-  private lazy val queueUrl = config.sqsSlugDeadLetterQueue
   private lazy val settings = SqsSourceSettings()
 
   private lazy val awsSqsClient =
@@ -60,12 +59,14 @@ class DeadLetterHandler @Inject()(
     }.get
 
   if (config.isEnabled) {
-    SqsSource(queueUrl, settings)(awsSqsClient)
-      .mapAsync(10)(processMessage)
-      .runWith(SqsAckSink(queueUrl)(awsSqsClient))
-      .recoverWith {
-        case NonFatal(e) => logger.error(e.getMessage, e); Future.failed(e)
-      }
+    config.sqsDeadLetterQueues.foreach { queueUrl =>
+      SqsSource(queueUrl, settings)(awsSqsClient)
+        .mapAsync(10)(processMessage)
+        .runWith(SqsAckSink(queueUrl)(awsSqsClient))
+        .recoverWith {
+          case NonFatal(e) => logger.error(e.getMessage, e); Future.failed(e)
+        }
+    }
   }
 
   private def processMessage(message: Message) = {
