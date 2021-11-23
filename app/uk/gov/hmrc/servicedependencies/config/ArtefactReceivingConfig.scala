@@ -18,17 +18,20 @@ package uk.gov.hmrc.servicedependencies.config
 
 import com.google.inject.{Inject, Singleton}
 import play.api.Configuration
-import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
 
 @Singleton
-class ArtefactReceivingConfig @Inject()
-                                     (configuration: Configuration,
-                                      serviceConfig: ServicesConfig) {
+class ArtefactReceivingConfig @Inject()(configuration: Configuration) {
 
   private lazy val sqsQueueUrlPrefix: String = configuration.get[String]("artefact.receiver.aws.sqs.queue-prefix")
   private lazy val sqsQueueSlugInfo: String = configuration.get[String]("artefact.receiver.aws.sqs.queue-slug")
+  private lazy val sqsQueueMetaArtefact: String = configuration.get[String]("artefact.receiver.aws.sqs.queue-meta")
 
-  lazy val sqsSlugQueue           = s"$sqsQueueUrlPrefix/$sqsQueueSlugInfo"
-  lazy val sqsSlugDeadLetterQueue = s"$sqsQueueUrlPrefix/$sqsQueueSlugInfo-deadletter"
-  lazy val isEnabled              = configuration.get[Boolean]("artefact.receiver.enabled")
+  lazy val sqsMetaArtefactQueue           = s"$sqsQueueUrlPrefix/$sqsQueueMetaArtefact"
+  lazy val sqsSlugQueue                   = s"$sqsQueueUrlPrefix/$sqsQueueSlugInfo"
+
+  lazy val sqsMetaArtefactDeadLetterQueue = s"$sqsQueueUrlPrefix/$sqsMetaArtefactQueue-deadletter"
+  lazy val sqsSlugDeadLetterQueue         = s"$sqsQueueUrlPrefix/$sqsQueueSlugInfo-deadletter"
+  lazy val sqsDeadLetterQueues            = Set(sqsSlugDeadLetterQueue, sqsMetaArtefactDeadLetterQueue)
+
+  lazy val isEnabled                      = configuration.get[Boolean]("artefact.receiver.enabled")
 }
