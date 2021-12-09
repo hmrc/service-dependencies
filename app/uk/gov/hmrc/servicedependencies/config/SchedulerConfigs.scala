@@ -46,7 +46,7 @@ object SchedulerConfig {
 }
 
 @Singleton
-class SchedulerConfigs @Inject()(configuration: Configuration) extends ConfigUtils {
+class SchedulerConfigs @Inject()(configuration: Configuration) {
   val slugMetadataUpdate   = SchedulerConfig(configuration, "repositoryDependencies.slugJob")
   val bobbyRulesSummary    = SchedulerConfig(configuration, "repositoryDependencies.bobbyRulesSummaryScheduler")
   val dependencyReload     = SchedulerConfig(configuration, "dependencyReload.scheduler")
