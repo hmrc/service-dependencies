@@ -16,11 +16,16 @@
 
 package uk.gov.hmrc.servicedependencies.persistence
 
+import org.mongodb.scala.bson.BsonString
 import org.mongodb.scala.model.{IndexModel, IndexOptions, Indexes}
+import org.mongodb.scala.model.Aggregates.{`match`, project, unwind}
+import org.mongodb.scala.model.Filters.{and, equal}
+import org.mongodb.scala.model.Projections.{fields, excludeId, include}
 import play.api.Logging
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.play.json.PlayMongoRepository
-import uk.gov.hmrc.servicedependencies.model.MetaArtefact
+import uk.gov.hmrc.servicedependencies.model.{MetaArtefact, Version}
+
 
 import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
@@ -42,4 +47,28 @@ class MetaArtefactRepository @Inject()(
     collection.insertOne(metaArtefact)
       .toFuture
       .map(_ => ())
+
+  // TODO expand modules in another derived collection
+  def findRepoNameByModule(group: String, artefact: String, version: Version): Future[Option[String]] =
+     mongoComponent.database.getCollection("metaArtefacts")
+      .aggregate(
+        List(
+          unwind("$modules"),
+          `match`(
+            and(
+              //eq("modules.group", group) // not yet captured
+              equal("modules.name", artefact),
+              equal("version"     , version.toString)
+            )
+          ),
+          project(
+            fields(
+              excludeId(),
+              include("name")
+            )
+          )
+        )
+      )
+      .headOption
+      .map(_.flatMap(_.get[BsonString]("name")).map(_.getValue))
 }
