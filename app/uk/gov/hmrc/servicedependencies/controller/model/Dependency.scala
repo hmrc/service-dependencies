@@ -17,7 +17,7 @@
 package uk.gov.hmrc.servicedependencies.controller.model
 
 import play.api.libs.functional.syntax._
-import play.api.libs.json.{JsBoolean, OWrites, Writes, __}
+import play.api.libs.json.{OWrites, Writes, __}
 import uk.gov.hmrc.servicedependencies.model.{DependencyScope, Version}
 
 
@@ -27,7 +27,7 @@ case class Dependency(
   , currentVersion     : Version
   , latestVersion      : Option[Version]
   , bobbyRuleViolations: List[DependencyBobbyRule]
-  , importBy           : Option[ImportedBy] = None
+  , importBy           : Option[ImportedBy]      = None
   , scope              : Option[DependencyScope] = None
   )
 
@@ -42,9 +42,6 @@ object Dependency {
     ~ (__ \ "importBy"           ).writeNullable[ImportedBy](ImportedBy.writes)
     ~ (__ \ "scope"              ).writeNullable[DependencyScope](DependencyScope.dependencyScopeFormat)
     )(unlift(Dependency.unapply))
-      .transform( js =>
-        js + ("isExternal" -> JsBoolean(!js("group").as[String].startsWith("uk.gov.hmrc")))
-      )
 }
 
 case class ImportedBy(name: String, group: String, version: Version)

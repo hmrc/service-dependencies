@@ -48,10 +48,17 @@ class TeamDependencyService @Inject()(
       updatedServices    <- services.toList.traverse(dep => replaceServiceDependencies(dep, latestVersions))
     } yield libs  ++ updatedServices
 
-  protected[service] def replaceServiceDependencies(dependencies: Dependencies, latestVersions: Seq[MongoLatestVersion]): Future[Dependencies] =
+  protected[service] def replaceServiceDependencies(
+    dependencies      : Dependencies,
+    latestVersions    : Seq[MongoLatestVersion]
+  ): Future[Dependencies] =
     for {
-      optLibraryDependencies <- slugDependenciesService.curatedLibrariesOfSlug(dependencies.repositoryName, SlugInfoFlag.Latest, latestVersions)
-      output                 =  optLibraryDependencies.map(libraryDependencies => dependencies.copy(libraryDependencies = libraryDependencies)).getOrElse(dependencies)
+      optLibraryDependencies <- slugDependenciesService.curatedLibrariesOfSlug(
+                                  dependencies.repositoryName,
+                                  SlugInfoFlag.Latest,
+                                  latestVersions
+                                )
+      output                 =  optLibraryDependencies.fold(dependencies)(libraryDependencies => dependencies.copy(libraryDependencies = libraryDependencies))
     } yield output
 
   def dependenciesOfSlugsForTeam(

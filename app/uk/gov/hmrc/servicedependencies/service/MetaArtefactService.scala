@@ -23,14 +23,17 @@ import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
-class MetaArtefactService @Inject()(repo: MetaArtefactRepository)(implicit ec: ExecutionContext) {
+class MetaArtefactService @Inject()(
+  metaArtefactRepository: MetaArtefactRepository
+)(implicit
+  ec: ExecutionContext
+) {
 
 /**
   * Placeholder for now. Going forward we might want to think about splitting the
   * metadata up by module, parsing its dep graphs into derived collections etc
   * and doing something a bit more sophisticated than just dumping it into a collection.
   */
-  def addMetaArtefact(metaArtefact: MetaArtefact): Future[Boolean] =
-    repo.insert(metaArtefact)
-
+  def addMetaArtefact(metaArtefact: MetaArtefact): Future[Unit] =
+    metaArtefactRepository.insert(metaArtefact)
 }

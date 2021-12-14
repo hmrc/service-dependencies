@@ -26,21 +26,20 @@ import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
-class MetaArtefactRepository @Inject()(mongoComponent: MongoComponent)(
-    implicit ec: ExecutionContext) extends PlayMongoRepository[MetaArtefact](
-      collectionName = "metaArtefacts"
-    , mongoComponent = mongoComponent
-    , domainFormat = MetaArtefact.mongoFormat
-    , indexes = Seq(
-      IndexModel(Indexes.ascending("name", "version"), IndexOptions().unique(true))
-    )
-  ) with Logging {
+class MetaArtefactRepository @Inject()(
+  mongoComponent: MongoComponent
+)(implicit
+  ec: ExecutionContext
+) extends PlayMongoRepository[MetaArtefact](
+  collectionName = "metaArtefacts",
+  mongoComponent = mongoComponent,
+  domainFormat   = MetaArtefact.mongoFormat,
+  indexes        = Seq(IndexModel(Indexes.ascending("name", "version"), IndexOptions().unique(true)))
+) with Logging {
 
-
-  def insert(metaArtefact: MetaArtefact) : Future[Boolean] = {
+  // TODO add organisation/group to metadata...
+  def insert(metaArtefact: MetaArtefact): Future[Unit] =
     collection.insertOne(metaArtefact)
       .toFuture
-      .map(_.wasAcknowledged())
-  }
-
+      .map(_ => ())
 }

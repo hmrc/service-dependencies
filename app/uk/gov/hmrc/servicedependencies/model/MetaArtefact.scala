@@ -21,48 +21,53 @@ import play.api.libs.functional.syntax._
 import play.api.libs.json._
 import uk.gov.hmrc.mongo.play.json.formats.MongoJavatimeFormats
 
-case class MetaArtefact(name              : String,
-                        version           : Version,
-                        uri               : String,
-                        gitUrl            : Option[String]      = None,
-                        dependencyDotBuild: Option[String]      = None,
-                        buildInfo         : Map[String, String] = Map.empty,
-                        modules           : Seq[MetaArtefactModule],
-                        created           : Instant             = Instant.now())
+case class MetaArtefact(
+  name              : String,
+  version           : Version,
+  uri               : String,
+  gitUrl            : Option[String]      = None,
+  dependencyDotBuild: Option[String]      = None,
+  buildInfo         : Map[String, String] = Map.empty,
+  modules           : Seq[MetaArtefactModule],
+  created           : Instant             = Instant.now()
+)
 
 object MetaArtefact {
   private implicit val mamf = MetaArtefactModule.format
 
-  val mongoFormat: OFormat[MetaArtefact] = (
-      (__ \ "name"              ).format[String] ~
-      (__ \ "version"           ).format[Version](Version.format) ~
-      (__ \ "uri"               ).format[String] ~
-      (__ \ "gitUrl"            ).formatNullable[String] ~
-      (__ \ "dependencyDotBuild").formatNullable[String] ~
-      (__ \ "buildInfo"         ).format[Map[String, String]] ~
-      (__ \ "modules"           ).format[Seq[MetaArtefactModule]] ~
-      (__ \ "created"           ).format[Instant](MongoJavatimeFormats.instantFormat)
+  val mongoFormat: OFormat[MetaArtefact] =
+    ( (__ \ "name"              ).format[String]
+    ~ (__ \ "version"           ).format[Version](Version.format)
+    ~ (__ \ "uri"               ).format[String]
+    ~ (__ \ "gitUrl"            ).formatNullable[String]
+    ~ (__ \ "dependencyDotBuild").formatNullable[String]
+    ~ (__ \ "buildInfo"         ).format[Map[String, String]]
+    ~ (__ \ "modules"           ).format[Seq[MetaArtefactModule]]
+    ~ (__ \ "created"           ).format[Instant](MongoJavatimeFormats.instantFormat)
     )(MetaArtefact.apply, unlift(MetaArtefact.unapply))
 
-  val apiFormat: OFormat[MetaArtefact] = (
-      (__ \ "name"              ).format[String] ~
-      (__ \ "version"           ).format[Version](Version.format) ~
-      (__ \ "uri"               ).format[String] ~
-      (__ \ "gitUrl"            ).formatNullable[String] ~
-      (__ \ "dependencyDotBuild").formatNullable[String] ~
-      (__ \ "buildInfo"         ).format[Map[String, String]] ~
-      (__ \ "modules"           ).format[Seq[MetaArtefactModule]] ~
-      (__ \ "created"           ).format[Instant]
+  val apiFormat: OFormat[MetaArtefact] =
+    ( (__ \ "name"              ).format[String]
+    ~ (__ \ "version"           ).format[Version](Version.format)
+    ~ (__ \ "uri"               ).format[String]
+    ~ (__ \ "gitUrl"            ).formatNullable[String]
+    ~ (__ \ "dependencyDotBuild").formatNullable[String]
+    ~ (__ \ "buildInfo"         ).format[Map[String, String]]
+    ~ (__ \ "modules"           ).format[Seq[MetaArtefactModule]]
+    ~ (__ \ "created"           ).format[Instant]
     )(MetaArtefact.apply, unlift(MetaArtefact.unapply))
-
 }
 
-case class MetaArtefactModule(name: String, dependencyDotCompile: Option[String], dependencyDotTest: Option[String])
+case class MetaArtefactModule(
+  name                : String,
+  dependencyDotCompile: Option[String],
+  dependencyDotTest: Option[String]
+)
 
 object MetaArtefactModule {
-  val format: OFormat[MetaArtefactModule] = (
-    (__ \ "name"                ).format[String]~
-      (__ \ "dependencyDotCompile").formatNullable[String] ~
-      (__ \ "dependencyDotTest"   ).formatNullable[String]
+  val format: OFormat[MetaArtefactModule] =
+    ( (__ \ "name"                ).format[String]
+    ~ (__ \ "dependencyDotCompile").formatNullable[String]
+    ~ (__ \ "dependencyDotTest"   ).formatNullable[String]
     )(MetaArtefactModule.apply, unlift(MetaArtefactModule.unapply))
 }

@@ -29,6 +29,7 @@ import play.api.test.Helpers._
 import uk.gov.hmrc.servicedependencies.connector.ServiceConfigsConnector
 import uk.gov.hmrc.servicedependencies.controller.model.{Dependencies, Dependency, DependencyBobbyRule}
 import uk.gov.hmrc.servicedependencies.model.{BobbyRules, BobbyVersionRange, SlugInfoFlag, Version}
+import uk.gov.hmrc.servicedependencies.persistence.MetaArtefactRepository
 import uk.gov.hmrc.servicedependencies.service._
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -143,12 +144,14 @@ class ServiceDependenciesControllerSpec
       val mockServiceConfigsConnector       = mock[ServiceConfigsConnector]
       val mockTeamDependencyService         = mock[TeamDependencyService]
       val mockRepositoryDependenciesService = mock[RepositoryDependenciesService]
+      val mockMetaArtefactRepository        = mock[MetaArtefactRepository]
       val controller = new ServiceDependenciesController(
           mockSlugInfoService
         , mockSlugDependenciesService
         , mockServiceConfigsConnector
         , mockTeamDependencyService
         , mockRepositoryDependenciesService
+        , mockMetaArtefactRepository
         , stubControllerComponents()
         )
       Boot(
@@ -187,22 +190,20 @@ class ServiceDependenciesControllerSpec
       )
 
     val jsonForDependencyWithLatestVersionNoRuleViolations: String =
-      s"""|{
-          |  "name": "library1",
-          |  "group": "uk.gov.hmrc",
-          |  "currentVersion": {"major": 1, "minor": 1, "patch": 1, "original": "1.1.1"},
-          |  "latestVersion": {"major": 1, "minor": 2, "patch": 1, "original": "1.2.1"},
-          |  "bobbyRuleViolations": [],
-          |  "isExternal": false
-          |}""".stripMargin
+      s"""{
+        "name": "library1",
+        "group": "uk.gov.hmrc",
+        "currentVersion": {"major": 1, "minor": 1, "patch": 1, "original": "1.1.1"},
+        "latestVersion": {"major": 1, "minor": 2, "patch": 1, "original": "1.2.1"},
+        "bobbyRuleViolations": []
+      }"""
 
     val jsonForDependencyWithRuleViolationsNoLatestVersion: String =
-      s"""|{
-          |  "name": "library2",
-          |  "group": "uk.gov.hmrc",
-          |  "currentVersion": {"major": 2, "minor": 2, "patch": 2, "original": "2.2.2"},
-          |  "bobbyRuleViolations": [{"reason": "security vulnerability", "from": "2019-11-27", "range": "(,3.0.0)"}],
-          |  "isExternal": false
-          |}""".stripMargin
+      s"""{
+        "name": "library2",
+        "group": "uk.gov.hmrc",
+        "currentVersion": {"major": 2, "minor": 2, "patch": 2, "original": "2.2.2"},
+        "bobbyRuleViolations": [{"reason": "security vulnerability", "from": "2019-11-27", "range": "(,3.0.0)"}]
+      }"""
   }
 }

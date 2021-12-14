@@ -49,14 +49,21 @@ class SlugDependenciesService @Inject()(
       curatedLibraries <- curatedLibrariesOfSlug(name, flag, latestVersions)
     } yield curatedLibraries
 
-  def curatedLibrariesOfSlug(name: String, flag: SlugInfoFlag, latestVersions: Seq[MongoLatestVersion]): Future[Option[List[Dependency]]] =
+  def curatedLibrariesOfSlug(
+    name          : String,
+    flag          : SlugInfoFlag,
+    latestVersions: Seq[MongoLatestVersion],
+  ): Future[Option[List[Dependency]]] =
     slugInfoService.getSlugInfo(name, flag).flatMap {
       case None                                                  => Future.successful(None)
       case Some(slugInfo) if slugInfo.dependencyDotCompile == "" => curatedLibrariesOfSlugInfo(slugInfo, latestVersions).map(Some.apply)
       case Some(slugInfo)                                        => curatedLibrariesOfSlugInfoFromGraph(slugInfo, latestVersions).map(Some.apply)
     }
 
-  private def curatedLibrariesOfSlugInfo(slugInfo: SlugInfo, latestVersions: Seq[MongoLatestVersion]): Future[List[Dependency]] =
+  private def curatedLibrariesOfSlugInfo(
+    slugInfo      : SlugInfo,
+    latestVersions: Seq[MongoLatestVersion],
+  ): Future[List[Dependency]] =
     for {
       bobbyRules     <- serviceConfigsConnector.getBobbyRules
       dependencies   =  slugInfo
@@ -76,7 +83,7 @@ class SlugDependenciesService @Inject()(
                                                           , name    = slugDependency.artifact
                                                           , version = slugDependency.version
                                                           )
-                                , scope                = Some(DependencyScope.Compile)
+                                , scope               = Some(DependencyScope.Compile)
                                 )
                           }
       filtered       =  dependencies.filter(dependency =>
@@ -90,8 +97,8 @@ class SlugDependenciesService @Inject()(
     } yield filtered
 
   private def curatedLibrariesOfSlugInfoFromGraph(
-    slugInfo: SlugInfo,
-    latestVersions: Seq[MongoLatestVersion]
+    slugInfo      : SlugInfo,
+    latestVersions: Seq[MongoLatestVersion],
   ): Future[List[Dependency]] = {
     for {
       bobbyRules <- serviceConfigsConnector.getBobbyRules
