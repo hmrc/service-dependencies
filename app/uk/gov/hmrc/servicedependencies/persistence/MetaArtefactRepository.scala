@@ -19,7 +19,7 @@ package uk.gov.hmrc.servicedependencies.persistence
 import org.mongodb.scala.bson.BsonString
 import org.mongodb.scala.model.{IndexModel, IndexOptions, Indexes}
 import org.mongodb.scala.model.Aggregates.{`match`, project, unwind}
-import org.mongodb.scala.model.Filters.{and, equal}
+import org.mongodb.scala.model.Filters.{and, equal, exists, or}
 import org.mongodb.scala.model.Projections.{fields, excludeId, include}
 import play.api.Logging
 import uk.gov.hmrc.mongo.MongoComponent
@@ -42,7 +42,6 @@ class MetaArtefactRepository @Inject()(
   indexes        = Seq(IndexModel(Indexes.ascending("name", "version"), IndexOptions().unique(true)))
 ) with Logging {
 
-  // TODO add organisation/group to metadata...
   def insert(metaArtefact: MetaArtefact): Future[Unit] =
     collection.insertOne(metaArtefact)
       .toFuture
@@ -56,7 +55,10 @@ class MetaArtefactRepository @Inject()(
           unwind("$modules"),
           `match`(
             and(
-              //eq("modules.group", group) // not yet captured
+              or(
+                exists("modules.group", false),
+                equal("modules.group", group)
+              ),
               equal("modules.name", artefact),
               equal("version"     , version.toString)
             )

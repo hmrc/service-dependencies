@@ -60,13 +60,15 @@ object MetaArtefact {
 
 case class MetaArtefactModule(
   name                : String,
+  group               : String,
   dependencyDotCompile: Option[String],
-  dependencyDotTest: Option[String]
+  dependencyDotTest   : Option[String]
 )
 
 object MetaArtefactModule {
   val format: OFormat[MetaArtefactModule] =
     ( (__ \ "name"                ).format[String]
+    ~ (__ \ "group"               ).formatWithDefault[String]("uk.gov.hmrc")
     ~ (__ \ "dependencyDotCompile").formatNullable[String]
     ~ (__ \ "dependencyDotTest"   ).formatNullable[String]
     )(MetaArtefactModule.apply, unlift(MetaArtefactModule.unapply))
