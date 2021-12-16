@@ -21,7 +21,7 @@ import javax.inject.{Inject, Singleton}
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.servicedependencies.connector.{ServiceConfigsConnector, TeamsAndRepositoriesConnector}
 import uk.gov.hmrc.servicedependencies.controller.model.{Dependencies, Dependency}
-import uk.gov.hmrc.servicedependencies.model.{MongoLatestVersion, SlugInfoFlag}
+import uk.gov.hmrc.servicedependencies.model.{BobbyRules, MongoLatestVersion, SlugInfoFlag}
 import uk.gov.hmrc.servicedependencies.persistence.{LatestVersionRepository, SlugInfoRepository}
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -44,18 +44,21 @@ class TeamDependencyService @Inject()(
                             ).mapN { case (t, gh) => (t, gh) }
       libs               =  team.libraries.flatMap(l => githubDeps.find(_.repositoryName == l))
       services           =  team.services.flatMap(s => githubDeps.find(_.repositoryName == s))
+      bobbyRules         <- serviceConfigsConnector.getBobbyRules
       latestVersions     <- latestVersionRepository.getAllEntries
-      updatedServices    <- services.toList.traverse(dep => replaceServiceDependencies(dep, latestVersions))
+      updatedServices    <- services.toList.traverse(dep => replaceServiceDependencies(dep, bobbyRules, latestVersions))
     } yield libs  ++ updatedServices
 
   protected[service] def replaceServiceDependencies(
     dependencies      : Dependencies,
+    bobbyRules        : BobbyRules,
     latestVersions    : Seq[MongoLatestVersion]
   ): Future[Dependencies] =
     for {
       optLibraryDependencies <- slugDependenciesService.curatedLibrariesOfSlug(
                                   dependencies.repositoryName,
                                   SlugInfoFlag.Latest,
+                                  bobbyRules,
                                   latestVersions
                                 )
       output                 =  optLibraryDependencies.fold(dependencies)(libraryDependencies => dependencies.copy(libraryDependencies = libraryDependencies))
@@ -69,8 +72,9 @@ class TeamDependencyService @Inject()(
     for {
       team           <- teamsAndReposConnector.getTeam(teamName)
       latestVersions <- latestVersionRepository.getAllEntries
+      bobbyRules     <- serviceConfigsConnector.getBobbyRules
       res            <- team.services.toList.traverse { serviceName =>
-                          slugDependenciesService.curatedLibrariesOfSlug(serviceName, flag, latestVersions)
+                          slugDependenciesService.curatedLibrariesOfSlug(serviceName, flag, bobbyRules, latestVersions)
                             .map(_.map(serviceName -> _))
                         }
     } yield res.collect { case Some(kv) => kv }.toMap

@@ -19,13 +19,14 @@ package uk.gov.hmrc.servicedependencies.controller
 import cats.data.EitherT
 import cats.instances.all._
 import com.google.inject.{Inject, Singleton}
-import play.api.libs.json.{Json, OWrites}
+import play.api.libs.functional.syntax._
+import play.api.libs.json.{__, Json, OWrites}
 import play.api.mvc._
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 import uk.gov.hmrc.servicedependencies.connector.ServiceConfigsConnector
 import uk.gov.hmrc.servicedependencies.controller.model.{Dependencies, Dependency}
 import uk.gov.hmrc.servicedependencies.model._
-import uk.gov.hmrc.servicedependencies.persistence.MetaArtefactRepository
+import uk.gov.hmrc.servicedependencies.persistence.{LatestVersionRepository, MetaArtefactRepository}
 import uk.gov.hmrc.servicedependencies.service.{RepositoryDependenciesService, SlugDependenciesService, SlugInfoService, TeamDependencyService}
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -38,6 +39,7 @@ class ServiceDependenciesController @Inject()(
 , teamDependencyService        : TeamDependencyService
 , repositoryDependenciesService: RepositoryDependenciesService
 , metaArtefactRepository       : MetaArtefactRepository
+, latestVersionRepository      : LatestVersionRepository
 , cc                           : ControllerComponents
 )(implicit ec: ExecutionContext
 ) extends BackendController(cc) {
@@ -163,9 +165,84 @@ class ServiceDependenciesController @Inject()(
       ).merge
     }
 
-  def dependencyRepository(group: String, artefact: String, version: String): Action[AnyContent] =
+  def moduleRepository(group: String, artefact: String, version: String): Action[AnyContent] =
     Action.async {
       metaArtefactRepository.findRepoNameByModule(group, artefact, Version(version))
         .map(_.fold(NotFound(""))(res => Ok(Json.toJson(res))))
     }
+
+  def getRepositoryModules(repositoryName: String): Action[AnyContent] =
+    Action.async {
+      (for {
+         meta           <- EitherT.fromOptionF(
+                             metaArtefactRepository.find(repositoryName),
+                             NotFound("")
+                           )
+         latestVersions <- EitherT.liftF[Future, Result, Seq[MongoLatestVersion]](latestVersionRepository.getAllEntries)
+         bobbyRules     <- EitherT.liftF[Future, Result, BobbyRules](serviceConfigsConnector.getBobbyRules)
+       } yield {
+         def toDependencies(name: String, scope: DependencyScope, dotFile: String) =
+           slugDependenciesService.curatedLibrariesFromGraph(
+             dotFile        = dotFile,
+             rootName       = name,
+             latestVersions = latestVersions,
+             bobbyRules     = bobbyRules,
+             scope          = scope
+           )
+         val repository =
+           Repository(
+             name              = meta.name,
+             version           = meta.version,
+             dependenciesBuild = meta.dependencyDotBuild.fold(Seq.empty[Dependency])(s => toDependencies(meta.name, DependencyScope.Build, s)),
+             modules           = meta.modules.map { m =>
+                                   RepositoryModule(
+                                     name                = m.name,
+                                     group               = m.group,
+                                     dependenciesCompile = m.dependencyDotCompile.fold(Seq.empty[Dependency])(s => toDependencies(m.name, DependencyScope.Compile, s)),
+                                     dependenciesTest    = m.dependencyDotTest   .fold(Seq.empty[Dependency])(s => toDependencies(m.name, DependencyScope.Test   , s))
+                                   )
+                                 }
+           )
+         implicit val rw = Repository.writes
+         Ok(Json.toJson(repository))
+       }
+      ).merge
+    }
+}
+
+case class Repository(
+  name             : String,
+  version          : Version,
+  dependenciesBuild: Seq[Dependency],
+  modules          : Seq[RepositoryModule]
+)
+
+object Repository {
+  val writes: OWrites[Repository] = {
+    implicit val dw  = Dependency.writes
+    implicit val rmw = RepositoryModule.writes
+    ( (__ \ "name"             ).write[String]
+    ~ (__ \ "version"          ).write[Version](Version.format)
+    ~ (__ \ "dependenciesBuild").write[Seq[Dependency]]
+    ~ (__ \ "modules"          ).write[Seq[RepositoryModule]]
+    )(unlift(Repository.unapply))
+  }
+}
+
+case class RepositoryModule(
+  name               : String,
+  group              : String,
+  dependenciesCompile: Seq[Dependency],
+  dependenciesTest   : Seq[Dependency]
+)
+
+object RepositoryModule {
+  val writes: OWrites[RepositoryModule] = {
+    implicit val dw = Dependency.writes
+    ( (__ \ "name"               ).write[String]
+    ~ (__ \ "group"              ).write[String]
+    ~ (__ \ "dependenciesCompile").write[Seq[Dependency]]
+    ~ (__ \ "dependenciesTest"   ).write[Seq[Dependency]]
+    )(unlift(RepositoryModule.unapply))
+  }
 }

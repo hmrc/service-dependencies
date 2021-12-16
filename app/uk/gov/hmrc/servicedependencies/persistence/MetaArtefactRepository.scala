@@ -47,11 +47,30 @@ class MetaArtefactRepository @Inject()(
       .toFuture
       .map(_ => ())
 
-  // TODO expand modules in another derived collection
+  def find(repositoryName: String): Future[Option[MetaArtefact]] =
+    collection.find(equal("name", repositoryName))
+      .toFuture()
+      .map(
+        _
+          .filterNot(_.version.isReleaseCandidate)
+          .sortBy(_.version)
+          .headOption
+      )
+
+  // TODO we could store this data normalised to apply an index etc.
   def findRepoNameByModule(group: String, artefact: String, version: Version): Future[Option[String]] =
      mongoComponent.database.getCollection("metaArtefacts")
       .aggregate(
         List(
+          project(
+            fields(
+              excludeId(),
+              include("version"),
+              include("name"),
+              include("modules.group"),
+              include("modules.name")
+            )
+          ),
           unwind("$modules"),
           `match`(
             and(
@@ -61,12 +80,6 @@ class MetaArtefactRepository @Inject()(
               ),
               equal("modules.name", artefact),
               equal("version"     , version.toString)
-            )
-          ),
-          project(
-            fields(
-              excludeId(),
-              include("name")
             )
           )
         )

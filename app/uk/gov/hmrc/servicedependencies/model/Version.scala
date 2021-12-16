@@ -38,10 +38,14 @@ case class Version(
     else
       major - other.major
 
-  override def toString: String = original
+  override def toString: String =
+    original
 
   def normalise: Version =
     Version(major, minor, patch, original = s"$major.$minor.$patch")
+
+  def isReleaseCandidate: Boolean =
+    original.endsWith("-RC")
 }
 
 object Version {
