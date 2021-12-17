@@ -50,36 +50,26 @@ class TeamDependencyServiceSpec extends AnyWordSpec with Matchers with MockitoSu
 
   "replaceServiceDeps" should {
     "replace library section with slug data" in {
-
       val lib1 = new Dependency(name = "foolib", group = "uk.gov.hmrc", currentVersion = Version("1.2.3"), latestVersion = None, bobbyRuleViolations = List.empty)
       val lib2 = new Dependency(name = "foolib", group = "uk.gov.hmrc", currentVersion = Version("1.2.4"), latestVersion = None, bobbyRuleViolations = List.empty)
-      val dep = Dependencies("foo", libraryDependencies = Seq(lib1), Nil, Nil, Instant.now() )
 
-      when(mockSlugDependenciesService.curatedLibrariesOfSlug(dep.repositoryName, SlugInfoFlag.Latest, Seq.empty))
+      val dep = Dependencies("foo", libraryDependencies = Seq(lib1), Nil, Nil, Instant.now())
+
+      when(mockSlugDependenciesService.curatedLibrariesOfSlug(dep.repositoryName, SlugInfoFlag.Latest, BobbyRules(Map.empty), Seq.empty))
         .thenReturn(Future.successful(Option(List(lib2))))
 
-      when(mockLatestVersionRepository.getAllEntries)
-        .thenReturn(Future.successful(Seq.empty))
+      val res = tds.replaceServiceDependencies(dep, BobbyRules(Map.empty), Seq.empty).futureValue
 
-      val res = tds.replaceServiceDependencies(dep, Seq.empty).futureValue
-
-      res.libraryDependencies shouldBe Seq(lib2)
+      res.libraryDependencies    shouldBe Seq(lib2)
       res.sbtPluginsDependencies shouldBe Nil
-      res.otherDependencies shouldBe Nil
+      res.otherDependencies      shouldBe Nil
     }
   }
 
   "findAllDepsForTeam" should {
-
     "return dependencies for all projects belonging to  team" in {
       implicit val hc: HeaderCarrier = new HeaderCarrier()
       val team = new Team("foo", Map("Service" -> Seq("foo-service")))
-
-      when(mockTeamsAndReposConnector.getTeam("foo"))
-        .thenReturn(Future.successful(team))
-
-      when(mockLatestVersionRepository.getAllEntries)
-        .thenReturn(Future.successful(Seq()))
 
       val fooDep1    = Dependency(name = "foo-dep1", group = "uk.gov.hmrc", currentVersion = Version("1.2.0"), latestVersion = None, bobbyRuleViolations = List.empty)
       val fooDep2    = Dependency(name = "foo-dep2", group = "uk.gov.hmrc", currentVersion = Version("0.6.0"), latestVersion = None, bobbyRuleViolations = List.empty)
@@ -93,14 +83,20 @@ class TeamDependencyServiceSpec extends AnyWordSpec with Matchers with MockitoSu
         , lastUpdated            = Instant.now()
         )
 
+      when(mockTeamsAndReposConnector.getTeam("foo"))
+        .thenReturn(Future.successful(team))
+
       when(mockRepositoryDependenciesService.getDependencyVersionsForAllRepositories)
         .thenReturn(Future.successful(Seq(fooDependencies)))
 
-      when(mockSlugDependenciesService.curatedLibrariesOfSlug("foo-service", SlugInfoFlag.Latest, Seq.empty))
-        .thenReturn(Future.successful(Option(List(fooDep1, fooSlugDep))))
-
       when(mockServiceConfigsConnector.getBobbyRules)
         .thenReturn(Future.successful(BobbyRules(Map.empty)))
+
+      when(mockLatestVersionRepository.getAllEntries)
+        .thenReturn(Future.successful(Seq()))
+
+      when(mockSlugDependenciesService.curatedLibrariesOfSlug("foo-service", SlugInfoFlag.Latest, BobbyRules(Map.empty), Seq.empty))
+        .thenReturn(Future.successful(Option(List(fooDep1, fooSlugDep))))
 
       val res = tds.findAllDepsForTeam("foo").futureValue
 

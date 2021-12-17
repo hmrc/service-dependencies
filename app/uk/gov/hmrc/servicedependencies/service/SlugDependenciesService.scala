@@ -121,7 +121,6 @@ class SlugDependenciesService @Inject()(
       .dependencies
       .filterNot(_.artefact == rootName)
       .map { graphDependency =>
-
         val latestVersion = latestVersions
             .find(v => v.group == graphDependency.group && v.name == graphDependency.artefact)
             .map(_.version)

@@ -110,7 +110,9 @@ class SlugDependenciesServiceSpec extends AnyFreeSpec with MockitoSugar with Mat
           DependencyConfig(name = Dependency1.artifact, group = Dependency1.group, latestVersion = None)
         , DependencyConfig(name = Dependency3.artifact, group = Dependency3.group, latestVersion = None)
         )
+
       stubNoEnrichmentsForDependencies()
+
       when(mockSlugInfoService.getSlugInfo(SlugName, flag))
         .thenReturn(
           Future.successful(
@@ -130,33 +132,31 @@ class SlugDependenciesServiceSpec extends AnyFreeSpec with MockitoSugar with Mat
 
     "returning None when the slug is not recognised" in new Fixture {
       stubLatestLibraryVersionLookupSuccessfullyReturns(Seq.empty)
+
+      when(mockServiceConfigsConnector.getBobbyRules)
+        .thenReturn(Future.successful(BobbyRules(Map.empty)))
+
       when(mockSlugInfoService.getSlugInfo(SlugName, flag))
         .thenReturn(Future.successful(None))
 
       underTest.curatedLibrariesOfSlug(SlugName, flag).futureValue shouldBe None
     }
 
-    "failing when slug retrieval encounters a failure" in new Fixture {
-      stubLatestLibraryVersionLookupSuccessfullyReturns(Seq.empty)
-      val failure = new RuntimeException("failed to retrieve slug info by flag")
-      when(mockSlugInfoService.getSlugInfo(SlugName, flag))
-        .thenReturn(Future.failed(failure))
-
-      underTest.curatedLibrariesOfSlug(SlugName, flag).failed.futureValue shouldBe failure
-    }
-
     "enriches dependencies with latest version information" - {
       "only adding the latest version when known" in new Fixture {
         stubBobbyRulesViolations(Map.empty)
+
         stubCuratedLibrariesOf(
           DependencyConfig(name = Dependency1.artifact, group = Dependency1.group, latestVersion = None)
         , DependencyConfig(name = Dependency2.artifact, group = Dependency2.group, latestVersion = None)
         , DependencyConfig(name = Dependency3.artifact, group = Dependency3.group, latestVersion = None)
         )
+
         stubLatestLibraryVersionLookupSuccessfullyReturns(Seq(
             Dependency1 -> LatestVersionOfDependency1
           , Dependency3 -> LatestVersionOfDependency3
           ))
+
         when(mockSlugInfoService.getSlugInfo(SlugName, flag))
           .thenReturn(
             Future.successful(
@@ -187,6 +187,9 @@ class SlugDependenciesServiceSpec extends AnyFreeSpec with MockitoSugar with Mat
               , withDependencies = List(Dependency2)
               ))
           ))
+
+        when(mockServiceConfigsConnector.getBobbyRules)
+          .thenReturn(Future.successful(BobbyRules(Map.empty)))
 
         when(mockLatestVersionRepository.getAllEntries)
           .thenReturn(Future.failed(failure))

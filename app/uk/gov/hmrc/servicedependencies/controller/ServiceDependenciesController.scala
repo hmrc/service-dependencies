@@ -58,14 +58,6 @@ class ServiceDependenciesController @Inject()(
       ).merge
     }
 
-  def dependencies(): Action[AnyContent] =
-    Action.async {
-      for {
-        dependencies <- repositoryDependenciesService
-                          .getDependencyVersionsForAllRepositories
-      } yield Ok(Json.toJson(dependencies))
-    }
-
   def dependenciesForTeam(teamName: String): Action[AnyContent] =
     Action.async { implicit request =>
       for {
@@ -128,11 +120,25 @@ class ServiceDependenciesController @Inject()(
   def dependenciesOfSlug(name: String, flag: String): Action[AnyContent] =
     Action.async {
       (for {
-         f    <- EitherT.fromOption[Future](SlugInfoFlag.parse(flag), BadRequest(s"invalid flag '$flag'"))
-         deps <- EitherT.fromOptionF(slugDependenciesService.curatedLibrariesOfSlug(name, f), NotFound(""))
+         f     <- EitherT.fromOption[Future](SlugInfoFlag.parse(flag), BadRequest(s"invalid flag '$flag'"))
+         deps  <- EitherT.fromOptionF(slugDependenciesService.curatedLibrariesOfSlug(name, f), NotFound(""))
+         deps2 <- if (f == SlugInfoFlag.Latest && !deps.exists(_.scope.contains(DependencyScope.Build))) { // i.e. no dependency graph data yet
+                    EitherT.fromOptionF(
+                       repositoryDependenciesService.getDependencyVersionsForRepository(name),
+                       NotFound("")
+                    ).map { latestGithub =>
+                      val compile = deps // latestGithub.libraryDependencies
+                      // test dependencies are assumed to be any github dependencies that are not in the slug
+                      val test    = latestGithub.libraryDependencies.filterNot(ghd => deps.exists(d => d.group == ghd.group && d.name == ghd.name))
+                      val build   = latestGithub.sbtPluginsDependencies ++ latestGithub.otherDependencies // other includes sbt.version - TODO can we include this for slug dependencies?
+                      compile.map(_.copy(scope = Some(DependencyScope.Compile))) ++
+                        build.map(_.copy(scope = Some(DependencyScope.Build))) ++
+                        test.map(_.copy(scope = Some(DependencyScope.Test)))
+                    }
+                  } else EitherT.pure[Future, Result](deps)
        } yield {
          implicit val dw = Dependency.writes
-         Ok(Json.toJson(deps))
+         Ok(Json.toJson(deps2))
        }
       ).merge
     }
@@ -165,13 +171,13 @@ class ServiceDependenciesController @Inject()(
       ).merge
     }
 
-  def moduleRepository(group: String, artefact: String, version: String): Action[AnyContent] =
+  def repositoryName(group: String, artefact: String, version: String): Action[AnyContent] =
     Action.async {
       metaArtefactRepository.findRepoNameByModule(group, artefact, Version(version))
         .map(_.fold(NotFound(""))(res => Ok(Json.toJson(res))))
     }
 
-  def getRepositoryModules(repositoryName: String): Action[AnyContent] =
+  def moduleDependencies(repositoryName: String): Action[AnyContent] =
     Action.async {
       (for {
          meta           <- EitherT.fromOptionF(
@@ -206,7 +212,34 @@ class ServiceDependenciesController @Inject()(
          implicit val rw = Repository.writes
          Ok(Json.toJson(repository))
        }
-      ).merge
+      ).leftFlatMap { _ =>
+        // fallback to data from getDependencyVersionsForRepository()
+        implicit val rw = Repository.writes
+        for {
+          dependencies <- EitherT.fromOptionF(
+                            repositoryDependenciesService.getDependencyVersionsForRepository(repositoryName),
+                            NotFound("")
+                         )
+        } yield
+          Ok(
+            Json.toJson(
+              Repository(
+                name              = repositoryName,
+                version           = Version("-"), // or have to make this optional...
+                dependenciesBuild = dependencies.sbtPluginsDependencies,
+                modules           = Seq(
+                                      RepositoryModule(
+                                        name                = repositoryName,
+                                        group               = "uk.gov.hmrc",
+                                        dependenciesCompile = dependencies.libraryDependencies,
+                                        dependenciesTest    = Seq.empty[Dependency]
+                                      )
+                                    )
+              )
+            )
+          )
+      }
+      .merge
     }
 }
 
@@ -214,6 +247,7 @@ case class Repository(
   name             : String,
   version          : Version,
   dependenciesBuild: Seq[Dependency],
+  // TODO include "other dependencies" (e.g. previously sbt version) - or even include as an extra build dependency? // or in slugInfo?
   modules          : Seq[RepositoryModule]
 )
 
