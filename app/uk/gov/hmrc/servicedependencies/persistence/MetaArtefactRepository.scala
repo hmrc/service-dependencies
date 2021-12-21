@@ -18,7 +18,7 @@ package uk.gov.hmrc.servicedependencies.persistence
 
 import org.mongodb.scala.bson.{BsonDocument, BsonString}
 import org.mongodb.scala.bson.conversions.Bson
-import org.mongodb.scala.model.{IndexModel, IndexOptions, Indexes}
+import org.mongodb.scala.model.{IndexModel, IndexOptions, Indexes, ReplaceOptions}
 import org.mongodb.scala.model.Aggregates.{`match`, project, unwind}
 import org.mongodb.scala.model.Filters.{and, equal, exists, or}
 import org.mongodb.scala.model.Projections.{fields, excludeId, include}
@@ -44,10 +44,19 @@ class MetaArtefactRepository @Inject()(
   indexes        = Seq(IndexModel(Indexes.ascending("name", "version"), IndexOptions().unique(true)))
 ) with Logging {
 
-  def insert(metaArtefact: MetaArtefact): Future[Unit] =
-    collection.insertOne(metaArtefact)
+  def add(metaArtefact: MetaArtefact): Future[Unit] =
+    collection
+      .replaceOne(
+          filter      = and(
+                          equal("name"  , metaArtefact.name),
+                          equal("vesion", metaArtefact.version.toString)
+                        )
+        , replacement = metaArtefact
+        , options     = ReplaceOptions().upsert(true)
+        )
       .toFuture
       .map(_ => ())
+
 
   def find(repositoryName: String): Future[Option[MetaArtefact]] =
     collection.find(equal("name", repositoryName))
@@ -55,7 +64,7 @@ class MetaArtefactRepository @Inject()(
       .map(
         _
           .filterNot(_.version.isReleaseCandidate)
-          .sortBy(_.version)
+          .sortBy(_.version)(implicitly[Ordering[Version]].reverse)
           .headOption
       )
 
@@ -94,4 +103,9 @@ class MetaArtefactRepository @Inject()(
       )
       .headOption
       .map(_.flatMap(_.get[BsonString]("name")).map(_.getValue))
+
+  def clearAllData: Future[Unit] =
+    collection.deleteMany(BsonDocument())
+      .toFuture
+      .map(_ => ())
 }
