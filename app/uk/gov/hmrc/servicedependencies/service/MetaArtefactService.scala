@@ -35,5 +35,5 @@ class MetaArtefactService @Inject()(
   * and doing something a bit more sophisticated than just dumping it into a collection.
   */
   def addMetaArtefact(metaArtefact: MetaArtefact): Future[Unit] =
-    metaArtefactRepository.insert(metaArtefact)
+    metaArtefactRepository.add(metaArtefact)
 }

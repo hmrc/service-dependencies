@@ -81,8 +81,8 @@ class BobbyRulesSummaryRepository @Inject()(
       .toFuture
       .map(_.toList)
 
-  def clearAllData: Future[Boolean] =
+  def clearAllData: Future[Unit] =
     collection.deleteMany(BsonDocument())
       .toFuture
-      .map(_.wasAcknowledged())
+      .map(_ => ())
 }

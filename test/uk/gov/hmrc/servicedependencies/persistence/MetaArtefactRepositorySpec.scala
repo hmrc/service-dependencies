@@ -63,10 +63,35 @@ class MetaArtefactRepositorySpec
       created            = Instant.now()
     )
 
+  "add" should {
+    "add correctly" in {
+      (for {
+         before <- repository.find(metaArtefact.name)
+         _      =  before shouldBe None
+         _      <- repository.add(metaArtefact)
+         after  <- repository.find(metaArtefact.name)
+         _      =  after shouldBe Some(metaArtefact)
+       } yield ()
+      ).futureValue
+    }
+  }
+
+  "find" should {
+    "return the latest" in {
+      (for {
+         _      <- repository.add(metaArtefact.copy(version = Version("2.0.0")))
+         _      <- repository.add(metaArtefact)
+         found  <- repository.find(metaArtefact.name)
+         _      =  found shouldBe Some(metaArtefact.copy(version = Version("2.0.0")))
+       } yield ()
+      ).futureValue
+    }
+  }
+
   "findRepoNameByModule" should {
     "find repo name" in {
       (for {
-         _      <- repository.insert(metaArtefact)
+         _      <- repository.add(metaArtefact)
          name   <- repository.findRepoNameByModule(
                      group    = "uk.gov.hmrc",
                      artefact = "sub-module",
@@ -79,7 +104,7 @@ class MetaArtefactRepositorySpec
 
     "return data for any version if no match" in {
       (for {
-         _      <- repository.insert(metaArtefact)
+         _      <- repository.add(metaArtefact)
          name   <- repository.findRepoNameByModule(
                      group    = "uk.gov.hmrc",
                      artefact = "sub-module",

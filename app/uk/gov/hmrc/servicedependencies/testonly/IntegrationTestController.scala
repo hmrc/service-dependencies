@@ -21,7 +21,6 @@ import javax.inject.Inject
 import org.mongodb.scala.bson.BsonDocument
 import play.api.libs.json._
 import play.api.mvc.ControllerComponents
-import uk.gov.hmrc.mongo.play.json.formats.MongoJavatimeFormats
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 import uk.gov.hmrc.servicedependencies.model._
 import uk.gov.hmrc.servicedependencies.persistence._
@@ -39,27 +38,27 @@ class IntegrationTestController @Inject()(
   , derivedViewsService             : DerivedViewsService
   , deploymentsRepo                 : DeploymentRepository
   , derivedServiceDependenciesRepository: DerivedServiceDependenciesRepository
+  , metaArtefactRepository          : MetaArtefactRepository
   , cc                              : ControllerComponents
   )(implicit ec: ExecutionContext
   ) extends BackendController(cc) {
-
-  implicit val dtf                = MongoJavatimeFormats.localDateFormat
-  implicit val vf                 = Version.format
-  implicit val latestVersionReads = Json.using[Json.WithDefaultValues].reads[MongoLatestVersion]
-  implicit val dependenciesReads  = Json.using[Json.WithDefaultValues].reads[MongoRepositoryDependencies]
-  implicit val siwfr              = SlugInfoWithFlags.reads
-  implicit val brsf               = BobbyRulesSummary.apiFormat
 
   private def validateJson[A : Reads] =
     parse.json.validate(
       _.validate[A].asEither.left.map(e => BadRequest(JsError.toJson(e)))
     )
 
-  def addLatestVersions =
+  def addLatestVersions = {
+    implicit val latestVersionReads = {
+      implicit val vf = Version.format
+      Json.using[Json.WithDefaultValues].reads[MongoLatestVersion]
+    }
+
     Action.async(validateJson[List[MongoLatestVersion]]) { implicit request =>
       request.body.traverse(latestVersionRepository.update)
         .map(_ => NoContent)
     }
+  }
 
   def deleteLatestVersions =
     Action.async {
@@ -67,11 +66,15 @@ class IntegrationTestController @Inject()(
         .map(_ => NoContent)
     }
 
-  def addDependencies =
+  def addDependencies = {
+    implicit val dependenciesReads =
+      Json.using[Json.WithDefaultValues].reads[MongoRepositoryDependencies]
+
     Action.async(validateJson[List[MongoRepositoryDependencies]]) { implicit request =>
       request.body.traverse(repositoryDependenciesRepository.update)
         .map(_ => NoContent)
     }
+  }
 
  def deleteDependencies =
     Action.async {
@@ -79,7 +82,22 @@ class IntegrationTestController @Inject()(
         .map(_ => NoContent)
     }
 
-  def addSluginfos =
+  def addMetaArtefacts = {
+    implicit val maf = MetaArtefact.apiFormat
+    Action.async(validateJson[List[MetaArtefact]]) { implicit request =>
+      request.body.traverse(metaArtefactRepository.add)
+        .map(_ => NoContent)
+    }
+  }
+
+ def deleteMetaArtefacts =
+    Action.async {
+      metaArtefactRepository.clearAllData
+        .map(_ => NoContent)
+    }
+
+  def addSluginfos = {
+    implicit val siwfr = SlugInfoWithFlags.reads
     Action.async(validateJson[List[SlugInfoWithFlags]]) { implicit request =>
       request.body.traverse { slugInfoWithFlag =>
         def updateFlag(slugInfoWithFlag: SlugInfoWithFlags, flag: SlugInfoFlag, toSet: SlugInfoWithFlags => Boolean): Future[Unit] =
@@ -100,6 +118,7 @@ class IntegrationTestController @Inject()(
         } yield ()
       }.map(_ => NoContent)
     }
+  }
 
   def deleteSluginfos =
     Action.async {
@@ -109,11 +128,13 @@ class IntegrationTestController @Inject()(
       } yield NoContent
     }
 
-  def addBobbyRulesSummaries =
+  def addBobbyRulesSummaries = {
+    implicit val brsf = BobbyRulesSummary.apiFormat
     Action.async(validateJson[List[BobbyRulesSummary]]) { implicit request =>
       request.body.traverse(bobbyRulesSummaryRepo.add)
         .map(_ => NoContent)
     }
+  }
 
   def deleteBobbyRulesSummaries =
     Action.async {
@@ -130,6 +151,7 @@ class IntegrationTestController @Inject()(
         , bobbyRulesSummaryRepo.clearAllData
         , deploymentsRepo.clearAllData
         , derivedServiceDependenciesRepository.collection.deleteMany(BsonDocument()).toFuture
+        , metaArtefactRepository.clearAllData
         ).sequence
          .map(_ => NoContent)
     }

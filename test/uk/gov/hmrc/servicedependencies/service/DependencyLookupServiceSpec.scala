@@ -92,9 +92,9 @@ class DependencyLookupServiceSpec
       override def getHistoric: Future[List[BobbyRulesSummary]] =
         Future.successful(store.get)
 
-      override def clearAllData: Future[Boolean] = {
+      override def clearAllData: Future[Unit] = {
         store.set(List.empty)
-        Future.successful(true)
+        Future.unit
       }
     }
 

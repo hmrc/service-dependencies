@@ -91,10 +91,10 @@ class RepositoryDependenciesRepository @Inject()(
       .toFuture
   }
 
-  def clearAllData: Future[Boolean] =
+  def clearAllData: Future[Unit] =
     collection.deleteMany(BsonDocument())
       .toFuture
-      .map(_.wasAcknowledged())
+      .map(_ => ())
 
   def clearUpdateDates: Future[Seq[MongoRepositoryDependencies]] =
     for {
