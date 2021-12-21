@@ -29,6 +29,7 @@ import play.api.test.Helpers._
 import uk.gov.hmrc.servicedependencies.connector.ServiceConfigsConnector
 import uk.gov.hmrc.servicedependencies.controller.model.{Dependencies, Dependency, DependencyBobbyRule}
 import uk.gov.hmrc.servicedependencies.model.{BobbyRules, BobbyVersionRange, SlugInfoFlag, Version}
+import uk.gov.hmrc.servicedependencies.persistence.{LatestVersionRepository, MetaArtefactRepository}
 import uk.gov.hmrc.servicedependencies.service._
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -66,39 +67,15 @@ class ServiceDependenciesControllerSpec
     }
   }
 
-  "get dependencies" should {
-    "get all dependencies using the service" in {
-      val boot                = Boot.init
-      val now                 = Instant.now()
-      val repo1               = Dependencies("repo1", Seq(), Seq(), Seq(), now)
-      val repo2               = Dependencies("repo2", Seq(), Seq(), Seq(), now)
-      val repo3               = Dependencies("repo3", Seq(), Seq(), Seq(), now)
-      val libraryDependencies = Seq(repo1, repo2, repo3)
-
-      when(boot.mockRepositoryDependenciesService.getDependencyVersionsForAllRepositories)
-        .thenReturn(Future.successful(libraryDependencies))
-
-      when(boot.mockServiceConfigsConnector.getBobbyRules)
-        .thenReturn(Future.successful(BobbyRules(Map.empty)))
-
-      val result = boot.controller.dependencies().apply(FakeRequest())
-
-      contentAsJson(result).toString shouldBe
-        List( s"""{"repositoryName":"repo1","libraryDependencies":[],"sbtPluginsDependencies":[],"otherDependencies":[],"lastUpdated":"$now"}"""
-            , s"""{"repositoryName":"repo2","libraryDependencies":[],"sbtPluginsDependencies":[],"otherDependencies":[],"lastUpdated":"$now"}"""
-            , s"""{"repositoryName":"repo3","libraryDependencies":[],"sbtPluginsDependencies":[],"otherDependencies":[],"lastUpdated":"$now"}"""
-            ).mkString("[", ",", "]")
-    }
-  }
-
   "dependenciesOfSlug" should {
     "get dependencies for a SlugInfoFlag" in new GetDependenciesOfSlugFixture {
-      val flag = SlugInfoFlag.Latest
-      when(boot.mockSlugDependenciesService.curatedLibrariesOfSlug(slugName, flag)).thenReturn(
-        Future.successful(
-          Some(List(DependencyWithLatestVersionNoRuleViolations, DependencyWithRuleViolationsNoLatestVersion))
+      val flag = SlugInfoFlag.Production
+      when(boot.mockSlugDependenciesService.curatedLibrariesOfSlug(slugName, flag))
+        .thenReturn(
+          Future.successful(
+            Some(List(DependencyWithLatestVersionNoRuleViolations, DependencyWithRuleViolationsNoLatestVersion))
+          )
         )
-      )
 
       val result = boot.controller.dependenciesOfSlug(slugName, flag.asString).apply(FakeRequest())
 
@@ -109,9 +86,8 @@ class ServiceDependenciesControllerSpec
 
     "return Not Found when the requested slug is not recognised" in new GetDependenciesOfSlugFixture {
       val flag = SlugInfoFlag.Latest
-      when(boot.mockSlugDependenciesService.curatedLibrariesOfSlug(slugName, flag)).thenReturn(
-        Future.successful(None)
-      )
+      when(boot.mockSlugDependenciesService.curatedLibrariesOfSlug(slugName, flag))
+        .thenReturn(Future.successful(None))
 
       val result = boot.controller.dependenciesOfSlug(slugName, flag.asString).apply(FakeRequest())
 
@@ -133,6 +109,8 @@ class ServiceDependenciesControllerSpec
     , mockServiceConfigsConnector      : ServiceConfigsConnector
     , mockTeamDependencyService        : TeamDependencyService
     , mockRepositoryDependenciesService: RepositoryDependenciesService
+    , mockMetaArtefactRepository       : MetaArtefactRepository
+    , mockLatestVersionRepository      : LatestVersionRepository
     , controller                       : ServiceDependenciesController
     )
 
@@ -143,12 +121,16 @@ class ServiceDependenciesControllerSpec
       val mockServiceConfigsConnector       = mock[ServiceConfigsConnector]
       val mockTeamDependencyService         = mock[TeamDependencyService]
       val mockRepositoryDependenciesService = mock[RepositoryDependenciesService]
+      val mockMetaArtefactRepository        = mock[MetaArtefactRepository]
+      val mockLatestVersionRepository       = mock[LatestVersionRepository]
       val controller = new ServiceDependenciesController(
           mockSlugInfoService
         , mockSlugDependenciesService
         , mockServiceConfigsConnector
         , mockTeamDependencyService
         , mockRepositoryDependenciesService
+        , mockMetaArtefactRepository
+        , mockLatestVersionRepository
         , stubControllerComponents()
         )
       Boot(
@@ -157,6 +139,8 @@ class ServiceDependenciesControllerSpec
         , mockServiceConfigsConnector
         , mockTeamDependencyService
         , mockRepositoryDependenciesService
+        , mockMetaArtefactRepository
+        , mockLatestVersionRepository
         , controller
         )
     }
@@ -187,22 +171,20 @@ class ServiceDependenciesControllerSpec
       )
 
     val jsonForDependencyWithLatestVersionNoRuleViolations: String =
-      s"""|{
-          |  "name": "library1",
-          |  "group": "uk.gov.hmrc",
-          |  "currentVersion": {"major": 1, "minor": 1, "patch": 1, "original": "1.1.1"},
-          |  "latestVersion": {"major": 1, "minor": 2, "patch": 1, "original": "1.2.1"},
-          |  "bobbyRuleViolations": [],
-          |  "isExternal": false
-          |}""".stripMargin
+      s"""{
+        "name": "library1",
+        "group": "uk.gov.hmrc",
+        "currentVersion": {"major": 1, "minor": 1, "patch": 1, "original": "1.1.1"},
+        "latestVersion": {"major": 1, "minor": 2, "patch": 1, "original": "1.2.1"},
+        "bobbyRuleViolations": []
+      }"""
 
     val jsonForDependencyWithRuleViolationsNoLatestVersion: String =
-      s"""|{
-          |  "name": "library2",
-          |  "group": "uk.gov.hmrc",
-          |  "currentVersion": {"major": 2, "minor": 2, "patch": 2, "original": "2.2.2"},
-          |  "bobbyRuleViolations": [{"reason": "security vulnerability", "from": "2019-11-27", "range": "(,3.0.0)"}],
-          |  "isExternal": false
-          |}""".stripMargin
+      s"""{
+        "name": "library2",
+        "group": "uk.gov.hmrc",
+        "currentVersion": {"major": 2, "minor": 2, "patch": 2, "original": "2.2.2"},
+        "bobbyRuleViolations": [{"reason": "security vulnerability", "from": "2019-11-27", "range": "(,3.0.0)"}]
+      }"""
   }
 }

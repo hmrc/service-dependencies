@@ -45,74 +45,82 @@ class SlugDependenciesService @Inject()(
    */
   def curatedLibrariesOfSlug(name: String, flag: SlugInfoFlag): Future[Option[List[Dependency]]] =
     for {
+      bobbyRules       <- serviceConfigsConnector.getBobbyRules
       latestVersions   <- latestVersionRepository.getAllEntries
-      curatedLibraries <- curatedLibrariesOfSlug(name, flag, latestVersions)
+      curatedLibraries <- curatedLibrariesOfSlug(name, flag, bobbyRules, latestVersions)
     } yield curatedLibraries
 
-  def curatedLibrariesOfSlug(name: String, flag: SlugInfoFlag, latestVersions: Seq[MongoLatestVersion]): Future[Option[List[Dependency]]] =
-    slugInfoService.getSlugInfo(name, flag).flatMap {
-      case None                                                  => Future.successful(None)
-      case Some(slugInfo) if slugInfo.dependencyDotCompile == "" => curatedLibrariesOfSlugInfo(slugInfo, latestVersions).map(Some.apply)
-      case Some(slugInfo)                                        => curatedLibrariesOfSlugInfoFromGraph(slugInfo, latestVersions).map(Some.apply)
-    }
+  def curatedLibrariesOfSlug(
+    name          : String,
+    flag          : SlugInfoFlag,
+    bobbyRules    : BobbyRules,
+    latestVersions: Seq[MongoLatestVersion],
+  ): Future[Option[List[Dependency]]] =
+    slugInfoService.getSlugInfo(name, flag)
+      .map(_.map(slugInfo =>
+        if (slugInfo.dependencyDotCompile == "")
+          curatedLibrariesOfSlugInfo(slugInfo, bobbyRules, latestVersions)
+        else
+          curatedLibrariesOfSlugInfoFromGraph(slugInfo, bobbyRules, latestVersions)
+      ))
 
-  private def curatedLibrariesOfSlugInfo(slugInfo: SlugInfo, latestVersions: Seq[MongoLatestVersion]): Future[List[Dependency]] =
-    for {
-      bobbyRules     <- serviceConfigsConnector.getBobbyRules
-      dependencies   =  slugInfo
-                          .dependencies
-                          .map { slugDependency =>
-                              val latestVersion =
-                                latestVersions
-                                  .find(v => v.group == slugDependency.group && v.name == slugDependency.artifact)
-                                  .map(_.version)
-                              Dependency(
-                                  name                = slugDependency.artifact
-                                , group               = slugDependency.group
-                                , currentVersion      = slugDependency.version
-                                , latestVersion       = latestVersion
-                                , bobbyRuleViolations = bobbyRules.violationsFor(
-                                                            group   = slugDependency.group
-                                                          , name    = slugDependency.artifact
-                                                          , version = slugDependency.version
-                                                          )
-                                , scope                = Some(DependencyScope.Compile)
-                                )
-                          }
-      filtered       =  dependencies.filter(dependency =>
-                            dependency.group.startsWith("uk.gov.hmrc") ||
-                            curatedDependencyConfig.allDependencies.exists(lib =>
-                              lib.name  == dependency.name &&
-                              lib.group == dependency.group
-                            ) ||
-                            dependency.bobbyRuleViolations.nonEmpty
-                          )
-    } yield filtered
-
-  private def curatedLibrariesOfSlugInfoFromGraph(
-    slugInfo: SlugInfo,
-    latestVersions: Seq[MongoLatestVersion]
-  ): Future[List[Dependency]] = {
-    for {
-      bobbyRules <- serviceConfigsConnector.getBobbyRules
-      compile    =  curatedLibrariesOfSlugInfoFromGraph(slugInfo, latestVersions, bobbyRules, DependencyScope.Compile)
-      test       =  curatedLibrariesOfSlugInfoFromGraph(slugInfo, latestVersions, bobbyRules, DependencyScope.Test).filterNot(n => compile.exists(_.name == n.name))
-      build      =  curatedLibrariesOfSlugInfoFromGraph(slugInfo, latestVersions, bobbyRules, DependencyScope.Build)
-    } yield compile ++ test ++ build
-  }
+  private def curatedLibrariesOfSlugInfo(
+    slugInfo      : SlugInfo,
+    bobbyRules    : BobbyRules,
+    latestVersions: Seq[MongoLatestVersion],
+  ): List[Dependency] =
+    slugInfo
+      .dependencies
+      .map { slugDependency =>
+          val latestVersion =
+            latestVersions
+              .find(v => v.group == slugDependency.group && v.name == slugDependency.artifact)
+              .map(_.version)
+          Dependency(
+              name                = slugDependency.artifact
+            , group               = slugDependency.group
+            , currentVersion      = slugDependency.version
+            , latestVersion       = latestVersion
+            , bobbyRuleViolations = bobbyRules.violationsFor(
+                                        group   = slugDependency.group
+                                      , name    = slugDependency.artifact
+                                      , version = slugDependency.version
+                                      )
+            , scope               = Some(DependencyScope.Compile)
+            )
+      }
+      .filter(dependency =>
+        dependency.group.startsWith("uk.gov.hmrc") ||
+        curatedDependencyConfig.allDependencies.exists(lib =>
+          lib.name  == dependency.name &&
+          lib.group == dependency.group
+        ) ||
+        dependency.bobbyRuleViolations.nonEmpty
+      )
 
   private def curatedLibrariesOfSlugInfoFromGraph(
     slugInfo      : SlugInfo,
+    bobbyRules    : BobbyRules,
+    latestVersions: Seq[MongoLatestVersion],
+  ): List[Dependency] = {
+    val compile    =  curatedLibrariesFromGraph(dotFileForScope(slugInfo, DependencyScope.Compile), slugInfo.name, latestVersions, bobbyRules, DependencyScope.Compile)
+    val test       =  curatedLibrariesFromGraph(dotFileForScope(slugInfo, DependencyScope.Test   ), slugInfo.name, latestVersions, bobbyRules, DependencyScope.Test).filterNot(n => compile.exists(_.name == n.name))
+    val build      =  curatedLibrariesFromGraph(dotFileForScope(slugInfo, DependencyScope.Build  ), slugInfo.name, latestVersions, bobbyRules, DependencyScope.Build)
+    compile ++ test ++ build
+  }
+
+  def curatedLibrariesFromGraph(
+    dotFile       : String,
+    rootName      : String,
     latestVersions: Seq[MongoLatestVersion],
     bobbyRules    : BobbyRules,
     scope         : DependencyScope
   ): List[Dependency] = {
-    val graph = graphParser.parse(dotFileForScope(slugInfo, scope))
+    val graph = graphParser.parse(dotFile)
     val dependencies = graph
       .dependencies
-      .filterNot(_.artefact == slugInfo.name)
+      .filterNot(_.artefact == rootName)
       .map { graphDependency =>
-
         val latestVersion = latestVersions
             .find(v => v.group == graphDependency.group && v.name == graphDependency.artefact)
             .map(_.version)

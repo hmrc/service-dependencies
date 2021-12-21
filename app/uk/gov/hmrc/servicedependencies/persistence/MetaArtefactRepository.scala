@@ -16,31 +16,82 @@
 
 package uk.gov.hmrc.servicedependencies.persistence
 
+import org.mongodb.scala.bson.{BsonDocument, BsonString}
+import org.mongodb.scala.bson.conversions.Bson
 import org.mongodb.scala.model.{IndexModel, IndexOptions, Indexes}
+import org.mongodb.scala.model.Aggregates.{`match`, project, unwind}
+import org.mongodb.scala.model.Filters.{and, equal, exists, or}
+import org.mongodb.scala.model.Projections.{fields, excludeId, include}
 import play.api.Logging
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.play.json.PlayMongoRepository
-import uk.gov.hmrc.servicedependencies.model.MetaArtefact
+import uk.gov.hmrc.servicedependencies.model.{MetaArtefact, Version}
+
 
 import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
+import cats.data.OptionT
 
 @Singleton
-class MetaArtefactRepository @Inject()(mongoComponent: MongoComponent)(
-    implicit ec: ExecutionContext) extends PlayMongoRepository[MetaArtefact](
-      collectionName = "metaArtefacts"
-    , mongoComponent = mongoComponent
-    , domainFormat = MetaArtefact.mongoFormat
-    , indexes = Seq(
-      IndexModel(Indexes.ascending("name", "version"), IndexOptions().unique(true))
-    )
-  ) with Logging {
+class MetaArtefactRepository @Inject()(
+  mongoComponent: MongoComponent
+)(implicit
+  ec: ExecutionContext
+) extends PlayMongoRepository[MetaArtefact](
+  collectionName = "metaArtefacts",
+  mongoComponent = mongoComponent,
+  domainFormat   = MetaArtefact.mongoFormat,
+  indexes        = Seq(IndexModel(Indexes.ascending("name", "version"), IndexOptions().unique(true)))
+) with Logging {
 
-
-  def insert(metaArtefact: MetaArtefact) : Future[Boolean] = {
+  def insert(metaArtefact: MetaArtefact): Future[Unit] =
     collection.insertOne(metaArtefact)
       .toFuture
-      .map(_.wasAcknowledged())
-  }
+      .map(_ => ())
 
+  def find(repositoryName: String): Future[Option[MetaArtefact]] =
+    collection.find(equal("name", repositoryName))
+      .toFuture()
+      .map(
+        _
+          .filterNot(_.version.isReleaseCandidate)
+          .sortBy(_.version)
+          .headOption
+      )
+
+  // TODO we could store this data normalised to apply an index etc.
+  def findRepoNameByModule(group: String, artefact: String, version: Version): Future[Option[String]] =
+    OptionT(findRepoNameByModule2(group, artefact, Some(version)))
+      // in-case the version predates collecting meta-data, just ignore Version
+      .orElse(OptionT(findRepoNameByModule2(group, artefact, None)))
+      .value
+
+  private def findRepoNameByModule2(group: String, artefact: String, version: Option[Version]): Future[Option[String]] =
+    mongoComponent.database.getCollection("metaArtefacts")
+      .aggregate(
+        List(
+          project(
+            fields(
+              excludeId(),
+              include("version"),
+              include("name"),
+              include("modules.group"),
+              include("modules.name")
+            )
+          ),
+          unwind("$modules"),
+          `match`(
+            and(
+              or(
+                exists("modules.group", false),
+                equal("modules.group", group)
+              ),
+              equal("modules.name", artefact),
+              version.fold[Bson](BsonDocument())(v => equal("version", v.toString))
+            )
+          )
+        )
+      )
+      .headOption
+      .map(_.flatMap(_.get[BsonString]("name")).map(_.getValue))
 }

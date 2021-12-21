@@ -25,11 +25,13 @@ import uk.gov.hmrc.githubclient.GitApiConfig
 import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
 import uk.gov.hmrc.servicedependencies.config.model.CuratedDependencyConfig
 
+import scala.concurrent.duration.Duration
+
 @Singleton
 class ServiceDependenciesConfig @Inject()(
-    configuration: Configuration
-  , serviceConfig: ServicesConfig
-  ) extends ConfigUtils {
+  configuration: Configuration,
+  serviceConfig: ServicesConfig
+) {
 
   lazy val teamsAndRepositoriesServiceUrl: String =
     serviceConfig.baseUrl("teams-and-repositories")
@@ -49,7 +51,7 @@ class ServiceDependenciesConfig @Inject()(
     }
 
   lazy val teamsAndRepositoriesCacheExpiration =
-    getDuration(configuration, "microservice.services.teams-and-repositories.cache.expiration")
+    configuration.get[Duration]("microservice.services.teams-and-repositories.cache.expiration")
 
   lazy val artifactoryBase: String          = configuration.get[String]("artifactory.url")
   lazy val artifactoryToken: Option[String] = configuration.getOptional[String]("artifactory.token")

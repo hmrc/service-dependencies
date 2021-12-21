@@ -10,3 +10,5 @@ GET     /api/bobbyViolations                   @uk.gov.hmrc.servicedependencies.
 GET     /api/historicBobbyViolations           @uk.gov.hmrc.servicedependencies.controller.BobbyRuleViolationController.findHistoricBobbyRuleViolations
 GET     /api/slug-dependencies/:name           @uk.gov.hmrc.servicedependencies.controller.ServiceDependenciesController.dependenciesOfSlug(name, flag ?= "latest")
 GET     /api/teams/:team/slug-dependencies     @uk.gov.hmrc.servicedependencies.controller.ServiceDependenciesController.dependenciesOfSlugForTeam(team, flag ?= "latest")
+GET     /api/repository-name                   @uk.gov.hmrc.servicedependencies.controller.ServiceDependenciesController.repositoryName(group: String, artefact: String, version: String)
+GET     /api/module-dependencies/:repository   @uk.gov.hmrc.servicedependencies.controller.ServiceDependenciesController.moduleDependencies(repository: String)

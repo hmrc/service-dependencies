@@ -38,15 +38,14 @@ import scala.util.{Failure, Try}
 
 @Singleton
 class MetaArtefactUpdateHandler @Inject()(
-                                          config             : ArtefactReceivingConfig,
-                                          metaArtefactService: MetaArtefactService,
-                                          messageHandling    : SqsMessageHandling
-                                        )(implicit
-                                          actorSystem : ActorSystem,
-                                          materializer: Materializer,
-                                          ec          : ExecutionContext
-                                        ) extends Logging {
-
+  config             : ArtefactReceivingConfig,
+  metaArtefactService: MetaArtefactService,
+  messageHandling    : SqsMessageHandling
+)(implicit
+  actorSystem : ActorSystem,
+  materializer: Materializer,
+  ec          : ExecutionContext
+) extends Logging {
 
   private lazy val metaQueueUrl = config.sqsMetaArtefactQueue
   private lazy val settings = SqsSourceSettings()
@@ -81,27 +80,28 @@ class MetaArtefactUpdateHandler @Inject()(
     logger.debug(s"Starting processing meta-artefact message with ID '${message.messageId()}'")
 
     (for {
-      metaArtefact <- EitherT(messageHandling
-        .decompress(message.body)
-        .map(decompressed =>
-          Json.parse(decompressed)
-            .validate(MetaArtefact.apiFormat)
-            .asEither.left.map(error => s"Could not parse message with ID '${message.messageId}'.  Reason: " + error.toString)))
-      _ <- EitherT(
-        metaArtefactService.addMetaArtefact(metaArtefact).map(Right.apply).recover {
-          case e =>
-            val errorMessage = s"Could not store meta-artefact for message with ID '${message.messageId()}'"
-            logger.error(errorMessage, e)
-            Left(s"$errorMessage ${e.getMessage}")
-        })
-    } yield ()).value.map {
-      case Left(error) =>
-        logger.error(error)
-        MessageAction.Ignore(message)
-      case Right(_) =>
-        logger.info(s"Meta artefact message with ID '${message.messageId()}' successfully processed.")
-        MessageAction.Delete(message)
+       metaArtefact <- EitherT(messageHandling
+                         .decompress(message.body)
+                         .map(decompressed =>
+                           Json.parse(decompressed)
+                             .validate(MetaArtefact.apiFormat)
+                             .asEither.left.map(error => s"Could not parse message with ID '${message.messageId}'.  Reason: " + error.toString)
+                         )
+                       )
+       _            <- EitherT(
+                         metaArtefactService.addMetaArtefact(metaArtefact).map(Right.apply).recover {
+                           case e =>
+                             val errorMessage = s"Could not store meta-artefact for message with ID '${message.messageId()}'"
+                             logger.error(errorMessage, e)
+                             Left(s"$errorMessage ${e.getMessage}")
+                         }
+                       )
+     } yield ()
+    ).value.map {
+      case Left(error) => logger.error(error)
+                          MessageAction.Ignore(message)
+      case Right(_)    => logger.info(s"Meta artefact message with ID '${message.messageId()}' successfully processed.")
+                          MessageAction.Delete(message)
     }
   }
-
 }
