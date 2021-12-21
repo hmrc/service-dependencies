@@ -16,7 +16,8 @@
 
 package uk.gov.hmrc.servicedependencies.persistence
 
-import org.mongodb.scala.bson.BsonString
+import org.mongodb.scala.bson.{BsonDocument, BsonString}
+import org.mongodb.scala.bson.conversions.Bson
 import org.mongodb.scala.model.{IndexModel, IndexOptions, Indexes}
 import org.mongodb.scala.model.Aggregates.{`match`, project, unwind}
 import org.mongodb.scala.model.Filters.{and, equal, exists, or}
@@ -29,6 +30,7 @@ import uk.gov.hmrc.servicedependencies.model.{MetaArtefact, Version}
 
 import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
+import cats.data.OptionT
 
 @Singleton
 class MetaArtefactRepository @Inject()(
@@ -59,7 +61,13 @@ class MetaArtefactRepository @Inject()(
 
   // TODO we could store this data normalised to apply an index etc.
   def findRepoNameByModule(group: String, artefact: String, version: Version): Future[Option[String]] =
-     mongoComponent.database.getCollection("metaArtefacts")
+    OptionT(findRepoNameByModule2(group, artefact, Some(version)))
+      // in-case the version predates collecting meta-data, just ignore Version
+      .orElse(OptionT(findRepoNameByModule2(group, artefact, None)))
+      .value
+
+  private def findRepoNameByModule2(group: String, artefact: String, version: Option[Version]): Future[Option[String]] =
+    mongoComponent.database.getCollection("metaArtefacts")
       .aggregate(
         List(
           project(
@@ -79,7 +87,7 @@ class MetaArtefactRepository @Inject()(
                 equal("modules.group", group)
               ),
               equal("modules.name", artefact),
-              equal("version"     , version.toString)
+              version.fold[Bson](BsonDocument())(v => equal("version", v.toString))
             )
           )
         )
