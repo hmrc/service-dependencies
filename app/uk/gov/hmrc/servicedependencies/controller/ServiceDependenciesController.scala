@@ -122,15 +122,18 @@ class ServiceDependenciesController @Inject()(
       (for {
          f     <- EitherT.fromOption[Future](SlugInfoFlag.parse(flag), BadRequest(s"invalid flag '$flag'"))
          deps  <- EitherT.fromOptionF(slugDependenciesService.curatedLibrariesOfSlug(name, f), NotFound(""))
+                  // previously we collected dependencies from the jars in thes slug (i.e. only Compile time dependencies available)
+                  // if we detect this we are using old data, for the case of Latest, we can use the data from github - which includes
+                  // all library dependencies (compile and test) as well as plugin dependencies
          deps2 <- if (f == SlugInfoFlag.Latest && !deps.exists(_.scope.contains(DependencyScope.Build))) { // i.e. no dependency graph data yet
                     EitherT.fromOptionF(
                        repositoryDependenciesService.getDependencyVersionsForRepository(name),
                        NotFound("")
                     ).map { latestGithub =>
-                      val compile = deps // latestGithub.libraryDependencies
-                      // test dependencies are assumed to be any github dependencies that are not in the slug
+                      val compile = deps
+                      // test dependencies are assumed to be any library dependencies that are not in the slug
                       val test    = latestGithub.libraryDependencies.filterNot(ghd => deps.exists(d => d.group == ghd.group && d.name == ghd.name))
-                      val build   = latestGithub.sbtPluginsDependencies ++ latestGithub.otherDependencies // other includes sbt.version - TODO can we include this for slug dependencies?
+                      val build   = latestGithub.sbtPluginsDependencies ++ latestGithub.otherDependencies // other includes sbt.version
                       compile.map(_.copy(scope = Some(DependencyScope.Compile))) ++
                         build.map(_.copy(scope = Some(DependencyScope.Build))) ++
                         test.map(_.copy(scope = Some(DependencyScope.Test)))
@@ -198,7 +201,7 @@ class ServiceDependenciesController @Inject()(
          val repository =
            Repository(
              name              = meta.name,
-             version           = meta.version,
+             version           = Some(meta.version),
              dependenciesBuild = meta.dependencyDotBuild.fold(Seq.empty[Dependency])(s => toDependencies(meta.name, DependencyScope.Build, s)),
              modules           = meta.modules.map { m =>
                                    RepositoryModule(
@@ -225,7 +228,7 @@ class ServiceDependenciesController @Inject()(
             Json.toJson(
               Repository(
                 name              = repositoryName,
-                version           = Version("-"), // or have to make this optional...
+                version           = None,
                 dependenciesBuild = dependencies.sbtPluginsDependencies,
                 modules           = Seq(
                                       RepositoryModule(
@@ -245,7 +248,7 @@ class ServiceDependenciesController @Inject()(
 
 case class Repository(
   name             : String,
-  version          : Version,
+  version          : Option[Version], // optional since we don't have this when reshaping old data
   dependenciesBuild: Seq[Dependency],
   // TODO include "other dependencies" (e.g. previously sbt version) - or even include as an extra build dependency? // or in slugInfo?
   modules          : Seq[RepositoryModule]
@@ -256,7 +259,7 @@ object Repository {
     implicit val dw  = Dependency.writes
     implicit val rmw = RepositoryModule.writes
     ( (__ \ "name"             ).write[String]
-    ~ (__ \ "version"          ).write[Version](Version.format)
+    ~ (__ \ "version"          ).writeNullable[Version](Version.format)
     ~ (__ \ "dependenciesBuild").write[Seq[Dependency]]
     ~ (__ \ "modules"          ).write[Seq[RepositoryModule]]
     )(unlift(Repository.unapply))
