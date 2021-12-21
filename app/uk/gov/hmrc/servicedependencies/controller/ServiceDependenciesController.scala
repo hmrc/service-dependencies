@@ -46,6 +46,7 @@ class ServiceDependenciesController @Inject()(
 
   implicit val dw: OWrites[Dependencies] = Dependencies.writes
 
+  // TODO remove (and from routes)
   def getDependencyVersionsForRepository(repositoryName: String): Action[AnyContent] =
     Action.async {
       (for {
@@ -56,6 +57,15 @@ class ServiceDependenciesController @Inject()(
                           )
        } yield Ok(Json.toJson(dependencies))
       ).merge
+    }
+
+  // TODO remove (and from routes)
+  def dependencies(): Action[AnyContent] =
+    Action.async {
+      for {
+        dependencies <- repositoryDependenciesService
+                          .getDependencyVersionsForAllRepositories
+      } yield Ok(Json.toJson(dependencies))
     }
 
   def dependenciesForTeam(teamName: String): Action[AnyContent] =

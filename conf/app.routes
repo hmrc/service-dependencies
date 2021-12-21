@@ -1,3 +1,5 @@
+GET     /api/dependencies                      @uk.gov.hmrc.servicedependencies.controller.ServiceDependenciesController.dependencies()
+GET     /api/dependencies/:repository          @uk.gov.hmrc.servicedependencies.controller.ServiceDependenciesController.getDependencyVersionsForRepository(repository)
 GET     /api/sluginfos                         @uk.gov.hmrc.servicedependencies.controller.ServiceDependenciesController.slugInfos(name: String, version: Option[String])
 GET     /api/sluginfo                          @uk.gov.hmrc.servicedependencies.controller.ServiceDependenciesController.slugInfo(name: String, flag: String ?= "latest")
 GET     /api/teams/:team/dependencies          @uk.gov.hmrc.servicedependencies.controller.ServiceDependenciesController.dependenciesForTeam(team)
