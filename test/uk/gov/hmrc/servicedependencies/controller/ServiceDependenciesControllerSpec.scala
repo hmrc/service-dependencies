@@ -42,31 +42,6 @@ class ServiceDependenciesControllerSpec
      with ScalaFutures
      with IntegrationPatience {
 
-  "getDependencyVersionsForRepository" should {
-    "get dependency versions for a repository using the service" in {
-      val boot                   = Boot.init
-      val repoName               = "repo1"
-      val now                    = Instant.now()
-      val repositoryDependencies = Dependencies(repoName, Seq(), Seq(), Seq(), now)
-
-      when(boot.mockRepositoryDependenciesService.getDependencyVersionsForRepository(any()))
-        .thenReturn(Future.successful(Some(repositoryDependencies)))
-
-      when(boot.mockServiceConfigsConnector.getBobbyRules)
-        .thenReturn(Future.successful(BobbyRules(Map.empty)))
-
-      val result = boot.controller
-        .getDependencyVersionsForRepository(repoName)
-        .apply(FakeRequest())
-
-      contentAsJson(result).toString shouldBe
-        s"""{"repositoryName":"repo1","libraryDependencies":[],"sbtPluginsDependencies":[],"otherDependencies":[],"lastUpdated":"$now"}"""
-
-      Mockito.verify(boot.mockRepositoryDependenciesService)
-        .getDependencyVersionsForRepository(repoName)
-    }
-  }
-
   "dependenciesOfSlug" should {
     "get dependencies for a SlugInfoFlag" in new GetDependenciesOfSlugFixture {
       val flag = SlugInfoFlag.Production
