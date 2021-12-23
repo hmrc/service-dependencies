@@ -64,7 +64,7 @@ class MetaArtefactRepository @Inject()(
       .map(
         _
           .filterNot(_.version.isReleaseCandidate)
-          .sortBy(_.version)(implicitly[Ordering[Version]].reverse)
+          .sortBy(_.version)(Ordering[Version].reverse)
           .headOption
       )
 

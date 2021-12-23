@@ -17,8 +17,8 @@
 package uk.gov.hmrc.servicedependencies.persistence
 
 import com.google.inject.{Inject, Singleton}
-import org.bson.conversions.Bson
 import org.mongodb.scala.bson.BsonDocument
+import org.mongodb.scala.bson.conversions.Bson
 import org.mongodb.scala.model.Filters.{and, equal}
 import org.mongodb.scala.model.ReplaceOptions
 import org.mongodb.scala.model.Aggregates._
@@ -62,17 +62,15 @@ class SlugInfoRepository @Inject()(
     collection.distinct[String]("name")
       .toFuture()
 
- def getSlugInfos(name: String, optVersion: Option[Version]): Future[Seq[SlugInfo]] = {
-    val filter =
-      optVersion match {
-        case None          => equal("name", name)
-        case Some(version) => and( equal("name"   , name)
-                                 , equal("version", version.original)
-                                 )
-      }
-    collection.find(filter)
+ def getSlugInfos(name: String, optVersion: Option[Version]): Future[Seq[SlugInfo]] =
+    collection
+      .find(
+        filter = and(
+                   equal("name", name),
+                   optVersion.fold[Bson](BsonDocument())(v => equal("version", v.original))
+                 )
+      )
       .toFuture()
-  }
 
   def getSlugInfo(name: String, flag: SlugInfoFlag): Future[Option[SlugInfo]] =
     findSlugsFromDeployments(
