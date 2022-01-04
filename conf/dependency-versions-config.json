@@ -5,7 +5,14 @@
   ],
   "libraries": [
     { "group": "org.reactivemongo", "name": "reactivemongo", "latestVersion": "0.20.3" },
-    { "group": "com.typesafe.play", "name": "play"         , "latestVersion": "2.8.8"  }
+    { "group": "com.typesafe.play", "name": "play"         , "latestVersion": "2.8.8"  },
+    { "group": "uk.gov.hmrc"      , "name": "accessibility-driver"          },
+    { "group": "uk.gov.hmrc"      , "name": "accessibility-testing-library" },
+    { "group": "uk.gov.hmrc"      , "name": "api-performance-test-runner"   },
+    { "group": "uk.gov.hmrc"      , "name": "gateway-performance-tests"     },
+    { "group": "uk.gov.hmrc"      , "name": "performance-test-runner"       },
+    { "group": "uk.gov.hmrc"      , "name": "scala-webdriver"               },
+    { "group": "uk.gov.hmrc"      , "name": "zap-automation"                }
   ],
   "others": [
     { "name": "sbt", "group": "org.scala-sbt", "latestVersion": "1.4.9" }
