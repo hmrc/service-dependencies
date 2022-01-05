@@ -16,7 +16,6 @@
 
 package uk.gov.hmrc.servicedependencies.service
 
-
 import akka.actor.ActorSystem
 import akka.stream.alpakka.sqs.scaladsl.{SqsAckSink, SqsSource}
 import akka.stream.alpakka.sqs.{MessageAction, SqsSourceSettings}
@@ -28,8 +27,10 @@ import play.api.Logging
 import play.api.libs.json.Json
 import software.amazon.awssdk.services.sqs.SqsAsyncClient
 import software.amazon.awssdk.services.sqs.model.Message
+import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.servicedependencies.config.ArtefactReceivingConfig
-import uk.gov.hmrc.servicedependencies.model.MetaArtefact
+import uk.gov.hmrc.servicedependencies.connector.ArtefactProcessorConnector
+import uk.gov.hmrc.servicedependencies.model.Version
 
 import javax.inject.Singleton
 import scala.concurrent.{ExecutionContext, Future}
@@ -38,9 +39,10 @@ import scala.util.{Failure, Try}
 
 @Singleton
 class MetaArtefactUpdateHandler @Inject()(
-  config             : ArtefactReceivingConfig,
-  metaArtefactService: MetaArtefactService,
-  messageHandling    : SqsMessageHandling
+  config                    : ArtefactReceivingConfig,
+  artefactProcessorConnector: ArtefactProcessorConnector,
+  metaArtefactService       : MetaArtefactService,
+  messageHandling           : SqsMessageHandling
 )(implicit
   actorSystem : ActorSystem,
   materializer: Materializer,
@@ -49,6 +51,8 @@ class MetaArtefactUpdateHandler @Inject()(
 
   private lazy val metaQueueUrl = config.sqsMetaArtefactQueue
   private lazy val settings = SqsSourceSettings()
+
+  private implicit val hc = HeaderCarrier()
 
   private lazy val awsSqsClient =
     Try {
@@ -78,15 +82,18 @@ class MetaArtefactUpdateHandler @Inject()(
 
   private def processMetaArtefactMessage(message: Message): Future[MessageAction] = {
     logger.debug(s"Starting processing meta-artefact message with ID '${message.messageId()}'")
-
     (for {
-       metaArtefact <- EitherT(messageHandling
+       available    <- EitherT(messageHandling
                          .decompress(message.body)
                          .map(decompressed =>
                            Json.parse(decompressed)
-                             .validate(MetaArtefact.apiFormat)
+                             .validate(MetaArtefactAvailable.reads)
                              .asEither.left.map(error => s"Could not parse message with ID '${message.messageId}'.  Reason: " + error.toString)
                          )
+                       )
+       metaArtefact <- EitherT.fromOptionF(
+                         artefactProcessorConnector.getMetaArtefact(available.name, available.version),
+                         s"MetaArtefact for name: ${available.name}, version: ${available.version} was not found"
                        )
        _            <- EitherT(
                          metaArtefactService.addMetaArtefact(metaArtefact).map(Right.apply).recover {
@@ -103,5 +110,23 @@ class MetaArtefactUpdateHandler @Inject()(
       case Right(_)    => logger.info(s"Meta artefact message with ID '${message.messageId()}' successfully processed.")
                           MessageAction.Delete(message)
     }
+  }
+}
+
+case class MetaArtefactAvailable(
+  name   : String,
+  version: Version,
+  url    : String
+)
+
+object MetaArtefactAvailable {
+  import play.api.libs.json.{Reads, __}
+  val reads: Reads[MetaArtefactAvailable] = {
+    import play.api.libs.functional.syntax._
+    implicit val vr  = Version.format
+    ( (__ \ "name"   ).read[String]
+    ~ (__ \ "version").read[Version]
+    ~ (__ \ "url"    ).read[String]
+    )(MetaArtefactAvailable.apply _)
   }
 }
