@@ -1,49 +1,92 @@
+# Migration to 2.42.0
+
+```javascript
+db.getCollection('slugInfos').aggregate([
+  {$project:
+    {
+      _id: 1,
+      uri: 1,
+      created: { $toDate: "$created" },
+      name: 1,
+      version: 1,
+      runnerVersion: 1,
+      classpath: 1,
+      java: 1,
+      dependencies: 1,
+      applicationConfig: 1,
+      slugConfig: 1,
+      development: 1,
+      qa: 1,
+      staging: 1,
+      "external test": 1,
+      integration: 1,
+      production: 1
+    }
+  },
+  { $out: "slugInfos-new" }
+], {allowDiskUse:true})
+```
+
+Switch collections over
+```javascript
+db.getCollection("slugInfos").copyTo("slugInfos-bak")
+db.getCollection("slugInfos-new").copyTo("slugInfos")
+```
+
+## Rollback
+
+Switch collections over
+```javascript
+db.getCollection("slugInfos").copyTo("slugInfos-new")
+db.getCollection("slugInfos-bak").copyTo("slugInfos")
+```
+
 # Migration to 2.0.0
 
 ## Backup
 
-```
+```javascript
 db.getCollection("slugInfos").copyTo("slugInfos-bak")
 ```
 
 ## Upgrade collections
 
 * Need to drop updated indices:
-```
+```javascript
 db.getCollection("slugInfos").dropIndexes()
 db.getCollection("DERIVED-slug-dependencies").dropIndexes()
 ```
 
 * Need to drop updated schemas (before removing unnecessary fields):
-```
+```javascript
 db.runCommand({"collMod": "slugInfos", "validator": {}, "validationLevel": "off"})
 ```
 
 * Need to duplicate the slugInfos collection as deployments
-```
+```javascript
 db.getCollection("slugInfos").copyTo("deployments")
 ```
 
 (for newer mongo - i.e. development:
-```
+```javascript
 db.getCollection("slugInfos").aggregate([
   { $out: "deployments" }
 ])
 ```
 
 * Need to remove the environment fields from slugInfos collection
-```
+```javascript
 db.getCollection("slugInfos").update({}, { $unset: { latest: "", production: "", qa: "", staging: "", development: "", "external test": "", integration: "" } }, {multi: true})
 ```
 
 * Need to remove the unrequired fields from deployments collection
-```
+```javascript
 db.getCollection("deployments").update({}, { $unset: { uri: "", created: "", runnerVersion: "", classpath: "", java: "", dependencies: "", dependencyDot: "", applicationConfig: "", slugConfig: "" } }, {multi: true})
 ```
 
 * poplate legacy data once, on command line:
 
-```
+```javascript
 db.getCollection("slugInfos").aggregate([
   {$match: {"dependencyDot": {$exists: false}}},
   {$project: {
@@ -72,7 +115,7 @@ db.getCollection("slugInfos").aggregate([
 ], {allowDiskUse:true})
 ```
 
-```
+```javascript
 db.getCollection('DERIVED-slug-dependencies').deleteMany({"version": { $regex: "^.*(-assets)|(-sans-externalized)$"}})
 ```
 
