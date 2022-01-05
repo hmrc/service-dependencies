@@ -12,15 +12,12 @@ db.getCollection('slugInfos').aggregate([
       runnerVersion: 1,
       classpath: 1,
       java: 1,
+      sbtVersion: 1,
+      repoUrl: 1,
       dependencies: 1,
+      dependencyDot: 1,
       applicationConfig: 1,
-      slugConfig: 1,
-      development: 1,
-      qa: 1,
-      staging: 1,
-      "external test": 1,
-      integration: 1,
-      production: 1
+      slugConfig: 1
     }
   },
   { $out: "slugInfos-new" }
@@ -29,16 +26,16 @@ db.getCollection('slugInfos').aggregate([
 
 Switch collections over
 ```javascript
-db.getCollection("slugInfos").copyTo("slugInfos-bak")
-db.getCollection("slugInfos-new").copyTo("slugInfos")
+db.getCollection("slugInfos").renameCollection("slugInfos-bak")
+db.getCollection("slugInfos-new").renameCollection("slugInfos")
 ```
 
 ## Rollback
 
 Switch collections over
 ```javascript
-db.getCollection("slugInfos").copyTo("slugInfos-new")
-db.getCollection("slugInfos-bak").copyTo("slugInfos")
+db.getCollection("slugInfos").renameCollection("slugInfos-new")
+db.getCollection("slugInfos-bak").renameCollection("slugInfos")
 ```
 
 # Migration to 2.0.0
