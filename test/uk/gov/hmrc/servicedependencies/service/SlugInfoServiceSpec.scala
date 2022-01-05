@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.servicedependencies.service
 
-import java.time.{Instant, LocalDateTime}
+import java.time.Instant
 import org.mockito.scalatest.MockitoSugar
 import org.scalatest.concurrent.{IntegrationPatience, ScalaFutures}
 import org.scalatest.matchers.should.Matchers
@@ -346,7 +346,7 @@ class SlugInfoServiceSpec
     val SlugName = "a-slug-name"
     val sampleSlugInfo = SlugInfo(
       uri               = "sample-uri",
-      created           = LocalDateTime.parse("2019-12-12T13:14:00"),
+      created           = Instant.parse("2019-12-12T13:14:00.000Z"),
       name              = SlugName,
       version           = Version(major = 1, minor = 2, patch = 3),
       teams             = Nil,

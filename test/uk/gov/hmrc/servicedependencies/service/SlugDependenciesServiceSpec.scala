@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.servicedependencies.service
 
-import java.time.{LocalDate, LocalDateTime}
+import java.time.{LocalDate, Instant}
 import akka.Done
 import org.mockito.ArgumentMatchers.any
 import org.mockito.MockitoSugar
@@ -334,7 +334,7 @@ private object SlugDependenciesServiceSpec {
   def slugInfo(withName: String, withVersion: Version, withDependencies: List[SlugDependency]): SlugInfo =
     SlugInfo(
       uri               = "some-uri",
-      created           = LocalDateTime.now(),
+      created           = Instant.now(),
       name              = withName,
       version           = withVersion,
       teams             = Nil,
