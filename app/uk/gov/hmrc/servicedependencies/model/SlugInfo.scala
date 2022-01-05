@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 HM Revenue & Customs
+ * Copyright 2022 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,6 +20,7 @@ import java.time.LocalDateTime
 
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
+import uk.gov.hmrc.mongo.play.json.formats.MongoJavatimeFormats
 
 sealed trait SlugInfoFlag { def asString: String }
 object SlugInfoFlag {
@@ -111,7 +112,7 @@ trait MongoSlugInfoFormats {
     implicit val sdf = SlugDependency.format
     implicit val jif = javaInfoFormat
     ( (__ \ "uri"              ).format[String]
-    ~ (__ \ "created"          ).format[LocalDateTime]
+    ~ (__ \ "created"          ).format[LocalDateTime](MongoJavatimeFormats.localDateTimeFormat)
     ~ (__ \ "name"             ).format[String]
     ~ (__ \ "version"          ).format[Version]
     ~ OFormat( Reads.pure(List.empty[String])
@@ -167,7 +168,7 @@ trait MongoSlugInfoFormats {
                 ]
     , properties:
       { uri              : { bsonType: "string" }
-      , created          : { bsonType: "string" }
+      , created          : { bsonType: "date"   }
       , name             : { bsonType: "string" }
       , version          : { bsonType: "string" }
       , runnerVersion    : { bsonType: "string" }
