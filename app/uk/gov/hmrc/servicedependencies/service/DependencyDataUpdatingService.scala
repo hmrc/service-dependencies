@@ -53,11 +53,11 @@ class DependencyDataUpdatingService @Inject()(
 
   private[service] def versionsToUpdate(): Future[List[DependencyConfig]] = {
     for {
-      hmrcDependencies <- hmrcDependencies()
+      hmrcDependencies                  <- hmrcDependencies()
       nonHmrcDependenciesWithBobbyRules <- nonHmrcDependenciesWithBobbyRules()
-    } yield ((hmrcDependencies ++ nonHmrcDependenciesWithBobbyRules).groupBy(a => a.group + ":" + a.name) ++
-      curatedDependencyConfig.allDependencies.groupBy(a => a.group + ":" + a.name))
-      .values.flatten.toList
+    } yield
+      ((hmrcDependencies ++ nonHmrcDependenciesWithBobbyRules).groupBy(a => a.group + ":" + a.name) ++
+        curatedDependencyConfig.allDependencies.groupBy(a => a.group + ":" + a.name)).values.flatten.toList
   }
 
   def reloadLatestVersions(): Future[List[MongoLatestVersion]] =
@@ -139,25 +139,27 @@ class DependencyDataUpdatingService @Inject()(
     )
   }
 
-  private def hmrcDependencies(): Future[Seq[DependencyConfig]] = derivedGroupArtefactRepository.findGroupsArtefacts
-    .map(groupsArtefacts =>
-      groupsArtefacts
-        .filter(_.group.startsWith("uk.gov.hmrc"))
-        .flatMap(hmrcGA =>
-          hmrcGA.artefacts.map(artefact =>
-            DependencyConfig(name = artefact, group = hmrcGA.group, latestVersion = None)
+  private def hmrcDependencies(): Future[Seq[DependencyConfig]] =
+    derivedGroupArtefactRepository.findGroupsArtefacts
+      .map(groupsArtefacts =>
+        groupsArtefacts
+          .filter(_.group.startsWith("uk.gov.hmrc"))
+          .flatMap(hmrcGA =>
+            hmrcGA.artefacts.map(artefact =>
+              DependencyConfig(name = artefact, group = hmrcGA.group, latestVersion = None)
+            )
           )
-        )
-    )
+      )
 
-  private def nonHmrcDependenciesWithBobbyRules(): Future[Seq[DependencyConfig]] = serviceConfigsConnector.getBobbyRules
-    .map(bobbyRules =>
-      bobbyRules
-        .asMap
-        .filterNot(_._1._1.startsWith("uk.gov.hmrc"))
-        .map(_._1)
-        .map(bobbyRuleKey =>
-          DependencyConfig(name = bobbyRuleKey._2, group = bobbyRuleKey._1, latestVersion = None)
-        ).toSeq
-    )
+  private def nonHmrcDependenciesWithBobbyRules(): Future[Seq[DependencyConfig]] =
+    serviceConfigsConnector.getBobbyRules
+      .map(bobbyRules =>
+        bobbyRules
+          .asMap
+          .filterNot(_._1._1.startsWith("uk.gov.hmrc"))
+          .map(_._1)
+          .map(bobbyRuleKey =>
+            DependencyConfig(name = bobbyRuleKey._2, group = bobbyRuleKey._1, latestVersion = None)
+          ).toSeq
+      )
 }

@@ -16,14 +16,14 @@
 
 package uk.gov.hmrc.servicedependencies.persistence
 
-import java.time.LocalDateTime
+import java.time.Instant
 
 import uk.gov.hmrc.servicedependencies.model._
 
 object TestSlugInfos {
   val slugInfo =
     SlugInfo(
-      created              = LocalDateTime.of(2019, 6, 28, 11, 51, 23),
+      created              = Instant.parse("2019-06-28T11:51:23.000Z"),
       uri                  = "https://store/slugs/my-slug/my-slug_0.27.0_0.5.2.tgz",
       name                 = "my-slug",
       version              = Version("0.27.0"),
@@ -61,7 +61,7 @@ object TestSlugInfos {
 
   val otherSlug =
     SlugInfo(
-      created       = LocalDateTime.of(2019, 6, 28, 11, 51, 23),
+      created       = Instant.parse("2019-06-28T11:51:23.000Z"),
       uri           = "https://store/slugs/other-slug/other-slug_0.55.0_0.5.2.tgz",
       name          = "other-slug",
       version       = Version("0.55.0"),

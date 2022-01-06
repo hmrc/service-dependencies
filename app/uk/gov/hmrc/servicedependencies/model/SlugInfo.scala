@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.servicedependencies.model
 
-import java.time.LocalDateTime
+import java.time.{Instant, LocalDateTime, ZoneId, ZoneOffset}
 
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
@@ -70,7 +70,7 @@ case class JavaInfo(
 
 case class SlugInfo(
   uri                 : String,
-  created             : LocalDateTime,
+  created             : Instant,
   name                : String,
   version             : Version,
   teams               : List[String],
@@ -112,7 +112,7 @@ trait MongoSlugInfoFormats {
     implicit val sdf = SlugDependency.format
     implicit val jif = javaInfoFormat
     ( (__ \ "uri"              ).format[String]
-    ~ (__ \ "created"          ).format[LocalDateTime](MongoJavatimeFormats.localDateTimeFormat)
+    ~ (__ \ "created"          ).format[Instant](MongoJavatimeFormats.instantFormat)
     ~ (__ \ "name"             ).format[String]
     ~ (__ \ "version"          ).format[Version]
     ~ OFormat( Reads.pure(List.empty[String])
@@ -212,6 +212,8 @@ trait ApiSlugInfoFormats {
     implicit val sdf = SlugDependency.format
     ( (__ \ "uri"                      ).format[String]
     ~ (__ \ "created"                  ).format[LocalDateTime]
+                                        // TODO change to Instant - needs to be synchronised with artefact-processor and service-configs
+                                        .inmap[Instant](_.toInstant(ZoneOffset.UTC), LocalDateTime.ofInstant(_, ZoneId.of("UTC")))
     ~ (__ \ "name"                     ).format[String]
     ~ (__ \ "version"                  ).format[Version]
     ~ (__ \ "teams"                    ).format[List[String]]

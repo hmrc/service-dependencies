@@ -36,6 +36,9 @@ class ServiceDependenciesConfig @Inject()(
   lazy val teamsAndRepositoriesServiceUrl: String =
     serviceConfig.baseUrl("teams-and-repositories")
 
+  lazy val artefactProcessorServiceUrl: String =
+    serviceConfig.baseUrl("artefact-processor")
+
   private def gitPath(gitFolder: String): String =
     s"${System.getProperty("user.home")}/.github/$gitFolder"
 

@@ -23,7 +23,7 @@ import org.scalatest.wordspec.AnyWordSpecLike
 import uk.gov.hmrc.mongo.test.{CleanMongoCollectionSupport, PlayMongoRepositorySupport}
 import uk.gov.hmrc.servicedependencies.model.{JavaInfo, SlugInfo, Version}
 
-import java.time.LocalDateTime
+import java.time.Instant
 import scala.concurrent.ExecutionContext
 
 
@@ -55,7 +55,7 @@ class SlugVersionRepositorySpec  extends AnyWordSpecLike
 
   def sampleSlugInfo(version: Version, uri: String): SlugInfo =
     SlugInfo(
-      created              = LocalDateTime.of(2019, 6, 28, 11, 51, 23),
+      created              = Instant.parse("2019-06-28T11:51:23.000Z"),
       uri                  = uri,
       name                 = "my-slug",
       version              = version,
