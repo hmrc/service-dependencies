@@ -83,13 +83,10 @@ class MetaArtefactUpdateHandler @Inject()(
   private def processMetaArtefactMessage(message: Message): Future[MessageAction] = {
     logger.debug(s"Starting processing meta-artefact message with ID '${message.messageId()}'")
     (for {
-       available    <- EitherT(messageHandling
-                         .decompress(message.body)
-                         .map(decompressed =>
-                           Json.parse(decompressed)
-                             .validate(MetaArtefactAvailable.reads)
-                             .asEither.left.map(error => s"Could not parse message with ID '${message.messageId}'.  Reason: " + error.toString)
-                         )
+       available    <- EitherT.fromEither[Future](
+                         Json.parse(message.body)
+                           .validate(MetaArtefactAvailable.reads)
+                           .asEither.left.map(error => s"Could not parse message with ID '${message.messageId}'.  Reason: " + error.toString)
                        )
        metaArtefact <- EitherT.fromOptionF(
                          artefactProcessorConnector.getMetaArtefact(available.name, available.version),
