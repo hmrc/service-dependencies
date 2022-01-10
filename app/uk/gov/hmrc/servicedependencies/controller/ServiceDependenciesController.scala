@@ -186,11 +186,25 @@ class ServiceDependenciesController @Inject()(
              bobbyRules     = bobbyRules,
              scope          = scope
            )
+         val sbtVersionAsDependency =
+           meta.modules.find(_.sbtVersion.isDefined).flatMap(_.sbtVersion) // sbt-versions will be the same for all modules,
+             .map { sbtVersion =>
+               Dependency(
+                 name                = "sbt",
+                 group               = "org.scala-sbt",
+                 currentVersion      = sbtVersion,
+                 latestVersion       = latestVersions.find(d => d.name == "sbt" && d.group == "org.scala-sbt").map(_.version),
+                 bobbyRuleViolations = List.empty,
+                 importBy            = None,
+                 scope               = Some(DependencyScope.Build)
+               )
+             }
          val repository =
            Repository(
              name              = meta.name,
              version           = Some(meta.version),
-             dependenciesBuild = meta.dependencyDotBuild.fold(Seq.empty[Dependency])(s => toDependencies(meta.name, DependencyScope.Build, s)),
+             dependenciesBuild = meta.dependencyDotBuild.fold(Seq.empty[Dependency])(s => toDependencies(meta.name, DependencyScope.Build, s)) ++
+                                   sbtVersionAsDependency.toSeq,
              modules           = meta.modules
                                    .filter(_.publishSkip.fold(true)(!_))
                                    .map { m =>
@@ -201,8 +215,7 @@ class ServiceDependenciesController @Inject()(
                                        dependenciesTest    = m.dependencyDotTest   .fold(Seq.empty[Dependency])(s => toDependencies(m.name, DependencyScope.Test   , s)),
                                        crossScalaVersions  = m.crossScalaVersions
                                      )
-                                   },
-             sbtVersion        = meta.modules.find(_.sbtVersion.isDefined).flatMap(_.sbtVersion) // sbt-versions will be the same for all modules
+                                   }
            )
          implicit val rw = Repository.writes
          Ok(Json.toJson(repository))
@@ -230,8 +243,7 @@ class ServiceDependenciesController @Inject()(
                                         dependenciesTest    = Seq.empty[Dependency],
                                         crossScalaVersions  = None
                                       )
-                                    ),
-                sbtVersion        = None
+                                    )
               )
             )
           )
@@ -244,8 +256,7 @@ case class Repository(
   name             : String,
   version          : Option[Version], // optional since we don't have this when reshaping old data
   dependenciesBuild: Seq[Dependency],
-  modules          : Seq[RepositoryModule],
-  sbtVersion       : Option[Version]
+  modules          : Seq[RepositoryModule]
 )
 
 object Repository {
@@ -257,7 +268,6 @@ object Repository {
     ~ (__ \ "version"          ).writeNullable[Version]
     ~ (__ \ "dependenciesBuild").write[Seq[Dependency]]
     ~ (__ \ "modules"          ).write[Seq[RepositoryModule]]
-    ~ (__ \ "sbtVersion"       ).writeNullable[Version]
     )(unlift(Repository.unapply))
   }
 }
