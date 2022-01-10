@@ -191,14 +191,18 @@ class ServiceDependenciesController @Inject()(
              name              = meta.name,
              version           = Some(meta.version),
              dependenciesBuild = meta.dependencyDotBuild.fold(Seq.empty[Dependency])(s => toDependencies(meta.name, DependencyScope.Build, s)),
-             modules           = meta.modules.map { m =>
-                                   RepositoryModule(
-                                     name                = m.name,
-                                     group               = m.group,
-                                     dependenciesCompile = m.dependencyDotCompile.fold(Seq.empty[Dependency])(s => toDependencies(m.name, DependencyScope.Compile, s)),
-                                     dependenciesTest    = m.dependencyDotTest   .fold(Seq.empty[Dependency])(s => toDependencies(m.name, DependencyScope.Test   , s))
-                                   )
-                                 }
+             modules           = meta.modules
+                                   .filter(_.publishSkip.fold(true)(!_))
+                                   .map { m =>
+                                     RepositoryModule(
+                                       name                = m.name,
+                                       group               = m.group,
+                                       dependenciesCompile = m.dependencyDotCompile.fold(Seq.empty[Dependency])(s => toDependencies(m.name, DependencyScope.Compile, s)),
+                                       dependenciesTest    = m.dependencyDotTest   .fold(Seq.empty[Dependency])(s => toDependencies(m.name, DependencyScope.Test   , s)),
+                                       crossScalaVersions  = m.crossScalaVersions
+                                     )
+                                   },
+             sbtVersion        = meta.modules.find(_.sbtVersion.isDefined).flatMap(_.sbtVersion) // sbt-versions will be the same for all modules
            )
          implicit val rw = Repository.writes
          Ok(Json.toJson(repository))
@@ -223,9 +227,11 @@ class ServiceDependenciesController @Inject()(
                                         name                = repositoryName,
                                         group               = "uk.gov.hmrc",
                                         dependenciesCompile = dependencies.libraryDependencies,
-                                        dependenciesTest    = Seq.empty[Dependency]
+                                        dependenciesTest    = Seq.empty[Dependency],
+                                        crossScalaVersions  = None
                                       )
-                                    )
+                                    ),
+                sbtVersion        = None
               )
             )
           )
@@ -238,18 +244,20 @@ case class Repository(
   name             : String,
   version          : Option[Version], // optional since we don't have this when reshaping old data
   dependenciesBuild: Seq[Dependency],
-  // TODO include "other dependencies" (e.g. previously sbt version) - or even include as an extra build dependency? // or in slugInfo?
-  modules          : Seq[RepositoryModule]
+  modules          : Seq[RepositoryModule],
+  sbtVersion       : Option[Version]
 )
 
 object Repository {
   val writes: OWrites[Repository] = {
     implicit val dw  = Dependency.writes
     implicit val rmw = RepositoryModule.writes
+    implicit val vf  = Version.format
     ( (__ \ "name"             ).write[String]
-    ~ (__ \ "version"          ).writeNullable[Version](Version.format)
+    ~ (__ \ "version"          ).writeNullable[Version]
     ~ (__ \ "dependenciesBuild").write[Seq[Dependency]]
     ~ (__ \ "modules"          ).write[Seq[RepositoryModule]]
+    ~ (__ \ "sbtVersion"       ).writeNullable[Version]
     )(unlift(Repository.unapply))
   }
 }
@@ -258,16 +266,19 @@ case class RepositoryModule(
   name               : String,
   group              : String,
   dependenciesCompile: Seq[Dependency],
-  dependenciesTest   : Seq[Dependency]
+  dependenciesTest   : Seq[Dependency],
+  crossScalaVersions : Option[List[Version]]
 )
 
 object RepositoryModule {
   val writes: OWrites[RepositoryModule] = {
     implicit val dw = Dependency.writes
+    implicit val vf  = Version.format
     ( (__ \ "name"               ).write[String]
     ~ (__ \ "group"              ).write[String]
     ~ (__ \ "dependenciesCompile").write[Seq[Dependency]]
     ~ (__ \ "dependenciesTest"   ).write[Seq[Dependency]]
+    ~ (__ \ "crossScalaVersions" ).write[Seq[Version]].contramap[Option[Seq[Version]]](_.getOrElse(Seq.empty))
     )(unlift(RepositoryModule.unapply))
   }
 }
