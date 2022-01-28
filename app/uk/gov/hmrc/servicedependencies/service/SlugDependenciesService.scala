@@ -64,6 +64,27 @@ class SlugDependenciesService @Inject()(
           curatedLibrariesOfSlugInfoFromGraph(slugInfo, bobbyRules, latestVersions)
       ))
 
+  def curatedLibrariesOfSlug(name: String, version: Version): Future[Option[List[Dependency]]] =
+    for {
+      bobbyRules       <- serviceConfigsConnector.getBobbyRules
+      latestVersions   <- latestVersionRepository.getAllEntries
+      curatedLibraries <- curatedLibrariesOfSlug(name, version, bobbyRules, latestVersions)
+    } yield curatedLibraries
+
+  def curatedLibrariesOfSlug(
+    name          : String,
+    version       : Version,
+    bobbyRules    : BobbyRules,
+    latestVersions: Seq[MongoLatestVersion],
+  ): Future[Option[List[Dependency]]] =
+    slugInfoService.getSlugInfo(name, version)
+      .map(_.map(slugInfo =>
+        if (slugInfo.dependencyDotCompile == "")
+          curatedLibrariesOfSlugInfo(slugInfo, bobbyRules, latestVersions)
+        else
+          curatedLibrariesOfSlugInfoFromGraph(slugInfo, bobbyRules, latestVersions)
+      ))
+
   private def curatedLibrariesOfSlugInfo(
     slugInfo      : SlugInfo,
     bobbyRules    : BobbyRules,

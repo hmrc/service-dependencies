@@ -68,6 +68,15 @@ class MetaArtefactRepository @Inject()(
           .headOption
       )
 
+  def find(repositoryName: String, version: Version): Future[Option[MetaArtefact]] =
+    collection.find(
+      filter = and(
+                 equal("name"   , repositoryName),
+                 equal("version", version.toString)
+               )
+      )
+      .headOption()
+
   // TODO we could store this data normalised to apply an index etc.
   def findRepoNameByModule(group: String, artefact: String, version: Version): Future[Option[String]] =
     OptionT(findRepoNameByModule2(group, artefact, Some(version)))
