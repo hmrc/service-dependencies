@@ -103,35 +103,6 @@ class ServiceDependenciesController @Inject()(
       ).map(res => Ok(Json.toJson(res)))
     }
 
-  def dependenciesOfSlug(name: String, flag: String): Action[AnyContent] =
-    Action.async {
-      (for {
-         f     <- EitherT.fromOption[Future](SlugInfoFlag.parse(flag), BadRequest(s"invalid flag '$flag'"))
-         deps  <- EitherT.fromOptionF(slugDependenciesService.curatedLibrariesOfSlug(name, f), NotFound(""))
-                  // previously we collected dependencies from the jars in thes slug (i.e. only Compile time dependencies available)
-                  // if we detect this we are using old data, for the case of Latest, we can use the data from github - which includes
-                  // all library dependencies (compile and test) as well as plugin dependencies
-         deps2 <- if (f == SlugInfoFlag.Latest && !deps.exists(_.scope.contains(DependencyScope.Build))) { // i.e. no dependency graph data yet
-                    EitherT.fromOptionF(
-                       repositoryDependenciesService.getDependencyVersionsForRepository(name),
-                       NotFound("")
-                    ).map { latestGithub =>
-                      val compile = deps
-                      // test dependencies are assumed to be any library dependencies that are not in the slug
-                      val test    = latestGithub.libraryDependencies.filterNot(ghd => deps.exists(d => d.group == ghd.group && d.name == ghd.name))
-                      val build   = latestGithub.sbtPluginsDependencies ++ latestGithub.otherDependencies // other includes sbt.version
-                      compile.map(_.copy(scope = Some(DependencyScope.Compile))) ++
-                        build.map(_.copy(scope = Some(DependencyScope.Build))) ++
-                        test.map(_.copy(scope = Some(DependencyScope.Test)))
-                    }
-                  } else EitherT.pure[Future, Result](deps)
-       } yield {
-         implicit val dw = Dependency.writes
-         Ok(Json.toJson(deps2))
-       }
-      ).merge
-    }
-
   def dependenciesOfSlugForTeam(team: String, flag: String): Action[AnyContent] =
     Action.async { implicit request =>
       (for {
