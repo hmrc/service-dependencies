@@ -16,15 +16,17 @@
 
 package uk.gov.hmrc.servicedependencies.service
 
+import cats.data.OptionT
 import cats.implicits._
 import javax.inject.{Inject, Singleton}
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.servicedependencies.connector.{ServiceConfigsConnector, TeamsAndRepositoriesConnector}
 import uk.gov.hmrc.servicedependencies.controller.model.{Dependencies, Dependency}
-import uk.gov.hmrc.servicedependencies.model.{BobbyRules, MongoLatestVersion, SlugInfoFlag}
-import uk.gov.hmrc.servicedependencies.persistence.{LatestVersionRepository, SlugInfoRepository}
+import uk.gov.hmrc.servicedependencies.model.{BobbyRules, DependencyScope, MetaArtefact, MongoLatestVersion, SlugInfoFlag}
+import uk.gov.hmrc.servicedependencies.persistence.{LatestVersionRepository, MetaArtefactRepository, SlugInfoRepository}
 
 import scala.concurrent.{ExecutionContext, Future}
+import java.time.Instant
 
 @Singleton
 class TeamDependencyService @Inject()(
@@ -34,20 +36,49 @@ class TeamDependencyService @Inject()(
 , serviceConfigsConnector      : ServiceConfigsConnector
 , slugDependenciesService      : SlugDependenciesService
 , latestVersionRepository      : LatestVersionRepository
+, metaArtefactRepository       : MetaArtefactRepository
 )(implicit ec: ExecutionContext
 ) {
 
   def findAllDepsForTeam(teamName: String)(implicit hc: HeaderCarrier): Future[Seq[Dependencies]] =
     for {
-      (team, githubDeps) <- ( teamsAndReposConnector.getTeam(teamName)
-                            , repositoryDependenciesService.getDependencyVersionsForAllRepositories
-                            ).mapN { case (t, gh) => (t, gh) }
-      libs               =  team.libraries.flatMap(l => githubDeps.find(_.repositoryName == l))
-      services           =  team.services.flatMap(s => githubDeps.find(_.repositoryName == s))
-      bobbyRules         <- serviceConfigsConnector.getBobbyRules
-      latestVersions     <- latestVersionRepository.getAllEntries
-      updatedServices    <- services.toList.traverse(dep => replaceServiceDependencies(dep, bobbyRules, latestVersions))
-    } yield libs  ++ updatedServices
+      bobbyRules     <- serviceConfigsConnector.getBobbyRules
+      latestVersions <- latestVersionRepository.getAllEntries
+      team           <- teamsAndReposConnector.getTeam(teamName)
+      libs           <- team.libraries.toList.traverse { repoName =>
+                          metaArtefactRepository.find(repoName).flatMap {
+                            case Some(metaArtefact) => Future.successful(Some(dependenciesFromMetaArtefact(metaArtefact, bobbyRules, latestVersions)))
+                            case None               => repositoryDependenciesService.getDependencyVersionsForRepository(repoName)
+                          }
+                        }.map(_.flatten)
+      services       <- team.services.toList.traverse { repoName =>
+                            metaArtefactRepository.find(repoName).flatMap {
+                            case Some(metaArtefact) => Future.successful(Some(dependenciesFromMetaArtefact(metaArtefact, bobbyRules, latestVersions)))
+                            case None               => OptionT(repositoryDependenciesService.getDependencyVersionsForRepository(repoName))
+                                                         .flatMap(dep => OptionT.liftF(replaceServiceDependencies(dep, bobbyRules, latestVersions)))
+                                                         .value
+                          }
+                        }.map(_.flatten)
+    } yield libs ++ services
+
+  private def dependenciesFromMetaArtefact(metaArtefact: MetaArtefact, bobbyRules: BobbyRules, latestVersions: Seq[MongoLatestVersion]): Dependencies = {
+    def toDependencies(name: String, scope: DependencyScope, dotFile: String) =
+      slugDependenciesService.curatedLibrariesFromGraph(
+        dotFile        = dotFile,
+        rootName       = name,
+        latestVersions = latestVersions,
+        bobbyRules     = bobbyRules,
+        scope          = scope
+      )
+    Dependencies(
+      repositoryName         = metaArtefact.name,
+      libraryDependencies    = metaArtefact.modules.flatMap(m => m.dependencyDotCompile.fold(Seq.empty[Dependency])(s => toDependencies(m.name, DependencyScope.Compile, s))) ++
+                               metaArtefact.modules.flatMap(m => m.dependencyDotTest.fold(Seq.empty[Dependency])(s => toDependencies(m.name, DependencyScope.Test, s))),
+      sbtPluginsDependencies = metaArtefact.dependencyDotBuild.fold(Seq.empty[Dependency])(s => toDependencies(metaArtefact.name, DependencyScope.Build, s)),
+      otherDependencies      = Seq.empty,
+      lastUpdated            = Instant.now // shouldn't need to return this - client doesn't use it
+    )
+  }
 
   protected[service] def replaceServiceDependencies(
     dependencies      : Dependencies,
@@ -74,8 +105,32 @@ class TeamDependencyService @Inject()(
       latestVersions <- latestVersionRepository.getAllEntries
       bobbyRules     <- serviceConfigsConnector.getBobbyRules
       res            <- team.services.toList.traverse { serviceName =>
-                          slugDependenciesService.curatedLibrariesOfSlug(serviceName, flag, bobbyRules, latestVersions)
-                            .map(_.map(serviceName -> _))
+                          for {
+                            optMetaArtefact <- OptionT(slugInfoRepository.getSlugInfo(serviceName, flag))
+                                                 .flatMap(slugInfo => OptionT(metaArtefactRepository.find(serviceName, slugInfo.version)))
+                                                 .value
+                            optDeps         <- optMetaArtefact match {
+                                                 case Some(metaArtefact) =>
+                                                   def toDependencies(name: String, scope: DependencyScope, dotFile: String) =
+                                                     slugDependenciesService.curatedLibrariesFromGraph(
+                                                       dotFile        = dotFile,
+                                                       rootName       = name,
+                                                       latestVersions = latestVersions,
+                                                       bobbyRules     = bobbyRules,
+                                                       scope          = scope
+                                                     )
+
+                                                   Future.successful(
+                                                     Some(
+                                                       metaArtefact.dependencyDotBuild.fold(Seq.empty[Dependency])(s => toDependencies(metaArtefact.name, DependencyScope.Build, s)) ++
+                                                         metaArtefact.modules.flatMap(m => m.dependencyDotCompile.fold(Seq.empty[Dependency])(s => toDependencies(m.name, DependencyScope.Compile, s))) ++
+                                                         metaArtefact.modules.flatMap(m => m.dependencyDotTest.fold(Seq.empty[Dependency])(s => toDependencies(m.name, DependencyScope.Test, s)))
+                                                     )
+                                                   )
+
+                                                 case None => slugDependenciesService.curatedLibrariesOfSlug(serviceName, flag, bobbyRules, latestVersions)
+                                               }
+                          } yield optDeps.map(serviceName -> _)
                         }
     } yield res.collect { case Some(kv) => kv }.toMap
 }
