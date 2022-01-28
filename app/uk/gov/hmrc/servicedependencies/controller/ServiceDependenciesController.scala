@@ -168,11 +168,14 @@ class ServiceDependenciesController @Inject()(
         .map(_.fold(NotFound(""))(res => Ok(Json.toJson(res))))
     }
 
-  def moduleDependencies(repositoryName: String): Action[AnyContent] =
+  def moduleDependencies(repositoryName: String, version: Option[String]): Action[AnyContent] =
     Action.async {
       (for {
          meta           <- EitherT.fromOptionF(
-                             metaArtefactRepository.find(repositoryName),
+                             version match {
+                               case Some(version)          => metaArtefactRepository.find(repositoryName, Version(version))
+                               case None /* i.e. latest */ => metaArtefactRepository.find(repositoryName)
+                             },
                              NotFound("")
                            )
          latestVersions <- EitherT.liftF[Future, Result, Seq[MongoLatestVersion]](latestVersionRepository.getAllEntries)
@@ -221,13 +224,44 @@ class ServiceDependenciesController @Inject()(
          Ok(Json.toJson(repository))
        }
       ).leftFlatMap { _ =>
+        // fallback to data from curatedLibrariesOfSlug
+        for {
+          dependencies  <- version match {
+                     case None          => EitherT.fromOptionF(slugDependenciesService.curatedLibrariesOfSlug(repositoryName, SlugInfoFlag.Latest), NotFound(""))
+                     case Some(version) => EitherT.fromOptionF(slugDependenciesService.curatedLibrariesOfSlug(repositoryName, Version(version)), NotFound(""))
+                   }
+        } yield {
+          implicit val rw = Repository.writes
+          Ok(
+            Json.toJson(
+              Repository(
+                name              = repositoryName,
+                version           = None,
+                dependenciesBuild = dependencies.filter(_.scope == Some(DependencyScope.Build)),
+                modules           = Seq(
+                                      RepositoryModule(
+                                        name                = repositoryName,
+                                        group               = "uk.gov.hmrc",
+                                        dependenciesCompile = dependencies.filter(_.scope == Some(DependencyScope.Compile)),
+                                        dependenciesTest    = dependencies.filter(_.scope == Some(DependencyScope.Test)),
+                                        crossScalaVersions  = None
+                                      )
+                                    )
+              )
+            )
+          )
+        }
+      }.leftFlatMap { _ =>
         // fallback to data from getDependencyVersionsForRepository()
         implicit val rw = Repository.writes
         for {
-          dependencies <- EitherT.fromOptionF(
-                            repositoryDependenciesService.getDependencyVersionsForRepository(repositoryName),
-                            NotFound("")
-                         )
+          dependencies <- version match {
+                            case None          => EitherT.fromOptionF(
+                                                    repositoryDependenciesService.getDependencyVersionsForRepository(repositoryName),
+                                                    NotFound("")
+                                                  )
+                            case Some(version) => EitherT.leftT[Future, Dependencies](NotFound(""))
+                          }
         } yield
           Ok(
             Json.toJson(

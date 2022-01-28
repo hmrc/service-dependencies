@@ -1,11 +1,11 @@
 {
   "sbtPlugins": [
-    { "group": "com.typesafe.play", "name": "sbt-plugin", "latestVersion": "2.8.8" },
+    { "group": "com.typesafe.play", "name": "sbt-plugin", "latestVersion": "2.8.13" },
     { "group": "se.marcuslonnberg", "name": "sbt-docker", "latestVersion": "1.5.0" }
   ],
   "libraries": [
     { "group": "org.reactivemongo", "name": "reactivemongo", "latestVersion": "0.20.3" },
-    { "group": "com.typesafe.play", "name": "play"         , "latestVersion": "2.8.8"  },
+    { "group": "com.typesafe.play", "name": "play"         , "latestVersion": "2.8.13" },
     { "group": "uk.gov.hmrc"      , "name": "accessibility-driver"          },
     { "group": "uk.gov.hmrc"      , "name": "accessibility-testing-library" },
     { "group": "uk.gov.hmrc"      , "name": "api-performance-test-runner"   },
