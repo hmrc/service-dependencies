@@ -85,22 +85,30 @@ class ServiceDependenciesController @Inject()(
         .map(res => Ok(Json.toJson(res)))
     }
 
-  def slugInfos(name: String, version: Option[String]): Action[AnyContent] =
-    Action.async {
-      implicit val format = ApiSlugInfoFormats.slugInfoFormat
-      slugInfoService
-        .getSlugInfos(name, version.map(Version.apply))
-        .map(res => Ok(Json.toJson(res)))
-    }
-
+  // TODO look at changing Derived views to process meta-artefacts too
   def slugInfo(name: String, version: Option[String]): Action[AnyContent] =
     Action.async {
-      implicit val format = ApiSlugInfoFormats.slugInfoFormat
-      (version match {
-         case Some(version) => slugInfoService.getSlugInfo(name, Version(version))
-         case None          => slugInfoService.getSlugInfo(name, SlugInfoFlag.Latest)
+      (for {
+         slugInfo        <- EitherT.fromOptionF(
+                              version match {
+                                case Some(version) => slugInfoService.getSlugInfo(name, Version(version))
+                                case None          => slugInfoService.getSlugInfo(name, SlugInfoFlag.Latest)
+                              },
+                              NotFound("")
+                            )
+         // prefer graph data from meta-artefact if available
+         optMetaArtefact <- EitherT.liftF[Future, Result, Option[MetaArtefact]](metaArtefactRepository.find(name, slugInfo.version))
+         optModule       =  optMetaArtefact.flatMap(_.modules.headOption)
+         slugInfo2       =  optMetaArtefact.fold(slugInfo)(ma => slugInfo.copy(
+                              dependencyDotCompile = optModule.flatMap(_.dependencyDotCompile).getOrElse(""),
+                              dependencyDotTest    = optModule.flatMap(_.dependencyDotTest).getOrElse(""),
+                              dependencyDotBuild   = ma.dependencyDotBuild.getOrElse("")
+                            ))
+       } yield {
+         implicit val f = ApiSlugInfoFormats.slugInfoFormat
+         Ok(Json.toJson(slugInfo2))
        }
-      ).map(res => Ok(Json.toJson(res)))
+      ).merge
     }
 
   def dependenciesOfSlugForTeam(team: String, flag: String): Action[AnyContent] =
