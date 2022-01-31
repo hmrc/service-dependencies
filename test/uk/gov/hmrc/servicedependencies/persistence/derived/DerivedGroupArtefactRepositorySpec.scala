@@ -55,7 +55,7 @@ class DerivedGroupArtefactRepositorySpec
   "GroupArtefactsRepository.findGroupsArtefacts" should {
     "return a map of artefact group to list of found artefacts" in {
       val slugWithDependencies = slugInfo.copy(dependencyDotCompile = scala.io.Source.fromResource("slugs/dependencies-compile.dot").mkString)
-      derivedServiceDependenciesRepository.populateDependencies(slugWithDependencies).futureValue
+      derivedServiceDependenciesRepository.populateDependencies(slugWithDependencies, meta = None).futureValue
       repository.populate().futureValue
 
       val result = repository.findGroupsArtefacts.futureValue

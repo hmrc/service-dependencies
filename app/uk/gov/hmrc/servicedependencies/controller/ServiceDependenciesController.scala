@@ -230,6 +230,7 @@ class ServiceDependenciesController @Inject()(
         }
       }.leftFlatMap { _ =>
         // fallback to data from getDependencyVersionsForRepository()
+        // TODO are we still populating from github? Should we be?
         implicit val rw = Repository.writes
         for {
           dependencies <- version match {

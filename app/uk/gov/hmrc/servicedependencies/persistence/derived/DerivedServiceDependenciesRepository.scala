@@ -27,7 +27,7 @@ import org.mongodb.scala.model.Indexes.{ascending, compoundIndex}
 import play.api.Logger
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.play.json.{CollectionFactory, PlayMongoRepository}
-import uk.gov.hmrc.servicedependencies.model.{ApiServiceDependencyFormats, DependencyScope, ServiceDependency, ServiceDependencyWrite, SlugInfo, SlugInfoFlag, Version}
+import uk.gov.hmrc.servicedependencies.model.{ApiServiceDependencyFormats, DependencyScope, MetaArtefact, ServiceDependency, ServiceDependencyWrite, SlugInfo, SlugInfoFlag, Version}
 import uk.gov.hmrc.servicedependencies.persistence.DeploymentRepository
 import uk.gov.hmrc.servicedependencies.service.DependencyGraphParser
 
@@ -140,9 +140,9 @@ class DerivedServiceDependenciesRepository @Inject()(
       ServiceDependencyWrite.format
     )
 
-  def populateDependencies(slugInfo: SlugInfo): Future[Unit] = {
+  def populateDependencies(slugInfo: SlugInfo, meta: Option[MetaArtefact]): Future[Unit] = {
     val writes =
-      if (slugInfo.dependencyDotCompile.isEmpty) // legacy java slug
+      if (meta.isEmpty && slugInfo.dependencyDotCompile.isEmpty) // legacy java slug
             slugInfo.dependencies
               .map(d =>
                 ServiceDependencyWrite(
@@ -158,12 +158,16 @@ class DerivedServiceDependenciesRepository @Inject()(
                 )
               )
       else {
-        val compile = dependencyGraphParser.parse(slugInfo.dependencyDotCompile).dependencies.map((_, DependencyScope.Compile))
-        val test    = dependencyGraphParser.parse(slugInfo.dependencyDotTest   ).dependencies.map((_, DependencyScope.Test   ))
-        val build   = dependencyGraphParser.parse(slugInfo.dependencyDotBuild  ).dependencies.map((_, DependencyScope.Build  ))
+        val graphBuild   = meta.flatMap(_.dependencyDotBuild                                ).getOrElse(slugInfo.dependencyDotBuild  )
+        val graphCompile = meta.flatMap(_.modules.headOption).flatMap(_.dependencyDotCompile).getOrElse(slugInfo.dependencyDotCompile)
+        val graphTest    = meta.flatMap(_.modules.headOption).flatMap(_.dependencyDotTest   ).getOrElse(slugInfo.dependencyDotTest   )
+
+        val build   = dependencyGraphParser.parse(graphBuild  ).dependencies.map((_, DependencyScope.Build  ))
+        val compile = dependencyGraphParser.parse(graphCompile).dependencies.map((_, DependencyScope.Compile))
+        val test    = dependencyGraphParser.parse(graphTest   ).dependencies.map((_, DependencyScope.Test   ))
 
         val dependencies: Map[DependencyGraphParser.Node, Set[DependencyScope]] =
-          (compile ++ test ++ build)
+          (build ++ compile ++ test)
             .foldLeft(Map.empty[DependencyGraphParser.Node, Set[DependencyScope]]){ case (acc, (n, flag)) =>
               acc + (n -> (acc.getOrElse(n, Set.empty) + flag))
             }
@@ -187,7 +191,7 @@ class DerivedServiceDependenciesRepository @Inject()(
       }
 
     if (writes.isEmpty)
-      Future.successful(())
+      Future.unit
     else {
       logger.info(s"Inserting ${writes.size} dependencies for ${slugInfo.name} ${slugInfo.version}")
       targetCollection

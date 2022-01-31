@@ -51,7 +51,7 @@ class SlugInfoRepository @Inject()(
 
   def getAllEntries: Future[Seq[SlugInfo]] =
     collection.find()
-      .toFuture
+      .toFuture()
 
   def clearAllData: Future[Unit] =
     collection.deleteMany(BsonDocument())
@@ -62,15 +62,15 @@ class SlugInfoRepository @Inject()(
     collection.distinct[String]("name")
       .toFuture()
 
- def getSlugInfos(name: String, optVersion: Option[Version]): Future[Seq[SlugInfo]] =
+ def getSlugInfo(name: String, version: Version): Future[Option[SlugInfo]] =
     collection
       .find(
         filter = and(
                    equal("name", name),
-                   optVersion.fold[Bson](BsonDocument())(v => equal("version", v.original))
+                   equal("version", version.original)
                  )
       )
-      .toFuture()
+      .headOption()
 
   def getSlugInfo(name: String, flag: SlugInfoFlag): Future[Option[SlugInfo]] =
     findSlugsFromDeployments(
