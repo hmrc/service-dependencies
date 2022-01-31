@@ -93,16 +93,14 @@ class ServiceDependenciesController @Inject()(
         .map(res => Ok(Json.toJson(res)))
     }
 
-  def slugInfo(name: String, flag: String): Action[AnyContent] =
+  def slugInfo(name: String, version: Option[String]): Action[AnyContent] =
     Action.async {
-      (for {
-         f        <- EitherT.fromOption[Future](SlugInfoFlag.parse(flag), BadRequest(s"invalid flag '$flag'"))
-         slugInfo <- EitherT.fromOptionF(slugInfoService.getSlugInfo(name, f), NotFound(""))
-       } yield {
-         implicit val sif = ApiSlugInfoFormats.slugInfoFormat
-         Ok(Json.toJson(slugInfo))
+      implicit val format = ApiSlugInfoFormats.slugInfoFormat
+      (version match {
+         case Some(version) => slugInfoService.getSlugInfo(name, Version(version))
+         case None          => slugInfoService.getSlugInfo(name, SlugInfoFlag.Latest)
        }
-      ).merge
+      ).map(res => Ok(Json.toJson(res)))
     }
 
   def dependenciesOfSlug(name: String, flag: String): Action[AnyContent] =
