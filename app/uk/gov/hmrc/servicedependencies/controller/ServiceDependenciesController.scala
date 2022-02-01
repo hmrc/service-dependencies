@@ -85,7 +85,6 @@ class ServiceDependenciesController @Inject()(
         .map(res => Ok(Json.toJson(res)))
     }
 
-  // TODO look at changing Derived views to process meta-artefacts too
   def slugInfo(name: String, version: Option[String]): Action[AnyContent] =
     Action.async {
       (for {

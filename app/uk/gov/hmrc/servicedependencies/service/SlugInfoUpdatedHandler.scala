@@ -33,7 +33,7 @@ import uk.gov.hmrc.servicedependencies.connector.ArtefactProcessorConnector
 import uk.gov.hmrc.servicedependencies.model.ApiSlugInfoFormats
 
 import scala.concurrent.{ExecutionContext, Future, Promise}
-import scala.concurrent.duration.{FiniteDuration, DurationInt}
+import scala.concurrent.duration.FiniteDuration
 import scala.util.{Failure, Try}
 import scala.util.control.NonFatal
 
@@ -101,7 +101,7 @@ class SlugInfoUpdatedHandler @Inject()(
                      OptionT(artefactProcessorConnector.getMetaArtefact(slugInfo.name, slugInfo.version))
                        .transform { res => logger.info(s"1) getMetaArtefact for ${slugInfo.name} ${slugInfo.version} returned $res"); res}
                        // try again after a delay, could be a race-condition in being processed
-                       .orElseF(after(2.seconds)(artefactProcessorConnector.getMetaArtefact(slugInfo.name, slugInfo.version)))
+                       .orElseF(after(config.metaArtefactRetryDelay)(artefactProcessorConnector.getMetaArtefact(slugInfo.name, slugInfo.version)))
                        .transform { res => logger.info(s"2) getMetaArtefact for ${slugInfo.name} ${slugInfo.version} returned $res"); res}
                        .value
                    )
