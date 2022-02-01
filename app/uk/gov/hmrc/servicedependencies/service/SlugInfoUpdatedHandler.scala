@@ -96,7 +96,8 @@ class SlugInfoUpdatedHandler @Inject()(
                            .asEither.left.map(error => s"Could not parse message with ID '${message.messageId}'.  Reason: " + error.toString)
                        )
                    )
-       optMeta <-  // we don't go to metaArtefactRepository since it might not have been updated yet...
+       _        =  logger.info(s"Message '${message.messageId()}': slugInfo: ${slugInfo.name} ${slugInfo.version}")
+       optMeta  <- // we don't go to metaArtefactRepository since it might not have been updated yet...
                    EitherT.liftF(
                      OptionT(artefactProcessorConnector.getMetaArtefact(slugInfo.name, slugInfo.version))
                        .transform { res => logger.info(s"1) getMetaArtefact for ${slugInfo.name} ${slugInfo.version} returned $res"); res}
@@ -105,6 +106,7 @@ class SlugInfoUpdatedHandler @Inject()(
                        .transform { res => logger.info(s"2) getMetaArtefact for ${slugInfo.name} ${slugInfo.version} returned $res"); res}
                        .value
                    )
+       _        =  logger.info(s"Message '${message.messageId()}': optMeta.isDefined: ${optMeta.isDefined}")
        _        <- EitherT(
                      slugInfoService.addSlugInfo(slugInfo, optMeta)
                        .map(Right.apply)
