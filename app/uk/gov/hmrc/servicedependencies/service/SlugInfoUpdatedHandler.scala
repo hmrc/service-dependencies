@@ -20,7 +20,7 @@ import akka.actor.ActorSystem
 import akka.stream.{ActorAttributes, Materializer, Supervision}
 import akka.stream.alpakka.sqs.{MessageAction, SqsSourceSettings}
 import akka.stream.alpakka.sqs.scaladsl.{SqsAckSink, SqsSource}
-import cats.data.EitherT
+import cats.data.{EitherT, OptionT}
 import com.github.matsluni.akkahttpspi.AkkaHttpClient
 import com.google.inject.Inject
 import play.api.Logging
@@ -32,7 +32,8 @@ import uk.gov.hmrc.servicedependencies.config.ArtefactReceivingConfig
 import uk.gov.hmrc.servicedependencies.connector.ArtefactProcessorConnector
 import uk.gov.hmrc.servicedependencies.model.ApiSlugInfoFormats
 
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.{ExecutionContext, Future, Promise}
+import scala.concurrent.duration.{FiniteDuration, DurationInt}
 import scala.util.{Failure, Try}
 import scala.util.control.NonFatal
 
@@ -77,6 +78,12 @@ class SlugInfoUpdatedHandler @Inject()(
       .runWith(SqsAckSink(queueUrl)(awsSqsClient))
   }
 
+  private def after[A](delay: FiniteDuration)(task: => Future[A]): Future[A] = {
+    val promise = Promise[A]()
+    actorSystem.scheduler.scheduleOnce(delay)(task.foreach(promise.success))
+    promise.future
+  }
+
   private def processMessage(message: Message): Future[MessageAction] = {
     logger.debug(s"Starting processing message with ID '${message.messageId()}'")
     (for {
@@ -89,8 +96,13 @@ class SlugInfoUpdatedHandler @Inject()(
                            .asEither.left.map(error => s"Could not parse message with ID '${message.messageId}'.  Reason: " + error.toString)
                        )
                    )
-       optMeta  <- // we don't go to metaArtefactRepository since it might not have been updated yet...
-                   EitherT.liftF(artefactProcessorConnector.getMetaArtefact(slugInfo.name, slugInfo.version))
+       optMeta <-  // we don't go to metaArtefactRepository since it might not have been updated yet...
+                   EitherT.liftF(
+                     OptionT(artefactProcessorConnector.getMetaArtefact(slugInfo.name, slugInfo.version))
+                       // try again after a delay, could be a race-condition in being processed
+                       .orElseF(after(2.seconds)(artefactProcessorConnector.getMetaArtefact(slugInfo.name, slugInfo.version)))
+                       .value
+                   )
        _        <- EitherT(
                      slugInfoService.addSlugInfo(slugInfo, optMeta)
                        .map(Right.apply)
