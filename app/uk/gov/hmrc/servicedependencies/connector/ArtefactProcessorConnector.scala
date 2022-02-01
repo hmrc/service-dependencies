@@ -22,6 +22,8 @@ import uk.gov.hmrc.servicedependencies.config.ServiceDependenciesConfig
 import uk.gov.hmrc.servicedependencies.model.{MetaArtefact, Version}
 
 import scala.concurrent.{ExecutionContext, Future}
+import uk.gov.hmrc.http.HttpResponse
+import play.api.Logger
 
 @Singleton
 class ArtefactProcessorConnector @Inject()(
@@ -31,11 +33,26 @@ class ArtefactProcessorConnector @Inject()(
 ) {
   import HttpReads.Implicits._
 
+  private val logger = Logger(getClass)
+
   private val artefactProcessorApiBase =
     serviceConfiguration.artefactProcessorServiceUrl
 
   private implicit val maf = MetaArtefact.apiFormat
 
-  def getMetaArtefact(repositoryName: String, version: Version)(implicit hc: HeaderCarrier): Future[Option[MetaArtefact]] =
-    httpClient.GET[Option[MetaArtefact]](url"$artefactProcessorApiBase/result/meta/$repositoryName/${version.toString}")
+  def getMetaArtefact(repositoryName: String, version: Version)(implicit hc: HeaderCarrier): Future[Option[MetaArtefact]] = {
+    //httpClient.GET[Option[MetaArtefact]](url"$artefactProcessorApiBase/result/meta/$repositoryName/${version.toString}")
+    httpClient.GET[HttpResponse](url"$artefactProcessorApiBase/result/meta/$repositoryName/${version.toString}")
+      .map { res =>
+        logger.info(s"getMetaArtefact ($repositoryName $version) returned ${res.status} '${res.body}'")
+        if (res.status == 200)
+          Some(
+            res.json
+              .validate[MetaArtefact]
+              .fold({errs => logger.error(s"Could not parse MetaArtefact: ${errs}"); sys.error(s"Could not parse MetaArtefact: ${errs}")}, identity)
+          )
+        else
+          None
+      }
+    }
 }
