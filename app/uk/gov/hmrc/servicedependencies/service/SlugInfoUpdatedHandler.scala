@@ -27,7 +27,9 @@ import play.api.Logging
 import play.api.libs.json.Json
 import software.amazon.awssdk.services.sqs.SqsAsyncClient
 import software.amazon.awssdk.services.sqs.model.Message
+import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.servicedependencies.config.ArtefactReceivingConfig
+import uk.gov.hmrc.servicedependencies.connector.ArtefactProcessorConnector
 import uk.gov.hmrc.servicedependencies.model.ApiSlugInfoFormats
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -35,9 +37,10 @@ import scala.util.{Failure, Try}
 import scala.util.control.NonFatal
 
 class SlugInfoUpdatedHandler @Inject()(
-  config         : ArtefactReceivingConfig,
-  slugInfoService: SlugInfoService,
-  messageHandling: SqsMessageHandling
+  config                    : ArtefactReceivingConfig,
+  artefactProcessorConnector: ArtefactProcessorConnector,
+  slugInfoService           : SlugInfoService,
+  messageHandling           : SqsMessageHandling
 )(implicit
    actorSystem : ActorSystem,
    materializer: Materializer,
@@ -50,6 +53,8 @@ class SlugInfoUpdatedHandler @Inject()(
 
   private lazy val queueUrl = config.sqsSlugQueue
   private lazy val settings = SqsSourceSettings()
+
+  private implicit val hc = HeaderCarrier()
 
   private lazy val awsSqsClient =
     Try {
@@ -84,8 +89,10 @@ class SlugInfoUpdatedHandler @Inject()(
                            .asEither.left.map(error => s"Could not parse message with ID '${message.messageId}'.  Reason: " + error.toString)
                        )
                    )
+       optMeta  <- // we don't go to metaArtefactRepository since it might not have been updated yet...
+                   EitherT.liftF(artefactProcessorConnector.getMetaArtefact(slugInfo.name, slugInfo.version))
        _        <- EitherT(
-                     slugInfoService.addSlugInfo(slugInfo)
+                     slugInfoService.addSlugInfo(slugInfo, optMeta)
                        .map(Right.apply)
                        .recover {
                          case e =>

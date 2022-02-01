@@ -158,6 +158,7 @@ class DerivedServiceDependenciesRepository @Inject()(
                 )
               )
       else {
+        // java slugs do not have a meta-artefact - need to fall back on slugInfo
         val graphBuild   = meta.flatMap(_.dependencyDotBuild                                ).getOrElse(slugInfo.dependencyDotBuild  )
         val graphCompile = meta.flatMap(_.modules.headOption).flatMap(_.dependencyDotCompile).getOrElse(slugInfo.dependencyDotCompile)
         val graphTest    = meta.flatMap(_.modules.headOption).flatMap(_.dependencyDotTest   ).getOrElse(slugInfo.dependencyDotTest   )

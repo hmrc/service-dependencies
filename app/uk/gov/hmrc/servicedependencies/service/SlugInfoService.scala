@@ -23,7 +23,7 @@ import play.api.Logging
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.servicedependencies.connector.{GithubRawConnector, ReleasesApiConnector, TeamsAndRepositoriesConnector}
 import uk.gov.hmrc.servicedependencies.model._
-import uk.gov.hmrc.servicedependencies.persistence.{DeploymentRepository, JdkVersionRepository, MetaArtefactRepository, SlugInfoRepository, SlugVersionRepository}
+import uk.gov.hmrc.servicedependencies.persistence.{DeploymentRepository, JdkVersionRepository, SlugInfoRepository, SlugVersionRepository}
 import uk.gov.hmrc.servicedependencies.persistence.derived.{DerivedGroupArtefactRepository, DerivedServiceDependenciesRepository}
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -36,14 +36,13 @@ class SlugInfoService @Inject()(
   jdkVersionRepository          : JdkVersionRepository,
   groupArtefactRepository       : DerivedGroupArtefactRepository,
   deploymentRepository          : DeploymentRepository,
-  metaArtefactRepository        : MetaArtefactRepository,
   teamsAndRepositoriesConnector : TeamsAndRepositoriesConnector,
   releasesApiConnector          : ReleasesApiConnector,
   githubRawConnector            : GithubRawConnector,
 )(implicit ec: ExecutionContext
 ) extends Logging {
 
-  def addSlugInfo(slug: SlugInfo): Future[Unit] =
+  def addSlugInfo(slug: SlugInfo, metaArtefact: Option[MetaArtefact]): Future[Unit] =
     for {
       // Determine which slug is latest from the existing collection
       _        <- slugInfoRepository.add(slug)
@@ -55,8 +54,7 @@ class SlugInfoService @Inject()(
                                                isLatest
                     }
       _        <- if (isLatest) deploymentRepository.markLatest(slug.name, slug.version) else Future.unit
-      meta     <- metaArtefactRepository.find(slug.name, slug.version) // TODO will this have been populated yet for new slug?
-      _        <- serviceDependencyRepository.populateDependencies(slug, meta)
+      _        <- serviceDependencyRepository.populateDependencies(slug, metaArtefact)
     } yield ()
 
   def getSlugInfo(name: String, flag: SlugInfoFlag): Future[Option[SlugInfo]] =

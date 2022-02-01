@@ -93,12 +93,14 @@ class MetaArtefactUpdateHandler @Inject()(
                          s"MetaArtefact for name: ${available.name}, version: ${available.version} was not found"
                        )
        _            <- EitherT(
-                         metaArtefactService.addMetaArtefact(metaArtefact).map(Right.apply).recover {
-                           case e =>
-                             val errorMessage = s"Could not store meta-artefact for message with ID '${message.messageId()}'"
-                             logger.error(errorMessage, e)
-                             Left(s"$errorMessage ${e.getMessage}")
-                         }
+                         metaArtefactService.addMetaArtefact(metaArtefact)
+                           .map(Right.apply)
+                           .recover {
+                             case e =>
+                               val errorMessage = s"Could not store meta-artefact for message with ID '${message.messageId()}'"
+                               logger.error(errorMessage, e)
+                               Left(s"$errorMessage ${e.getMessage}")
+                           }
                        )
      } yield ()
     ).value.map {

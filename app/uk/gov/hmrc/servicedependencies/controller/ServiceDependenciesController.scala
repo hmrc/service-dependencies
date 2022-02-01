@@ -230,7 +230,8 @@ class ServiceDependenciesController @Inject()(
         }
       }.leftFlatMap { _ =>
         // fallback to data from getDependencyVersionsForRepository()
-        // TODO are we still populating from github? Should we be?
+        // TODO are we still populating from github? Should we be? (It is brittle (brute parsing of sbt files) & incomplete (no transitive))
+        // and can be fixed by producing meta-artefacts - TODO REMOVE
         implicit val rw = Repository.writes
         for {
           dependencies <- version match {

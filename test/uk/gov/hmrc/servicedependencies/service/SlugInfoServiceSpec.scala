@@ -25,7 +25,7 @@ import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.servicedependencies.connector.{GithubRawConnector, ReleasesApiConnector, TeamsAndRepositoriesConnector, TeamsForServices}
 import uk.gov.hmrc.servicedependencies.connector.model.RepositoryInfo
 import uk.gov.hmrc.servicedependencies.model._
-import uk.gov.hmrc.servicedependencies.persistence.{DeploymentRepository, JdkVersionRepository, MetaArtefactRepository, SlugInfoRepository, SlugVersionRepository}
+import uk.gov.hmrc.servicedependencies.persistence.{DeploymentRepository, JdkVersionRepository, SlugInfoRepository, SlugVersionRepository}
 import uk.gov.hmrc.servicedependencies.persistence.derived.{DerivedGroupArtefactRepository, DerivedServiceDependenciesRepository}
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -156,12 +156,10 @@ class SlugInfoServiceSpec
         .thenReturn(Future.successful(true))
       when(boot.mockedDeploymentRepository.markLatest(any, any))
         .thenReturn(Future.unit)
-      when(boot.mockedMetaArtefactRepository.find(any, any))
-        .thenReturn(Future.successful(None))
       when(boot.mockedServiceDependenciesRepository.populateDependencies(any, any))
         .thenReturn(Future.unit)
 
-      boot.service.addSlugInfo(sampleSlugInfo).futureValue
+      boot.service.addSlugInfo(sampleSlugInfo, metaArtefact = None).futureValue
 
       verify(boot.mockedDeploymentRepository, times(1)).markLatest(sampleSlugInfo.name, sampleSlugInfo.version)
       verifyNoMoreInteractions(boot.mockedSlugInfoRepository)
@@ -177,12 +175,10 @@ class SlugInfoServiceSpec
         .thenReturn(Future.successful(true))
       when(boot.mockedDeploymentRepository.markLatest(any, any))
         .thenReturn(Future.unit)
-      when(boot.mockedMetaArtefactRepository.find(any, any))
-        .thenReturn(Future.successful(None))
       when(boot.mockedServiceDependenciesRepository.populateDependencies(any, any))
         .thenReturn(Future.unit)
 
-      boot.service.addSlugInfo(slugv2).futureValue
+      boot.service.addSlugInfo(slugv2, metaArtefact = None).futureValue
       verify(boot.mockedDeploymentRepository, times(1)).markLatest(slugv2.name, Version("2.0.0"))
 
       verifyNoMoreInteractions(boot.mockedSlugInfoRepository)
@@ -196,12 +192,10 @@ class SlugInfoServiceSpec
         .thenReturn(Future.successful(Some(slugv2.version)))
       when(boot.mockedSlugInfoRepository.add(any))
         .thenReturn(Future.successful(true))
-      when(boot.mockedMetaArtefactRepository.find(any, any))
-        .thenReturn(Future.successful(None))
       when(boot.mockedServiceDependenciesRepository.populateDependencies(any, any))
         .thenReturn(Future.unit)
 
-      boot.service.addSlugInfo(slugv1).futureValue
+      boot.service.addSlugInfo(slugv1, metaArtefact = None).futureValue
 
       verify(boot.mockedSlugInfoRepository, times(1)).add(slugv1)
       verifyNoMoreInteractions(boot.mockedSlugInfoRepository)
@@ -215,12 +209,10 @@ class SlugInfoServiceSpec
         .thenReturn(Future.successful(Some(slugv2.version)))
       when(boot.mockedSlugInfoRepository.add(any))
         .thenReturn(Future.successful(true))
-      when(boot.mockedMetaArtefactRepository.find(any, any))
-        .thenReturn(Future.successful(None))
       when(boot.mockedServiceDependenciesRepository.populateDependencies(any, any))
         .thenReturn(Future.unit)
 
-      boot.service.addSlugInfo(slugv1).futureValue
+      boot.service.addSlugInfo(slugv1, metaArtefact = None).futureValue
 
       verifyNoMoreInteractions(boot.mockedSlugInfoRepository)
     }
@@ -306,7 +298,6 @@ class SlugInfoServiceSpec
   , mockedJdkVersionRespository         : JdkVersionRepository
   , mockedGroupArtefactRepository       : DerivedGroupArtefactRepository
   , mockedDeploymentRepository          : DeploymentRepository
-  , mockedMetaArtefactRepository        : MetaArtefactRepository
   , mockedTeamsAndRepositoriesConnector : TeamsAndRepositoriesConnector
   , mockedReleasesApiConnector          : ReleasesApiConnector
   , mockedRawGithubConnector            : GithubRawConnector
@@ -321,7 +312,6 @@ class SlugInfoServiceSpec
       val mockedJdkVersionRepository              = mock[JdkVersionRepository]
       val mockedGroupArtefactRepository           = mock[DerivedGroupArtefactRepository]
       val mockedDeploymentRepository              = mock[DeploymentRepository]
-      val mockedMetaArtefactRepository            = mock[MetaArtefactRepository]
       val mockedTeamsAndRepositoriesConnector     = mock[TeamsAndRepositoriesConnector]
       val mockedReleasesApiConnector              = mock[ReleasesApiConnector]
       val mockedRawGithubConnector                = mock[GithubRawConnector]
@@ -333,7 +323,6 @@ class SlugInfoServiceSpec
           , mockedJdkVersionRepository
           , mockedGroupArtefactRepository
           , mockedDeploymentRepository
-          , mockedMetaArtefactRepository
           , mockedTeamsAndRepositoriesConnector
           , mockedReleasesApiConnector
           , mockedRawGithubConnector
@@ -345,7 +334,6 @@ class SlugInfoServiceSpec
         , mockedJdkVersionRepository
         , mockedGroupArtefactRepository
         , mockedDeploymentRepository
-        , mockedMetaArtefactRepository
         , mockedTeamsAndRepositoriesConnector
         , mockedReleasesApiConnector
         , mockedRawGithubConnector
