@@ -25,12 +25,15 @@ import uk.gov.hmrc.servicedependencies.model.{JavaInfo, SlugInfo, Version}
 
 import java.time.Instant
 import scala.concurrent.ExecutionContext
+import org.scalatest.concurrent.IntegrationPatience
 
 
-class SlugVersionRepositorySpec  extends AnyWordSpecLike
-  with Matchers
-  with PlayMongoRepositorySupport[Version]
-  with CleanMongoCollectionSupport {
+class SlugVersionRepositorySpec
+  extends AnyWordSpecLike
+     with Matchers
+     with PlayMongoRepositorySupport[Version]
+     with CleanMongoCollectionSupport
+     with IntegrationPatience {
 
   import ExecutionContext.Implicits.global
 
@@ -40,7 +43,6 @@ class SlugVersionRepositorySpec  extends AnyWordSpecLike
 
   "SlugVersionRepository"  should {
     "return the max version" in {
-
       slugInfoRepository.add(sampleSlugInfo(Version(1, 1, 0), "/my-slug/1.1.0")).futureValue
       slugInfoRepository.add(sampleSlugInfo(Version(1, 0, 0), "/my-slug/1.0.0")).futureValue
       slugInfoRepository.add(sampleSlugInfo(Version(1, 4, 1), "/my-slug/1.4.1")).futureValue

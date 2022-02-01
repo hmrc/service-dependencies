@@ -19,11 +19,13 @@ package uk.gov.hmrc.servicedependencies.config
 import com.google.inject.{Inject, Singleton}
 import play.api.Configuration
 
+import scala.concurrent.duration.FiniteDuration
+
 @Singleton
 class ArtefactReceivingConfig @Inject()(configuration: Configuration) {
 
-  private lazy val sqsQueueUrlPrefix: String = configuration.get[String]("artefact.receiver.aws.sqs.queue-prefix")
-  private lazy val sqsQueueSlugInfo: String = configuration.get[String]("artefact.receiver.aws.sqs.queue-slug")
+  private lazy val sqsQueueUrlPrefix   : String = configuration.get[String]("artefact.receiver.aws.sqs.queue-prefix")
+  private lazy val sqsQueueSlugInfo    : String = configuration.get[String]("artefact.receiver.aws.sqs.queue-slug")
   private lazy val sqsQueueMetaArtefact: String = configuration.get[String]("artefact.receiver.aws.sqs.queue-meta")
 
   lazy val sqsMetaArtefactQueue           = s"$sqsQueueUrlPrefix/$sqsQueueMetaArtefact"
@@ -33,5 +35,9 @@ class ArtefactReceivingConfig @Inject()(configuration: Configuration) {
   lazy val sqsSlugDeadLetterQueue         = s"$sqsQueueUrlPrefix/$sqsQueueSlugInfo-deadletter"
   lazy val sqsDeadLetterQueues            = Set(sqsSlugDeadLetterQueue, sqsMetaArtefactDeadLetterQueue)
 
-  lazy val isEnabled                      = configuration.get[Boolean]("artefact.receiver.enabled")
+  lazy val isEnabled: Boolean =
+    configuration.get[Boolean]("artefact.receiver.enabled")
+
+  lazy val metaArtefactRetryDelay: FiniteDuration =
+    configuration.get[FiniteDuration]("artefact.receiver.meta-artefact.retry.delay")
 }
