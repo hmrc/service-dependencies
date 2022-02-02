@@ -25,8 +25,8 @@ import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.servicedependencies.connector.{GithubRawConnector, ReleasesApiConnector, TeamsAndRepositoriesConnector, TeamsForServices}
 import uk.gov.hmrc.servicedependencies.connector.model.RepositoryInfo
 import uk.gov.hmrc.servicedependencies.model._
-import uk.gov.hmrc.servicedependencies.persistence.derived.{DerivedGroupArtefactRepository, DerivedServiceDependenciesRepository}
 import uk.gov.hmrc.servicedependencies.persistence.{DeploymentRepository, JdkVersionRepository, SlugInfoRepository, SlugVersionRepository}
+import uk.gov.hmrc.servicedependencies.persistence.derived.{DerivedGroupArtefactRepository, DerivedServiceDependenciesRepository}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
@@ -133,16 +133,16 @@ class SlugInfoServiceSpec
 
     "support retrieval of a SlugInfo by version" in new GetSlugInfoFixture {
       val targetVersion = Version("1.2.3")
-      when(boot.mockedSlugInfoRepository.getSlugInfos(SlugName, Some(targetVersion)))
-        .thenReturn(Future.successful(Seq(sampleSlugInfo)))
+      when(boot.mockedSlugInfoRepository.getSlugInfo(SlugName, targetVersion))
+        .thenReturn(Future.successful(Some(sampleSlugInfo)))
 
       boot.service.getSlugInfo(SlugName, targetVersion).futureValue shouldBe Some(sampleSlugInfo)
     }
 
     "return None when no SlugInfos are found matching the target name and version" in new GetSlugInfoFixture {
       val targetVersion = Version("1.2.3")
-      when(boot.mockedSlugInfoRepository.getSlugInfos(SlugName, Some(targetVersion)))
-        .thenReturn(Future.successful(Nil))
+      when(boot.mockedSlugInfoRepository.getSlugInfo(SlugName, targetVersion))
+        .thenReturn(Future.successful(None))
 
       boot.service.getSlugInfo(SlugName, targetVersion).futureValue shouldBe None
     }
@@ -155,11 +155,11 @@ class SlugInfoServiceSpec
       when(boot.mockedSlugInfoRepository.add(any))
         .thenReturn(Future.successful(true))
       when(boot.mockedDeploymentRepository.markLatest(any, any))
-        .thenReturn(Future.successful(()))
-      when(boot.mockedServiceDependenciesRepository.populateDependencies(any))
-        .thenReturn(Future.successful(()))
+        .thenReturn(Future.unit)
+      when(boot.mockedServiceDependenciesRepository.populateDependencies(any, any))
+        .thenReturn(Future.unit)
 
-      boot.service.addSlugInfo(sampleSlugInfo).futureValue
+      boot.service.addSlugInfo(sampleSlugInfo, metaArtefact = None).futureValue
 
       verify(boot.mockedDeploymentRepository, times(1)).markLatest(sampleSlugInfo.name, sampleSlugInfo.version)
       verifyNoMoreInteractions(boot.mockedSlugInfoRepository)
@@ -174,11 +174,11 @@ class SlugInfoServiceSpec
       when(boot.mockedSlugInfoRepository.add(any))
         .thenReturn(Future.successful(true))
       when(boot.mockedDeploymentRepository.markLatest(any, any))
-        .thenReturn(Future.successful(()))
-      when(boot.mockedServiceDependenciesRepository.populateDependencies(any))
-        .thenReturn(Future.successful(()))
+        .thenReturn(Future.unit)
+      when(boot.mockedServiceDependenciesRepository.populateDependencies(any, any))
+        .thenReturn(Future.unit)
 
-      boot.service.addSlugInfo(slugv2).futureValue
+      boot.service.addSlugInfo(slugv2, metaArtefact = None).futureValue
       verify(boot.mockedDeploymentRepository, times(1)).markLatest(slugv2.name, Version("2.0.0"))
 
       verifyNoMoreInteractions(boot.mockedSlugInfoRepository)
@@ -192,10 +192,10 @@ class SlugInfoServiceSpec
         .thenReturn(Future.successful(Some(slugv2.version)))
       when(boot.mockedSlugInfoRepository.add(any))
         .thenReturn(Future.successful(true))
-      when(boot.mockedServiceDependenciesRepository.populateDependencies(any))
-        .thenReturn(Future.successful(()))
+      when(boot.mockedServiceDependenciesRepository.populateDependencies(any, any))
+        .thenReturn(Future.unit)
 
-      boot.service.addSlugInfo(slugv1).futureValue
+      boot.service.addSlugInfo(slugv1, metaArtefact = None).futureValue
 
       verify(boot.mockedSlugInfoRepository, times(1)).add(slugv1)
       verifyNoMoreInteractions(boot.mockedSlugInfoRepository)
@@ -209,10 +209,10 @@ class SlugInfoServiceSpec
         .thenReturn(Future.successful(Some(slugv2.version)))
       when(boot.mockedSlugInfoRepository.add(any))
         .thenReturn(Future.successful(true))
-      when(boot.mockedServiceDependenciesRepository.populateDependencies(any))
-        .thenReturn(Future.successful(()))
+      when(boot.mockedServiceDependenciesRepository.populateDependencies(any, any))
+        .thenReturn(Future.unit)
 
-      boot.service.addSlugInfo(slugv1).futureValue
+      boot.service.addSlugInfo(slugv1, metaArtefact = None).futureValue
 
       verifyNoMoreInteractions(boot.mockedSlugInfoRepository)
     }
@@ -240,7 +240,7 @@ class SlugInfoServiceSpec
         .thenReturn(Future.successful(Seq.empty))
 
       when(boot.mockedDeploymentRepository.clearFlags(any[List[SlugInfoFlag]], any[List[String]]))
-        .thenReturn(Future.successful(()))
+        .thenReturn(Future.unit)
 
       boot.service.updateMetadata().futureValue
 
@@ -280,10 +280,10 @@ class SlugInfoServiceSpec
         .thenReturn(Future.successful(activeServices))
 
       when(boot.mockedDeploymentRepository.clearFlag(any[SlugInfoFlag], any[String]))
-        .thenReturn(Future.successful(()))
+        .thenReturn(Future.unit)
 
       when(boot.mockedDeploymentRepository.clearFlags(any[List[SlugInfoFlag]], any[List[String]]))
-        .thenReturn(Future.successful(()))
+        .thenReturn(Future.unit)
 
       boot.service.updateMetadata().futureValue
 

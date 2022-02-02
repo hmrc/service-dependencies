@@ -23,8 +23,8 @@ import play.api.Logging
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.servicedependencies.connector.{GithubRawConnector, ReleasesApiConnector, TeamsAndRepositoriesConnector}
 import uk.gov.hmrc.servicedependencies.model._
-import uk.gov.hmrc.servicedependencies.persistence.derived.{DerivedGroupArtefactRepository, DerivedServiceDependenciesRepository}
 import uk.gov.hmrc.servicedependencies.persistence.{DeploymentRepository, JdkVersionRepository, SlugInfoRepository, SlugVersionRepository}
+import uk.gov.hmrc.servicedependencies.persistence.derived.{DerivedGroupArtefactRepository, DerivedServiceDependenciesRepository}
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -41,7 +41,8 @@ class SlugInfoService @Inject()(
   githubRawConnector            : GithubRawConnector,
 )(implicit ec: ExecutionContext
 ) extends Logging {
-  def addSlugInfo(slug: SlugInfo): Future[Unit] =
+
+  def addSlugInfo(slug: SlugInfo, metaArtefact: Option[MetaArtefact]): Future[Unit] =
     for {
       // Determine which slug is latest from the existing collection
       _        <- slugInfoRepository.add(slug)
@@ -52,18 +53,15 @@ class SlugInfoService @Inject()(
                                                logger.info(s"Slug ${slug.name} ${slug.version} isLatest=$isLatest (latest is: ${maxVersion})")
                                                isLatest
                     }
-      _        <- if (isLatest) deploymentRepository.markLatest(slug.name, slug.version) else Future(())
-      _        <- serviceDependencyRepository.populateDependencies(slug)
+      _        <- if (isLatest) deploymentRepository.markLatest(slug.name, slug.version) else Future.unit
+      _        <- serviceDependencyRepository.populateDependencies(slug, metaArtefact)
     } yield ()
-
-  def getSlugInfos(name: String, version: Option[Version]): Future[Seq[SlugInfo]] =
-    slugInfoRepository.getSlugInfos(name, version)
 
   def getSlugInfo(name: String, flag: SlugInfoFlag): Future[Option[SlugInfo]] =
     slugInfoRepository.getSlugInfo(name, flag)
 
   def getSlugInfo(name: String, version: Version): Future[Option[SlugInfo]] =
-    slugInfoRepository.getSlugInfos(name, Some(version)).map(_.headOption)
+    slugInfoRepository.getSlugInfo(name, version)
 
   def findServicesWithDependency(
       flag        : SlugInfoFlag

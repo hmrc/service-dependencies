@@ -41,39 +41,29 @@ class ServiceDependenciesControllerSpec
      with ScalaFutures
      with IntegrationPatience {
 
-  "dependenciesOfSlug" should {
-    "get dependencies for a SlugInfoFlag" in new GetDependenciesOfSlugFixture {
-      val flag = SlugInfoFlag.Production
-      when(boot.mockSlugDependenciesService.curatedLibrariesOfSlug(slugName, flag))
-        .thenReturn(
-          Future.successful(
-            Some(List(DependencyWithLatestVersionNoRuleViolations, DependencyWithRuleViolationsNoLatestVersion))
-          )
-        )
+  "repositoryName" should {
+    val group    = "uk.gov.hmrc.mongo"
+    val artefact = "hmrc-mongo-lib1"
+    val version  = Version("1.0.0")
 
-      val result = boot.controller.dependenciesOfSlug(slugName, flag.asString).apply(FakeRequest())
+    "get repositoryName for a SlugInfoFlag" in {
+      val boot = Boot.init
+      when(boot.mockMetaArtefactRepository.findRepoNameByModule(group, artefact, version))
+        .thenReturn(Future.successful(Some("hmrc-mongo")))
 
-      contentAsJson(result) shouldBe Json.parse(
-        s"""[$jsonForDependencyWithLatestVersionNoRuleViolations, $jsonForDependencyWithRuleViolationsNoLatestVersion]"""
-      )
+      val result = boot.controller.repositoryName(group, artefact, version.toString).apply(FakeRequest())
+
+      contentAsJson(result) shouldBe Json.parse(s""""hmrc-mongo"""")
     }
 
-    "return Not Found when the requested slug is not recognised" in new GetDependenciesOfSlugFixture {
-      val flag = SlugInfoFlag.Latest
-      when(boot.mockSlugDependenciesService.curatedLibrariesOfSlug(slugName, flag))
+    "return Not Found when the requested repo is not recognised" in {
+      val boot = Boot.init
+       when(boot.mockMetaArtefactRepository.findRepoNameByModule(group, artefact, version))
         .thenReturn(Future.successful(None))
 
-      val result = boot.controller.dependenciesOfSlug(slugName, flag.asString).apply(FakeRequest())
+      val result = boot.controller.repositoryName(group, artefact, version.toString).apply(FakeRequest())
 
       status(result) shouldBe NOT_FOUND
-    }
-
-    "reject an invalid flag descriptor" in new GetDependenciesOfSlugFixture {
-      val invalidFlag = "an-invalid-flag"
-
-      val result = boot.controller.dependenciesOfSlug(slugName, invalidFlag).apply(FakeRequest())
-
-      status(result) shouldBe BAD_REQUEST
     }
   }
 
@@ -118,47 +108,5 @@ class ServiceDependenciesControllerSpec
         , controller
         )
     }
-  }
-
-  private trait GetDependenciesOfSlugFixture {
-    val slugName = "a-slug-name"
-    val boot = Boot.init
-
-    private val today = LocalDate.of(2019, 11, 27)
-
-    val DependencyWithLatestVersionNoRuleViolations = Dependency(
-        name                = "library1"
-      , group               = "uk.gov.hmrc"
-      , currentVersion      = Version("1.1.1")
-      , latestVersion       = Some(Version("1.2.1"))
-      , bobbyRuleViolations = Nil
-      )
-
-    val DependencyWithRuleViolationsNoLatestVersion = Dependency(
-        name                = "library2"
-      , group               = "uk.gov.hmrc"
-      , currentVersion      = Version("2.2.2")
-      , latestVersion       = None
-      , bobbyRuleViolations = List(
-          DependencyBobbyRule(reason = "security vulnerability", from = today, range = BobbyVersionRange("(,3.0.0)"))
-        )
-      )
-
-    val jsonForDependencyWithLatestVersionNoRuleViolations: String =
-      s"""{
-        "name": "library1",
-        "group": "uk.gov.hmrc",
-        "currentVersion": {"major": 1, "minor": 1, "patch": 1, "original": "1.1.1"},
-        "latestVersion": {"major": 1, "minor": 2, "patch": 1, "original": "1.2.1"},
-        "bobbyRuleViolations": []
-      }"""
-
-    val jsonForDependencyWithRuleViolationsNoLatestVersion: String =
-      s"""{
-        "name": "library2",
-        "group": "uk.gov.hmrc",
-        "currentVersion": {"major": 2, "minor": 2, "patch": 2, "original": "2.2.2"},
-        "bobbyRuleViolations": [{"reason": "security vulnerability", "from": "2019-11-27", "range": "(,3.0.0)"}]
-      }"""
   }
 }

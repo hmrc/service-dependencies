@@ -85,49 +85,27 @@ class ServiceDependenciesController @Inject()(
         .map(res => Ok(Json.toJson(res)))
     }
 
-  def slugInfos(name: String, version: Option[String]): Action[AnyContent] =
-    Action.async {
-      implicit val format = ApiSlugInfoFormats.slugInfoFormat
-      slugInfoService
-        .getSlugInfos(name, version.map(Version.apply))
-        .map(res => Ok(Json.toJson(res)))
-    }
-
   def slugInfo(name: String, version: Option[String]): Action[AnyContent] =
     Action.async {
-      implicit val format = ApiSlugInfoFormats.slugInfoFormat
-      (version match {
-         case Some(version) => slugInfoService.getSlugInfo(name, Version(version))
-         case None          => slugInfoService.getSlugInfo(name, SlugInfoFlag.Latest)
-       }
-      ).map(res => Ok(Json.toJson(res)))
-    }
-
-  def dependenciesOfSlug(name: String, flag: String): Action[AnyContent] =
-    Action.async {
       (for {
-         f     <- EitherT.fromOption[Future](SlugInfoFlag.parse(flag), BadRequest(s"invalid flag '$flag'"))
-         deps  <- EitherT.fromOptionF(slugDependenciesService.curatedLibrariesOfSlug(name, f), NotFound(""))
-                  // previously we collected dependencies from the jars in thes slug (i.e. only Compile time dependencies available)
-                  // if we detect this we are using old data, for the case of Latest, we can use the data from github - which includes
-                  // all library dependencies (compile and test) as well as plugin dependencies
-         deps2 <- if (f == SlugInfoFlag.Latest && !deps.exists(_.scope.contains(DependencyScope.Build))) { // i.e. no dependency graph data yet
-                    EitherT.fromOptionF(
-                       repositoryDependenciesService.getDependencyVersionsForRepository(name),
-                       NotFound("")
-                    ).map { latestGithub =>
-                      val compile = deps
-                      // test dependencies are assumed to be any library dependencies that are not in the slug
-                      val test    = latestGithub.libraryDependencies.filterNot(ghd => deps.exists(d => d.group == ghd.group && d.name == ghd.name))
-                      val build   = latestGithub.sbtPluginsDependencies ++ latestGithub.otherDependencies // other includes sbt.version
-                      compile.map(_.copy(scope = Some(DependencyScope.Compile))) ++
-                        build.map(_.copy(scope = Some(DependencyScope.Build))) ++
-                        test.map(_.copy(scope = Some(DependencyScope.Test)))
-                    }
-                  } else EitherT.pure[Future, Result](deps)
+         slugInfo        <- EitherT.fromOptionF(
+                              version match {
+                                case Some(version) => slugInfoService.getSlugInfo(name, Version(version))
+                                case None          => slugInfoService.getSlugInfo(name, SlugInfoFlag.Latest)
+                              },
+                              NotFound("")
+                            )
+         // prefer graph data from meta-artefact if available
+         optMetaArtefact <- EitherT.liftF[Future, Result, Option[MetaArtefact]](metaArtefactRepository.find(name, slugInfo.version))
+         optModule       =  optMetaArtefact.flatMap(_.modules.headOption)
+         slugInfo2       =  optMetaArtefact.fold(slugInfo)(ma => slugInfo.copy(
+                              dependencyDotCompile = optModule.flatMap(_.dependencyDotCompile).getOrElse(""),
+                              dependencyDotTest    = optModule.flatMap(_.dependencyDotTest).getOrElse(""),
+                              dependencyDotBuild   = ma.dependencyDotBuild.getOrElse("")
+                            ))
        } yield {
-         implicit val dw = Dependency.writes
-         Ok(Json.toJson(deps2))
+         implicit val f = ApiSlugInfoFormats.slugInfoFormat
+         Ok(Json.toJson(slugInfo2))
        }
       ).merge
     }
@@ -224,10 +202,10 @@ class ServiceDependenciesController @Inject()(
       ).leftFlatMap { _ =>
         // fallback to data from curatedLibrariesOfSlug
         for {
-          dependencies  <- version match {
-                     case None          => EitherT.fromOptionF(slugDependenciesService.curatedLibrariesOfSlug(repositoryName, SlugInfoFlag.Latest), NotFound(""))
-                     case Some(version) => EitherT.fromOptionF(slugDependenciesService.curatedLibrariesOfSlug(repositoryName, Version(version)), NotFound(""))
-                   }
+          dependencies <- version match {
+                            case None          => EitherT.fromOptionF(slugDependenciesService.curatedLibrariesOfSlug(repositoryName, SlugInfoFlag.Latest), NotFound(""))
+                            case Some(version) => EitherT.fromOptionF(slugDependenciesService.curatedLibrariesOfSlug(repositoryName, Version(version)), NotFound(""))
+                          }
         } yield {
           implicit val rw = Repository.writes
           Ok(
@@ -251,6 +229,8 @@ class ServiceDependenciesController @Inject()(
         }
       }.leftFlatMap { _ =>
         // fallback to data from getDependencyVersionsForRepository()
+        // TODO are we still populating from github? Should we be? (It is brittle (brute parsing of sbt files) & incomplete (no transitive))
+        // and can be fixed by producing meta-artefacts - TODO REMOVE
         implicit val rw = Repository.writes
         for {
           dependencies <- version match {

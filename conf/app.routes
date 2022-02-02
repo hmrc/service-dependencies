@@ -1,4 +1,3 @@
-GET     /api/sluginfos                         @uk.gov.hmrc.servicedependencies.controller.ServiceDependenciesController.slugInfos(name: String, version: Option[String])
 GET     /api/sluginfo                          @uk.gov.hmrc.servicedependencies.controller.ServiceDependenciesController.slugInfo(name: String, version: Option[String])
 GET     /api/teams/:team/dependencies          @uk.gov.hmrc.servicedependencies.controller.ServiceDependenciesController.dependenciesForTeam(team)
 GET     /api/serviceDeps                       @uk.gov.hmrc.servicedependencies.controller.ServiceDependenciesController.getServicesWithDependency(flag: String ?= "latest", group: String, artefact: String, versionRange: String, scope: Option[String] ?= Some("compile"))
@@ -6,7 +5,6 @@ GET     /api/groupArtefacts                    @uk.gov.hmrc.servicedependencies.
 GET     /api/jdkVersions                       @uk.gov.hmrc.servicedependencies.controller.ServiceDependenciesController.findJDKForEnvironment(flag: String ?= "latest")
 GET     /api/bobbyViolations                   @uk.gov.hmrc.servicedependencies.controller.BobbyRuleViolationController.findBobbyRuleViolations
 GET     /api/historicBobbyViolations           @uk.gov.hmrc.servicedependencies.controller.BobbyRuleViolationController.findHistoricBobbyRuleViolations
-GET     /api/slug-dependencies/:name           @uk.gov.hmrc.servicedependencies.controller.ServiceDependenciesController.dependenciesOfSlug(name, flag ?= "latest")
 GET     /api/teams/:team/slug-dependencies     @uk.gov.hmrc.servicedependencies.controller.ServiceDependenciesController.dependenciesOfSlugForTeam(team, flag ?= "latest")
 GET     /api/repository-name                   @uk.gov.hmrc.servicedependencies.controller.ServiceDependenciesController.repositoryName(group: String, artefact: String, version: String)
 GET     /api/module-dependencies/:repository   @uk.gov.hmrc.servicedependencies.controller.ServiceDependenciesController.moduleDependencies(repository: String, version: Option[String])

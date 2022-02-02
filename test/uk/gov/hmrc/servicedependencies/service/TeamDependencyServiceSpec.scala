@@ -19,25 +19,32 @@ package uk.gov.hmrc.servicedependencies.service
 import java.time.Instant
 
 import org.mockito.{ArgumentMatchersSugar, MockitoSugar}
-import org.scalatest.concurrent.ScalaFutures
+import org.scalatest.concurrent.{IntegrationPatience, ScalaFutures}
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.servicedependencies.connector.{ServiceConfigsConnector, TeamsAndRepositoriesConnector}
 import uk.gov.hmrc.servicedependencies.controller.model.{Dependencies, Dependency}
 import uk.gov.hmrc.servicedependencies.model.{BobbyRules, SlugInfoFlag, Team, Version}
-import uk.gov.hmrc.servicedependencies.persistence.{LatestVersionRepository, SlugInfoRepository}
+import uk.gov.hmrc.servicedependencies.persistence.{LatestVersionRepository, MetaArtefactRepository, SlugInfoRepository}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
-class TeamDependencyServiceSpec extends AnyWordSpec with Matchers with MockitoSugar with ScalaFutures with ArgumentMatchersSugar {
+class TeamDependencyServiceSpec
+  extends AnyWordSpec
+     with Matchers
+     with MockitoSugar
+     with ScalaFutures
+     with IntegrationPatience
+     with ArgumentMatchersSugar {
   val mockTeamsAndReposConnector        = mock[TeamsAndRepositoriesConnector]
   val mockSlugInfoRepository            = mock[SlugInfoRepository]
   val mockRepositoryDependenciesService = mock[RepositoryDependenciesService]
   val mockServiceConfigsConnector       = mock[ServiceConfigsConnector]
   val mockSlugDependenciesService       = mock[SlugDependenciesService]
   val mockLatestVersionRepository       = mock[LatestVersionRepository]
+  val mockMetaArtefactRepository        = mock[MetaArtefactRepository]
 
   val tds = new TeamDependencyService(
       mockTeamsAndReposConnector
@@ -46,6 +53,7 @@ class TeamDependencyServiceSpec extends AnyWordSpec with Matchers with MockitoSu
     , mockServiceConfigsConnector
     , mockSlugDependenciesService
     , mockLatestVersionRepository
+    , mockMetaArtefactRepository
     )
 
   "replaceServiceDeps" should {
@@ -86,14 +94,17 @@ class TeamDependencyServiceSpec extends AnyWordSpec with Matchers with MockitoSu
       when(mockTeamsAndReposConnector.getTeam("foo"))
         .thenReturn(Future.successful(team))
 
-      when(mockRepositoryDependenciesService.getDependencyVersionsForAllRepositories)
-        .thenReturn(Future.successful(Seq(fooDependencies)))
-
       when(mockServiceConfigsConnector.getBobbyRules)
         .thenReturn(Future.successful(BobbyRules(Map.empty)))
 
       when(mockLatestVersionRepository.getAllEntries)
         .thenReturn(Future.successful(Seq()))
+
+      when(mockMetaArtefactRepository.find("foo-service"))
+        .thenReturn(Future.successful(None))
+
+      when(mockRepositoryDependenciesService.getDependencyVersionsForRepository("foo-service"))
+        .thenReturn(Future.successful(Some(fooDependencies)))
 
       when(mockSlugDependenciesService.curatedLibrariesOfSlug("foo-service", SlugInfoFlag.Latest, BobbyRules(Map.empty), Seq.empty))
         .thenReturn(Future.successful(Option(List(fooDep1, fooSlugDep))))

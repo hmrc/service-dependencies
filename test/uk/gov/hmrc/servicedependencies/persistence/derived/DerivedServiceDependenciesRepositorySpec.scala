@@ -71,7 +71,7 @@ class DerivedServiceDependenciesRepositorySpec
         )
       )
 
-      repository.populateDependencies(slugWithDependencies).futureValue
+      repository.populateDependencies(slugWithDependencies, meta = None).futureValue
 
       val result = repository.collection.find().toFuture.futureValue
 
@@ -103,7 +103,7 @@ class DerivedServiceDependenciesRepositorySpec
     "populate dependencies from dependencyDot file" in {
       val slugWithDependencies = slugInfo.copy(dependencyDotCompile = scala.io.Source.fromResource("slugs/dependencies-compile.dot").mkString)
 
-      repository.populateDependencies(slugWithDependencies).futureValue
+      repository.populateDependencies(slugWithDependencies, meta = None).futureValue
 
       val result = repository.collection.find().toFuture.futureValue
 

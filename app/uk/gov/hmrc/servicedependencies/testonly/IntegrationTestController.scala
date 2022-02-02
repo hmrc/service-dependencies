@@ -104,9 +104,13 @@ class IntegrationTestController @Inject()(
           if (toSet(slugInfoWithFlag))
             deploymentsRepo.setFlag(flag, slugInfoWithFlag.slugInfo.name, slugInfoWithFlag.slugInfo.version)
           else
-            Future(())
+            Future.unit
+
         for {
-          _ <- slugInfoService.addSlugInfo(slugInfoWithFlag.slugInfo)
+          _ <- slugInfoService.addSlugInfo(
+                 slugInfoWithFlag.slugInfo,
+                 metaArtefact = None // addMetaArtefacts should be called before addSluginfos
+               )
           _ <- updateFlag(slugInfoWithFlag, SlugInfoFlag.Latest      , _.latest      )
           _ <- updateFlag(slugInfoWithFlag, SlugInfoFlag.Production  , _.production  )
           _ <- updateFlag(slugInfoWithFlag, SlugInfoFlag.QA          , _.qa          )

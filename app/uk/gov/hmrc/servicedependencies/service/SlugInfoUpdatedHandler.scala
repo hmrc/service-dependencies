@@ -20,24 +20,28 @@ import akka.actor.ActorSystem
 import akka.stream.{ActorAttributes, Materializer, Supervision}
 import akka.stream.alpakka.sqs.{MessageAction, SqsSourceSettings}
 import akka.stream.alpakka.sqs.scaladsl.{SqsAckSink, SqsSource}
-import cats.data.EitherT
+import cats.data.{EitherT, OptionT}
 import com.github.matsluni.akkahttpspi.AkkaHttpClient
 import com.google.inject.Inject
 import play.api.Logging
 import play.api.libs.json.Json
 import software.amazon.awssdk.services.sqs.SqsAsyncClient
 import software.amazon.awssdk.services.sqs.model.Message
+import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.servicedependencies.config.ArtefactReceivingConfig
+import uk.gov.hmrc.servicedependencies.connector.ArtefactProcessorConnector
 import uk.gov.hmrc.servicedependencies.model.ApiSlugInfoFormats
 
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.{ExecutionContext, Future, Promise}
+import scala.concurrent.duration.FiniteDuration
 import scala.util.{Failure, Try}
 import scala.util.control.NonFatal
 
 class SlugInfoUpdatedHandler @Inject()(
-  config         : ArtefactReceivingConfig,
-  slugInfoService: SlugInfoService,
-  messageHandling: SqsMessageHandling
+  config                    : ArtefactReceivingConfig,
+  artefactProcessorConnector: ArtefactProcessorConnector,
+  slugInfoService           : SlugInfoService,
+  messageHandling           : SqsMessageHandling
 )(implicit
    actorSystem : ActorSystem,
    materializer: Materializer,
@@ -50,6 +54,8 @@ class SlugInfoUpdatedHandler @Inject()(
 
   private lazy val queueUrl = config.sqsSlugQueue
   private lazy val settings = SqsSourceSettings()
+
+  private implicit val hc = HeaderCarrier()
 
   private lazy val awsSqsClient =
     Try {
@@ -72,6 +78,12 @@ class SlugInfoUpdatedHandler @Inject()(
       .runWith(SqsAckSink(queueUrl)(awsSqsClient))
   }
 
+  private def after[A](delay: FiniteDuration)(task: => Future[A]): Future[A] = {
+    val promise = Promise[A]()
+    actorSystem.scheduler.scheduleOnce(delay)(task.foreach(promise.success))
+    promise.future
+  }
+
   private def processMessage(message: Message): Future[MessageAction] = {
     logger.debug(s"Starting processing message with ID '${message.messageId()}'")
     (for {
@@ -84,23 +96,30 @@ class SlugInfoUpdatedHandler @Inject()(
                            .asEither.left.map(error => s"Could not parse message with ID '${message.messageId}'.  Reason: " + error.toString)
                        )
                    )
+       optMeta  <- // we don't go to metaArtefactRepository since it might not have been updated yet...
+                   EitherT.liftF(
+                     OptionT(artefactProcessorConnector.getMetaArtefact(slugInfo.name, slugInfo.version))
+                       // try again after a delay, could be a race-condition in being processed
+                       .orElseF(after(config.metaArtefactRetryDelay)(artefactProcessorConnector.getMetaArtefact(slugInfo.name, slugInfo.version)))
+                       .value
+                   )
        _        <- EitherT(
-                     slugInfoService.addSlugInfo(slugInfo)
+                     slugInfoService.addSlugInfo(slugInfo, optMeta)
                        .map(Right.apply)
                        .recover {
                          case e =>
-                           val errorMessage = s"Could not store slug info for message with ID '${message.messageId()}'"
+                           val errorMessage = s"Could not store slug info for message with ID '${message.messageId()}' (${slugInfo.name} ${slugInfo.version})"
                            logger.error(errorMessage, e)
                            Left(s"$errorMessage ${e.getMessage}")
                        }
                    )
-     } yield ()
+     } yield slugInfo
     ).value.map {
       case Left(error) =>
         logger.error(error)
         MessageAction.Ignore(message)
-      case Right(_) =>
-        logger.info(s"Message with ID '${message.messageId()}' successfully processed.")
+      case Right(slugInfo) =>
+        logger.info(s"Message with ID '${message.messageId()}' (${slugInfo.name} ${slugInfo.version}) successfully processed.")
         MessageAction.Delete(message)
     }
   }

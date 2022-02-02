@@ -59,28 +59,35 @@ class DeadLetterHandler @Inject()(
     }.get
 
   if (config.isEnabled) {
-    config.sqsDeadLetterQueues.foreach { queueUrl =>
+    config.sqsDeadLetterQueues.foreach { case (queueUrl, isCompressed) =>
       SqsSource(queueUrl, settings)(awsSqsClient)
-        .mapAsync(10)(processMessage)
+        .mapAsync(10)(processMessage(_, isCompressed))
         .runWith(SqsAckSink(queueUrl)(awsSqsClient))
         .recoverWith {
-          case NonFatal(e) => logger.error(e.getMessage, e); Future.failed(e)
+          case NonFatal(e) => logger.error(s"Failed to process from $queueUrl: ${e.getMessage}", e); Future.failed(e)
         }
     }
   }
 
-  private def processMessage(message: Message) = {
-    messageHandling.decompress(message.body).onComplete {
-      case Success(m) =>
-        logger.warn(
-          s"""Dead letter message with
-             |ID: '${message.messageId}'
-             |Body: '$m'""".stripMargin
-        )
-      case Failure(e) =>
-        // if the decompress failed, log without message body
-        logger.error(s"Could not decompress message with ID '${message.messageId}'", e)
-    }
+  private def processMessage(message: Message, isCompressed: Boolean) = {
+    if (isCompressed)
+      messageHandling.decompress(message.body).onComplete {
+        case Success(m) =>
+          logger.warn(
+            s"""Dead letter message with
+               |ID: '${message.messageId}'
+               |Body: '$m'""".stripMargin
+          )
+        case Failure(e) =>
+          // if the decompress failed, log without message body
+          logger.error(s"Could not decompress message with ID '${message.messageId}'", e)
+      }
+    else
+      logger.warn(
+        s"""Dead letter message with
+           |ID: '${message.messageId}'
+           |Body: '${message.body}'""".stripMargin
+      )
     Future(Delete(message))
   }
 }
