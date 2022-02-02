@@ -202,10 +202,10 @@ class ServiceDependenciesController @Inject()(
       ).leftFlatMap { _ =>
         // fallback to data from curatedLibrariesOfSlug
         for {
-          dependencies  <- version match {
-                     case None          => EitherT.fromOptionF(slugDependenciesService.curatedLibrariesOfSlug(repositoryName, SlugInfoFlag.Latest), NotFound(""))
-                     case Some(version) => EitherT.fromOptionF(slugDependenciesService.curatedLibrariesOfSlug(repositoryName, Version(version)), NotFound(""))
-                   }
+          dependencies <- version match {
+                            case None          => EitherT.fromOptionF(slugDependenciesService.curatedLibrariesOfSlug(repositoryName, SlugInfoFlag.Latest), NotFound(""))
+                            case Some(version) => EitherT.fromOptionF(slugDependenciesService.curatedLibrariesOfSlug(repositoryName, Version(version)), NotFound(""))
+                          }
         } yield {
           implicit val rw = Repository.writes
           Ok(

@@ -29,11 +29,17 @@ class ArtefactReceivingConfig @Inject()(configuration: Configuration) {
   private lazy val sqsQueueMetaArtefact: String = configuration.get[String]("artefact.receiver.aws.sqs.queue-meta")
 
   lazy val sqsMetaArtefactQueue           = s"$sqsQueueUrlPrefix/$sqsQueueMetaArtefact"
-  lazy val sqsSlugQueue                   = s"$sqsQueueUrlPrefix/$sqsQueueSlugInfo"
+  lazy val sqsMetaArtefactDeadLetterQueue = s"$sqsQueueUrlPrefix/$sqsQueueMetaArtefact-deadletter"
 
-  lazy val sqsMetaArtefactDeadLetterQueue = s"$sqsQueueUrlPrefix/$sqsMetaArtefactQueue-deadletter"
+  lazy val sqsSlugQueue                   = s"$sqsQueueUrlPrefix/$sqsQueueSlugInfo"
   lazy val sqsSlugDeadLetterQueue         = s"$sqsQueueUrlPrefix/$sqsQueueSlugInfo-deadletter"
-  lazy val sqsDeadLetterQueues            = Set(sqsSlugDeadLetterQueue, sqsMetaArtefactDeadLetterQueue)
+
+  /** includes whether the payloads are compressed */
+  lazy val sqsDeadLetterQueues: Map[String, Boolean] =
+    Map(
+      sqsSlugDeadLetterQueue         -> true,
+      sqsMetaArtefactDeadLetterQueue -> false
+    )
 
   lazy val isEnabled: Boolean =
     configuration.get[Boolean]("artefact.receiver.enabled")
