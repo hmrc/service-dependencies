@@ -11,7 +11,6 @@ private object AppDependencies {
     ws,
     ehcache,
     "uk.gov.hmrc"        %% "bootstrap-backend-play-28" % bootstrapPlayVersion,
-    "uk.gov.hmrc"        %% "github-client"             % "3.0.0",
     "uk.gov.hmrc.mongo"  %% "hmrc-mongo-play-28"        % hmrcMongoVersion,
     "org.typelevel"      %% "cats-core"                 % "2.6.1",
     "org.apache.commons" %  "commons-compress"          % "1.20",

@@ -76,7 +76,8 @@ class GithubRawConnectorSpec
 
       val serviceDependenciesConfig = new ServiceDependenciesConfig(
         Configuration.from(Map(
-          "github.open.api.rawurl" -> s"$wireMockUrl/github/raw"
+          "github.open.api.rawurl" -> s"$wireMockUrl/github/raw",
+          "github.open.api.key"    -> "TOKEN"
         )),
         mockServicesConfig
       )

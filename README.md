@@ -44,8 +44,6 @@ As well as the configured scheduler, a refresh of the latest version for allow-l
   `POST    /reload-latest-versions`
 
 <TODO DELETE>
-Similarly, a refresh of dependencies from Github, for all modified repositories, can be initiated with:
-  `POST    /reload-dependencies`
 
 Note, that this refresh will only include repositories which have been modified in Github since the last run. To force a reload of all repositories, the last modified date can be cleared prior to reloading the dependencies with:
   `POST    /api/admin/dependencies/clear-update-dates`

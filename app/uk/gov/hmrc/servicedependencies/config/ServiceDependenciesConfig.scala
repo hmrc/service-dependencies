@@ -16,12 +16,9 @@
 
 package uk.gov.hmrc.servicedependencies.config
 
-import java.io.File
-
 import com.google.inject.{Inject, Singleton}
 import play.api.Configuration
 import play.api.libs.json.Json
-import uk.gov.hmrc.githubclient.GitApiConfig
 import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
 import uk.gov.hmrc.servicedependencies.config.model.CuratedDependencyConfig
 
@@ -39,19 +36,8 @@ class ServiceDependenciesConfig @Inject()(
   lazy val artefactProcessorServiceUrl: String =
     serviceConfig.baseUrl("artefact-processor")
 
-  private def gitPath(gitFolder: String): String =
-    s"${System.getProperty("user.home")}/.github/$gitFolder"
-
-  private val host = configuration.getOptional[String]("github.open.api.host")
-  private val user = configuration.getOptional[String]("github.open.api.user")
-  private val key  = configuration.getOptional[String]("github.open.api.key")
-
-  val githubApiOpenConfig: GitApiConfig =
-    (user, key, host) match {
-      case (Some(u), Some(k), Some(h)) => GitApiConfig(u, k, h)
-      case (None, None, None) if new File(gitPath(".credentials")).exists() => GitApiConfig.fromFile(gitPath(".credentials"))
-      case _ => GitApiConfig("user_not_set", "key_not_set", "https://hostnotset.com")
-    }
+  val githubApiOpenConfigKey =
+    configuration.get[String]("github.open.api.key")
 
   lazy val teamsAndRepositoriesCacheExpiration =
     configuration.get[Duration]("microservice.services.teams-and-repositories.cache.expiration")

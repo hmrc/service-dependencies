@@ -1,5 +1,4 @@
 POST    /reload-latest-versions             @uk.gov.hmrc.servicedependencies.controller.admin.AdministrationController.reloadLatestVersions
-POST    /reload-dependencies                @uk.gov.hmrc.servicedependencies.controller.admin.AdministrationController.reloadLibraryDependenciesForAllRepositories
 
 POST    /drop-collection/:collection        @uk.gov.hmrc.servicedependencies.controller.admin.AdministrationController.dropCollection(collection)
 POST    /clear-update-dates                 @uk.gov.hmrc.servicedependencies.controller.admin.AdministrationController.clearUpdateDates

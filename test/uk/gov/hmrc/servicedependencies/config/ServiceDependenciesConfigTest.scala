@@ -35,9 +35,7 @@ class ServiceDependenciesConfigTest
     "load github credentials from config, when available" in {
       val config =
         Configuration(
-          "github.open.api.host" -> "https://api.test.url",
-          "github.open.api.user" -> "testuser",
-          "github.open.api.key"  -> "key123"
+          "github.open.api.key" -> "key123"
         ).withFallback(Configuration(ConfigFactory.load()))
 
       val serviceConfig = mock[ServicesConfig]
@@ -45,9 +43,7 @@ class ServiceDependenciesConfigTest
 
       val sdc = new ServiceDependenciesConfig(config, serviceConfig)
 
-      sdc.githubApiOpenConfig.key    shouldBe "key123"
-      sdc.githubApiOpenConfig.user   shouldBe "testuser"
-      sdc.githubApiOpenConfig.apiUrl shouldBe "https://api.test.url"
+      sdc.githubApiOpenConfigKey shouldBe "key123"
     }
 
     "load the curatedDependencyConfig" in {
