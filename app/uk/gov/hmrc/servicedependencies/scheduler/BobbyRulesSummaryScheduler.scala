@@ -21,18 +21,18 @@ import javax.inject.Inject
 import play.api.Logging
 import play.api.inject.ApplicationLifecycle
 import uk.gov.hmrc.http.HeaderCarrier
+import uk.gov.hmrc.mongo.lock.{MongoLockRepository, LockService}
 import uk.gov.hmrc.servicedependencies.config.SchedulerConfigs
-import uk.gov.hmrc.servicedependencies.persistence.MongoLocks
 import uk.gov.hmrc.servicedependencies.util.SchedulerUtils
 import uk.gov.hmrc.servicedependencies.service.DependencyLookupService
 
 import scala.concurrent.ExecutionContext
-
+import scala.concurrent.duration.DurationInt
 
 class BobbyRulesSummaryScheduler @Inject()(
     schedulerConfigs       : SchedulerConfigs,
     dependencyLookupService: DependencyLookupService,
-    mongoLocks             : MongoLocks
+    mongoLockRepository    : MongoLockRepository
   )(implicit
     actorSystem         : ActorSystem,
     applicationLifecycle: ApplicationLifecycle,
@@ -40,9 +40,12 @@ class BobbyRulesSummaryScheduler @Inject()(
   ) extends SchedulerUtils
     with Logging {
 
+  private val lock =
+    LockService(mongoLockRepository, "bobby-rules-summary-scheduler", 1.hour)
+
   implicit val hc: HeaderCarrier = HeaderCarrier()
 
-  scheduleWithLock("Bobby Rules Summary", schedulerConfigs.bobbyRulesSummary, mongoLocks.bobbyRulesSummarySchedulerLock) {
+  scheduleWithLock("Bobby Rules Summary", schedulerConfigs.bobbyRulesSummary, lock) {
 
     logger.info("Updating bobby rules summary")
     for {

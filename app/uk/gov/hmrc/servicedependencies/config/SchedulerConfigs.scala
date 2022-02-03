@@ -49,6 +49,5 @@ object SchedulerConfig {
 class SchedulerConfigs @Inject()(configuration: Configuration) {
   val slugMetadataUpdate   = SchedulerConfig(configuration, "repositoryDependencies.slugJob")
   val bobbyRulesSummary    = SchedulerConfig(configuration, "repositoryDependencies.bobbyRulesSummaryScheduler")
-  val dependencyReload     = SchedulerConfig(configuration, "dependencyReload.scheduler")
   val latestVersionsReload = SchedulerConfig(configuration, "dependencyVersionsReload.scheduler")
 }

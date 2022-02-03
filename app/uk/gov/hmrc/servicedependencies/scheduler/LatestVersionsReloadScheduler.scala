@@ -21,40 +21,34 @@ import com.google.inject.Singleton
 import javax.inject.Inject
 import play.api.inject.ApplicationLifecycle
 import uk.gov.hmrc.http.HeaderCarrier
+import uk.gov.hmrc.mongo.lock.{MongoLockRepository, LockService}
 import uk.gov.hmrc.servicedependencies.config.SchedulerConfigs
-import uk.gov.hmrc.servicedependencies.persistence.MongoLocks
 import uk.gov.hmrc.servicedependencies.service.DependencyDataUpdatingService
 import uk.gov.hmrc.servicedependencies.util.SchedulerUtils
 
 import scala.concurrent.ExecutionContext
-
+import scala.concurrent.duration.DurationInt
 
 @Singleton
-class DataReloadScheduler @Inject()(
+class LatestVersionsReloadScheduler @Inject()(
       schedulerConfigs             : SchedulerConfigs
     , dependencyDataUpdatingService: DependencyDataUpdatingService
-    , mongoLocks                   : MongoLocks
+    , mongoLockRepository          : MongoLockRepository
     )(implicit
       actorSystem         : ActorSystem
     , applicationLifecycle: ApplicationLifecycle
     , ec                  : ExecutionContext
     ) extends SchedulerUtils {
 
-  implicit val hc: HeaderCarrier = HeaderCarrier()
+  private val lock =
+    LockService(mongoLockRepository, "dependencyVersions-reload-scheduler", 1.hour)
 
-  scheduleWithLock(
-    label           = "dependencyDataReloader"
-  , schedulerConfig = schedulerConfigs.dependencyReload
-  , lock            = mongoLocks.dependencyReloadSchedulerLock
-  ){
-    dependencyDataUpdatingService.reloadCurrentDependenciesDataForAllRepositories
-      .map(_ => ())
-  }
+  implicit val hc: HeaderCarrier = HeaderCarrier()
 
   scheduleWithLock(
     label           = "latestVersionsReloader"
   , schedulerConfig = schedulerConfigs.latestVersionsReload
-  , lock            = mongoLocks.latestVersionsReloadSchedulerLock
+  , lock            = lock
   ){
     dependencyDataUpdatingService.reloadLatestVersions
       .map(_ => ())
