@@ -26,7 +26,6 @@ import uk.gov.hmrc.servicedependencies.model.{BobbyRules, DependencyScope, MetaA
 import uk.gov.hmrc.servicedependencies.persistence.{LatestVersionRepository, MetaArtefactRepository, SlugInfoRepository}
 
 import scala.concurrent.{ExecutionContext, Future}
-import java.time.Instant
 
 @Singleton
 class TeamDependencyService @Inject()(
@@ -61,8 +60,7 @@ class TeamDependencyService @Inject()(
                                                              repositoryName         = repoName,
                                                              libraryDependencies    = dependencies.filter(d => d.scope == Some(DependencyScope.Compile) || d.scope == Some(DependencyScope.Test)),
                                                              sbtPluginsDependencies = dependencies.filter(_.scope == Some(DependencyScope.Build)),
-                                                             otherDependencies      = Seq.empty,
-                                                             lastUpdated            = Instant.now // TODO delete this field
+                                                             otherDependencies      = Seq.empty
                                                            )
                                                        ))
                           }
@@ -87,8 +85,7 @@ class TeamDependencyService @Inject()(
       libraryDependencies    = metaArtefact.modules.flatMap(m => m.dependencyDotCompile.fold(Seq.empty[Dependency])(s => toDependencies(m.name, DependencyScope.Compile, s))) ++
                                metaArtefact.modules.flatMap(m => m.dependencyDotTest.fold(Seq.empty[Dependency])(s => toDependencies(m.name, DependencyScope.Test, s))),
       sbtPluginsDependencies = metaArtefact.dependencyDotBuild.fold(Seq.empty[Dependency])(s => toDependencies(metaArtefact.name, DependencyScope.Build, s)),
-      otherDependencies      = Seq.empty,
-      lastUpdated            = Instant.now // shouldn't need to return this - client doesn't use it
+      otherDependencies      = Seq.empty
     )
   }
 
