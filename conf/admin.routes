@@ -1,4 +1,1 @@
 POST    /reload-latest-versions             @uk.gov.hmrc.servicedependencies.controller.admin.AdministrationController.reloadLatestVersions
-
-POST    /drop-collection/:collection        @uk.gov.hmrc.servicedependencies.controller.admin.AdministrationController.dropCollection(collection)
-GET     /mongo-locks                        @uk.gov.hmrc.servicedependencies.controller.admin.AdministrationController.mongoLocks()
