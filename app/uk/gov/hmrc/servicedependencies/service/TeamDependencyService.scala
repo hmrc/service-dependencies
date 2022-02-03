@@ -32,7 +32,6 @@ import java.time.Instant
 class TeamDependencyService @Inject()(
   teamsAndReposConnector       : TeamsAndRepositoriesConnector
 , slugInfoRepository           : SlugInfoRepository
-, repositoryDependenciesService: RepositoryDependenciesService
 , serviceConfigsConnector      : ServiceConfigsConnector
 , slugDependenciesService      : SlugDependenciesService
 , latestVersionRepository      : LatestVersionRepository
@@ -46,22 +45,35 @@ class TeamDependencyService @Inject()(
       latestVersions <- latestVersionRepository.getAllEntries
       team           <- teamsAndReposConnector.getTeam(teamName)
       libs           <- team.libraries.toList.traverse { repoName =>
-                          metaArtefactRepository.find(repoName).flatMap {
-                            case Some(metaArtefact) => Future.successful(Some(dependenciesFromMetaArtefact(metaArtefact, bobbyRules, latestVersions)))
-                            case None               => repositoryDependenciesService.getDependencyVersionsForRepository(repoName)
-                          }
+                          metaArtefactRepository.find(repoName)
+                            .map(_.map(dependenciesFromMetaArtefact(_, bobbyRules, latestVersions)))
                         }.map(_.flatten)
       services       <- team.services.toList.traverse { repoName =>
                             metaArtefactRepository.find(repoName).flatMap {
                             case Some(metaArtefact) => Future.successful(Some(dependenciesFromMetaArtefact(metaArtefact, bobbyRules, latestVersions)))
-                            case None               => OptionT(repositoryDependenciesService.getDependencyVersionsForRepository(repoName))
-                                                         .flatMap(dep => OptionT.liftF(replaceServiceDependencies(dep, bobbyRules, latestVersions)))
-                                                         .value
+                            case None               => slugDependenciesService.curatedLibrariesOfSlug(
+                                                         repoName,
+                                                         SlugInfoFlag.Latest,
+                                                         bobbyRules,
+                                                         latestVersions
+                                                       ).map(_.map(dependencies =>
+                                                           Dependencies(
+                                                             repositoryName         = repoName,
+                                                             libraryDependencies    = dependencies.filter(d => d.scope == Some(DependencyScope.Compile) || d.scope == Some(DependencyScope.Test)),
+                                                             sbtPluginsDependencies = dependencies.filter(_.scope == Some(DependencyScope.Build)),
+                                                             otherDependencies      = Seq.empty,
+                                                             lastUpdated            = Instant.now // TODO delete this field
+                                                           )
+                                                       ))
                           }
                         }.map(_.flatten)
     } yield libs ++ services
 
-  private def dependenciesFromMetaArtefact(metaArtefact: MetaArtefact, bobbyRules: BobbyRules, latestVersions: Seq[MongoLatestVersion]): Dependencies = {
+  private def dependenciesFromMetaArtefact(
+    metaArtefact  : MetaArtefact,
+    bobbyRules    : BobbyRules,
+    latestVersions: Seq[MongoLatestVersion]
+  ): Dependencies = {
     def toDependencies(name: String, scope: DependencyScope, dotFile: String) =
       slugDependenciesService.curatedLibrariesFromGraph(
         dotFile        = dotFile,
@@ -79,21 +91,6 @@ class TeamDependencyService @Inject()(
       lastUpdated            = Instant.now // shouldn't need to return this - client doesn't use it
     )
   }
-
-  protected[service] def replaceServiceDependencies(
-    dependencies      : Dependencies,
-    bobbyRules        : BobbyRules,
-    latestVersions    : Seq[MongoLatestVersion]
-  ): Future[Dependencies] =
-    for {
-      optLibraryDependencies <- slugDependenciesService.curatedLibrariesOfSlug(
-                                  dependencies.repositoryName,
-                                  SlugInfoFlag.Latest,
-                                  bobbyRules,
-                                  latestVersions
-                                )
-      output                 =  optLibraryDependencies.fold(dependencies)(libraryDependencies => dependencies.copy(libraryDependencies = libraryDependencies))
-    } yield output
 
   def dependenciesOfSlugsForTeam(
     teamName: String

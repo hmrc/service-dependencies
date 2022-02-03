@@ -43,15 +43,6 @@ dependencyVersionsReload.scheduler.interval     # delay between refresh
 As well as the configured scheduler, a refresh of the latest version for allow-listed dependencies can be initiated with:
   `POST    /reload-latest-versions`
 
-<TODO DELETE>
-
-Note, that this refresh will only include repositories which have been modified in Github since the last run. To force a reload of all repositories, the last modified date can be cleared prior to reloading the dependencies with:
-  `POST    /api/admin/dependencies/clear-update-dates`
-
-The last modified date for a single repository can also be cleared with:
-  `POST    /api/admin/dependencies/:repository/clear-update-dates`
-<DELETE>
-
 ### License
 
 This code is open source software licensed under the [Apache 2.0 License]("http://www.apache.org/licenses/LICENSE-2.0.html")

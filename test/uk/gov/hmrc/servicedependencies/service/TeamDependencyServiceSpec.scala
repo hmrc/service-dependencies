@@ -16,16 +16,14 @@
 
 package uk.gov.hmrc.servicedependencies.service
 
-import java.time.Instant
-
 import org.mockito.{ArgumentMatchersSugar, MockitoSugar}
 import org.scalatest.concurrent.{IntegrationPatience, ScalaFutures}
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.servicedependencies.connector.{ServiceConfigsConnector, TeamsAndRepositoriesConnector}
-import uk.gov.hmrc.servicedependencies.controller.model.{Dependencies, Dependency}
-import uk.gov.hmrc.servicedependencies.model.{BobbyRules, SlugInfoFlag, Team, Version}
+import uk.gov.hmrc.servicedependencies.controller.model.Dependency
+import uk.gov.hmrc.servicedependencies.model.{BobbyRules, DependencyScope, SlugInfoFlag, Team, Version}
 import uk.gov.hmrc.servicedependencies.persistence.{LatestVersionRepository, MetaArtefactRepository, SlugInfoRepository}
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -38,57 +36,44 @@ class TeamDependencyServiceSpec
      with ScalaFutures
      with IntegrationPatience
      with ArgumentMatchersSugar {
-  val mockTeamsAndReposConnector        = mock[TeamsAndRepositoriesConnector]
-  val mockSlugInfoRepository            = mock[SlugInfoRepository]
-  val mockRepositoryDependenciesService = mock[RepositoryDependenciesService]
-  val mockServiceConfigsConnector       = mock[ServiceConfigsConnector]
-  val mockSlugDependenciesService       = mock[SlugDependenciesService]
-  val mockLatestVersionRepository       = mock[LatestVersionRepository]
-  val mockMetaArtefactRepository        = mock[MetaArtefactRepository]
+  val mockTeamsAndReposConnector  = mock[TeamsAndRepositoriesConnector]
+  val mockSlugInfoRepository      = mock[SlugInfoRepository]
+  val mockServiceConfigsConnector = mock[ServiceConfigsConnector]
+  val mockSlugDependenciesService = mock[SlugDependenciesService]
+  val mockLatestVersionRepository = mock[LatestVersionRepository]
+  val mockMetaArtefactRepository  = mock[MetaArtefactRepository]
 
   val tds = new TeamDependencyService(
       mockTeamsAndReposConnector
     , mockSlugInfoRepository
-    , mockRepositoryDependenciesService
     , mockServiceConfigsConnector
     , mockSlugDependenciesService
     , mockLatestVersionRepository
     , mockMetaArtefactRepository
     )
 
-  "replaceServiceDeps" should {
-    "replace library section with slug data" in {
-      val lib1 = new Dependency(name = "foolib", group = "uk.gov.hmrc", currentVersion = Version("1.2.3"), latestVersion = None, bobbyRuleViolations = List.empty)
-      val lib2 = new Dependency(name = "foolib", group = "uk.gov.hmrc", currentVersion = Version("1.2.4"), latestVersion = None, bobbyRuleViolations = List.empty)
-
-      val dep = Dependencies("foo", libraryDependencies = Seq(lib1), Nil, Nil, Instant.now())
-
-      when(mockSlugDependenciesService.curatedLibrariesOfSlug(dep.repositoryName, SlugInfoFlag.Latest, BobbyRules(Map.empty), Seq.empty))
-        .thenReturn(Future.successful(Option(List(lib2))))
-
-      val res = tds.replaceServiceDependencies(dep, BobbyRules(Map.empty), Seq.empty).futureValue
-
-      res.libraryDependencies    shouldBe Seq(lib2)
-      res.sbtPluginsDependencies shouldBe Nil
-      res.otherDependencies      shouldBe Nil
-    }
-  }
-
   "findAllDepsForTeam" should {
-    "return dependencies for all projects belonging to  team" in {
+    "return dependencies for all projects belonging to team" in {
       implicit val hc: HeaderCarrier = new HeaderCarrier()
       val team = new Team("foo", Map("Service" -> Seq("foo-service")))
 
-      val fooDep1    = Dependency(name = "foo-dep1", group = "uk.gov.hmrc", currentVersion = Version("1.2.0"), latestVersion = None, bobbyRuleViolations = List.empty)
-      val fooDep2    = Dependency(name = "foo-dep2", group = "uk.gov.hmrc", currentVersion = Version("0.6.0"), latestVersion = None, bobbyRuleViolations = List.empty)
-      val fooSlugDep = Dependency(name = "foo-dep2", group = "uk.gov.hmrc", currentVersion = Version("7.7.7"), latestVersion = None, bobbyRuleViolations = List.empty)
-
-      val fooDependencies = Dependencies(
-          "foo-service"
-        , libraryDependencies    = Seq(fooDep1, fooDep2)
-        , sbtPluginsDependencies = Seq.empty
-        , otherDependencies      = Seq.empty
-        , lastUpdated            = Instant.now()
+      val fooDep1 =
+        Dependency(
+          name                = "foo-dep1",
+          group               = "uk.gov.hmrc",
+          currentVersion      = Version("1.2.0"),
+          latestVersion       = None,
+          bobbyRuleViolations = List.empty,
+          scope               = Some(DependencyScope.Compile)
+        )
+      val fooSlugDep =
+        Dependency(
+          name                = "foo-dep2",
+          group               = "uk.gov.hmrc",
+          currentVersion      = Version("7.7.7"),
+          latestVersion       = None,
+          bobbyRuleViolations = List.empty,
+          scope               = Some(DependencyScope.Compile)
         )
 
       when(mockTeamsAndReposConnector.getTeam("foo"))
@@ -102,9 +87,6 @@ class TeamDependencyServiceSpec
 
       when(mockMetaArtefactRepository.find("foo-service"))
         .thenReturn(Future.successful(None))
-
-      when(mockRepositoryDependenciesService.getDependencyVersionsForRepository("foo-service"))
-        .thenReturn(Future.successful(Some(fooDependencies)))
 
       when(mockSlugDependenciesService.curatedLibrariesOfSlug("foo-service", SlugInfoFlag.Latest, BobbyRules(Map.empty), Seq.empty))
         .thenReturn(Future.successful(Option(List(fooDep1, fooSlugDep))))

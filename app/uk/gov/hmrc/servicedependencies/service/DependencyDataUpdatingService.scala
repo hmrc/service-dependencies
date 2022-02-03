@@ -25,7 +25,7 @@ import uk.gov.hmrc.servicedependencies.config.ServiceDependenciesConfig
 import uk.gov.hmrc.servicedependencies.config.model.DependencyConfig
 import uk.gov.hmrc.servicedependencies.connector.{ArtifactoryConnector, ServiceConfigsConnector, TeamsAndRepositoriesConnector}
 import uk.gov.hmrc.servicedependencies.model.MongoLatestVersion
-import uk.gov.hmrc.servicedependencies.persistence.{LatestVersionRepository, RepositoryDependenciesRepository}
+import uk.gov.hmrc.servicedependencies.persistence.LatestVersionRepository
 import uk.gov.hmrc.servicedependencies.persistence.derived.DerivedGroupArtefactRepository
 import uk.gov.hmrc.servicedependencies.util.Max
 
@@ -33,13 +33,12 @@ import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
 class DependencyDataUpdatingService @Inject()(
-  serviceDependenciesConfig       : ServiceDependenciesConfig
-, repositoryDependenciesRepository: RepositoryDependenciesRepository
-, latestVersionRepository         : LatestVersionRepository
-, derivedGroupArtefactRepository  : DerivedGroupArtefactRepository
-, teamsAndRepositoriesConnector   : TeamsAndRepositoriesConnector
-, artifactoryConnector            : ArtifactoryConnector
-, serviceConfigsConnector         : ServiceConfigsConnector
+  serviceDependenciesConfig     : ServiceDependenciesConfig
+, latestVersionRepository       : LatestVersionRepository
+, derivedGroupArtefactRepository: DerivedGroupArtefactRepository
+, teamsAndRepositoriesConnector : TeamsAndRepositoriesConnector
+, artifactoryConnector          : ArtifactoryConnector
+, serviceConfigsConnector       : ServiceConfigsConnector
 )(implicit ec: ExecutionContext
 ) extends Logging {
 

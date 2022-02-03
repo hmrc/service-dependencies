@@ -69,7 +69,6 @@ class ServiceDependenciesControllerSpec
     , mockSlugDependenciesService      : SlugDependenciesService
     , mockServiceConfigsConnector      : ServiceConfigsConnector
     , mockTeamDependencyService        : TeamDependencyService
-    , mockRepositoryDependenciesService: RepositoryDependenciesService
     , mockMetaArtefactRepository       : MetaArtefactRepository
     , mockLatestVersionRepository      : LatestVersionRepository
     , controller                       : ServiceDependenciesController
@@ -81,7 +80,6 @@ class ServiceDependenciesControllerSpec
       val mockSlugDependenciesService       = mock[SlugDependenciesService]
       val mockServiceConfigsConnector       = mock[ServiceConfigsConnector]
       val mockTeamDependencyService         = mock[TeamDependencyService]
-      val mockRepositoryDependenciesService = mock[RepositoryDependenciesService]
       val mockMetaArtefactRepository        = mock[MetaArtefactRepository]
       val mockLatestVersionRepository       = mock[LatestVersionRepository]
       val controller = new ServiceDependenciesController(
@@ -89,7 +87,6 @@ class ServiceDependenciesControllerSpec
         , mockSlugDependenciesService
         , mockServiceConfigsConnector
         , mockTeamDependencyService
-        , mockRepositoryDependenciesService
         , mockMetaArtefactRepository
         , mockLatestVersionRepository
         , stubControllerComponents()
@@ -99,7 +96,6 @@ class ServiceDependenciesControllerSpec
         , mockSlugDependenciesService
         , mockServiceConfigsConnector
         , mockTeamDependencyService
-        , mockRepositoryDependenciesService
         , mockMetaArtefactRepository
         , mockLatestVersionRepository
         , controller

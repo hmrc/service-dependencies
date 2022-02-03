@@ -23,6 +23,7 @@ import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success}
 
 @Singleton
+// TODO delete this
 class FutureHelpers @Inject()(metrics: Metrics) {
 
   lazy val defaultMetricsRegistry: MetricRegistry = metrics.defaultRegistry

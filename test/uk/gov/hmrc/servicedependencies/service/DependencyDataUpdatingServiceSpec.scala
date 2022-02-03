@@ -62,8 +62,6 @@ class DependencyDataUpdatingServiceSpec
 
       verify(boot.mockLatestVersionRepository, times(1))
         .update(MongoLatestVersion(name = "libYY", group = "uk.gov.hmrc", version = Version("1.1.1"), updateDate = timeForTest))
-
-      verifyZeroInteractions(boot.mockRepositoryDependenciesRepository)
     }
   }
 
@@ -133,7 +131,6 @@ class DependencyDataUpdatingServiceSpec
 
   class Boot(dependencyConfig: CuratedDependencyConfig) {
     val mockServiceDependenciesConfig        = mock[ServiceDependenciesConfig]
-    val mockRepositoryDependenciesRepository = mock[RepositoryDependenciesRepository]
     val mockLatestVersionRepository          = mock[LatestVersionRepository]
     val derivedGroupArtefactRepository       = mock[DerivedGroupArtefactRepository]
     val mockTeamsAndRepositoriesConnector    = mock[TeamsAndRepositoriesConnector]
@@ -151,7 +148,6 @@ class DependencyDataUpdatingServiceSpec
 
     val dependencyUpdatingService = new DependencyDataUpdatingService(
         mockServiceDependenciesConfig
-      , mockRepositoryDependenciesRepository
       , mockLatestVersionRepository
       , derivedGroupArtefactRepository
       , mockTeamsAndRepositoriesConnector

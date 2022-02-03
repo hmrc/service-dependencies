@@ -27,7 +27,7 @@ import uk.gov.hmrc.servicedependencies.connector.ServiceConfigsConnector
 import uk.gov.hmrc.servicedependencies.controller.model.{Dependencies, Dependency}
 import uk.gov.hmrc.servicedependencies.model._
 import uk.gov.hmrc.servicedependencies.persistence.{LatestVersionRepository, MetaArtefactRepository}
-import uk.gov.hmrc.servicedependencies.service.{RepositoryDependenciesService, SlugDependenciesService, SlugInfoService, TeamDependencyService}
+import uk.gov.hmrc.servicedependencies.service.{SlugDependenciesService, SlugInfoService, TeamDependencyService}
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -37,7 +37,6 @@ class ServiceDependenciesController @Inject()(
 , slugDependenciesService      : SlugDependenciesService
 , serviceConfigsConnector      : ServiceConfigsConnector
 , teamDependencyService        : TeamDependencyService
-, repositoryDependenciesService: RepositoryDependenciesService
 , metaArtefactRepository       : MetaArtefactRepository
 , latestVersionRepository      : LatestVersionRepository
 , cc                           : ControllerComponents
@@ -199,7 +198,7 @@ class ServiceDependenciesController @Inject()(
          implicit val rw = Repository.writes
          Ok(Json.toJson(repository))
        }
-      ).leftFlatMap { _ =>
+      ).leftFlatMap(_ =>
         // fallback to data from curatedLibrariesOfSlug
         for {
           dependencies <- version match {
@@ -227,40 +226,7 @@ class ServiceDependenciesController @Inject()(
             )
           )
         }
-      }.leftFlatMap { _ =>
-        // fallback to data from getDependencyVersionsForRepository()
-        // TODO are we still populating from github? Should we be? (It is brittle (brute parsing of sbt files) & incomplete (no transitive))
-        // and can be fixed by producing meta-artefacts - TODO REMOVE
-        implicit val rw = Repository.writes
-        for {
-          dependencies <- version match {
-                            case None          => EitherT.fromOptionF(
-                                                    repositoryDependenciesService.getDependencyVersionsForRepository(repositoryName),
-                                                    NotFound("")
-                                                  )
-                            case Some(version) => EitherT.leftT[Future, Dependencies](NotFound(""))
-                          }
-        } yield
-          Ok(
-            Json.toJson(
-              Repository(
-                name              = repositoryName,
-                version           = None,
-                dependenciesBuild = dependencies.sbtPluginsDependencies,
-                modules           = Seq(
-                                      RepositoryModule(
-                                        name                = repositoryName,
-                                        group               = "uk.gov.hmrc",
-                                        dependenciesCompile = dependencies.libraryDependencies,
-                                        dependenciesTest    = Seq.empty[Dependency],
-                                        crossScalaVersions  = None
-                                      )
-                                    )
-              )
-            )
-          )
-      }
-      .merge
+      ).merge
     }
 }
 
