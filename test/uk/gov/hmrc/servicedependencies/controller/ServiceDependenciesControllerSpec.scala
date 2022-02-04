@@ -16,8 +16,6 @@
 
 package uk.gov.hmrc.servicedependencies.controller
 
-import java.time.LocalDate
-
 import org.mockito.MockitoSugar
 import org.scalatest.wordspec.AnyWordSpec
 import org.scalatest.matchers.should.Matchers
@@ -26,8 +24,7 @@ import play.api.libs.json.Json
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
 import uk.gov.hmrc.servicedependencies.connector.ServiceConfigsConnector
-import uk.gov.hmrc.servicedependencies.controller.model.{Dependency, DependencyBobbyRule}
-import uk.gov.hmrc.servicedependencies.model.{BobbyVersionRange, SlugInfoFlag, Version}
+import uk.gov.hmrc.servicedependencies.model.Version
 import uk.gov.hmrc.servicedependencies.persistence.{LatestVersionRepository, MetaArtefactRepository}
 import uk.gov.hmrc.servicedependencies.service._
 
@@ -72,7 +69,6 @@ class ServiceDependenciesControllerSpec
     , mockSlugDependenciesService      : SlugDependenciesService
     , mockServiceConfigsConnector      : ServiceConfigsConnector
     , mockTeamDependencyService        : TeamDependencyService
-    , mockRepositoryDependenciesService: RepositoryDependenciesService
     , mockMetaArtefactRepository       : MetaArtefactRepository
     , mockLatestVersionRepository      : LatestVersionRepository
     , controller                       : ServiceDependenciesController
@@ -84,7 +80,6 @@ class ServiceDependenciesControllerSpec
       val mockSlugDependenciesService       = mock[SlugDependenciesService]
       val mockServiceConfigsConnector       = mock[ServiceConfigsConnector]
       val mockTeamDependencyService         = mock[TeamDependencyService]
-      val mockRepositoryDependenciesService = mock[RepositoryDependenciesService]
       val mockMetaArtefactRepository        = mock[MetaArtefactRepository]
       val mockLatestVersionRepository       = mock[LatestVersionRepository]
       val controller = new ServiceDependenciesController(
@@ -92,7 +87,6 @@ class ServiceDependenciesControllerSpec
         , mockSlugDependenciesService
         , mockServiceConfigsConnector
         , mockTeamDependencyService
-        , mockRepositoryDependenciesService
         , mockMetaArtefactRepository
         , mockLatestVersionRepository
         , stubControllerComponents()
@@ -102,7 +96,6 @@ class ServiceDependenciesControllerSpec
         , mockSlugDependenciesService
         , mockServiceConfigsConnector
         , mockTeamDependencyService
-        , mockRepositoryDependenciesService
         , mockMetaArtefactRepository
         , mockLatestVersionRepository
         , controller

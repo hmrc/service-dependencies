@@ -20,25 +20,26 @@ import play.api.Logger
 import play.api.libs.functional.syntax._
 import play.api.libs.json.{Format, __}
 import com.google.inject.{Inject, Singleton}
-import org.mongodb.scala.bson.conversions.Bson
+import org.mongodb.scala.ClientSession
 import org.mongodb.scala.bson.{BsonArray, BsonDocument}
+import org.mongodb.scala.bson.conversions.Bson
+import org.mongodb.scala.model.{IndexModel, IndexOptions, UpdateOptions, Variable}
 import org.mongodb.scala.model.Aggregates._
 import org.mongodb.scala.model.Filters._
 import org.mongodb.scala.model.Updates.{set, _}
 import org.mongodb.scala.model.Indexes.{ascending, compoundIndex}
-import org.mongodb.scala.model.{IndexModel, IndexOptions, Variable}
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.play.json.{CollectionFactory, PlayMongoRepository}
+import uk.gov.hmrc.mongo.transaction.{TransactionConfiguration, Transactions}
 import uk.gov.hmrc.servicedependencies.model.{SlugInfoFlag, Version}
 
 import scala.concurrent.{ExecutionContext, Future}
 import scala.reflect.ClassTag
-import org.mongodb.scala.model.UpdateOptions
 
 // TODO would a model of name, version, flag=compile/test/build - be better?
 @Singleton
 class DeploymentRepository @Inject()(
-  mongoComponent: MongoComponent
+  final val mongoComponent: MongoComponent
 )(implicit ec: ExecutionContext
 ) extends PlayMongoRepository[Deployment](
   collectionName = "deployments",
@@ -54,15 +55,23 @@ class DeploymentRepository @Inject()(
                        IndexOptions().name("slugInfoFlagIdx").background(true)
                      )
                    )
-) {
+) with Transactions {
   val logger = Logger(getClass)
 
-  def clearFlag(flag: SlugInfoFlag, name: String): Future[Unit] = {
+  private implicit val tc = TransactionConfiguration.strict
+
+  def clearFlag(flag: SlugInfoFlag, name: String): Future[Unit] =
+    withSessionAndTransaction { session =>
+      clearFlag(flag, name, session)
+   }
+
+  private def clearFlag(flag: SlugInfoFlag, name: String, session: ClientSession): Future[Unit] = {
     logger.debug(s"clear ${flag.asString} flag on $name")
     collection
       .updateMany(
-          filter = equal("name", name),
-          update = set(flag.asString, false)
+          clientSession = session,
+          filter        = equal("name", name),
+          update        = set(flag.asString, false)
         )
       .toFuture
       .map(_ => ())
@@ -90,20 +99,23 @@ class DeploymentRepository @Inject()(
 
   // TODO more efficient way to sync this data with release-api?
   def setFlag(flag: SlugInfoFlag, name: String, version: Version): Future[Unit] =
-    for {
-      _ <- clearFlag(flag, name)
-      _ =  logger.debug(s"mark slug $name $version with ${flag.asString} flag")
-      _ <- collection
-             .updateOne(
-               filter  = and(
-                           equal("name", name),
-                           equal("version", version.original),
-                         ),
-               update  = set(flag.asString, true),
-               options = UpdateOptions().upsert(true)
-             )
-             .toFuture
-    } yield ()
+    withSessionAndTransaction { session =>
+      for {
+        _ <- clearFlag(flag, name, session)
+        _ =  logger.debug(s"mark slug $name $version with ${flag.asString} flag")
+        _ <- collection
+               .updateOne(
+                 clientSession = session,
+                 filter        = and(
+                                   equal("name", name),
+                                   equal("version", version.original),
+                                 ),
+                 update        = set(flag.asString, true),
+                 options       = UpdateOptions().upsert(true)
+               )
+               .toFuture()
+      } yield ()
+    }
 
   def lookupAgainstDeployments[A: ClassTag](
     collectionName: String,

@@ -38,25 +38,10 @@ dependencyVersionsReload.scheduler.enabled      # disable refreshing the latest 
 dependencyVersionsReload.scheduler.interval     # delay between refresh
 ````
 
-The github/sbt dependency parser is configured:
-````
-dependencyReload.scheduler.enabled   # disable the refresh of dependencies from the github projects
-dependencyReload.scheduler.interval  # delay between refresh
-````
-
 #### Admin endpoints
 
 As well as the configured scheduler, a refresh of the latest version for allow-listed dependencies can be initiated with:
   `POST    /reload-latest-versions`
-
-Similarly, a refresh of dependencies from Github, for all modified repositories, can be initiated with:
-  `POST    /reload-dependencies`
-
-Note, that this refresh will only include repositories which have been modified in Github since the last run. To force a reload of all repositories, the last modified date can be cleared prior to reloading the dependencies with:
-  `POST    /api/admin/dependencies/clear-update-dates`
-
-The last modified date for a single repository can also be cleared with:
-  `POST    /api/admin/dependencies/:repository/clear-update-dates`
 
 ### License
 

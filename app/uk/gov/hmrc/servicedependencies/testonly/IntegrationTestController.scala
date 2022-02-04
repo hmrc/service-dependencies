@@ -31,7 +31,6 @@ import scala.concurrent.{ExecutionContext, Future}
 
 class IntegrationTestController @Inject()(
     latestVersionRepository         : LatestVersionRepository
-  , repositoryDependenciesRepository: RepositoryDependenciesRepository
   , slugInfoRepo                    : SlugInfoRepository
   , slugInfoService                 : SlugInfoService
   , bobbyRulesSummaryRepo           : BobbyRulesSummaryRepository
@@ -63,22 +62,6 @@ class IntegrationTestController @Inject()(
   def deleteLatestVersions =
     Action.async {
       latestVersionRepository.clearAllData
-        .map(_ => NoContent)
-    }
-
-  def addDependencies = {
-    implicit val dependenciesReads =
-      Json.using[Json.WithDefaultValues].reads[MongoRepositoryDependencies]
-
-    Action.async(validateJson[List[MongoRepositoryDependencies]]) { implicit request =>
-      request.body.traverse(repositoryDependenciesRepository.update)
-        .map(_ => NoContent)
-    }
-  }
-
- def deleteDependencies =
-    Action.async {
-      repositoryDependenciesRepository.clearAllData
         .map(_ => NoContent)
     }
 
@@ -150,7 +133,6 @@ class IntegrationTestController @Inject()(
     Action.async {
       List(
           latestVersionRepository.clearAllData
-        , repositoryDependenciesRepository.clearAllData
         , slugInfoRepo.clearAllData
         , bobbyRulesSummaryRepo.clearAllData
         , deploymentsRepo.clearAllData

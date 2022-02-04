@@ -16,15 +16,13 @@
 
 package uk.gov.hmrc.servicedependencies.controller.admin
 
-import org.mockito.ArgumentMatchers.any
 import org.mockito.MockitoSugar
 import org.scalatest.concurrent.{IntegrationPatience, ScalaFutures}
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
-import uk.gov.hmrc.servicedependencies.model.MongoRepositoryDependencies
-import uk.gov.hmrc.servicedependencies.persistence.{LatestVersionRepository, LocksRepository, RepositoryDependenciesRepository}
+import uk.gov.hmrc.servicedependencies.model.MongoLatestVersion
 import uk.gov.hmrc.servicedependencies.service.DependencyDataUpdatingService
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -37,17 +35,17 @@ class AdministrationControllerSpec
      with ScalaFutures
      with IntegrationPatience {
 
-  "reloadLibraryDependenciesForAllRepositories" should {
+  "reloadLatestVersions" should {
     "call the reloadLibraryDependencyDataForAllRepositories on the service" in {
       val boot = Boot.init
 
-      when(boot.mockDependencyDataUpdatingService.reloadCurrentDependenciesDataForAllRepositories(any()))
-        .thenReturn(Future.successful(Seq.empty[MongoRepositoryDependencies]))
+      when(boot.mockDependencyDataUpdatingService.reloadLatestVersions())
+        .thenReturn(Future.successful(List.empty[MongoLatestVersion]))
 
-      boot.controller.reloadLibraryDependenciesForAllRepositories().apply(FakeRequest())
+      boot.controller.reloadLatestVersions().apply(FakeRequest())
 
       verify(boot.mockDependencyDataUpdatingService)
-        .reloadCurrentDependenciesDataForAllRepositories(any())
+        .reloadLatestVersions()
     }
   }
 
@@ -58,16 +56,10 @@ class AdministrationControllerSpec
 
   object Boot {
     def init: Boot = {
-      val mockDependencyDataUpdatingService    = mock[DependencyDataUpdatingService]
-      val mockLocksRepository                  = mock[LocksRepository]
-      val mockRepositoryDependenciesRepository = mock[RepositoryDependenciesRepository]
-      val mockLatestVersionRepository          = mock[LatestVersionRepository]
+      val mockDependencyDataUpdatingService = mock[DependencyDataUpdatingService]
 
       val controller = new AdministrationController(
           mockDependencyDataUpdatingService
-        , mockLocksRepository
-        , mockRepositoryDependenciesRepository
-        , mockLatestVersionRepository
         , stubControllerComponents()
         )
 

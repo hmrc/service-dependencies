@@ -22,22 +22,20 @@ import com.codahale.metrics.MetricRegistry
 import org.mockito.MockitoSugar
 import uk.gov.hmrc.mongo.test.DefaultPlayMongoRepositorySupport
 import uk.gov.hmrc.servicedependencies.model.{MongoLatestVersion, Version}
-import uk.gov.hmrc.servicedependencies.util.{FutureHelpers, MockFutureHelpers}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpecLike
 
 class LatestVersionRepositorySpec
-    extends AnyWordSpecLike
-    with Matchers
-    with MockitoSugar
-    with DefaultPlayMongoRepositorySupport[MongoLatestVersion] {
+  extends AnyWordSpecLike
+     with Matchers
+     with MockitoSugar
+     with DefaultPlayMongoRepositorySupport[MongoLatestVersion] {
 
-  val metricsRegistry             = new MetricRegistry()
-  val futureHelper: FutureHelpers = new MockFutureHelpers()
+  val metricsRegistry = new MetricRegistry()
 
-  override lazy val repository = new LatestVersionRepository(mongoComponent, futureHelper)
+  override lazy val repository = new LatestVersionRepository(mongoComponent)
 
   val latestVersion = MongoLatestVersion(
       name       = "some-library"

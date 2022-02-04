@@ -16,8 +16,6 @@
 
 package uk.gov.hmrc.servicedependencies.controller.model
 
-import java.time.Instant
-
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
 
@@ -26,17 +24,13 @@ case class Dependencies(
   , libraryDependencies   : Seq[Dependency]
   , sbtPluginsDependencies: Seq[Dependency]
   , otherDependencies     : Seq[Dependency]
-  , lastUpdated           : Instant
   )
 
 object Dependencies {
-
   val writes: OWrites[Dependencies] =
     ( (__ \ "repositoryName"        ).write[String]
     ~ (__ \ "libraryDependencies"   ).lazyWrite(Writes.seq[Dependency](Dependency.writes))
     ~ (__ \ "sbtPluginsDependencies").lazyWrite(Writes.seq[Dependency](Dependency.writes))
     ~ (__ \ "otherDependencies"     ).lazyWrite(Writes.seq[Dependency](Dependency.writes))
-    ~ (__ \ "lastUpdated"           ).write[Instant]
     )(unlift(Dependencies.unapply))
-
 }

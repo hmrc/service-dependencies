@@ -24,14 +24,12 @@ import play.api.Logging
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.play.json.PlayMongoRepository
 import uk.gov.hmrc.servicedependencies.model._
-import uk.gov.hmrc.servicedependencies.util.FutureHelpers
 
 import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
 class LatestVersionRepository @Inject()(
     mongoComponent: MongoComponent
-  , futureHelpers : FutureHelpers
   )(implicit ec: ExecutionContext
   ) extends PlayMongoRepository[MongoLatestVersion](
     collectionName = "dependencyVersions"
@@ -45,22 +43,16 @@ class LatestVersionRepository @Inject()(
 
   def update(latestVersion: MongoLatestVersion): Future[Unit] = {
     logger.debug(s"writing $latestVersion")
-    futureHelpers
-      .withTimerAndCounter("mongo.update") {
-        collection
-          .replaceOne(
-              filter      = and( equal("name" , latestVersion.name)
-                               , equal("group", latestVersion.group)
-                               )
-            , replacement = latestVersion
-            , options     = ReplaceOptions().upsert(true)
-            )
-          .toFuture
-          .map(_ => ())
-    } recover {
-      case e =>
-        throw new RuntimeException(s"failed to persist latest version $latestVersion: ${e.getMessage}", e)
-    }
+    collection
+      .replaceOne(
+          filter      = and( equal("name" , latestVersion.name)
+                           , equal("group", latestVersion.group)
+                           )
+        , replacement = latestVersion
+        , options     = ReplaceOptions().upsert(true)
+        )
+      .toFuture
+      .map(_ => ())
   }
 
   def getAllEntries: Future[Seq[MongoLatestVersion]] =
