@@ -19,7 +19,7 @@ package uk.gov.hmrc.servicedependencies.connector
 import com.google.inject.{Inject, Singleton}
 import uk.gov.hmrc.http.{HeaderCarrier, HttpClient, HttpReads, StringContextOps}
 import uk.gov.hmrc.servicedependencies.config.ServiceDependenciesConfig
-import uk.gov.hmrc.servicedependencies.model.{MetaArtefact, Version}
+import uk.gov.hmrc.servicedependencies.model.{ApiSlugInfoFormats, MetaArtefact, SlugInfo, Version}
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -34,8 +34,13 @@ class ArtefactProcessorConnector @Inject()(
   private val artefactProcessorApiBase =
     serviceConfiguration.artefactProcessorServiceUrl
 
-  private implicit val maf = MetaArtefact.apiFormat
-
-  def getMetaArtefact(repositoryName: String, version: Version)(implicit hc: HeaderCarrier): Future[Option[MetaArtefact]] =
+  def getMetaArtefact(repositoryName: String, version: Version)(implicit hc: HeaderCarrier): Future[Option[MetaArtefact]] = {
+    implicit val maf = MetaArtefact.apiFormat
     httpClient.GET[Option[MetaArtefact]](url"$artefactProcessorApiBase/result/meta/$repositoryName/${version.toString}")
+  }
+
+  def getSlugInfo(slugName: String, version: Version)(implicit hc: HeaderCarrier): Future[Option[SlugInfo]] = {
+    implicit val maf = ApiSlugInfoFormats.slugInfoFormat
+    httpClient.GET[Option[SlugInfo]](url"$artefactProcessorApiBase/result/slug/$slugName/${version.toString}")
+  }
 }

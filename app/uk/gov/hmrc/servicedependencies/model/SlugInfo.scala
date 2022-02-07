@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.servicedependencies.model
 
-import java.time.{Instant, LocalDateTime, ZoneId, ZoneOffset}
+import java.time.Instant
 
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
@@ -211,12 +211,10 @@ trait ApiSlugInfoFormats {
     implicit val jif = javaInfoFormat
     implicit val sdf = SlugDependency.format
     ( (__ \ "uri"                      ).format[String]
-    ~ (__ \ "created"                  ).format[LocalDateTime]
-                                        // TODO change to Instant - needs to be synchronised with artefact-processor and service-configs
-                                        .inmap[Instant](_.toInstant(ZoneOffset.UTC), LocalDateTime.ofInstant(_, ZoneId.of("UTC")))
+    ~ (__ \ "created"                  ).format[Instant]
     ~ (__ \ "name"                     ).format[String]
     ~ (__ \ "version"                  ).format[Version]
-    ~ (__ \ "teams"                    ).format[List[String]]
+    ~ (__ \ "teams"                    ).formatWithDefault[List[String]](List.empty)
     ~ (__ \ "runnerVersion"            ).format[String]
     ~ (__ \ "classpath"                ).format[String]
     ~ (__ \ "java"                     ).format[JavaInfo]

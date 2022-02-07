@@ -30,7 +30,6 @@ import software.amazon.awssdk.services.sqs.model.Message
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.servicedependencies.config.ArtefactReceivingConfig
 import uk.gov.hmrc.servicedependencies.connector.ArtefactProcessorConnector
-import uk.gov.hmrc.servicedependencies.model.ApiSlugInfoFormats
 
 import scala.concurrent.{ExecutionContext, Future, Promise}
 import scala.concurrent.duration.FiniteDuration
@@ -47,10 +46,6 @@ class SlugInfoUpdatedHandler @Inject()(
    materializer: Materializer,
    ec          : ExecutionContext
 ) extends Logging {
-
-  if (!config.isEnabled) {
-    logger.debug("SlugInfoUpdatedHandler is disabled.")
-  }
 
   private lazy val queueUrl = config.sqsSlugQueue
   private lazy val settings = SqsSourceSettings()
@@ -76,6 +71,8 @@ class SlugInfoUpdatedHandler @Inject()(
         case NonFatal(e) => logger.error(s"Failed to process sqs messages: ${e.getMessage}", e); Supervision.Restart
       })
       .runWith(SqsAckSink(queueUrl)(awsSqsClient))
+  } else {
+    logger.info("SlugInfoUpdatedHandler is disabled")
   }
 
   private def after[A](delay: FiniteDuration)(task: => Future[A]): Future[A] = {
@@ -85,41 +82,42 @@ class SlugInfoUpdatedHandler @Inject()(
   }
 
   private def processMessage(message: Message): Future[MessageAction] = {
-    logger.debug(s"Starting processing message with ID '${message.messageId()}'")
+    logger.debug(s"Starting processing SlugInfo message with ID '${message.messageId()}'")
     (for {
-       slugInfo <- EitherT(
-                     messageHandling
-                       .decompress(message.body)
-                       .map(decompressed =>
-                         Json.parse(decompressed)
-                           .validate(ApiSlugInfoFormats.slugInfoFormat)
-                           .asEither.left.map(error => s"Could not parse message with ID '${message.messageId}'.  Reason: " + error.toString)
-                       )
-                   )
-       optMeta  <- // we don't go to metaArtefactRepository since it might not have been updated yet...
-                   EitherT.liftF(
-                     OptionT(artefactProcessorConnector.getMetaArtefact(slugInfo.name, slugInfo.version))
-                       // try again after a delay, could be a race-condition in being processed
-                       .orElseF(after(config.metaArtefactRetryDelay)(artefactProcessorConnector.getMetaArtefact(slugInfo.name, slugInfo.version)))
-                       .value
-                   )
-       _        <- EitherT(
-                     slugInfoService.addSlugInfo(slugInfo, optMeta)
-                       .map(Right.apply)
-                       .recover {
-                         case e =>
-                           val errorMessage = s"Could not store slug info for message with ID '${message.messageId()}' (${slugInfo.name} ${slugInfo.version})"
-                           logger.error(errorMessage, e)
-                           Left(s"$errorMessage ${e.getMessage}")
-                       }
-                   )
+       available <- EitherT.fromEither[Future](
+                      Json.parse(message.body)
+                        .validate(JobAvailable.reads)
+                        .asEither.left.map(error => s"Could not parse message with ID '${message.messageId}'.  Reason: " + error.toString)
+                    )
+       _         <- EitherT.cond[Future](available.jobType == "slug", (), s"${available.jobType} was not 'slug'")
+       slugInfo  <- EitherT.fromOptionF(
+                      artefactProcessorConnector.getSlugInfo(available.name, available.version),
+                      s"SlugInfo for name: ${available.name}, version: ${available.version} was not found"
+                    )
+       optMeta   <- // we don't go to metaArtefactRepository since it might not have been updated yet...
+                    EitherT.liftF(
+                      OptionT(artefactProcessorConnector.getMetaArtefact(slugInfo.name, slugInfo.version))
+                        // try again after a delay, could be a race-condition in being processed
+                        .orElseF(after(config.metaArtefactRetryDelay)(artefactProcessorConnector.getMetaArtefact(slugInfo.name, slugInfo.version)))
+                        .value
+                    )
+       _         <- EitherT(
+                      slugInfoService.addSlugInfo(slugInfo, optMeta)
+                        .map(Right.apply)
+                        .recover {
+                          case e =>
+                            val errorMessage = s"Could not store SlugInfo for message with ID '${message.messageId()}' (${slugInfo.name} ${slugInfo.version})"
+                            logger.error(errorMessage, e)
+                            Left(s"$errorMessage ${e.getMessage}")
+                        }
+                    )
      } yield slugInfo
     ).value.map {
       case Left(error) =>
         logger.error(error)
         MessageAction.Ignore(message)
       case Right(slugInfo) =>
-        logger.info(s"Message with ID '${message.messageId()}' (${slugInfo.name} ${slugInfo.version}) successfully processed.")
+        logger.info(s"SlugInfo message with ID '${message.messageId()}' (${slugInfo.name} ${slugInfo.version}) successfully processed.")
         MessageAction.Delete(message)
     }
   }
