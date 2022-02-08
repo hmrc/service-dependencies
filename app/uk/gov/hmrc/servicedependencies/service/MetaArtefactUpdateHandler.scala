@@ -17,9 +17,9 @@
 package uk.gov.hmrc.servicedependencies.service
 
 import akka.actor.ActorSystem
-import akka.stream.alpakka.sqs.scaladsl.{SqsAckSink, SqsSource}
-import akka.stream.alpakka.sqs.{MessageAction, SqsSourceSettings}
 import akka.stream.{ActorAttributes, Materializer, Supervision}
+import akka.stream.alpakka.sqs.{MessageAction, SqsSourceSettings}
+import akka.stream.alpakka.sqs.scaladsl.{SqsAckSink, SqsSource}
 import cats.data.EitherT
 import com.github.matsluni.akkahttpspi.AkkaHttpClient
 import com.google.inject.Inject
@@ -34,8 +34,8 @@ import uk.gov.hmrc.servicedependencies.model.Version
 
 import javax.inject.Singleton
 import scala.concurrent.{ExecutionContext, Future}
-import scala.util.control.NonFatal
 import scala.util.{Failure, Try}
+import scala.util.control.NonFatal
 
 @Singleton
 class MetaArtefactUpdateHandler @Inject()(
@@ -81,13 +81,14 @@ class MetaArtefactUpdateHandler @Inject()(
 
 
   private def processMetaArtefactMessage(message: Message): Future[MessageAction] = {
-    logger.debug(s"Starting processing meta-artefact message with ID '${message.messageId()}'")
+    logger.debug(s"Starting processing MetaArtefact message with ID '${message.messageId()}'")
     (for {
        available    <- EitherT.fromEither[Future](
                          Json.parse(message.body)
-                           .validate(MetaArtefactAvailable.reads)
+                           .validate(JobAvailable.reads)
                            .asEither.left.map(error => s"Could not parse message with ID '${message.messageId}'.  Reason: " + error.toString)
                        )
+       _            <- EitherT.cond[Future](available.jobType == "meta", (), s"${available.jobType} was not 'meta'")
        metaArtefact <- EitherT.fromOptionF(
                          artefactProcessorConnector.getMetaArtefact(available.name, available.version),
                          s"MetaArtefact for name: ${available.name}, version: ${available.version} was not found"
@@ -97,35 +98,39 @@ class MetaArtefactUpdateHandler @Inject()(
                            .map(Right.apply)
                            .recover {
                              case e =>
-                               val errorMessage = s"Could not store meta-artefact for message with ID '${message.messageId()}'"
+                               val errorMessage = s"Could not store MetaArtefact for message with ID '${message.messageId()}' (${metaArtefact.name} ${metaArtefact.version})"
                                logger.error(errorMessage, e)
                                Left(s"$errorMessage ${e.getMessage}")
                            }
                        )
-     } yield ()
+     } yield metaArtefact
     ).value.map {
-      case Left(error) => logger.error(error)
-                          MessageAction.Ignore(message)
-      case Right(_)    => logger.info(s"Meta artefact message with ID '${message.messageId()}' successfully processed.")
-                          MessageAction.Delete(message)
+      case Left(error) =>
+        logger.error(error)
+        MessageAction.Ignore(message)
+      case Right(metaArtefact) =>
+        logger.info(s"MetaArtefact message with ID '${message.messageId()}' (${metaArtefact.name} ${metaArtefact.version}) successfully processed.")
+        MessageAction.Delete(message)
     }
   }
 }
 
-case class MetaArtefactAvailable(
+case class JobAvailable(
+  jobType: String,
   name   : String,
   version: Version,
   url    : String
 )
 
-object MetaArtefactAvailable {
+object JobAvailable {
   import play.api.libs.json.{Reads, __}
-  val reads: Reads[MetaArtefactAvailable] = {
+  val reads: Reads[JobAvailable] = {
     import play.api.libs.functional.syntax._
     implicit val vr  = Version.format
-    ( (__ \ "name"   ).read[String]
+    ( (__ \ "jobType").read[String]
+    ~ (__ \ "name"   ).read[String]
     ~ (__ \ "version").read[Version]
     ~ (__ \ "url"    ).read[String]
-    )(MetaArtefactAvailable.apply _)
+    )(apply _)
   }
 }

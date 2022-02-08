@@ -29,7 +29,7 @@ import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.http.test.WireMockSupport
-import uk.gov.hmrc.servicedependencies.model.{MetaArtefact, MetaArtefactModule, Version}
+import uk.gov.hmrc.servicedependencies.model.{JavaInfo, MetaArtefact, MetaArtefactModule, SlugInfo, Version}
 
 class ArtefactProcessorConnectorSpec
   extends AnyWordSpec
@@ -48,8 +48,8 @@ class ArtefactProcessorConnectorSpec
       .configure(
         "microservice.services.artefact-processor.host" -> wireMockHost,
         "microservice.services.artefact-processor.port" -> wireMockPort,
-        "play.http.requestHandler"                   -> "play.api.http.DefaultHttpRequestHandler",
-        "metrics.jvm"                                -> false
+        "play.http.requestHandler"                      -> "play.api.http.DefaultHttpRequestHandler",
+        "metrics.jvm"                                   -> false
       )
       .build()
 
@@ -80,6 +80,36 @@ class ArtefactProcessorConnectorSpec
                                  dependencyDotTest    = Some("dependencyDotTest")
                                )),
           created            = Instant.parse("2022-01-04T17:46:18.588Z")
+        )
+      )
+    }
+  }
+
+  "ArtefactProcessorConnector.getSlugInfo" should {
+    "correctly parse json response" in {
+      stubFor(
+        get(urlEqualTo(s"/result/slug/name/1.0.0"))
+          .willReturn(aResponse().withBodyFile("artefact-processor/slug-info.json"))
+      )
+
+      connector.getSlugInfo("name", Version("1.0.0")).futureValue shouldBe Some(
+        SlugInfo(
+          created              = Instant.parse("2019-06-28T11:51:23Z"),
+          uri                  = "https://store/slugs/my-slug/my-slug_0.27.0_0.5.2.tgz",
+          name                 = "my-slug",
+          version              = Version.apply("0.27.0"),
+          runnerVersion        = "0.5.2",
+          classpath            = "some-classpath",
+          java                 = JavaInfo("1.181.0", "Oracle", "JDK"),
+          sbtVersion           = Some("1.4.9"),
+          repoUrl              = Some("https://github.com/hmrc/test.git"),
+          dependencies         = List.empty,
+          dependencyDotCompile = "some-dependencyDotCompile",
+          dependencyDotTest    = "some-dependencyDotTest",
+          dependencyDotBuild   = "some-dependencyDotBuild",
+          applicationConfig    = "some-application-config",
+          slugConfig           = "some-slug-config",
+          teams                = List.empty
         )
       )
     }
