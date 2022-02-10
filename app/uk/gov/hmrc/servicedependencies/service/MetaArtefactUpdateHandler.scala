@@ -41,8 +41,7 @@ import scala.util.control.NonFatal
 class MetaArtefactUpdateHandler @Inject()(
   config                    : ArtefactReceivingConfig,
   artefactProcessorConnector: ArtefactProcessorConnector,
-  metaArtefactService       : MetaArtefactService,
-  messageHandling           : SqsMessageHandling
+  metaArtefactService       : MetaArtefactService
 )(implicit
   actorSystem : ActorSystem,
   materializer: Materializer,

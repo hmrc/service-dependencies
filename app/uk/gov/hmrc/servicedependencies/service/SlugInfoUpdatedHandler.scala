@@ -39,8 +39,7 @@ import scala.util.control.NonFatal
 class SlugInfoUpdatedHandler @Inject()(
   config                    : ArtefactReceivingConfig,
   artefactProcessorConnector: ArtefactProcessorConnector,
-  slugInfoService           : SlugInfoService,
-  messageHandling           : SqsMessageHandling
+  slugInfoService           : SlugInfoService
 )(implicit
    actorSystem : ActorSystem,
    materializer: Materializer,

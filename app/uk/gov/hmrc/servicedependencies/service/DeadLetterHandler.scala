@@ -29,21 +29,16 @@ import software.amazon.awssdk.services.sqs.model.Message
 import uk.gov.hmrc.servicedependencies.config.ArtefactReceivingConfig
 
 import scala.concurrent.{ExecutionContext, Future}
-import scala.util.{Failure, Success, Try}
+import scala.util.{Failure, Try}
 import scala.util.control.NonFatal
 
 class DeadLetterHandler @Inject()(
-  config: ArtefactReceivingConfig,
-  messageHandling: SqsMessageHandling
+  config: ArtefactReceivingConfig
 )(implicit
   actorSystem : ActorSystem,
   materializer: Materializer,
   ec          : ExecutionContext
 ) extends Logging {
-
-  if (!config.isEnabled) {
-    logger.debug("DeadLetterHandler is disabled.")
-  }
 
   private lazy val settings = SqsSourceSettings()
 
@@ -58,36 +53,24 @@ class DeadLetterHandler @Inject()(
       case NonFatal(e) => logger.error(e.getMessage, e); Failure(e)
     }.get
 
-  if (config.isEnabled) {
-    config.sqsDeadLetterQueues.foreach { case (queueUrl, isCompressed) =>
+  if (config.isEnabled)
+    config.sqsDeadLetterQueues.foreach(queueUrl =>
       SqsSource(queueUrl, settings)(awsSqsClient)
-        .mapAsync(10)(processMessage(_, isCompressed))
+        .mapAsync(10)(processMessage)
         .runWith(SqsAckSink(queueUrl)(awsSqsClient))
         .recoverWith {
           case NonFatal(e) => logger.error(s"Failed to process from $queueUrl: ${e.getMessage}", e); Future.failed(e)
         }
-    }
-  }
+    )
+  else
+    logger.debug("DeadLetterHandler is disabled.")
 
-  private def processMessage(message: Message, isCompressed: Boolean) = {
-    if (isCompressed)
-      messageHandling.decompress(message.body).onComplete {
-        case Success(m) =>
-          logger.warn(
-            s"""Dead letter message with
-               |ID: '${message.messageId}'
-               |Body: '$m'""".stripMargin
-          )
-        case Failure(e) =>
-          // if the decompress failed, log without message body
-          logger.error(s"Could not decompress message with ID '${message.messageId}'", e)
-      }
-    else
-      logger.warn(
-        s"""Dead letter message with
-           |ID: '${message.messageId}'
-           |Body: '${message.body}'""".stripMargin
-      )
+  private def processMessage(message: Message) = {
+    logger.warn(
+      s"""Dead letter message with
+         |ID: '${message.messageId}'
+         |Body: '${message.body}'""".stripMargin
+    )
     Future(Delete(message))
   }
 }
