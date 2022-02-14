@@ -49,7 +49,7 @@ class MetaArtefactRepository @Inject()(
       .replaceOne(
           filter      = and(
                           equal("name"  , metaArtefact.name),
-                          equal("vesion", metaArtefact.version.toString)
+                          equal("version", metaArtefact.version.toString)
                         )
         , replacement = metaArtefact
         , options     = ReplaceOptions().upsert(true)
