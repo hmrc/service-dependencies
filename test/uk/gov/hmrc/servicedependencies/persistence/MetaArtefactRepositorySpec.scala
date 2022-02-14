@@ -66,6 +66,8 @@ class MetaArtefactRepositorySpec
       created            = Instant.now()
     )
 
+  val updatedMetaArtefact = metaArtefact.copy(modules = Seq(metaArtefactModule.copy(name = "sub-module3")))
+
   "add" should {
     "add correctly" in {
       (for {
@@ -76,6 +78,19 @@ class MetaArtefactRepositorySpec
          _      =  after shouldBe Some(metaArtefact)
        } yield ()
       ).futureValue
+    }
+    "upsert correctly" in {
+      (for {
+         before  <- repository.find(metaArtefact.name)
+         _       =  before shouldBe None
+         _       <- repository.add(metaArtefact)
+         after   <- repository.find(metaArtefact.name)
+         _       =  after shouldBe Some(metaArtefact)
+         _       <- repository.add(updatedMetaArtefact)
+         updated <- repository.find(metaArtefact.name)
+         _       =  updated shouldBe Some(updatedMetaArtefact)
+       } yield ()
+     ).futureValue
     }
   }
 
