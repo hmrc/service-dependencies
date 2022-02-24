@@ -6,6 +6,9 @@
   "libraries": [
     { "group": "org.reactivemongo", "name": "reactivemongo", "latestVersion": "0.20.3" },
     { "group": "com.typesafe.play", "name": "play"         , "latestVersion": "2.8.13" },
+    { "group": "uk.gov.hmrc"      , "name": "http-verbs"             , "latestVersion": "13.12.0" },
+    { "group": "uk.gov.hmrc"      , "name": "http-verbs-play-28"     , "latestVersion": "13.12.0" },
+    { "group": "uk.gov.hmrc"      , "name": "http-verbs-test-play-28", "latestVersion": "13.12.0" },
     { "group": "uk.gov.hmrc"      , "name": "accessibility-driver"          },
     { "group": "uk.gov.hmrc"      , "name": "accessibility-testing-library" },
     { "group": "uk.gov.hmrc"      , "name": "api-performance-test-runner"   },
