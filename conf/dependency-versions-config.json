@@ -18,6 +18,6 @@
     { "group": "uk.gov.hmrc"      , "name": "zap-automation"                }
   ],
   "others": [
-    { "name": "sbt", "group": "org.scala-sbt", "latestVersion": "1.4.9" }
+    { "name": "sbt", "group": "org.scala-sbt", "latestVersion": "1.5.8" }
   ]
 }
