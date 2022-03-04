@@ -164,33 +164,72 @@ class ServiceDependenciesController @Inject()(
              bobbyRules     = bobbyRules,
              scope          = scope
            )
-         val sbtVersionAsDependency =
-           meta.modules.find(_.sbtVersion.isDefined).flatMap(_.sbtVersion) // sbt-versions will be the same for all modules,
-             .map { sbtVersion =>
-               Dependency(
-                 name                = "sbt",
-                 group               = "org.scala-sbt",
-                 currentVersion      = sbtVersion,
-                 latestVersion       = latestVersions.find(d => d.name == "sbt" && d.group == "org.scala-sbt").map(_.version),
-                 bobbyRuleViolations = List.empty,
-                 importBy            = None,
-                 scope               = Some(DependencyScope.Build)
-               )
-             }
+
+        val sbtVersion =
+          // sbt-versions will be the same for all modules,
+          meta.modules.flatMap(_.sbtVersion.toSeq).headOption
+
+         def dependencyIfMissing(
+           dependencies: Seq[Dependency],
+           group       : String,
+           artefact    : String,
+           versions    : Seq[Version],
+           scope       : DependencyScope
+         ): Seq[Dependency] =
+           for {
+             v <- versions
+             if dependencies.find(dep => dep.group == group && dep.name == artefact).isEmpty
+           } yield
+             Dependency(
+               name                = artefact,
+               group               = group,
+               currentVersion      = v,
+               latestVersion       = latestVersions.find(d => d.name == artefact && d.group == group).map(_.version),
+               bobbyRuleViolations = List.empty,
+               importBy            = None,
+               scope               = Some(scope)
+             )
+
+         val buildDependencies = meta.dependencyDotBuild.fold(Seq.empty[Dependency])(s => toDependencies(meta.name, DependencyScope.Build, s))
+
          val repository =
            Repository(
              name              = meta.name,
              version           = Some(meta.version),
-             dependenciesBuild = meta.dependencyDotBuild.fold(Seq.empty[Dependency])(s => toDependencies(meta.name, DependencyScope.Build, s)) ++
-                                   sbtVersionAsDependency.toSeq,
+             dependenciesBuild = buildDependencies ++
+                                   dependencyIfMissing(
+                                     buildDependencies,
+                                     group    = "org.scala-sbt",
+                                     artefact = "sbt",
+                                     versions = sbtVersion.toSeq,
+                                     scope    = DependencyScope.Build
+                                   ),
              modules           = meta.modules
                                    .filter(_.publishSkip.fold(true)(!_))
                                    .map { m =>
+                                     val compileDependencies = m.dependencyDotCompile.fold(Seq.empty[Dependency])(s => toDependencies(m.name, DependencyScope.Compile, s))
+                                     val testDependencies    = m.dependencyDotTest   .fold(Seq.empty[Dependency])(s => toDependencies(m.name, DependencyScope.Test   , s))
+                                     val scalaVersions       = m.crossScalaVersions.toSeq.flatten
+
                                      RepositoryModule(
                                        name                = m.name,
                                        group               = m.group,
-                                       dependenciesCompile = m.dependencyDotCompile.fold(Seq.empty[Dependency])(s => toDependencies(m.name, DependencyScope.Compile, s)),
-                                       dependenciesTest    = m.dependencyDotTest   .fold(Seq.empty[Dependency])(s => toDependencies(m.name, DependencyScope.Test   , s)),
+                                       dependenciesCompile = compileDependencies ++
+                                                               dependencyIfMissing(
+                                                                 compileDependencies,
+                                                                 group    = "org.scala-lang",
+                                                                 artefact = "scala-library",
+                                                                 versions = scalaVersions,
+                                                                 scope    = DependencyScope.Compile
+                                                               ),
+                                       dependenciesTest    = testDependencies ++
+                                                               dependencyIfMissing(
+                                                                 testDependencies,
+                                                                 group    = "org.scala-lang",
+                                                                 artefact = "scala-library",
+                                                                 versions = scalaVersions,
+                                                                 scope    = DependencyScope.Test
+                                                               ),
                                        crossScalaVersions  = m.crossScalaVersions
                                      )
                                    }

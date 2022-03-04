@@ -173,22 +173,76 @@ class DerivedServiceDependenciesRepository @Inject()(
               acc + (n -> (acc.getOrElse(n, Set.empty) + flag))
             }
 
+        def toServiceDependencyWrite(group: String, artefact: String, version: Version, scalaVersion: Option[String], scopes: Set[DependencyScope]) =
+          ServiceDependencyWrite(
+                  slugName         = slugInfo.name,
+                  slugVersion      = slugInfo.version,
+                  depGroup         = group,
+                  depArtefact      = artefact,
+                  depVersion       = version,
+                  scalaVersion     = scalaVersion,
+                  compileFlag      = scopes.contains(DependencyScope.Compile),
+                  testFlag         = scopes.contains(DependencyScope.Test),
+                  buildFlag        = scopes.contains(DependencyScope.Build)
+                )
+
+        val scalaVersion =
+          meta.toSeq.flatMap(_.modules).flatMap(_.crossScalaVersions.toSeq.flatten).headOption
+
+        val sbtVersion =
+          meta.toSeq.flatMap(_.modules).flatMap(_.sbtVersion).headOption
+
+        def dependencyIfMissing(
+          group       : String,
+          artefact    : String,
+          version     : Option[Version],
+          scalaVersion: Option[String],
+          scopes      : Set[DependencyScope]
+        ): Option[ServiceDependencyWrite] =
+          for {
+            v                <- version
+            applicableScopes = scopes.collect {
+                                 case scope if dependencies.find(dep => dep._2.contains(scope) &&
+                                                                        dep._1.group    == group &&
+                                                                        dep._1.artefact == artefact
+                                                                ).isEmpty => scope
+                               }
+            if applicableScopes.nonEmpty
+          } yield
+            toServiceDependencyWrite(
+              group        = group,
+              artefact     = artefact,
+              version      = v,
+              scalaVersion = scalaVersion,
+              scopes       = applicableScopes
+            )
+
         dependencies
-          .filter { case (node, _) => node.group != "default" || node.artefact != "project" }
+          .filter { case (node, _) => node.group != "default"     || node.artefact != "project"     }
           .filter { case (node, _) => node.group != "uk.gov.hmrc" || node.artefact != slugInfo.name }
           .map { case (node, scopes) =>
-            ServiceDependencyWrite(
-              slugName         = slugInfo.name,
-              slugVersion      = slugInfo.version,
-              depGroup         = node.group,
-              depArtefact      = node.artefact,
-              depVersion       = Version(node.version),
-              scalaVersion     = node.scalaVersion,
-              compileFlag      = scopes.contains(DependencyScope.Compile),
-              testFlag         = scopes.contains(DependencyScope.Test),
-              buildFlag        = scopes.contains(DependencyScope.Build)
+            toServiceDependencyWrite(
+              group        = node.group,
+              artefact     = node.artefact,
+              version      = Version(node.version),
+              scalaVersion = node.scalaVersion,
+              scopes       = scopes
             )
-          }
+          } ++
+          dependencyIfMissing(
+            group        = "org.scala-lang",
+            artefact     = "scala-library",
+            version      = scalaVersion,
+            scalaVersion = None,
+            scopes       = Set(DependencyScope.Compile, DependencyScope.Test)
+          ).toList ++
+          dependencyIfMissing(
+            group        = "org.scala-sbt",
+            artefact     = "sbt",
+            version      = sbtVersion,
+            scalaVersion = None,
+            scopes       = Set(DependencyScope.Build)
+          ).toList
       }
 
     if (writes.isEmpty)
