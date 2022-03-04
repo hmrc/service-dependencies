@@ -32,6 +32,6 @@ class DerivedViewsService @Inject()(
   def generateAllViews() : Future[Unit] =
     derivedGroupArtefactRepository.populate()
       .recover {
-      case e => logger.error("Failed to update derived collections", e)
-    }
+        case e => logger.error("Failed to update derived collections", e)
+      }
 }
