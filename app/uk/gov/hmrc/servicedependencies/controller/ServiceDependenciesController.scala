@@ -153,7 +153,7 @@ class ServiceDependenciesController @Inject()(
                              },
                              NotFound("")
                            )
-         latestVersions <- EitherT.liftF[Future, Result, Seq[MongoLatestVersion]](latestVersionRepository.getAllEntries)
+         latestVersions <- EitherT.liftF[Future, Result, Seq[LatestVersion]](latestVersionRepository.getAllEntries)
          bobbyRules     <- EitherT.liftF[Future, Result, BobbyRules](serviceConfigsConnector.getBobbyRules)
        } yield {
          def toDependencies(name: String, scope: DependencyScope, dotFile: String) =
@@ -266,6 +266,12 @@ class ServiceDependenciesController @Inject()(
           )
         }
       ).merge
+    }
+
+  def latestVersion(group: String, artefact: String): Action[AnyContent] =
+    Action.async {
+      latestVersionRepository.find(group, artefact)
+        .map(_.fold(NotFound(""))(res => Ok(Json.toJson(res)(LatestVersion.apiWrites))))
     }
 }
 

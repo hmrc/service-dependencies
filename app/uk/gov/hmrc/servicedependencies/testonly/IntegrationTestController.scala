@@ -50,10 +50,10 @@ class IntegrationTestController @Inject()(
   def addLatestVersions = {
     implicit val latestVersionReads = {
       implicit val vf = Version.format
-      Json.using[Json.WithDefaultValues].reads[MongoLatestVersion]
+      Json.using[Json.WithDefaultValues].reads[LatestVersion]
     }
 
-    Action.async(validateJson[List[MongoLatestVersion]]) { implicit request =>
+    Action.async(validateJson[List[LatestVersion]]) { implicit request =>
       request.body.traverse(latestVersionRepository.update)
         .map(_ => NoContent)
     }
