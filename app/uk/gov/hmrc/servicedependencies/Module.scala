@@ -25,9 +25,9 @@ class Module() extends AbstractModule {
     bind(classOf[scheduler.LatestVersionsReloadScheduler]).asEagerSingleton()
     bind(classOf[scheduler.SlugMetadataUpdateScheduler  ]).asEagerSingleton()
     bind(classOf[scheduler.BobbyRulesSummaryScheduler   ]).asEagerSingleton()
-    bind(classOf[service.SlugInfoUpdatedHandler         ]).asEagerSingleton()
-    bind(classOf[service.MetaArtefactUpdateHandler      ]).asEagerSingleton()
-    bind(classOf[service.DeadLetterHandler              ]).asEagerSingleton()
+    bind(classOf[notification.SlugInfoUpdatedHandler    ]).asEagerSingleton()
+    bind(classOf[notification.MetaArtefactUpdateHandler ]).asEagerSingleton()
+    bind(classOf[notification.DeadLetterHandler         ]).asEagerSingleton()
     bind(classOf[Materializer                           ]).toProvider(classOf[MaterializerProvider])
   }
 }

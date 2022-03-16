@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.servicedependencies.service
+package uk.gov.hmrc.servicedependencies.notification
 
 import akka.actor.ActorSystem
 import akka.stream.{ActorAttributes, Materializer, Supervision}
@@ -30,7 +30,7 @@ import software.amazon.awssdk.services.sqs.model.Message
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.servicedependencies.config.ArtefactReceivingConfig
 import uk.gov.hmrc.servicedependencies.connector.ArtefactProcessorConnector
-import uk.gov.hmrc.servicedependencies.model.Version
+import uk.gov.hmrc.servicedependencies.service.MetaArtefactService
 
 import javax.inject.Singleton
 import scala.concurrent.{ExecutionContext, Future}
@@ -66,70 +66,55 @@ class MetaArtefactUpdateHandler @Inject()(
     }.get
 
 
-  if (config.isEnabled) {
-    // Meta Artefact Processor
+  if (config.isEnabled)
     SqsSource(metaQueueUrl, settings)(awsSqsClient)
       .mapAsync(10)(processMetaArtefactMessage)
       .withAttributes(ActorAttributes.supervisionStrategy {
         case NonFatal(e) => logger.error(s"Failed to process meta artefact sqs messages: ${e.getMessage}", e); Supervision.Restart
       })
       .runWith(SqsAckSink(metaQueueUrl)(awsSqsClient))
-  } else {
+  else
     logger.info("MetaArtefactUpdateHandler is disabled")
-  }
 
 
   private def processMetaArtefactMessage(message: Message): Future[MessageAction] = {
     logger.debug(s"Starting processing MetaArtefact message with ID '${message.messageId()}'")
     (for {
-       available    <- EitherT.fromEither[Future](
-                         Json.parse(message.body)
-                           .validate(JobAvailable.reads)
-                           .asEither.left.map(error => s"Could not parse message with ID '${message.messageId}'.  Reason: " + error.toString)
-                       )
-       _            <- EitherT.cond[Future](available.jobType == "meta", (), s"${available.jobType} was not 'meta'")
-       metaArtefact <- EitherT.fromOptionF(
-                         artefactProcessorConnector.getMetaArtefact(available.name, available.version),
-                         s"MetaArtefact for name: ${available.name}, version: ${available.version} was not found"
-                       )
-       _            <- EitherT(
-                         metaArtefactService.addMetaArtefact(metaArtefact)
-                           .map(Right.apply)
-                           .recover {
-                             case e =>
-                               val errorMessage = s"Could not store MetaArtefact for message with ID '${message.messageId()}' (${metaArtefact.name} ${metaArtefact.version})"
-                               logger.error(errorMessage, e)
-                               Left(s"$errorMessage ${e.getMessage}")
-                           }
-                       )
-     } yield metaArtefact
+       payload <- EitherT.fromEither[Future](
+                    Json.parse(message.body)
+                      .validate(MessagePayload.reads)
+                      .asEither.left.map(error => s"Could not parse message with ID '${message.messageId}'.  Reason: " + error.toString)
+                  )
+      action   <- payload match {
+                    case available: MessagePayload.JobAvailable =>
+                      for {
+                        _            <- EitherT.cond[Future](available.jobType == "meta", (), s"${available.jobType} was not 'meta'")
+                        metaArtefact <- EitherT.fromOptionF(
+                                          artefactProcessorConnector.getMetaArtefact(available.name, available.version),
+                                          s"MetaArtefact for name: ${available.name}, version: ${available.version} was not found"
+                                        )
+                        _            <- EitherT(
+                                          metaArtefactService.addMetaArtefact(metaArtefact)
+                                            .map(Right.apply)
+                                            .recover {
+                                              case e =>
+                                                val errorMessage = s"Could not store MetaArtefact for message with ID '${message.messageId()}' (${metaArtefact.name} ${metaArtefact.version})"
+                                                logger.error(errorMessage, e)
+                                                Left(s"$errorMessage ${e.getMessage}")
+                                            }
+                                        )
+                       } yield {
+                         logger.info(s"MetaArtefact message with ID '${message.messageId()}' (${metaArtefact.name} ${metaArtefact.version}) successfully processed.")
+                         MessageAction.Delete(message)
+                       }
+                  }
+     } yield action
     ).value.map {
       case Left(error) =>
         logger.error(error)
         MessageAction.Ignore(message)
-      case Right(metaArtefact) =>
-        logger.info(s"MetaArtefact message with ID '${message.messageId()}' (${metaArtefact.name} ${metaArtefact.version}) successfully processed.")
-        MessageAction.Delete(message)
+      case Right(action) =>
+        action
     }
-  }
-}
-
-case class JobAvailable(
-  jobType: String,
-  name   : String,
-  version: Version,
-  url    : String
-)
-
-object JobAvailable {
-  import play.api.libs.json.{Reads, __}
-  val reads: Reads[JobAvailable] = {
-    import play.api.libs.functional.syntax._
-    implicit val vr  = Version.format
-    ( (__ \ "jobType").read[String]
-    ~ (__ \ "name"   ).read[String]
-    ~ (__ \ "version").read[Version]
-    ~ (__ \ "url"    ).read[String]
-    )(apply _)
   }
 }
