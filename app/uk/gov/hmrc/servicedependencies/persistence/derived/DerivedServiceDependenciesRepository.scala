@@ -140,6 +140,17 @@ class DerivedServiceDependenciesRepository @Inject()(
       ServiceDependencyWrite.format
     )
 
+  def delete(slugName: String, slugVersion: Version): Future[Unit] =
+    collection
+      .deleteOne(
+          and(
+            equal("slugName"   , slugName),
+            equal("slugVersion", slugVersion.toString)
+          )
+        )
+      .toFuture()
+      .map(_ => ())
+
   def populateDependencies(slugInfo: SlugInfo, meta: Option[MetaArtefact]): Future[Unit] = {
     val writes =
       if (meta.isEmpty && slugInfo.dependencyDotCompile.isEmpty) // legacy java slug

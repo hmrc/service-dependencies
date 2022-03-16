@@ -117,6 +117,23 @@ class SlugInfoUpdatedHandler @Inject()(
                         logger.info(s"SlugInfo message with ID '${message.messageId()}' (${slugInfo.name} ${slugInfo.version}) successfully processed.")
                         MessageAction.Delete(message)
                       }
+                    case deleted: MessagePayload.JobDeleted =>
+                      for {
+                        _ <- EitherT.cond[Future](deleted.jobType == "slug", (), s"${deleted.jobType} was not 'slug'")
+                        _ <- EitherT(
+                               slugInfoService.deleteSlugInfo(deleted.name, deleted.version)
+                                 .map(Right.apply)
+                                 .recover {
+                                   case e =>
+                                     val errorMessage = s"Could not delete SlugInfo for message with ID '${message.messageId()}' (${deleted.name} ${deleted.version})"
+                                     logger.error(errorMessage, e)
+                                     Left(s"$errorMessage ${e.getMessage}")
+                                 }
+                             )
+                       } yield {
+                         logger.info(s"SlugInfo deleted message with ID '${message.messageId()}' (${deleted.name} ${deleted.version}) successfully processed.")
+                         MessageAction.Delete(message)
+                       }
                   }
      } yield action
     ).value.map {

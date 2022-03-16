@@ -30,7 +30,7 @@ import software.amazon.awssdk.services.sqs.model.Message
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.servicedependencies.config.ArtefactReceivingConfig
 import uk.gov.hmrc.servicedependencies.connector.ArtefactProcessorConnector
-import uk.gov.hmrc.servicedependencies.service.MetaArtefactService
+import uk.gov.hmrc.servicedependencies.persistence.MetaArtefactRepository
 
 import javax.inject.Singleton
 import scala.concurrent.{ExecutionContext, Future}
@@ -41,7 +41,7 @@ import scala.util.control.NonFatal
 class MetaArtefactUpdateHandler @Inject()(
   config                    : ArtefactReceivingConfig,
   artefactProcessorConnector: ArtefactProcessorConnector,
-  metaArtefactService       : MetaArtefactService
+  metaArtefactRepository    : MetaArtefactRepository
 )(implicit
   actorSystem : ActorSystem,
   materializer: Materializer,
@@ -94,7 +94,7 @@ class MetaArtefactUpdateHandler @Inject()(
                                           s"MetaArtefact for name: ${available.name}, version: ${available.version} was not found"
                                         )
                         _            <- EitherT(
-                                          metaArtefactService.addMetaArtefact(metaArtefact)
+                                          metaArtefactRepository.add(metaArtefact)
                                             .map(Right.apply)
                                             .recover {
                                               case e =>
@@ -103,8 +103,25 @@ class MetaArtefactUpdateHandler @Inject()(
                                                 Left(s"$errorMessage ${e.getMessage}")
                                             }
                                         )
+                      } yield {
+                        logger.info(s"MetaArtefact available message with ID '${message.messageId()}' (${metaArtefact.name} ${metaArtefact.version}) successfully processed.")
+                        MessageAction.Delete(message)
+                      }
+                    case deleted: MessagePayload.JobDeleted =>
+                      for {
+                        _ <- EitherT.cond[Future](deleted.jobType == "meta", (), s"${deleted.jobType} was not 'meta'")
+                        _ <- EitherT(
+                               metaArtefactRepository.delete(deleted.name, deleted.version)
+                                 .map(Right.apply)
+                                 .recover {
+                                   case e =>
+                                     val errorMessage = s"Could not delete MetaArtefact for message with ID '${message.messageId()}' (${deleted.name} ${deleted.version})"
+                                     logger.error(errorMessage, e)
+                                     Left(s"$errorMessage ${e.getMessage}")
+                                 }
+                             )
                        } yield {
-                         logger.info(s"MetaArtefact message with ID '${message.messageId()}' (${metaArtefact.name} ${metaArtefact.version}) successfully processed.")
+                         logger.info(s"MetaArtefact deleted message with ID '${message.messageId()}' (${deleted.name} ${deleted.version}) successfully processed.")
                          MessageAction.Delete(message)
                        }
                   }

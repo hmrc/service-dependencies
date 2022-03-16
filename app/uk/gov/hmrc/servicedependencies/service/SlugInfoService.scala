@@ -57,6 +57,13 @@ class SlugInfoService @Inject()(
       _        <- serviceDependencyRepository.populateDependencies(slug, metaArtefact)
     } yield ()
 
+  def deleteSlugInfo(name: String, version: Version): Future[Unit] =
+    for {
+      _ <- deploymentRepository.delete(name, version)
+      _ <- serviceDependencyRepository.delete(name, version)
+      _ <- slugInfoRepository.delete(name, version)
+    } yield ()
+
   def getSlugInfo(name: String, flag: SlugInfoFlag): Future[Option[SlugInfo]] =
     slugInfoRepository.getSlugInfo(name, flag)
 

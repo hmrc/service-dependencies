@@ -49,6 +49,17 @@ class SlugInfoRepository @Inject()(
       .toFuture()
       .map(_ => ())
 
+  def delete(name: String, version: Version): Future[Unit] =
+    collection
+      .deleteOne(
+          and(
+            equal("name"   , name),
+            equal("version", version.toString)
+          )
+        )
+      .toFuture()
+      .map(_ => ())
+
   def getAllEntries: Future[Seq[SlugInfo]] =
     collection.find()
       .toFuture()
@@ -67,7 +78,7 @@ class SlugInfoRepository @Inject()(
       .find(
         filter = and(
                    equal("name", name),
-                   equal("version", version.original)
+                   equal("version", version.toString)
                  )
       )
       .headOption()

@@ -48,15 +48,25 @@ class MetaArtefactRepository @Inject()(
     collection
       .replaceOne(
           filter      = and(
-                          equal("name"  , metaArtefact.name),
+                          equal("name"   , metaArtefact.name),
                           equal("version", metaArtefact.version.toString)
                         )
         , replacement = metaArtefact
         , options     = ReplaceOptions().upsert(true)
         )
-      .toFuture
+      .toFuture()
       .map(_ => ())
 
+  def delete(repositoryName: String, version: Version): Future[Unit] =
+    collection
+      .deleteOne(
+          and(
+            equal("name"   , repositoryName),
+            equal("version", version.toString)
+          )
+        )
+      .toFuture()
+      .map(_ => ())
 
   def find(repositoryName: String): Future[Option[MetaArtefact]] =
     collection.find(equal("name", repositoryName))
@@ -110,11 +120,11 @@ class MetaArtefactRepository @Inject()(
           )
         )
       )
-      .headOption
+      .headOption()
       .map(_.flatMap(_.get[BsonString]("name")).map(_.getValue))
 
   def clearAllData: Future[Unit] =
     collection.deleteMany(BsonDocument())
-      .toFuture
+      .toFuture()
       .map(_ => ())
 }

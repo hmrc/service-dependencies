@@ -30,21 +30,36 @@ object MessagePayload {
     url    : String
   ) extends MessagePayload
 
-  object JobAvailable {
-    val reads: Reads[JobAvailable] = {
-      import play.api.libs.functional.syntax._
-      implicit val vr  = Version.format
-      ( (__ \ "jobType").read[String]
-      ~ (__ \ "name"   ).read[String]
-      ~ (__ \ "version").read[Version]
-      ~ (__ \ "url"    ).read[String]
-      )(apply _)
-    }
+  case class JobDeleted(
+    jobType: String,
+    name   : String,
+    version: Version,
+    url    : String
+  ) extends MessagePayload
+
+  private val jobAvailableReads: Reads[JobAvailable] = {
+    import play.api.libs.functional.syntax._
+    implicit val vr  = Version.format
+    ( (__ \ "jobType").read[String]
+    ~ (__ \ "name"   ).read[String]
+    ~ (__ \ "version").read[Version]
+    ~ (__ \ "url"    ).read[String]
+    )(JobAvailable.apply _)
+  }
+
+  private val jobDeletedReads: Reads[JobDeleted] = {
+    import play.api.libs.functional.syntax._
+    implicit val vr  = Version.format
+    ( (__ \ "jobType").read[String]
+    ~ (__ \ "name"   ).read[String]
+    ~ (__ \ "version").read[Version]
+    ~ (__ \ "url"    ).read[String]
+    )(JobDeleted.apply _)
   }
 
   val reads: Reads[MessagePayload] =
     (__ \ "type").read[String].flatMap {
-      case "creation" => JobAvailable.reads.map[MessagePayload](identity)
-      case "deletion" => ???
+      case "creation" => jobAvailableReads.map[MessagePayload](identity)
+      case "deletion" => jobDeletedReads.map[MessagePayload](identity)
     }
 }
