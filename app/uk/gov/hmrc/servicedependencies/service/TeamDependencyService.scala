@@ -22,7 +22,7 @@ import javax.inject.{Inject, Singleton}
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.servicedependencies.connector.{ServiceConfigsConnector, TeamsAndRepositoriesConnector}
 import uk.gov.hmrc.servicedependencies.controller.model.{Dependencies, Dependency}
-import uk.gov.hmrc.servicedependencies.model.{BobbyRules, DependencyScope, MetaArtefact, MongoLatestVersion, SlugInfoFlag}
+import uk.gov.hmrc.servicedependencies.model.{BobbyRules, DependencyScope, MetaArtefact, LatestVersion, SlugInfoFlag}
 import uk.gov.hmrc.servicedependencies.persistence.{LatestVersionRepository, MetaArtefactRepository, SlugInfoRepository}
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -70,7 +70,7 @@ class TeamDependencyService @Inject()(
   private def dependenciesFromMetaArtefact(
     metaArtefact  : MetaArtefact,
     bobbyRules    : BobbyRules,
-    latestVersions: Seq[MongoLatestVersion]
+    latestVersions: Seq[LatestVersion]
   ): Dependencies = {
     def toDependencies(name: String, scope: DependencyScope, dotFile: String) =
       slugDependenciesService.curatedLibrariesFromGraph(

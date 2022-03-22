@@ -24,7 +24,7 @@ import play.api.Logging
 import uk.gov.hmrc.servicedependencies.config.ServiceDependenciesConfig
 import uk.gov.hmrc.servicedependencies.config.model.DependencyConfig
 import uk.gov.hmrc.servicedependencies.connector.{ArtifactoryConnector, ServiceConfigsConnector, TeamsAndRepositoriesConnector}
-import uk.gov.hmrc.servicedependencies.model.MongoLatestVersion
+import uk.gov.hmrc.servicedependencies.model.LatestVersion
 import uk.gov.hmrc.servicedependencies.persistence.LatestVersionRepository
 import uk.gov.hmrc.servicedependencies.persistence.derived.DerivedGroupArtefactRepository
 import uk.gov.hmrc.servicedependencies.util.Max
@@ -56,10 +56,10 @@ class DependencyDataUpdatingService @Inject()(
         curatedDependencyConfig.allDependencies.groupBy(a => a.group + ":" + a.name)).values.flatten.toList
   }
 
-  def reloadLatestVersions(): Future[List[MongoLatestVersion]] =
+  def reloadLatestVersions(): Future[List[LatestVersion]] =
     versionsToUpdate
       .flatMap(
-        _.foldLeftM[Future, List[MongoLatestVersion]](List.empty) {
+        _.foldLeftM[Future, List[LatestVersion]](List.empty) {
           case (acc, config) =>
             (for {
               optVersion <- config.latestVersion
@@ -70,7 +70,7 @@ class DependencyDataUpdatingService @Inject()(
                             )(v => Future.successful(Some(v)))
               optDbVersion <- optVersion.traverse { version =>
                               val dbVersion =
-                                MongoLatestVersion(name = config.name, group = config.group, version = version, now)
+                                LatestVersion(name = config.name, group = config.group, version = version, now)
                               latestVersionRepository
                                 .update(dbVersion)
                                 .map(_ => dbVersion)

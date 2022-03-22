@@ -22,7 +22,7 @@ import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
-import uk.gov.hmrc.servicedependencies.model.MongoLatestVersion
+import uk.gov.hmrc.servicedependencies.model.LatestVersion
 import uk.gov.hmrc.servicedependencies.service.DependencyDataUpdatingService
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -40,7 +40,7 @@ class AdministrationControllerSpec
       val boot = Boot.init
 
       when(boot.mockDependencyDataUpdatingService.reloadLatestVersions())
-        .thenReturn(Future.successful(List.empty[MongoLatestVersion]))
+        .thenReturn(Future.successful(List.empty[LatestVersion]))
 
       boot.controller.reloadLatestVersions().apply(FakeRequest())
 

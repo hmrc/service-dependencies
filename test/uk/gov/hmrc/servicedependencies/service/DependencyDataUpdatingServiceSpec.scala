@@ -56,12 +56,12 @@ class DependencyDataUpdatingServiceSpec
         .thenReturn(Future.successful(Map(ScalaVersion.SV_None -> Version("1.1.1"))))
 
       when(boot.mockLatestVersionRepository.update(any()))
-        .thenReturn(Future.successful(mock[MongoLatestVersion]))
+        .thenReturn(Future.successful(mock[LatestVersion]))
 
       boot.dependencyUpdatingService.reloadLatestVersions().futureValue
 
       verify(boot.mockLatestVersionRepository, times(1))
-        .update(MongoLatestVersion(name = "libYY", group = "uk.gov.hmrc", version = Version("1.1.1"), updateDate = timeForTest))
+        .update(LatestVersion(name = "libYY", group = "uk.gov.hmrc", version = Version("1.1.1"), updateDate = timeForTest))
     }
   }
 

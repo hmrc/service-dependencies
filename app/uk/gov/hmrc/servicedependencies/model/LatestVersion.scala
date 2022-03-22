@@ -18,26 +18,37 @@ package uk.gov.hmrc.servicedependencies.model
 
 import java.time.Instant
 
-import play.api.libs.json.__
 import play.api.libs.functional.syntax._
+import play.api.libs.json._
 import uk.gov.hmrc.mongo.play.json.formats.MongoJavatimeFormats
 
-case class MongoLatestVersion(
+case class LatestVersion(
     name        : String
   , group       : String
   , version     : Version
   , updateDate  : Instant = Instant.now()
   )
 
-object MongoLatestVersion {
-  implicit val format = {
+object LatestVersion {
+  private def ignore[A] = OWrites[A](_ => Json.obj())
+
+  val apiWrites: Writes[LatestVersion] = {
+    implicit val vf = Version.format
+    ( (__ \ "artefact").write[String]
+    ~ (__ \ "group"   ).write[String]
+    ~ (__ \ "version" ).write[Version]
+    ~ ignore[Instant]
+    )(unlift(LatestVersion.unapply))
+  }
+
+  val mongoFormat = {
     implicit val iF  = MongoJavatimeFormats.instantFormat
     implicit val vf  = Version.format
     ( (__ \ "name"        ).format[String]
     ~ (__ \ "group"       ).format[String]
     ~ (__ \ "version"     ).format[Version]
     ~ (__ \ "updateDate"  ).format[Instant]
-    )(MongoLatestVersion.apply, unlift(MongoLatestVersion.unapply))
+    )(LatestVersion.apply, unlift(LatestVersion.unapply))
   }
 
   val schema =

@@ -21,7 +21,7 @@ import java.time.Instant
 import com.codahale.metrics.MetricRegistry
 import org.mockito.MockitoSugar
 import uk.gov.hmrc.mongo.test.DefaultPlayMongoRepositorySupport
-import uk.gov.hmrc.servicedependencies.model.{MongoLatestVersion, Version}
+import uk.gov.hmrc.servicedependencies.model.{LatestVersion, Version}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import org.scalatest.matchers.should.Matchers
@@ -31,13 +31,13 @@ class LatestVersionRepositorySpec
   extends AnyWordSpecLike
      with Matchers
      with MockitoSugar
-     with DefaultPlayMongoRepositorySupport[MongoLatestVersion] {
+     with DefaultPlayMongoRepositorySupport[LatestVersion] {
 
   val metricsRegistry = new MetricRegistry()
 
   override lazy val repository = new LatestVersionRepository(mongoComponent)
 
-  val latestVersion = MongoLatestVersion(
+  val latestVersion = LatestVersion(
       name       = "some-library"
     , group      = "uk.gov.hmrc"
     , version    = Version(1, 0, 2)
@@ -48,6 +48,7 @@ class LatestVersionRepositorySpec
     "inserts correctly" in {
       repository.update(latestVersion).futureValue
       repository.getAllEntries.futureValue shouldBe Seq(latestVersion)
+      repository.find(group = "uk.gov.hmrc", artefact = "some-library").futureValue shouldBe Some(latestVersion)
     }
 
     "updates correctly (based on name and group)" in {
@@ -56,6 +57,7 @@ class LatestVersionRepositorySpec
       repository.update(latestVersion).futureValue
       repository.update(newLibraryVersion).futureValue
       repository.getAllEntries.futureValue shouldBe Seq(newLibraryVersion)
+      repository.find(group = "uk.gov.hmrc", artefact = "some-library").futureValue shouldBe Some(newLibraryVersion)
     }
   }
 
@@ -65,6 +67,7 @@ class LatestVersionRepositorySpec
       repository.getAllEntries.futureValue should have size 1
       repository.clearAllData.futureValue
       repository.getAllEntries.futureValue shouldBe Nil
+      repository.find(group = "uk.gov.hmrc", artefact = "some-library").futureValue shouldBe None
     }
   }
 }

@@ -76,7 +76,7 @@ class SlugDependenciesServiceSpec extends AnyFreeSpec with MockitoSugar with Mat
         .thenReturn(
           Future.successful(
             versionsByName.map { case (sd, v) =>
-              MongoLatestVersion(name = sd.artifact, group = sd.group, version = v)
+              LatestVersion(name = sd.artifact, group = sd.group, version = v)
             }
           )
         )

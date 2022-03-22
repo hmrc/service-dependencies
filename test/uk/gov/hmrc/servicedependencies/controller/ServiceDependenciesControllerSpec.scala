@@ -24,7 +24,7 @@ import play.api.libs.json.Json
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
 import uk.gov.hmrc.servicedependencies.connector.ServiceConfigsConnector
-import uk.gov.hmrc.servicedependencies.model.Version
+import uk.gov.hmrc.servicedependencies.model.{LatestVersion, Version}
 import uk.gov.hmrc.servicedependencies.persistence.{LatestVersionRepository, MetaArtefactRepository}
 import uk.gov.hmrc.servicedependencies.service._
 
@@ -38,11 +38,11 @@ class ServiceDependenciesControllerSpec
      with ScalaFutures
      with IntegrationPatience {
 
-  "repositoryName" should {
-    val group    = "uk.gov.hmrc.mongo"
-    val artefact = "hmrc-mongo-lib1"
-    val version  = Version("1.0.0")
+  val group    = "uk.gov.hmrc.mongo"
+  val artefact = "hmrc-mongo-lib1"
+  val version  = Version("1.0.0")
 
+  "repositoryName" should {
     "get repositoryName for a SlugInfoFlag" in {
       val boot = Boot.init
       when(boot.mockMetaArtefactRepository.findRepoNameByModule(group, artefact, version))
@@ -59,6 +59,28 @@ class ServiceDependenciesControllerSpec
         .thenReturn(Future.successful(None))
 
       val result = boot.controller.repositoryName(group, artefact, version.toString).apply(FakeRequest())
+
+      status(result) shouldBe NOT_FOUND
+    }
+  }
+
+  "latestVersion" should {
+    "find a dependency by group and artefact" in {
+      val boot = Boot.init
+      when(boot.mockLatestVersionRepository.find(group, artefact))
+        .thenReturn(Future.successful(Some(LatestVersion(group = group, name = artefact, version = Version("0.1.0"), updateDate = java.time.Instant.now))))
+
+      val result = boot.controller.latestVersion(group, artefact).apply(FakeRequest())
+
+      contentAsJson(result) shouldBe Json.parse(s"""{"group":"$group","artefact":"$artefact","version":"0.1.0"}""")
+    }
+
+    "return Not Found when the requested repo is not recognised" in {
+      val boot = Boot.init
+       when(boot.mockLatestVersionRepository.find(group, artefact))
+        .thenReturn(Future.successful(None))
+
+      val result = boot.controller.latestVersion(group, artefact).apply(FakeRequest())
 
       status(result) shouldBe NOT_FOUND
     }

@@ -31,17 +31,17 @@ import scala.concurrent.{ExecutionContext, Future}
 class LatestVersionRepository @Inject()(
     mongoComponent: MongoComponent
   )(implicit ec: ExecutionContext
-  ) extends PlayMongoRepository[MongoLatestVersion](
+  ) extends PlayMongoRepository[LatestVersion](
     collectionName = "dependencyVersions"
   , mongoComponent = mongoComponent
-  , domainFormat   = MongoLatestVersion.format
+  , domainFormat   = LatestVersion.mongoFormat
   , indexes        = Seq(
                        IndexModel(Indexes.ascending("name", "group"), IndexOptions().unique(true))
                      )
-  , optSchema      = Some(BsonDocument(MongoLatestVersion.schema))
+  , optSchema      = Some(BsonDocument(LatestVersion.schema))
   ) with Logging {
 
-  def update(latestVersion: MongoLatestVersion): Future[Unit] = {
+  def update(latestVersion: LatestVersion): Future[Unit] = {
     logger.debug(s"writing $latestVersion")
     collection
       .replaceOne(
@@ -55,9 +55,14 @@ class LatestVersionRepository @Inject()(
       .map(_ => ())
   }
 
-  def getAllEntries: Future[Seq[MongoLatestVersion]] =
+  def getAllEntries: Future[Seq[LatestVersion]] =
     collection.find()
       .toFuture
+
+  def find(group: String, artefact: String): Future[Option[LatestVersion]] =
+    collection.find(and(equal("group", group), equal("name", artefact)))
+      .toFuture()
+      .map(_.headOption)
 
   def clearAllData: Future[Unit] =
     collection.deleteMany(BsonDocument())

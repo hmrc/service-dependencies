@@ -21,7 +21,7 @@ import uk.gov.hmrc.servicedependencies.config.ServiceDependenciesConfig
 import uk.gov.hmrc.servicedependencies.config.model.CuratedDependencyConfig
 import uk.gov.hmrc.servicedependencies.connector.ServiceConfigsConnector
 import uk.gov.hmrc.servicedependencies.controller.model.{Dependency, ImportedBy}
-import uk.gov.hmrc.servicedependencies.model.{BobbyRules, DependencyScope, MongoLatestVersion, SlugInfo, SlugInfoFlag, Version}
+import uk.gov.hmrc.servicedependencies.model.{BobbyRules, DependencyScope, LatestVersion, SlugInfo, SlugInfoFlag, Version}
 import uk.gov.hmrc.servicedependencies.persistence.LatestVersionRepository
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -54,7 +54,7 @@ class SlugDependenciesService @Inject()(
     name          : String,
     flag          : SlugInfoFlag,
     bobbyRules    : BobbyRules,
-    latestVersions: Seq[MongoLatestVersion],
+    latestVersions: Seq[LatestVersion],
   ): Future[Option[List[Dependency]]] =
     slugInfoService.getSlugInfo(name, flag)
       .map(_.map(slugInfo =>
@@ -75,7 +75,7 @@ class SlugDependenciesService @Inject()(
     name          : String,
     version       : Version,
     bobbyRules    : BobbyRules,
-    latestVersions: Seq[MongoLatestVersion],
+    latestVersions: Seq[LatestVersion],
   ): Future[Option[List[Dependency]]] =
     slugInfoService.getSlugInfo(name, version)
       .map(_.map(slugInfo =>
@@ -88,7 +88,7 @@ class SlugDependenciesService @Inject()(
   private def curatedLibrariesOfSlugInfo(
     slugInfo      : SlugInfo,
     bobbyRules    : BobbyRules,
-    latestVersions: Seq[MongoLatestVersion],
+    latestVersions: Seq[LatestVersion],
   ): List[Dependency] =
     slugInfo
       .dependencies
@@ -122,7 +122,7 @@ class SlugDependenciesService @Inject()(
   private def curatedLibrariesOfSlugInfoFromGraph(
     slugInfo      : SlugInfo,
     bobbyRules    : BobbyRules,
-    latestVersions: Seq[MongoLatestVersion],
+    latestVersions: Seq[LatestVersion],
   ): List[Dependency] = {
     val compile    =  curatedLibrariesFromGraph(dotFileForScope(slugInfo, DependencyScope.Compile), slugInfo.name, latestVersions, bobbyRules, DependencyScope.Compile)
     val test       =  curatedLibrariesFromGraph(dotFileForScope(slugInfo, DependencyScope.Test   ), slugInfo.name, latestVersions, bobbyRules, DependencyScope.Test).filterNot(n => compile.exists(_.name == n.name))
@@ -133,7 +133,7 @@ class SlugDependenciesService @Inject()(
   def curatedLibrariesFromGraph(
     dotFile       : String,
     rootName      : String,
-    latestVersions: Seq[MongoLatestVersion],
+    latestVersions: Seq[LatestVersion],
     bobbyRules    : BobbyRules,
     scope         : DependencyScope
   ): List[Dependency] = {
