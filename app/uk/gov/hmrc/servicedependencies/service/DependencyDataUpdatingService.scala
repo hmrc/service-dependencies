@@ -57,7 +57,7 @@ class DependencyDataUpdatingService @Inject()(
   }
 
   def reloadLatestVersions(): Future[List[LatestVersion]] =
-    versionsToUpdate
+    versionsToUpdate()
       .flatMap(
         _.foldLeftM[Future, List[LatestVersion]](List.empty) {
           case (acc, config) =>

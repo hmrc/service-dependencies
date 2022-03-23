@@ -23,8 +23,8 @@ import uk.gov.hmrc.http.{HeaderCarrier, HttpClient, HttpReads, HttpResponse, Str
 import uk.gov.hmrc.servicedependencies.config.ServiceDependenciesConfig
 import HttpReads.Implicits._
 
-import scala.collection.JavaConverters._
 import scala.concurrent.{ExecutionContext, Future}
+import scala.jdk.CollectionConverters._
 import scala.util.Try
 
 @Singleton

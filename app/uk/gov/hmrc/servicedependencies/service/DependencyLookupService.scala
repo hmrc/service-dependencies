@@ -53,10 +53,14 @@ class DependencyLookupService @Inject() (
         lookup     <- derivedServiceDependenciesRepository.findDependencies(env, Some(DependencyScope.Compile)) // we could look for violations in all scopes (but number will not align to results when drilling down in catalogue)
                         .map(_
                           .groupBy(d => s"${d.depGroup}:${d.depArtefact}")
+                          .view
                           .mapValues(
                             _.groupBy(_.depVersion)
+                             .view
                              .mapValues(_.map(d => s"${d.slugName}:${d.slugVersion}").toSet)
+                             .toMap
                           )
+                          .toMap
                         )
         violations =  rules.map(rule => ((rule, env), findSlugsUsing(lookup, rule.organisation, rule.name, rule.range).length))
       } yield violations
@@ -66,17 +70,16 @@ class DependencyLookupService @Inject() (
       rules   <- serviceConfigs.getBobbyRules.map(_.asMap.values.flatten.toSeq)
       _       =  logger.debug(s"Found ${rules.size} rules")
                  // traverse (in parallel) uses more memory and adds contention on data source - fold through it instead
-      counts  <- SlugInfoFlag.values.foldLeftM(Seq[((BobbyRule, SlugInfoFlag), Int)]()){ case (acc, env) =>
+      counts  <- SlugInfoFlag.values.foldLeftM(Seq[((BobbyRule, SlugInfoFlag), Int)]())((acc, env) =>
                    calculateCounts(rules)(env).map(acc ++ _)
-                 }
-      summary =  counts
-                   .toMap
+                 )
+      summary =  counts.toMap
       _       <- bobbyRulesSummaryRepo.add(BobbyRulesSummary(LocalDate.now, summary))
     } yield ()
   }
 
   def getHistoricBobbyRuleViolations: Future[HistoricBobbyRulesSummary] =
-    bobbyRulesSummaryRepo.getHistoric
+    bobbyRulesSummaryRepo.getHistoric()
       .map(combineBobbyRulesSummaries)
 }
 
@@ -91,7 +94,9 @@ object DependencyLookupService {
     ): Seq[String] =
       lookup
         .getOrElse(s"$group:$artifact", Map.empty)
+        .view
         .filterKeys(v => range.includes(v))
+        .toMap
         .values
         .flatten
         .toSeq
@@ -100,7 +105,7 @@ object DependencyLookupService {
     l match {
       case Nil          => HistoricBobbyRulesSummary(LocalDate.now, Map.empty)
       case head :: rest => rest
-                             .foldLeft(HistoricBobbyRulesSummary.fromBobbyRulesSummary(head)){ case (acc, s) =>
+                             .foldLeft(HistoricBobbyRulesSummary.fromBobbyRulesSummary(head)){ (acc, s) =>
                                val daysBetween = ChronoUnit.DAYS.between(s.date, acc.date).toInt
                                val res = acc.summary.foldLeft(acc.summary) { case (acc2, (k, v)) =>
                                   acc2 + (k -> (List.fill(daysBetween)(s.summary.getOrElse(k, v.head)) ++ v))

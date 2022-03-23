@@ -42,7 +42,7 @@ class GithubRawConnectorSpec
 
   "GithubRawConnector" should {
     "parse decommissioned services" in {
-      val boot = Boot.init
+      val boot = Boot.init()
 
       val body =
         """|- database_name: false

@@ -49,7 +49,7 @@ class BobbyRulesSummaryScheduler @Inject()(
 
     logger.info("Updating bobby rules summary")
     for {
-      _ <- dependencyLookupService.updateBobbyRulesSummary
+      _ <- dependencyLookupService.updateBobbyRulesSummary()
       _ =  logger.info("Finished updating bobby rules summary")
     } yield ()
   }

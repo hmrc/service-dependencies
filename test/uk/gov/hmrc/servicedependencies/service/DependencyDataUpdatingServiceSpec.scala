@@ -82,7 +82,7 @@ class DependencyDataUpdatingServiceSpec
           GroupArtefacts("uk.gov.hmrc.sub", List("lib3")),
         )))
 
-      boot.dependencyUpdatingService.versionsToUpdate().futureValue shouldBe List(
+      boot.dependencyUpdatingService.versionsToUpdate().futureValue should contain theSameElementsAs List(
         DependencyConfig("lib1" , "uk.gov.hmrc"    , None),
         DependencyConfig("lib2" , "uk.gov.hmrc"    , Some(Version("1.0.0"))),
         DependencyConfig("lib3" , "uk.gov.hmrc.sub", None),

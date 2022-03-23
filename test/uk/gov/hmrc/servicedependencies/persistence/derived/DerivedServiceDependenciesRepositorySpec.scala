@@ -74,7 +74,7 @@ class DerivedServiceDependenciesRepositorySpec
 
       repository.populateDependencies(slugWithDependencies, meta = None).futureValue
 
-      val result = repository.collection.find().toFuture.futureValue
+      val result = repository.collection.find().toFuture().futureValue
 
       result should have size 2
       result shouldEqual List(
@@ -106,7 +106,7 @@ class DerivedServiceDependenciesRepositorySpec
 
       repository.populateDependencies(slugWithDependencies, meta = None).futureValue
 
-      val result = repository.collection.find().toFuture.futureValue
+      val result = repository.collection.find().toFuture().futureValue
 
       result should have size 4
       result shouldEqual List(
@@ -182,7 +182,7 @@ class DerivedServiceDependenciesRepositorySpec
 
       repository.populateDependencies(slugInfo, meta = Some(metaArtefact)).futureValue
 
-      val result = repository.collection.find().toFuture.futureValue
+      val result = repository.collection.find().toFuture().futureValue
 
       result should have size 6
       result should contain theSameElementsAs List(

@@ -24,7 +24,7 @@ class DependencyGraphParser {
   import DependencyGraphParser._
 
   def parse(input: String): DependencyGraph = {
-    val graph = lexer(input.split("\n"))
+    val graph = lexer(input.split("\n").toIndexedSeq)
       .foldLeft(DependencyGraph.empty){ (graph, t)  =>
         t match {
           case n: Node     => graph.copy(nodes     = graph.nodes      + n)

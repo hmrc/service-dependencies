@@ -73,7 +73,7 @@ class DeploymentRepository @Inject()(
           filter        = equal("name", name),
           update        = set(flag.asString, false)
         )
-      .toFuture
+      .toFuture()
       .map(_ => ())
   }
 
@@ -84,7 +84,7 @@ class DeploymentRepository @Inject()(
           filter = in("name", names:_ *),
           update = combine(flags.map(flag => set(flag.asString, false)):_ *)
         )
-      .toFuture
+      .toFuture()
       .map(_ => ())
   }
 
@@ -161,11 +161,22 @@ class DeploymentRepository @Inject()(
           unwind("$res"),
           replaceRoot("$res")
         ) ++ pipeline
-      ).toFuture
+      ).toFuture()
+
+  def delete(repositoryName: String, version: Version): Future[Unit] =
+    collection
+      .deleteOne(
+          and(
+            equal("name"   , repositoryName),
+            equal("version", version.toString)
+          )
+        )
+      .toFuture()
+      .map(_ => ())
 
   def clearAllData: Future[Unit] =
     collection.deleteMany(BsonDocument())
-      .toFuture
+      .toFuture()
       .map(_ => ())
 }
 

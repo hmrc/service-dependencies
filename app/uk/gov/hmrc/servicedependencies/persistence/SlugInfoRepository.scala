@@ -21,7 +21,6 @@ import org.mongodb.scala.bson.BsonDocument
 import org.mongodb.scala.bson.conversions.Bson
 import org.mongodb.scala.model.Filters.{and, equal}
 import org.mongodb.scala.model.ReplaceOptions
-import org.mongodb.scala.model.Aggregates._
 import play.api.Logging
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.servicedependencies.model._
@@ -49,6 +48,17 @@ class SlugInfoRepository @Inject()(
       .toFuture()
       .map(_ => ())
 
+  def delete(name: String, version: Version): Future[Unit] =
+    collection
+      .deleteOne(
+          and(
+            equal("name"   , name),
+            equal("version", version.toString)
+          )
+        )
+      .toFuture()
+      .map(_ => ())
+
   def getAllEntries: Future[Seq[SlugInfo]] =
     collection.find()
       .toFuture()
@@ -67,7 +77,7 @@ class SlugInfoRepository @Inject()(
       .find(
         filter = and(
                    equal("name", name),
-                   equal("version", version.original)
+                   equal("version", version.toString)
                  )
       )
       .headOption()

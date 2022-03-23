@@ -51,12 +51,12 @@ class BobbyRulesSummaryRepository @Inject()(
         , replacement = summary
         , options     = ReplaceOptions().upsert(true)
         )
-      .toFuture
+      .toFuture()
       .map(_ => ())
 
   def getLatest: Future[Option[BobbyRulesSummary]] =
     collection.find(equal("date", LocalDate.now))
-      .toFuture
+      .toFuture()
       .map(_.headOption)
       .flatMap {
         case Some(a) => Future(Some(a))
@@ -78,11 +78,11 @@ class BobbyRulesSummaryRepository @Inject()(
     collection
       .find()
       .sort(descending("date"))
-      .toFuture
+      .toFuture()
       .map(_.toList)
 
   def clearAllData: Future[Unit] =
     collection.deleteMany(BsonDocument())
-      .toFuture
+      .toFuture()
       .map(_ => ())
 }

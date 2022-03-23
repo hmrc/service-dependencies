@@ -33,7 +33,7 @@ class AdministrationController @Inject()(
   def reloadLatestVersions =
     Action {
       dependencyDataUpdatingService
-        .reloadLatestVersions
+        .reloadLatestVersions()
         .recoverWith {
           case ex => Future.failed(new RuntimeException("reload of dependency versions failed", ex))
         }

@@ -109,7 +109,7 @@ class DependencyLookupServiceSpec
 
     val lookupService = new DependencyLookupService(configService, slugInfoRepository, bobbyRulesSummaryRepo, derivedServiceDependenciesRepository)
 
-    lookupService.updateBobbyRulesSummary.futureValue
+    lookupService.updateBobbyRulesSummary().futureValue
     val res = lookupService.getLatestBobbyRuleViolations.futureValue
     res.summary shouldBe Map(
         (bobbyRule, SlugInfoFlag.Latest      ) -> 0
