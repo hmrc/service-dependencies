@@ -97,6 +97,6 @@ object HistoricBobbyRulesSummary {
   def fromBobbyRulesSummary(bobbyRulesSummary: BobbyRulesSummary): HistoricBobbyRulesSummary =
     HistoricBobbyRulesSummary(
         date    = bobbyRulesSummary.date
-      , summary = bobbyRulesSummary.summary.mapValues(i => List(i))
+      , summary = bobbyRulesSummary.summary.view.mapValues(i => List(i)).toMap
       )
 }

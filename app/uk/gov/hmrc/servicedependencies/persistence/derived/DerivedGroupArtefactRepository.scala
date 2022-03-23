@@ -83,7 +83,7 @@ class DerivedGroupArtefactRepository @Inject()(
         )
       )
       .allowDiskUse(true)
-      .toFuture
+      .toFuture()
       .map(_ =>
         logger.info(s"Finished running DerivedGroupArtefactRepository.populate")
       )

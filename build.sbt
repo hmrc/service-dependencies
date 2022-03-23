@@ -1,7 +1,7 @@
 import play.sbt.PlayImport.PlayKeys
 import uk.gov.hmrc.sbtdistributables.SbtDistributablesPlugin
 
-val silencerVersion = "1.7.7"
+val silencerVersion = "1.7.8"
 
 lazy val microservice = Project("service-dependencies", file("."))
   .enablePlugins(play.sbt.PlayScala, SbtDistributablesPlugin)
@@ -12,7 +12,7 @@ lazy val microservice = Project("service-dependencies", file("."))
   .settings(PlayKeys.playDefaultPort := 8459)
   .settings(libraryDependencies ++= AppDependencies.compile ++ AppDependencies.test)
   .settings(resolvers += Resolver.jcenterRepo)
-  .settings(scalaVersion := "2.12.15")
+  .settings(scalaVersion := "2.13.8")
   .settings(
     // Use the silencer plugin to suppress warnings from unused imports in routes etc.
     scalacOptions += "-P:silencer:pathFilters=routes;resources",
@@ -22,5 +22,5 @@ lazy val microservice = Project("service-dependencies", file("."))
     )
   )
   .settings(
-    resources in Test := (resources in Test).value ++ Seq(baseDirectory.value / "conf" / "application.conf")
+    Test / resources := (Test / resources).value ++ Seq(baseDirectory.value / "conf" / "application.conf")
   )

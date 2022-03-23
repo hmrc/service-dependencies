@@ -51,13 +51,13 @@ class LatestVersionRepository @Inject()(
         , replacement = latestVersion
         , options     = ReplaceOptions().upsert(true)
         )
-      .toFuture
+      .toFuture()
       .map(_ => ())
   }
 
   def getAllEntries: Future[Seq[LatestVersion]] =
     collection.find()
-      .toFuture
+      .toFuture()
 
   def find(group: String, artefact: String): Future[Option[LatestVersion]] =
     collection.find(and(equal("group", group), equal("name", artefact)))
@@ -66,6 +66,6 @@ class LatestVersionRepository @Inject()(
 
   def clearAllData: Future[Unit] =
     collection.deleteMany(BsonDocument())
-      .toFuture
+      .toFuture()
       .map(_ => ())
 }

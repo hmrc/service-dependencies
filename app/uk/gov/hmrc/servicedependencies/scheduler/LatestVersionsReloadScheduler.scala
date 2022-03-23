@@ -50,7 +50,7 @@ class LatestVersionsReloadScheduler @Inject()(
   , schedulerConfig = schedulerConfigs.latestVersionsReload
   , lock            = lock
   ){
-    dependencyDataUpdatingService.reloadLatestVersions
+    dependencyDataUpdatingService.reloadLatestVersions()
       .map(_ => ())
   }
 }

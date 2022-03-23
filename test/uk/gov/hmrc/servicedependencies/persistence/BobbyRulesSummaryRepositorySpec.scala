@@ -78,7 +78,7 @@ class BobbyRulesSummaryRepositorySpec
 
       List(latest, older, oldest).traverse(repository.add).futureValue
 
-      repository.getHistoric.futureValue shouldBe Seq(latest, older, oldest)
+      repository.getHistoric().futureValue shouldBe Seq(latest, older, oldest)
     }
   }
 

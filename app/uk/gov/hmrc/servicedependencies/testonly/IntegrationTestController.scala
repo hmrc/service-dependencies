@@ -111,7 +111,7 @@ class IntegrationTestController @Inject()(
     Action.async {
       for {
         _ <- slugInfoRepo.clearAllData
-        _ <- derivedServiceDependenciesRepository.collection.deleteMany(BsonDocument()).toFuture
+        _ <- derivedServiceDependenciesRepository.collection.deleteMany(BsonDocument()).toFuture()
       } yield NoContent
     }
 
@@ -136,7 +136,7 @@ class IntegrationTestController @Inject()(
         , slugInfoRepo.clearAllData
         , bobbyRulesSummaryRepo.clearAllData
         , deploymentsRepo.clearAllData
-        , derivedServiceDependenciesRepository.collection.deleteMany(BsonDocument()).toFuture
+        , derivedServiceDependenciesRepository.collection.deleteMany(BsonDocument()).toFuture()
         , metaArtefactRepository.clearAllData
         ).sequence
          .map(_ => NoContent)
