@@ -23,7 +23,7 @@ import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 import play.api.libs.json.{JsSuccess, Json}
 import uk.gov.hmrc.http.HeaderCarrier
-import uk.gov.hmrc.http.test.{HttpClientSupport, WireMockSupport}
+import uk.gov.hmrc.http.test.{HttpClientV2Support, WireMockSupport}
 import uk.gov.hmrc.servicedependencies.config.ReleasesApiConfig
 import uk.gov.hmrc.servicedependencies.connector.ReleasesApiConnector.Environment
 
@@ -36,14 +36,14 @@ class ReleasesApiConnectorSpec
      with BeforeAndAfterAll
      with IntegrationPatience
      with WireMockSupport
-     with HttpClientSupport {
+     with HttpClientV2Support {
 
   implicit val hc = HeaderCarrier()
 
   val config = new ReleasesApiConfig(null) {
     override lazy val serviceUrl: String = wireMockUrl
   }
-  val connector = new ReleasesApiConnector(httpClient, config)
+  val connector = new ReleasesApiConnector(httpClientV2, config)
 
   override lazy val resetWireMockMappings = false
 

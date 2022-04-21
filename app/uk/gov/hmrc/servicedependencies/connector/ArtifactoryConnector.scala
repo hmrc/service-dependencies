@@ -18,7 +18,8 @@ package uk.gov.hmrc.servicedependencies.connector
 
 import cats.implicits._
 import javax.inject.{Inject, Singleton}
-import uk.gov.hmrc.http.{Authorization, HeaderCarrier, HttpClient, HttpReads, HttpResponse, StringContextOps}
+import uk.gov.hmrc.http.{Authorization, HeaderCarrier, HttpReads, HttpResponse, StringContextOps}
+import uk.gov.hmrc.http.client.HttpClientV2
 import uk.gov.hmrc.servicedependencies.config.ServiceDependenciesConfig
 import uk.gov.hmrc.servicedependencies.model.{ScalaVersion, Version}
 
@@ -26,8 +27,8 @@ import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
 class ArtifactoryConnector @Inject()(
-  httpClient: HttpClient
-, config    : ServiceDependenciesConfig
+  httpClientV2: HttpClientV2,
+  config      : ServiceDependenciesConfig
 )(implicit ec: ExecutionContext
 ){
   import HttpReads.Implicits._
@@ -43,9 +44,10 @@ class ArtifactoryConnector @Inject()(
   , scalaVersion: ScalaVersion
   ): Future[Option[Version]] = {
     implicit val hc = HeaderCarrier(authorization = authorization)
-    httpClient.GET[Option[HttpResponse]](
-      url"${config.artifactoryBase}/api/search/latestVersion?g=$group&a=$artefact${scalaVersion.asClassifier}"
-    ).map(_.map(_.body).map(Version.apply))
+    httpClientV2
+      .get(url"${config.artifactoryBase}/api/search/latestVersion?g=$group&a=$artefact${scalaVersion.asClassifier}")
+      .execute[Option[HttpResponse]]
+      .map(_.map(_.body).map(Version.apply))
   }
 
   def findLatestVersion(
