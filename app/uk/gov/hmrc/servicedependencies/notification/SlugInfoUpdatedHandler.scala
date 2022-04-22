@@ -16,10 +16,12 @@
 
 package uk.gov.hmrc.servicedependencies.notification
 
+import akka.NotUsed
 import akka.actor.ActorSystem
 import akka.stream.{ActorAttributes, Materializer, Supervision}
 import akka.stream.alpakka.sqs.{MessageAction, SqsSourceSettings}
 import akka.stream.alpakka.sqs.scaladsl.{SqsAckSink, SqsSource}
+import akka.stream.scaladsl.Source
 import cats.data.{EitherT, OptionT}
 import com.github.matsluni.akkahttpspi.AkkaHttpClient
 import com.google.inject.Inject
@@ -64,8 +66,9 @@ class SlugInfoUpdatedHandler @Inject()(
       case NonFatal(e) => logger.error(s"Failed to set up awsSqsClient: ${e.getMessage}", e); Failure(e)
     }.get
 
-  if (config.isEnabled)
-    SqsSource(queueUrl, settings)(awsSqsClient)
+  def dedupe(source: Source[Message, NotUsed]): Source[Message, NotUsed] =
+      Source.single(Message.builder.messageId("----------").build) // dummy value since the dedupe will ignore the first entry
+      .concat(source)
       // are we getting duplicates?
       .sliding(2, 1)
       .mapConcat { case prev +: current +: _=>
@@ -75,6 +78,9 @@ class SlugInfoUpdatedHandler @Inject()(
           }
           else List(current)
       }
+
+  if (config.isEnabled)
+    dedupe(SqsSource(queueUrl, settings)(awsSqsClient))
       .mapAsync(10)(processMessage)
       .withAttributes(ActorAttributes.supervisionStrategy {
         case NonFatal(e) => logger.error(s"Failed to process sqs messages: ${e.getMessage}", e); Supervision.Restart
