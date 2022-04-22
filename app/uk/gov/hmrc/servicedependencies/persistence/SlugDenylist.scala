@@ -31,7 +31,6 @@ object SlugDenylist {
       , "cb-frontend"
       , "cds-proxy"
       , "cds-tariff"
-      , "contact-finder"
       , "contact-voa-frontend"
       , "counter"
       , "credit-card-commission"
