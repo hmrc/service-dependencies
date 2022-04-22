@@ -23,7 +23,7 @@ import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 import play.api.Configuration
 import uk.gov.hmrc.http.HeaderCarrier
-import uk.gov.hmrc.http.test.{HttpClientSupport, WireMockSupport}
+import uk.gov.hmrc.http.test.{HttpClientV2Support, WireMockSupport}
 import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
 import uk.gov.hmrc.servicedependencies.config.ServiceDependenciesConfig
 
@@ -36,7 +36,7 @@ class GithubRawConnectorSpec
      with ScalaFutures
      with IntegrationPatience
      with WireMockSupport
-     with HttpClientSupport {
+     with HttpClientV2Support {
 
   import ExecutionContext.Implicits.global
 
@@ -83,7 +83,7 @@ class GithubRawConnectorSpec
       )
 
       val githubRawConnector = new GithubRawConnector(
-          httpClient,
+          httpClientV2,
           serviceDependenciesConfig
         )
 

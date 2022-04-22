@@ -19,7 +19,8 @@ package uk.gov.hmrc.servicedependencies.connector
 import javax.inject.Inject
 import play.api.cache.AsyncCacheApi
 import play.api.libs.json.Reads
-import uk.gov.hmrc.http.{HeaderCarrier, HttpClient, HttpReads, StringContextOps}
+import uk.gov.hmrc.http.{HeaderCarrier, HttpReads, StringContextOps}
+import uk.gov.hmrc.http.client.HttpClientV2
 import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
 import uk.gov.hmrc.servicedependencies.connector.model.DeprecatedDependencies
 import uk.gov.hmrc.servicedependencies.model.BobbyRules
@@ -27,7 +28,7 @@ import scala.concurrent.duration.Duration
 import scala.concurrent.{ExecutionContext, Future}
 
 class ServiceConfigsConnector @Inject()(
-  httpClient    : HttpClient,
+  httpClientV2  : HttpClientV2,
   servicesConfig: ServicesConfig,
   cache         : AsyncCacheApi
 )(implicit ec: ExecutionContext
@@ -44,8 +45,9 @@ class ServiceConfigsConnector @Inject()(
 
   def getBobbyRules: Future[BobbyRules] =
     cache.getOrElseUpdate("bobby-rules", cacheExpiration) {
-      httpClient
-        .GET[DeprecatedDependencies](url"$serviceUrl/bobby/rules")
+      httpClientV2
+        .get(url"$serviceUrl/bobby/rules")
+        .execute[DeprecatedDependencies]
         .map { dependencies =>
            BobbyRules(
              (dependencies.libraries.toList ++ dependencies.plugins)

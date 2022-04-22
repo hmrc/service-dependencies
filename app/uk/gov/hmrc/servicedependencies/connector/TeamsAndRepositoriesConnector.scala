@@ -18,7 +18,8 @@ package uk.gov.hmrc.servicedependencies.connector
 
 import com.google.inject.{Inject, Singleton}
 import play.api.cache.AsyncCacheApi
-import uk.gov.hmrc.http.{HeaderCarrier, HttpClient, HttpReads, StringContextOps}
+import uk.gov.hmrc.http.{HeaderCarrier, HttpReads, StringContextOps}
+import uk.gov.hmrc.http.client.HttpClientV2
 import uk.gov.hmrc.servicedependencies.config.ServiceDependenciesConfig
 import uk.gov.hmrc.servicedependencies.connector.model.{Repository, RepositoryInfo}
 import uk.gov.hmrc.servicedependencies.model.Team
@@ -32,7 +33,7 @@ case class TeamsForServices(toMap: Map[String, Seq[String]]) {
 
 @Singleton
 class TeamsAndRepositoriesConnector @Inject()(
-  httpClient          : HttpClient,
+  httpClientV2        : HttpClientV2,
   serviceConfiguration: ServiceDependenciesConfig,
   cache               : AsyncCacheApi
 )(implicit ec: ExecutionContext
@@ -46,17 +47,25 @@ class TeamsAndRepositoriesConnector @Inject()(
   implicit val tf  = Team.format
 
   def getRepository(repositoryName: String)(implicit hc: HeaderCarrier): Future[Option[Repository]] =
-    httpClient.GET[Option[Repository]](url"$teamsAndRepositoriesApiBase/api/repositories/$repositoryName")
+    httpClientV2
+      .get(url"$teamsAndRepositoriesApiBase/api/repositories/$repositoryName")
+      .execute[Option[Repository]]
 
   def getTeamsForServices(implicit hc: HeaderCarrier): Future[TeamsForServices] =
     cache.getOrElseUpdate("teams-for-services", serviceConfiguration.teamsAndRepositoriesCacheExpiration){
-      httpClient.GET[Map[String, Seq[String]]](url"$teamsAndRepositoriesApiBase/api/repository_teams")
+      httpClientV2
+        .get(url"$teamsAndRepositoriesApiBase/api/repository_teams")
+        .execute[Map[String, Seq[String]]]
         .map(TeamsForServices.apply)
     }
 
   def getAllRepositories(archived: Option[Boolean])(implicit hc: HeaderCarrier): Future[Seq[RepositoryInfo]] =
-    httpClient.GET[Seq[RepositoryInfo]](url"$teamsAndRepositoriesApiBase/api/repositories?archived=$archived")
+    httpClientV2
+      .get(url"$teamsAndRepositoriesApiBase/api/repositories?archived=$archived")
+      .execute[Seq[RepositoryInfo]]
 
   def getTeam(team: String)(implicit hc: HeaderCarrier): Future[Team] =
-    httpClient.GET[Team](url"$teamsAndRepositoriesApiBase/api/teams/$team?includeRepos=true")
+    httpClientV2
+      .get(url"$teamsAndRepositoriesApiBase/api/teams/$team?includeRepos=true")
+      .execute[Team]
 }

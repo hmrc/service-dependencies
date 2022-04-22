@@ -66,6 +66,15 @@ class SlugInfoUpdatedHandler @Inject()(
 
   if (config.isEnabled)
     SqsSource(queueUrl, settings)(awsSqsClient)
+      // are we getting duplicates?
+      .sliding(2, 1)
+      .mapConcat { case prev +: current +: _=>
+          if (prev.messageId == current.messageId) {
+            logger.warn(s"Read the same slug message ID twice ${prev.messageId} - ignoring duplicate")
+            List.empty
+          }
+          else List(current)
+      }
       .mapAsync(10)(processMessage)
       .withAttributes(ActorAttributes.supervisionStrategy {
         case NonFatal(e) => logger.error(s"Failed to process sqs messages: ${e.getMessage}", e); Supervision.Restart
