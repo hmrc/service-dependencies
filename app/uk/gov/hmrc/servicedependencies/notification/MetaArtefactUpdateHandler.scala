@@ -68,6 +68,15 @@ class MetaArtefactUpdateHandler @Inject()(
 
   if (config.isEnabled)
     SqsSource(metaQueueUrl, settings)(awsSqsClient)
+      // are we getting duplicates?
+      .sliding(2, 1)
+      .mapConcat { case prev +: current +: _=>
+          if (prev.messageId == current.messageId) {
+            logger.warn(s"Read the same meta-artefact message ID twice ${prev.messageId} - ignoring duplicate")
+            List.empty
+          }
+          else List(current)
+      }
       .mapAsync(10)(processMetaArtefactMessage)
       .withAttributes(ActorAttributes.supervisionStrategy {
         case NonFatal(e) => logger.error(s"Failed to process meta artefact sqs messages: ${e.getMessage}", e); Supervision.Restart
