@@ -60,11 +60,10 @@ class DerivedGroupArtefactRepositorySpec
 
       val result = repository.findGroupsArtefacts.futureValue
 
-      result should have size 3
+      result should have size 2
       result shouldEqual List(
         GroupArtefacts("com.typesafe.play", List("filters-helpers")),
-        GroupArtefacts("org.typelevel",     List("cats-core", "cats-kernel")),
-        GroupArtefacts("uk.gov.hmrc",       List("file-upload"))
+        GroupArtefacts("org.typelevel",     List("cats-core", "cats-kernel"))
       )
     }
   }

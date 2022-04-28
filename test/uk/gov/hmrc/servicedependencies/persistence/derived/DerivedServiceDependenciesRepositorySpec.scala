@@ -68,6 +68,13 @@ class DerivedServiceDependenciesRepositorySpec
             group      = "org.typelevel",
             artifact   = "cats-core",
             meta       = ""
+         ),
+         SlugDependency(
+            path       = "./my-slug-0.27.0/lib/uk.gov.hmrc.my-slug_2.12-0.27.0.jar",
+            version    = Version("0.27.0"),
+            group      = "uk.gov.hmrc",
+            artifact   = "my-slug",
+            meta       = ""
          )
         )
       )
@@ -108,7 +115,7 @@ class DerivedServiceDependenciesRepositorySpec
 
       val result = repository.collection.find().toFuture().futureValue
 
-      result should have size 4
+      result should have size 3
       result shouldEqual List(
         ServiceDependency(
           slugName     = "my-slug",
@@ -137,16 +144,6 @@ class DerivedServiceDependenciesRepositorySpec
           depGroup     = "org.typelevel",
           depArtefact  = "cats-kernel",
           depVersion   = Version("2.2.0"),
-          scalaVersion = Some("2.12"),
-          scopes       = Set(DependencyScope.Compile)
-        ),
-        ServiceDependency(
-          slugName     = "my-slug",
-          slugVersion  = Version("0.27.0"),
-          teams        = List.empty,
-          depGroup     = "uk.gov.hmrc",
-          depArtefact  = "file-upload",
-          depVersion   = Version("2.22.0"),
           scalaVersion = Some("2.12"),
           scopes       = Set(DependencyScope.Compile)
         )
@@ -184,7 +181,7 @@ class DerivedServiceDependenciesRepositorySpec
 
       val result = repository.collection.find().toFuture().futureValue
 
-      result should have size 6
+      result should have size 5
       result should contain theSameElementsAs List(
         ServiceDependency(
           slugName     = "my-slug",
@@ -213,16 +210,6 @@ class DerivedServiceDependenciesRepositorySpec
           depGroup     = "org.typelevel",
           depArtefact  = "cats-kernel",
           depVersion   = Version("2.2.0"),
-          scalaVersion = Some("2.12"),
-          scopes       = Set(DependencyScope.Compile)
-        ),
-        ServiceDependency(
-          slugName     = "my-slug",
-          slugVersion  = Version("0.27.0"),
-          teams        = List.empty,
-          depGroup     = "uk.gov.hmrc",
-          depArtefact  = "file-upload",
-          depVersion   = Version("2.22.0"),
           scalaVersion = Some("2.12"),
           scopes       = Set(DependencyScope.Compile)
         ),
