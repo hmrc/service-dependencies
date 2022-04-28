@@ -116,6 +116,7 @@ class SlugInfoUpdatedHandler @Inject()(
                                        OptionT(artefactProcessorConnector.getMetaArtefact(slugInfo.name, slugInfo.version))
                                          // try again after a delay, could be a race-condition in being processed
                                          .orElseF(after(config.metaArtefactRetryDelay)(artefactProcessorConnector.getMetaArtefact(slugInfo.name, slugInfo.version)))
+                                         .orElseF(after(config.metaArtefactRetryDelay)(artefactProcessorConnector.getMetaArtefact(slugInfo.name, slugInfo.version)))
                                          .value
                                      )
                         _         <- EitherT(

@@ -34,7 +34,7 @@ class DependencyGraphParserSpec
         Node("com.typesafe.play:filters-helpers_2.12:2.7.5"),
         Node("org.typelevel:cats-core_2.12:2.2.0"),
         Node("org.typelevel:cats-kernel_2.12:2.2.0"),
-        Node("uk.gov.hmrc:file-upload_2.12:2.22.0")
+        Node("uk.gov.hmrc:my-slug_2.12:2.22.0")
       )
     }
 
@@ -66,7 +66,7 @@ class DependencyGraphParserSpec
       graph.pathToRoot(Node("org.typelevel:cats-kernel_2.12:2.2.0")) shouldBe List(
         Node("org.typelevel:cats-kernel_2.12:2.2.0"),
         Node("org.typelevel:cats-core_2.12:2.2.0"),
-        Node("uk.gov.hmrc:file-upload_2.12:2.22.0")
+        Node("uk.gov.hmrc:my-slug_2.12:2.22.0")
       )
     }
 

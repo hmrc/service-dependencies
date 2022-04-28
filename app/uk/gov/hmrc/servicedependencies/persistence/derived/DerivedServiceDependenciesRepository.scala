@@ -151,22 +151,24 @@ class DerivedServiceDependenciesRepository @Inject()(
       .map(_ => ())
 
   def populateDependencies(slugInfo: SlugInfo, meta: Option[MetaArtefact]): Future[Unit] = {
+    logger.info(s"Processing ${slugInfo.name} ${slugInfo.version} - metaArtefact: ${meta.isDefined}, slugInfo.dependencyDotCompile: ${slugInfo.dependencyDotCompile.nonEmpty}")
     val writes =
       if (meta.isEmpty && slugInfo.dependencyDotCompile.isEmpty) // legacy java slug
-            slugInfo.dependencies
-              .map(d =>
-                ServiceDependencyWrite(
-                  slugName         = slugInfo.name,
-                  slugVersion      = slugInfo.version,
-                  depGroup         = d.group,
-                  depArtefact      = d.artifact,
-                  depVersion       = d.version,
-                  scalaVersion     = None,
-                  compileFlag      = true,
-                  testFlag         = false,
-                  buildFlag        = false
-                )
-              )
+        slugInfo.dependencies
+          .filterNot { case d => d.group == "uk.gov.hmrc" && d.artifact == slugInfo.name }
+          .map(d =>
+            ServiceDependencyWrite(
+              slugName         = slugInfo.name,
+              slugVersion      = slugInfo.version,
+              depGroup         = d.group,
+              depArtefact      = d.artifact,
+              depVersion       = d.version,
+              scalaVersion     = None,
+              compileFlag      = true,
+              testFlag         = false,
+              buildFlag        = false
+            )
+          )
       else {
         // java slugs do not have a meta-artefact - need to fall back on slugInfo
         val graphBuild   = meta.flatMap(_.dependencyDotBuild                                ).getOrElse(slugInfo.dependencyDotBuild  )
@@ -185,16 +187,16 @@ class DerivedServiceDependenciesRepository @Inject()(
 
         def toServiceDependencyWrite(group: String, artefact: String, version: Version, scalaVersion: Option[String], scopes: Set[DependencyScope]) =
           ServiceDependencyWrite(
-                  slugName         = slugInfo.name,
-                  slugVersion      = slugInfo.version,
-                  depGroup         = group,
-                  depArtefact      = artefact,
-                  depVersion       = version,
-                  scalaVersion     = scalaVersion,
-                  compileFlag      = scopes.contains(DependencyScope.Compile),
-                  testFlag         = scopes.contains(DependencyScope.Test),
-                  buildFlag        = scopes.contains(DependencyScope.Build)
-                )
+            slugName         = slugInfo.name,
+            slugVersion      = slugInfo.version,
+            depGroup         = group,
+            depArtefact      = artefact,
+            depVersion       = version,
+            scalaVersion     = scalaVersion,
+            compileFlag      = scopes.contains(DependencyScope.Compile),
+            testFlag         = scopes.contains(DependencyScope.Test),
+            buildFlag        = scopes.contains(DependencyScope.Build)
+          )
 
         val scalaVersion =
           meta.toSeq.flatMap(_.modules).flatMap(_.crossScalaVersions.toSeq.flatten).headOption
@@ -228,8 +230,8 @@ class DerivedServiceDependenciesRepository @Inject()(
             )
 
         dependencies
-          .filter { case (node, _) => node.group != "default"     || node.artefact != "project"     }
-          .filter { case (node, _) => node.group != "uk.gov.hmrc" || node.artefact != slugInfo.name }
+          .filterNot { case (node, _) => node.group == "default"     && node.artefact == "project"     }
+          .filterNot { case (node, _) => node.group == "uk.gov.hmrc" && node.artefact == slugInfo.name }
           .map { case (node, scopes) =>
             toServiceDependencyWrite(
               group        = node.group,
