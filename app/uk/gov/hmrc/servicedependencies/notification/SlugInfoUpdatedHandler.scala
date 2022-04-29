@@ -95,6 +95,14 @@ class SlugInfoUpdatedHandler @Inject()(
     promise.future
   }
 
+  private def attempt[A](delay: FiniteDuration, times: Int)(f: () => Future[Option[A]]): Future[Option[A]] =
+    if (times > 0)
+      OptionT(f())
+        .orElse(OptionT(after(delay)(attempt(delay, times - 1)(f))))
+        .value
+    else
+      Future.successful(None)
+
   private def processMessage(message: Message): Future[MessageAction] = {
     logger.debug(s"Starting processing SlugInfo message with ID '${message.messageId()}'")
     (for {
@@ -113,11 +121,11 @@ class SlugInfoUpdatedHandler @Inject()(
                                      )
                         optMeta   <- // we don't go to metaArtefactRepository since it might not have been updated yet...
                                      EitherT.liftF(
-                                       OptionT(artefactProcessorConnector.getMetaArtefact(slugInfo.name, slugInfo.version))
-                                         // try again after a delay, could be a race-condition in being processed
-                                         .orElseF(after(config.metaArtefactRetryDelay)(artefactProcessorConnector.getMetaArtefact(slugInfo.name, slugInfo.version)))
-                                         .orElseF(after(config.metaArtefactRetryDelay)(artefactProcessorConnector.getMetaArtefact(slugInfo.name, slugInfo.version)))
-                                         .value
+                                       // try a few times, the meta-artefact may not have been processed yet
+                                       // or it may just not be available (e.g. java slugs)
+                                       attempt(delay = config.metaArtefactRetryDelay, times = 5)(() =>
+                                         artefactProcessorConnector.getMetaArtefact(slugInfo.name, slugInfo.version)
+                                       )
                                      )
                         _         <- EitherT(
                                        slugInfoService.addSlugInfo(slugInfo, optMeta)
