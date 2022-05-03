@@ -123,7 +123,7 @@ class SlugInfoUpdatedHandler @Inject()(
                                      EitherT.liftF(
                                        // try a few times, the meta-artefact may not have been processed yet
                                        // or it may just not be available (e.g. java slugs)
-                                       attempt(delay = config.metaArtefactRetryDelay, times = 5)(() =>
+                                       attempt(delay = config.metaArtefactRetryDelay, times = config.metaArtefactRetryTimes)(() =>
                                          artefactProcessorConnector.getMetaArtefact(slugInfo.name, slugInfo.version)
                                        )
                                      )

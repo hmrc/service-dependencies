@@ -45,4 +45,7 @@ class ArtefactReceivingConfig @Inject()(configuration: Configuration) {
 
   lazy val metaArtefactRetryDelay: FiniteDuration =
     configuration.get[FiniteDuration]("artefact.receiver.meta-artefact.retry.delay")
+
+  lazy val metaArtefactRetryTimes: Int =
+    configuration.get[Int]("artefact.receiver.meta-artefact.retry.times")
 }
