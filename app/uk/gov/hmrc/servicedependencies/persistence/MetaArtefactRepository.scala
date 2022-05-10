@@ -74,9 +74,9 @@ class MetaArtefactRepository @Inject()(
         .projection(Projections.include("version"))
         .map(bson => Version(bson.getString("version")))
         .filter(_.isReleaseCandidate == false)
-        .foldLeft(Option.empty[Version])( (prev,cur) => prev.fold(Some(cur))(p => if(cur > p) Some(cur) else Some(p)) )
+        .foldLeft(Version("0.0.0"))((prev,cur) => if(cur > prev) cur else prev)
         .toFuture()
-      meta <- version.map(v => find(repositoryName, v)).getOrElse(Future.successful(None))
+      meta <- find(repositoryName, version)
     } yield meta
 
   def find(repositoryName: String, version: Version): Future[Option[MetaArtefact]] =
