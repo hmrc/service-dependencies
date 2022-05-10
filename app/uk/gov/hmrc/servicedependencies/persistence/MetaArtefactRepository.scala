@@ -18,15 +18,14 @@ package uk.gov.hmrc.servicedependencies.persistence
 
 import org.mongodb.scala.bson.{BsonDocument, BsonString}
 import org.mongodb.scala.bson.conversions.Bson
-import org.mongodb.scala.model.{IndexModel, IndexOptions, Indexes, ReplaceOptions}
+import org.mongodb.scala.model.{IndexModel, IndexOptions, Indexes, Projections, ReplaceOptions}
 import org.mongodb.scala.model.Aggregates.{`match`, project, unwind}
 import org.mongodb.scala.model.Filters.{and, equal, exists, or}
-import org.mongodb.scala.model.Projections.{fields, excludeId, include}
+import org.mongodb.scala.model.Projections.{excludeId, fields, include}
 import play.api.Logging
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.play.json.PlayMongoRepository
 import uk.gov.hmrc.servicedependencies.model.{MetaArtefact, Version}
-
 
 import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
@@ -69,14 +68,16 @@ class MetaArtefactRepository @Inject()(
       .map(_ => ())
 
   def find(repositoryName: String): Future[Option[MetaArtefact]] =
-    collection.find(equal("name", repositoryName))
-      .toFuture()
-      .map(
-        _
-          .filterNot(_.version.isReleaseCandidate)
-          .sortBy(_.version)(Ordering[Version].reverse)
-          .headOption
-      )
+    for {
+      version <- mongoComponent.database.getCollection("metaArtefacts")
+        .find(equal("name", repositoryName))
+        .projection(Projections.include("version"))
+        .map(bson => Version(bson.getString("version")))
+        .filter(_.isReleaseCandidate == false)
+        .foldLeft(Option.empty[Version])( (prev,cur) => prev.fold(Some(cur))(p => if(cur > p) Some(cur) else Some(p)) )
+        .toFuture()
+      meta <- version.map(v => find(repositoryName, v)).getOrElse(Future.successful(None))
+    } yield meta
 
   def find(repositoryName: String, version: Version): Future[Option[MetaArtefact]] =
     collection.find(
