@@ -16,14 +16,15 @@
 
 package uk.gov.hmrc.servicedependencies.persistence
 
-import java.time.LocalDate
 
+import java.time.LocalDate
 import com.google.inject.{Inject, Singleton}
 import org.mongodb.scala.bson.BsonDocument
-import org.mongodb.scala.model.Filters.equal
+import org.mongodb.scala.model.Aggregates.sort
+import org.mongodb.scala.model.Filters.{and, equal, gte, lte}
 import org.mongodb.scala.model.Indexes.ascending
 import org.mongodb.scala.model.Sorts.descending
-import org.mongodb.scala.model.{IndexModel, IndexOptions, ReplaceOptions}
+import org.mongodb.scala.model.{Aggregates, IndexModel, IndexOptions, ReplaceOptions, Sorts}
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.play.json.PlayMongoRepository
 import uk.gov.hmrc.servicedependencies.model.BobbyRulesSummary
@@ -73,11 +74,15 @@ class BobbyRulesSummaryRepository @Inject()(
         case _ => None
       }
 
-  // Not time bound yet
+  // Timebound to last 12 months
   def getHistoric(): Future[List[BobbyRulesSummary]] =
-    collection
-      .find()
-      .sort(descending("date"))
+    collection.aggregate(Seq(
+      Aggregates.`match`(and(
+        gte("date", LocalDate.now.minusYears(1)),
+        lte("date", LocalDate.now),
+      )),
+      sort(Sorts.descending("date"))
+    ))
       .toFuture()
       .map(_.toList)
 
