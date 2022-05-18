@@ -20,7 +20,7 @@ import javax.inject.Inject
 import play.api.Configuration
 import play.api.libs.json.Json
 import play.api.mvc._
-import uk.gov.hmrc.servicedependencies.model.{BobbyRulesSummary, HistoricBobbyRulesSummary}
+import uk.gov.hmrc.servicedependencies.model.{BobbyRuleQuery, BobbyRulesSummary, HistoricBobbyRulesSummary}
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 import uk.gov.hmrc.servicedependencies.service.DependencyLookupService
 
@@ -40,10 +40,10 @@ class BobbyRuleViolationController @Inject() (
     }
   }
 
-  def findHistoricBobbyRuleViolations: Action[AnyContent] = {
+  def findHistoricBobbyRuleViolations(query: List[BobbyRuleQuery]): Action[AnyContent] = {
     implicit val brsf = HistoricBobbyRulesSummary.apiFormat
     Action.async {
-      dependencyLookup.getHistoricBobbyRuleViolations
+      dependencyLookup.getHistoricBobbyRuleViolations(query)
         .map(v => Ok(Json.toJson(v)))
     }
   }

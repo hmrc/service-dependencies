@@ -17,15 +17,16 @@
 package uk.gov.hmrc.servicedependencies.persistence
 
 import java.time.LocalDate
-
 import cats.instances.all._
 import cats.syntax.all._
 import org.mockito.MockitoSugar
 import uk.gov.hmrc.mongo.test.DefaultPlayMongoRepositorySupport
-import uk.gov.hmrc.servicedependencies.model.{BobbyRule, BobbyRulesSummary, BobbyVersionRange, SlugInfoFlag}
+import uk.gov.hmrc.servicedependencies.model.{BobbyRule, BobbyRuleQuery, BobbyRulesSummary, BobbyVersionRange, SlugInfoFlag}
+
 import scala.concurrent.ExecutionContext.Implicits.global
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpecLike
+import uk.gov.hmrc.servicedependencies.model.SlugInfoFlag.Development
 
 class BobbyRulesSummaryRepositorySpec
     extends AnyWordSpecLike
@@ -36,7 +37,7 @@ class BobbyRulesSummaryRepositorySpec
   override protected lazy val repository = new BobbyRulesSummaryRepository(mongoComponent)
 
   "BobbyRulesSummaryRepository.add" should {
-    val summary = bobbyRulesSummary(LocalDate.now, SlugInfoFlag.Development, 1)
+    val summary = bobbyRulesSummary(playFrontend, LocalDate.now, SlugInfoFlag.Development, 1)
 
     "insert correctly" in {
       repository.add(summary).futureValue
@@ -58,9 +59,9 @@ class BobbyRulesSummaryRepositorySpec
     "only search the latest slugs" in {
       val now = LocalDate.now
 
-      val latest = bobbyRulesSummary(now, SlugInfoFlag.Development, count             = 1)
-      val older  = bobbyRulesSummary(now.minusDays(1), SlugInfoFlag.Latest, count     = 2)
-      val oldest = bobbyRulesSummary(now.minusDays(2), SlugInfoFlag.Production, count = 3)
+      val latest = bobbyRulesSummary(playFrontend, now, SlugInfoFlag.Development, count              = 1)
+      val older  = bobbyRulesSummary(playFrontend, now.minusDays(1), SlugInfoFlag.Latest, count     = 2)
+      val oldest = bobbyRulesSummary(playFrontend, now.minusDays(2), SlugInfoFlag.Production, count = 3)
 
       List(latest, older, oldest).traverse(repository.add).futureValue
 
@@ -69,16 +70,41 @@ class BobbyRulesSummaryRepositorySpec
   }
 
   "BobbyRulesSummaryRepository.getHistoric" should {
-    "only search the latest slugs" in {
+
+    val query = List(
+      BobbyRuleQuery("uk.gov.hmrc", "play-graphite", "(,3.6.2)"),
+      BobbyRuleQuery("uk.gov.hmrc", "json-encryption", "(,3.2.0)")
+    )
+
+    "return bobbyRulesSummaries for queried rules only" in {
       val now = LocalDate.now
 
-      val latest = bobbyRulesSummary(now, SlugInfoFlag.Development, count             = 1)
-      val older  = bobbyRulesSummary(now.minusDays(1), SlugInfoFlag.Latest, count     = 2)
-      val oldest = bobbyRulesSummary(now.minusDays(2), SlugInfoFlag.Production, count = 3)
+      val summaryNow = BobbyRulesSummary(now, Map((playFrontend, SlugInfoFlag.Development) -> 1,
+        (playGraphite, SlugInfoFlag.Development) -> 1,
+        (jsonEncryption, SlugInfoFlag.Development) -> 1))
 
-      List(latest, older, oldest).traverse(repository.add).futureValue
+      val summaryNowMinus1 = BobbyRulesSummary(now.minusDays(1), Map((playFrontend, SlugInfoFlag.Latest) -> 2,
+        (playGraphite, SlugInfoFlag.Latest) -> 2,
+        (jsonEncryption, SlugInfoFlag.Production) -> 2))
 
-      repository.getHistoric().futureValue shouldBe Seq(latest, older, oldest)
+      val summaryNowMinus2 = BobbyRulesSummary(now.minusDays(2), Map((playFrontend, SlugInfoFlag.Production) -> 3,
+        (playGraphite, SlugInfoFlag.Production) -> 4))
+
+      val Data = List(summaryNow, summaryNowMinus1, summaryNowMinus2)
+      repository.collection.insertMany(Data).toFuture().futureValue
+
+      //Should not retrieve playFrontend rules
+      val expectedResult = Seq(
+        BobbyRulesSummary(now, Map(
+          (playGraphite, SlugInfoFlag.Development) -> 1,
+          (jsonEncryption, SlugInfoFlag.Development) -> 1)),
+        BobbyRulesSummary(now.minusDays(1),  Map(
+          (playGraphite, SlugInfoFlag.Latest) -> 2,
+          (jsonEncryption, SlugInfoFlag.Production) -> 2)),
+        BobbyRulesSummary(now.minusDays(2), Map(
+          (playGraphite, SlugInfoFlag.Production) -> 4)))
+
+      repository.getHistoric(query).futureValue shouldBe expectedResult
     }
   }
 
@@ -90,6 +116,22 @@ class BobbyRulesSummaryRepositorySpec
     from         = LocalDate.of(2015, 11, 2)
   )
 
-  def bobbyRulesSummary(date: LocalDate, env: SlugInfoFlag, count: Int) =
-    BobbyRulesSummary(date, Map((playFrontend, env) -> count))
+  lazy val jsonEncryption = BobbyRule(
+    organisation = "uk.gov.hmrc",
+    name         = "json-encryption",
+    range        = BobbyVersionRange("(,3.2.0)"),
+    reason       = "Play 2.5 upgrade - security",
+    from         = LocalDate.of(2015, 11, 2)
+  )
+
+  lazy val playGraphite = BobbyRule(
+    organisation = "uk.gov.hmrc",
+    name         = "play-graphite",
+    range        = BobbyVersionRange("(,3.6.2)"),
+    reason       = "Post Play Frontend upgrade",
+    from         = LocalDate.of(2015, 11, 2)
+  )
+
+  def bobbyRulesSummary(rule: BobbyRule, date: LocalDate, env: SlugInfoFlag, count: Int) =
+    BobbyRulesSummary(date, Map((rule, env) -> count))
 }

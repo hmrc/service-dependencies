@@ -16,17 +16,20 @@
 
 package uk.gov.hmrc.servicedependencies.persistence
 
-import java.time.LocalDate
 
+import java.time.LocalDate
 import com.google.inject.{Inject, Singleton}
+import com.mongodb.client.model.Accumulators
+import com.mongodb.client.model.Updates
 import org.mongodb.scala.bson.BsonDocument
-import org.mongodb.scala.model.Filters.equal
+import org.mongodb.scala.model.Aggregates.{`match`, group, sort, unwind}
+import org.mongodb.scala.model.Filters.{and, elemMatch, equal, gte, lte, or}
 import org.mongodb.scala.model.Indexes.ascending
 import org.mongodb.scala.model.Sorts.descending
-import org.mongodb.scala.model.{IndexModel, IndexOptions, ReplaceOptions}
+import org.mongodb.scala.model.{Aggregates, Filters, IndexModel, IndexOptions, ReplaceOptions, Sorts}
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.play.json.PlayMongoRepository
-import uk.gov.hmrc.servicedependencies.model.BobbyRulesSummary
+import uk.gov.hmrc.servicedependencies.model.{BobbyRuleQuery, BobbyRulesSummary}
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -73,13 +76,29 @@ class BobbyRulesSummaryRepository @Inject()(
         case _ => None
       }
 
-  // Not time bound yet
-  def getHistoric(): Future[List[BobbyRulesSummary]] =
-    collection
-      .find()
-      .sort(descending("date"))
+  // Not yet timebound
+  def getHistoric(query: List[BobbyRuleQuery]): Future[Seq[BobbyRulesSummary]] = {
+    val filters = Seq(
+      query.map(q =>
+        Filters.and(
+          Filters.eq("summary.0.name", q.name),
+          Filters.eq("summary.0.range", q.range),
+          Filters.eq("summary.0.organisation", q.organisation)
+        ))
+    ).flatten
+
+    collection.aggregate(Seq(
+      unwind("$summary"),
+      `match`(or(filters:_*)),
+      group(
+        "$_id",
+        Accumulators.max("date", "$date"),
+        Accumulators.push("summary", "$summary")
+      ),
+      sort(Sorts.descending("date"))
+    ))
       .toFuture()
-      .map(_.toList)
+  }
 
   def clearAllData: Future[Unit] =
     collection.deleteMany(BsonDocument())
