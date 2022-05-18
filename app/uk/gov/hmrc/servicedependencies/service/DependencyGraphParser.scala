@@ -96,14 +96,14 @@ object DependencyGraphParser {
 
     def pathToRoot(node: Node): Seq[Node] = {
       @tailrec
-      def go(node: Node, acc: Seq[Node]): Seq[Node] = {
+      def go(node: Node, acc: Seq[Node], seen: Set[Node]): Seq[Node] = {
         val acc2 = acc :+ node
         arrowsMap.get(node) match {
-          case Some(n) => go(n, acc2)
-          case None    => acc2
+          case Some(n) if !seen.contains(n) => go(n, acc2, seen + node)
+          case _    => acc2
         }
       }
-      go(node, Seq.empty)
+      go(node, Seq.empty, Set.empty)
     }
   }
 
