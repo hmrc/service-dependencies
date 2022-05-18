@@ -16,6 +16,7 @@
 
 package uk.gov.hmrc.servicedependencies.service
 
+import org.scalatest.concurrent.Eventually.eventually
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 
@@ -97,6 +98,15 @@ class DependencyGraphParserSpec
         Node("uk.gov.hmrc.jdc:platops-example-classic-service:war:0.53.0"),
         Node("uk.gov.hmrc.jdc:platops-example-classic-service-business:jar:0.53.0:compile"),
       )
+    }
+
+
+    // BDOG-1884 if this test is hanging, its because pathToRoot's cycle detection has broken
+    "not get stuck in an infinite loop when parsing a cyclical graph" in {
+      val source = scala.io.Source.fromResource("slugs/loop.dot") // baz -> bar , bar -> baz
+      val graph = dependencyGraphParser.parse(source.mkString)
+      val bar = graph.nodes.filter(_.artefact == "baz").head
+      graph.pathToRoot(bar).head shouldBe Node("org:baz:3.0.0")
     }
   }
 
@@ -181,4 +191,5 @@ class DependencyGraphParserSpec
       n.scalaVersion shouldBe None
     }
   }
+
 }
