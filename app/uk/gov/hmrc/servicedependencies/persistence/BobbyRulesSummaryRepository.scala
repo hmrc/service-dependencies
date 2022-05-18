@@ -76,13 +76,9 @@ class BobbyRulesSummaryRepository @Inject()(
 
   // Timebound to last 12 months
   def getHistoric(): Future[List[BobbyRulesSummary]] =
-    collection.aggregate(Seq(
-      Aggregates.`match`(and(
-        gte("date", LocalDate.now.minusYears(1)),
-        lte("date", LocalDate.now),
-      )),
-      sort(Sorts.descending("date"))
-    ))
+    collection
+      .find(and(gte("date", LocalDate.now.minusYears(1)), lte("date", LocalDate.now)))
+      .sort(descending("date"))
       .toFuture()
       .map(_.toList)
 
