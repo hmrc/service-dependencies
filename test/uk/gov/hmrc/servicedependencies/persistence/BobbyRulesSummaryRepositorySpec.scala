@@ -37,7 +37,7 @@ class BobbyRulesSummaryRepositorySpec
   override protected lazy val repository = new BobbyRulesSummaryRepository(mongoComponent)
 
   "BobbyRulesSummaryRepository.add" should {
-    val summary = bobbyRulesSummary(playFrontend, LocalDate.now, SlugInfoFlag.Development, 1)
+    val summary = bobbyRulesSummary(playFrontendBobbyRule, LocalDate.now, SlugInfoFlag.Development, 1)
 
     "insert correctly" in {
       repository.add(summary).futureValue
@@ -59,9 +59,9 @@ class BobbyRulesSummaryRepositorySpec
     "only search the latest slugs" in {
       val now = LocalDate.now
 
-      val latest = bobbyRulesSummary(playFrontend, now, SlugInfoFlag.Development, count              = 1)
-      val older  = bobbyRulesSummary(playFrontend, now.minusDays(1), SlugInfoFlag.Latest, count     = 2)
-      val oldest = bobbyRulesSummary(playFrontend, now.minusDays(2), SlugInfoFlag.Production, count = 3)
+      val latest = bobbyRulesSummary(playFrontendBobbyRule, now, SlugInfoFlag.Development, count              = 1)
+      val older  = bobbyRulesSummary(playFrontendBobbyRule, now.minusDays(1), SlugInfoFlag.Latest, count     = 2)
+      val oldest = bobbyRulesSummary(playFrontendBobbyRule, now.minusDays(2), SlugInfoFlag.Production, count = 3)
 
       List(latest, older, oldest).traverse(repository.add).futureValue
 
@@ -79,16 +79,19 @@ class BobbyRulesSummaryRepositorySpec
     "return bobbyRulesSummaries for queried rules only" in {
       val now = LocalDate.now
 
-      val summaryNow = BobbyRulesSummary(now, Map((playFrontend, SlugInfoFlag.Development) -> 1,
-        (playGraphite, SlugInfoFlag.Development) -> 1,
-        (jsonEncryption, SlugInfoFlag.Development) -> 1))
+      val summaryNow = BobbyRulesSummary(now, Map(
+        (playFrontendBobbyRule, SlugInfoFlag.Development) -> 1,
+        (playGraphiteBobbyRule, SlugInfoFlag.Development) -> 1,
+        (jsonEncryptionBobbyRule, SlugInfoFlag.Development) -> 1))
 
-      val summaryNowMinus1 = BobbyRulesSummary(now.minusDays(1), Map((playFrontend, SlugInfoFlag.Latest) -> 2,
-        (playGraphite, SlugInfoFlag.Latest) -> 2,
-        (jsonEncryption, SlugInfoFlag.Production) -> 2))
+      val summaryNowMinus1 = BobbyRulesSummary(now.minusDays(1), Map(
+        (playFrontendBobbyRule, SlugInfoFlag.Latest) -> 2,
+        (playGraphiteBobbyRule, SlugInfoFlag.Latest) -> 2,
+        (jsonEncryptionBobbyRule, SlugInfoFlag.Production) -> 2))
 
-      val summaryNowMinus2 = BobbyRulesSummary(now.minusDays(2), Map((playFrontend, SlugInfoFlag.Production) -> 3,
-        (playGraphite, SlugInfoFlag.Production) -> 4))
+      val summaryNowMinus2 = BobbyRulesSummary(now.minusDays(2), Map(
+        (playFrontendBobbyRule, SlugInfoFlag.Production) -> 3,
+        (playGraphiteBobbyRule, SlugInfoFlag.Production) -> 4))
 
       val Data = List(summaryNow, summaryNowMinus1, summaryNowMinus2)
       repository.collection.insertMany(Data).toFuture().futureValue
@@ -96,19 +99,19 @@ class BobbyRulesSummaryRepositorySpec
       //Should not retrieve playFrontend rules
       val expectedResult = Seq(
         BobbyRulesSummary(now, Map(
-          (playGraphite, SlugInfoFlag.Development) -> 1,
-          (jsonEncryption, SlugInfoFlag.Development) -> 1)),
+          (playGraphiteBobbyRule, SlugInfoFlag.Development) -> 1,
+          (jsonEncryptionBobbyRule, SlugInfoFlag.Development) -> 1)),
         BobbyRulesSummary(now.minusDays(1),  Map(
-          (playGraphite, SlugInfoFlag.Latest) -> 2,
-          (jsonEncryption, SlugInfoFlag.Production) -> 2)),
+          (playGraphiteBobbyRule, SlugInfoFlag.Latest) -> 2,
+          (jsonEncryptionBobbyRule, SlugInfoFlag.Production) -> 2)),
         BobbyRulesSummary(now.minusDays(2), Map(
-          (playGraphite, SlugInfoFlag.Production) -> 4)))
+          (playGraphiteBobbyRule, SlugInfoFlag.Production) -> 4)))
 
       repository.getHistoric(query).futureValue shouldBe expectedResult
     }
   }
 
-  lazy val playFrontend = BobbyRule(
+  lazy val playFrontendBobbyRule = BobbyRule(
     organisation = "uk.gov.hmrc",
     name         = "play-frontend",
     range        = BobbyVersionRange("(,99.99.99)"),
@@ -116,7 +119,7 @@ class BobbyRulesSummaryRepositorySpec
     from         = LocalDate.of(2015, 11, 2)
   )
 
-  lazy val jsonEncryption = BobbyRule(
+  lazy val jsonEncryptionBobbyRule = BobbyRule(
     organisation = "uk.gov.hmrc",
     name         = "json-encryption",
     range        = BobbyVersionRange("(,3.2.0)"),
@@ -124,7 +127,7 @@ class BobbyRulesSummaryRepositorySpec
     from         = LocalDate.of(2015, 11, 2)
   )
 
-  lazy val playGraphite = BobbyRule(
+  lazy val playGraphiteBobbyRule = BobbyRule(
     organisation = "uk.gov.hmrc",
     name         = "play-graphite",
     range        = BobbyVersionRange("(,3.6.2)"),

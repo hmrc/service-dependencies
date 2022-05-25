@@ -77,15 +77,14 @@ class BobbyRulesSummaryRepository @Inject()(
       }
 
   // Not yet timebound
-  def getHistoric(query: List[BobbyRuleQuery]): Future[Seq[BobbyRulesSummary]] = {
-    val filters = Seq(
+  def getHistoric(query: List[BobbyRuleQuery]): Future[List[BobbyRulesSummary]] = {
+    val filters =
       query.map(q =>
         Filters.and(
           Filters.eq("summary.0.name", q.name),
           Filters.eq("summary.0.range", q.range),
           Filters.eq("summary.0.organisation", q.organisation)
         ))
-    ).flatten
 
     collection.aggregate(Seq(
       unwind("$summary"),
@@ -98,6 +97,7 @@ class BobbyRulesSummaryRepository @Inject()(
       sort(Sorts.descending("date"))
     ))
       .toFuture()
+      .map(_.toList)
   }
 
   def clearAllData: Future[Unit] =
