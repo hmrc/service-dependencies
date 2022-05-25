@@ -89,7 +89,7 @@ class DependencyLookupServiceSpec
       override def getLatest: Future[Option[BobbyRulesSummary]] =
         Future.successful(store.get.sortBy(_.date.toEpochDay).headOption)
 
-      override def getHistoric: Future[List[BobbyRulesSummary]] =
+      override def getHistoric(query: List[BobbyRuleQuery]): Future[List[BobbyRulesSummary]] =
         Future.successful(store.get)
 
       override def clearAllData: Future[Unit] = {

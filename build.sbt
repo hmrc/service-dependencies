@@ -1,4 +1,5 @@
 import play.sbt.PlayImport.PlayKeys
+import play.sbt.routes.RoutesKeys
 import uk.gov.hmrc.sbtdistributables.SbtDistributablesPlugin
 
 val silencerVersion = "1.7.8"
@@ -24,3 +25,12 @@ lazy val microservice = Project("service-dependencies", file("."))
   .settings(
     Test / resources := (Test / resources).value ++ Seq(baseDirectory.value / "conf" / "application.conf")
   )
+
+  .settings(
+    RoutesKeys.routesImport ++= Seq(
+      "uk.gov.hmrc.servicedependencies.binders.Binders._",
+      "uk.gov.hmrc.servicedependencies.model.BobbyRuleQuery"
+    )
+  )
+
+

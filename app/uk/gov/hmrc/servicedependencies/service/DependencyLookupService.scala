@@ -50,36 +50,36 @@ class DependencyLookupService @Inject() (
     def calculateCounts(rules: Seq[BobbyRule])(env: SlugInfoFlag): Future[Seq[((BobbyRule, SlugInfoFlag), Int)]] = {
       logger.debug(s"calculateCounts($env)")
       for {
-        lookup     <- derivedServiceDependenciesRepository.findDependencies(env, Some(DependencyScope.Compile)) // we could look for violations in all scopes (but number will not align to results when drilling down in catalogue)
-                        .map(_
-                          .groupBy(d => s"${d.depGroup}:${d.depArtefact}")
-                          .view
-                          .mapValues(
-                            _.groupBy(_.depVersion)
-                             .view
-                             .mapValues(_.map(d => s"${d.slugName}:${d.slugVersion}").toSet)
-                             .toMap
-                          )
-                          .toMap
-                        )
-        violations =  rules.map(rule => ((rule, env), findSlugsUsing(lookup, rule.organisation, rule.name, rule.range).length))
+        lookup <- derivedServiceDependenciesRepository.findDependencies(env, Some(DependencyScope.Compile)) // we could look for violations in all scopes (but number will not align to results when drilling down in catalogue)
+          .map(_
+            .groupBy(d => s"${d.depGroup}:${d.depArtefact}")
+            .view
+            .mapValues(
+              _.groupBy(_.depVersion)
+                .view
+                .mapValues(_.map(d => s"${d.slugName}:${d.slugVersion}").toSet)
+                .toMap
+            )
+            .toMap
+          )
+        violations = rules.map(rule => ((rule, env), findSlugsUsing(lookup, rule.organisation, rule.name, rule.range).length))
       } yield violations
     }
 
     for {
-      rules   <- serviceConfigs.getBobbyRules.map(_.asMap.values.flatten.toSeq)
-      _       =  logger.debug(s"Found ${rules.size} rules")
-                 // traverse (in parallel) uses more memory and adds contention on data source - fold through it instead
-      counts  <- SlugInfoFlag.values.foldLeftM(Seq[((BobbyRule, SlugInfoFlag), Int)]())((acc, env) =>
-                   calculateCounts(rules)(env).map(acc ++ _)
-                 )
-      summary =  counts.toMap
-      _       <- bobbyRulesSummaryRepo.add(BobbyRulesSummary(LocalDate.now, summary))
+      rules <- serviceConfigs.getBobbyRules.map(_.asMap.values.flatten.toSeq)
+      _ = logger.debug(s"Found ${rules.size} rules")
+      // traverse (in parallel) uses more memory and adds contention on data source - fold through it instead
+      counts <- SlugInfoFlag.values.foldLeftM(Seq[((BobbyRule, SlugInfoFlag), Int)]())((acc, env) =>
+        calculateCounts(rules)(env).map(acc ++ _)
+      )
+      summary = counts.toMap
+      _ <- bobbyRulesSummaryRepo.add(BobbyRulesSummary(LocalDate.now, summary))
     } yield ()
   }
 
-  def getHistoricBobbyRuleViolations: Future[HistoricBobbyRulesSummary] =
-    bobbyRulesSummaryRepo.getHistoric()
+  def getHistoricBobbyRuleViolations(query: List[BobbyRuleQuery]): Future[HistoricBobbyRulesSummary] =
+    bobbyRulesSummaryRepo.getHistoric(query)
       .map(combineBobbyRulesSummaries)
 }
 
