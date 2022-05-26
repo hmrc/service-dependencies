@@ -77,7 +77,7 @@ class BobbyRulesSummaryRepository @Inject()(
       }
 
   // Not yet timebound
-  def getHistoric(query: List[BobbyRuleQuery]): Future[List[BobbyRulesSummary]] = {
+  def getHistoric(query: List[BobbyRuleQuery], from: LocalDate, to: LocalDate): Future[List[BobbyRulesSummary]] = {
     val filters =
       query.map(q =>
         Filters.and(
@@ -87,6 +87,7 @@ class BobbyRulesSummaryRepository @Inject()(
         ))
 
     collection.aggregate(Seq(
+      `match`(and(gte("date", from), lte("date", to))),
       unwind("$summary"),
       `match`(or(filters:_*)),
       group(

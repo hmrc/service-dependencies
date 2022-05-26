@@ -24,6 +24,7 @@ import uk.gov.hmrc.servicedependencies.model.{BobbyRuleQuery, BobbyRulesSummary,
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 import uk.gov.hmrc.servicedependencies.service.DependencyLookupService
 
+import java.time.LocalDate
 import scala.concurrent.ExecutionContext
 
 class BobbyRuleViolationController @Inject() (
@@ -40,10 +41,10 @@ class BobbyRuleViolationController @Inject() (
     }
   }
 
-  def findHistoricBobbyRuleViolations(query: List[BobbyRuleQuery]): Action[AnyContent] = {
+  def findHistoricBobbyRuleViolations(query: List[BobbyRuleQuery], from: LocalDate, to: LocalDate): Action[AnyContent] = {
     implicit val brsf = HistoricBobbyRulesSummary.apiFormat
     Action.async {
-      dependencyLookup.getHistoricBobbyRuleViolations(query)
+      dependencyLookup.getHistoricBobbyRuleViolations(query, from, to)
         .map(v => Ok(Json.toJson(v)))
     }
   }

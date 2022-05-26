@@ -78,8 +78,8 @@ class DependencyLookupService @Inject() (
     } yield ()
   }
 
-  def getHistoricBobbyRuleViolations(query: List[BobbyRuleQuery]): Future[HistoricBobbyRulesSummary] =
-    bobbyRulesSummaryRepo.getHistoric(query)
+  def getHistoricBobbyRuleViolations(query: List[BobbyRuleQuery], from: LocalDate, to: LocalDate): Future[HistoricBobbyRulesSummary] =
+    bobbyRulesSummaryRepo.getHistoric(query, from, to)
       .map(combineBobbyRulesSummaries)
 }
 

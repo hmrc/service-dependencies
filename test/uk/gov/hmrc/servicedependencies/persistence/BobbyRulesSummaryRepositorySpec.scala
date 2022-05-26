@@ -107,9 +107,50 @@ class BobbyRulesSummaryRepositorySpec
         BobbyRulesSummary(now.minusDays(2), Map(
           (playGraphiteBobbyRule, SlugInfoFlag.Production) -> 4)))
 
-      repository.getHistoric(query).futureValue shouldBe expectedResult
+      repository.getHistoric(
+        query = query,
+        from = LocalDate.now().minusYears(2),
+        to = LocalDate.now()
+      ).futureValue shouldBe expectedResult
+    }
+
+    "return BobbyRuleSummaries within the date range provided only" in {
+      val now = LocalDate.now
+      val from = now.minusYears(2)
+      val to = now
+
+      val summaryNow = BobbyRulesSummary(now, Map(
+        (playGraphiteBobbyRule, SlugInfoFlag.Development) -> 1,
+        (jsonEncryptionBobbyRule, SlugInfoFlag.Development) -> 1))
+
+      val summary1YearAgo = BobbyRulesSummary(now.minusYears(1), Map(
+        (playGraphiteBobbyRule, SlugInfoFlag.Latest) -> 2,
+        (jsonEncryptionBobbyRule, SlugInfoFlag.Production) -> 2))
+
+      val summary3YearsAgo = BobbyRulesSummary(now.minusYears(3), Map(
+        (playGraphiteBobbyRule, SlugInfoFlag.Production) -> 4))
+
+      val summary4YearsAgo = BobbyRulesSummary(now.minusYears(4), Map(
+        (playGraphiteBobbyRule, SlugInfoFlag.Production) -> 6))
+
+      val Data = List(summaryNow, summary1YearAgo, summary3YearsAgo, summary4YearsAgo)
+      repository.collection.insertMany(Data).toFuture().futureValue
+
+      //Should only retrieve Summaries within 2 year timeframe
+      val expectedResult = Seq(
+        BobbyRulesSummary(now, Map(
+          (playGraphiteBobbyRule, SlugInfoFlag.Development) -> 1,
+          (jsonEncryptionBobbyRule, SlugInfoFlag.Development) -> 1)),
+        BobbyRulesSummary(now.minusYears(1),  Map(
+          (playGraphiteBobbyRule, SlugInfoFlag.Latest) -> 2,
+          (jsonEncryptionBobbyRule, SlugInfoFlag.Production) -> 2)))
+
+      repository.getHistoric(query, from, to).futureValue shouldBe expectedResult
+
     }
   }
+
+
 
   lazy val playFrontendBobbyRule = BobbyRule(
     organisation = "uk.gov.hmrc",
