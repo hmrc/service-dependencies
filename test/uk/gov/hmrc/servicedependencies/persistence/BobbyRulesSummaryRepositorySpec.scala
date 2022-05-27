@@ -150,8 +150,6 @@ class BobbyRulesSummaryRepositorySpec
     }
   }
 
-
-
   lazy val playFrontendBobbyRule = BobbyRule(
     organisation = "uk.gov.hmrc",
     name         = "play-frontend",
