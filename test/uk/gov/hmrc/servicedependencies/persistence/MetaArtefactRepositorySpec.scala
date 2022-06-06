@@ -63,7 +63,7 @@ class MetaArtefactRepositorySpec
                              metaArtefactModule,
                              metaArtefactModule.copy(name = "sub-module2")
                            ),
-      created            = Instant.now()
+      created            = Instant.parse("2007-12-03T10:15:30.00Z")
     )
 
   val updatedMetaArtefact = metaArtefact.copy(modules = Seq(metaArtefactModule.copy(name = "sub-module3")))
