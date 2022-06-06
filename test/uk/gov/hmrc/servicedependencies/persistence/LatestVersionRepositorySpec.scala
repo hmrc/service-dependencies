@@ -20,12 +20,12 @@ import java.time.Instant
 
 import com.codahale.metrics.MetricRegistry
 import org.mockito.MockitoSugar
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpecLike
 import uk.gov.hmrc.mongo.test.DefaultPlayMongoRepositorySupport
 import uk.gov.hmrc.servicedependencies.model.{LatestVersion, Version}
 
 import scala.concurrent.ExecutionContext.Implicits.global
-import org.scalatest.matchers.should.Matchers
-import org.scalatest.wordspec.AnyWordSpecLike
 
 class LatestVersionRepositorySpec
   extends AnyWordSpecLike
@@ -41,7 +41,7 @@ class LatestVersionRepositorySpec
       name       = "some-library"
     , group      = "uk.gov.hmrc"
     , version    = Version(1, 0, 2)
-    , updateDate = Instant.now()
+    , updateDate = Instant.parse("2007-12-03T10:15:30.00Z")
     )
 
   "update" should {
