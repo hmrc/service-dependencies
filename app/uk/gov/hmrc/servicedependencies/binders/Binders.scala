@@ -20,7 +20,7 @@ import play.api.mvc.QueryStringBindable
 import uk.gov.hmrc.servicedependencies.model.BobbyRuleQuery
 
 import java.time.LocalDate
-import scala.util.{Failure, Try}
+import scala.util.Try
 
 object Binders {
 
