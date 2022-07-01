@@ -20,13 +20,12 @@ package uk.gov.hmrc.servicedependencies.persistence
 import java.time.LocalDate
 import com.google.inject.{Inject, Singleton}
 import com.mongodb.client.model.Accumulators
-import com.mongodb.client.model.Updates
 import org.mongodb.scala.bson.BsonDocument
+import org.mongodb.scala.model.{Filters, IndexModel, IndexOptions, ReplaceOptions, Sorts}
 import org.mongodb.scala.model.Aggregates.{`match`, group, sort, unwind}
-import org.mongodb.scala.model.Filters.{and, elemMatch, equal, gte, lte, or}
+import org.mongodb.scala.model.Filters.{and, equal, gte, lte, or}
 import org.mongodb.scala.model.Indexes.ascending
 import org.mongodb.scala.model.Sorts.descending
-import org.mongodb.scala.model.{Aggregates, Filters, IndexModel, IndexOptions, ReplaceOptions, Sorts}
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.play.json.PlayMongoRepository
 import uk.gov.hmrc.servicedependencies.model.{BobbyRuleQuery, BobbyRulesSummary}
