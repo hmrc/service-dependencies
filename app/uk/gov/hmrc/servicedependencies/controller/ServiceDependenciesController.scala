@@ -96,7 +96,7 @@ class ServiceDependenciesController @Inject()(
                             )
          // prefer graph data from meta-artefact if available
          optMetaArtefact <- EitherT.liftF[Future, Result, Option[MetaArtefact]](metaArtefactRepository.find(name, slugInfo.version))
-         optModule       =  optMetaArtefact.flatMap(_.modules.headOption)
+         optModule       =  optMetaArtefact.flatMap(x => x.modules.find(_.name == name).orElse(x.modules.headOption))
          slugInfo2       =  optMetaArtefact.fold(slugInfo)(ma => slugInfo.copy(
                               dependencyDotCompile = optModule.flatMap(_.dependencyDotCompile).getOrElse(""),
                               dependencyDotTest    = optModule.flatMap(_.dependencyDotTest).getOrElse(""),
