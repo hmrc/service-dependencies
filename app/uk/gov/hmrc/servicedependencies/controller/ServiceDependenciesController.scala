@@ -273,6 +273,13 @@ class ServiceDependenciesController @Inject()(
       latestVersionRepository.find(group, artefact)
         .map(_.fold(NotFound(""))(res => Ok(Json.toJson(res)(LatestVersion.apiWrites))))
     }
+
+  def metaArtefact(repository: String, version: Option[String]): Action[AnyContent] =
+    Action.async {
+      version
+        .fold(metaArtefactRepository.find(repository))(v => metaArtefactRepository.find(repository, Version(v)))
+        .map(_.fold(NotFound(""))(res => Ok(Json.toJson(res)(MetaArtefact.apiFormat))))
+    }
 }
 
 case class Repository(
