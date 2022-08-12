@@ -1,16 +1,12 @@
 {
   "sbtPlugins": [
-    { "group": "com.typesafe.play", "name": "sbt-plugin", "latestVersion": "2.8.13" },
+    { "group": "com.typesafe.play", "name": "sbt-plugin", "latestVersion": "2.8.15" },
     { "group": "se.marcuslonnberg", "name": "sbt-docker", "latestVersion": "1.5.0" }
   ],
   "libraries": [
     { "group": "org.reactivemongo", "name": "reactivemongo"  , "latestVersion": "0.20.3"  },
-    { "group": "org.scala-lang"   , "name": "scala-library"  , "latestVersion": "2.12.15" },
-    { "group": "com.typesafe.play", "name": "play"           , "latestVersion": "2.8.13"  },
-    { "group": "uk.gov.hmrc"      , "name": "http-verbs"             , "latestVersion": "13.12.0" },
-    { "group": "uk.gov.hmrc"      , "name": "http-verbs-play-28"     , "latestVersion": "13.12.0" },
-    { "group": "uk.gov.hmrc"      , "name": "http-verbs-test-play-28", "latestVersion": "13.12.0" },
-    { "group": "uk.gov.hmrc"      , "name": "play-auditing-play-28"  , "latestVersion": "7.11.0"  },
+    { "group": "org.scala-lang"   , "name": "scala-library"  , "latestVersion": "2.13.8" },
+    { "group": "com.typesafe.play", "name": "play"           , "latestVersion": "2.8.15"  },
     { "group": "uk.gov.hmrc"      , "name": "accessibility-driver"          },
     { "group": "uk.gov.hmrc"      , "name": "accessibility-testing-library" },
     { "group": "uk.gov.hmrc"      , "name": "api-performance-test-runner"   },
@@ -20,6 +16,6 @@
     { "group": "uk.gov.hmrc"      , "name": "zap-automation"                }
   ],
   "others": [
-    { "group": "org.scala-sbt", "name": "sbt", "latestVersion": "1.5.8" }
+    { "group": "org.scala-sbt", "name": "sbt", "latestVersion": "1.6.2" }
   ]
 }
