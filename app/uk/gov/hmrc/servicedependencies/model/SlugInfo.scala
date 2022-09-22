@@ -82,6 +82,7 @@ case class SlugInfo(
   dependencies        : List[SlugDependency],
   dependencyDotCompile: String,
   dependencyDotTest   : String,
+  dependencyDotIt     : String,
   dependencyDotBuild  : String,
   applicationConfig   : String,
   slugConfig          : String,
@@ -126,6 +127,7 @@ trait MongoSlugInfoFormats {
     ~ (__ \ "dependencies"             ).format[List[SlugDependency]] // this has been replaced by dependencyDot, but is still needed for Java slugs
     ~ (__ \ "dependencyDot" \ "compile").formatWithDefault[String]("")
     ~ (__ \ "dependencyDot" \ "test"   ).formatWithDefault[String]("")
+    ~ (__ \ "dependencyDot" \ "it"     ).formatWithDefault[String]("")
     ~ (__ \ "dependencyDot" \ "build"  ).formatWithDefault[String]("")
     ~ (__ \ "applicationConfig"        ).formatWithDefault[String]("")
     ~ (__ \ "slugConfig"               ).formatWithDefault[String]("")
@@ -223,6 +225,7 @@ trait ApiSlugInfoFormats {
     ~ (__ \ "dependencies"             ).format[List[SlugDependency]]
     ~ (__ \ "dependencyDot" \ "compile").format[String]
     ~ (__ \ "dependencyDot" \ "test"   ).format[String]
+    ~ (__ \ "dependencyDot" \ "it"     ).format[String]
     ~ (__ \ "dependencyDot" \ "build"  ).format[String]
     ~ (__ \ "applicationConfig"        ).format[String]
     ~ (__ \ "slugConfig"               ).format[String]

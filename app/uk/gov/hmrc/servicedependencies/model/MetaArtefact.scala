@@ -65,7 +65,8 @@ case class MetaArtefactModule(
   crossScalaVersions  : Option[List[Version]],
   publishSkip         : Option[Boolean],
   dependencyDotCompile: Option[String],
-  dependencyDotTest   : Option[String]
+  dependencyDotTest   : Option[String],
+  dependencyDotIt     : Option[String]
 )
 
 object MetaArtefactModule {
@@ -78,6 +79,7 @@ object MetaArtefactModule {
     ~ (__ \ "publishSkip"         ).formatNullable[Boolean]
     ~ (__ \ "dependencyDotCompile").formatNullable[String]
     ~ (__ \ "dependencyDotTest"   ).formatNullable[String]
+    ~ (__ \ "dependencyDotIt"     ).formatNullable[String]
     )(MetaArtefactModule.apply, unlift(MetaArtefactModule.unapply))
   }
 }

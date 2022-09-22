@@ -106,6 +106,7 @@ db.getCollection("slugInfos").aggregate([
   {$addFields: {
     "scope_compile": true,
     "scope_test"   : false,
+    "scope_it"     : false,
     "scope_build"  : false
   }},
   {$out: "DERIVED-slug-dependencies"}
