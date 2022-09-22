@@ -100,6 +100,7 @@ class ServiceDependenciesController @Inject()(
          slugInfo2       =  optMetaArtefact.fold(slugInfo)(ma => slugInfo.copy(
                               dependencyDotCompile = optModule.flatMap(_.dependencyDotCompile).getOrElse(""),
                               dependencyDotTest    = optModule.flatMap(_.dependencyDotTest).getOrElse(""),
+                              dependencyDotIt      = optModule.flatMap(_.dependencyDotIt).getOrElse(""),
                               dependencyDotBuild   = ma.dependencyDotBuild.getOrElse("")
                             ))
        } yield {
@@ -209,6 +210,7 @@ class ServiceDependenciesController @Inject()(
                                    .map { m =>
                                      val compileDependencies = m.dependencyDotCompile.fold(Seq.empty[Dependency])(s => toDependencies(m.name, DependencyScope.Compile, s))
                                      val testDependencies    = m.dependencyDotTest   .fold(Seq.empty[Dependency])(s => toDependencies(m.name, DependencyScope.Test   , s))
+                                     val itDependencies      = m.dependencyDotIt     .fold(Seq.empty[Dependency])(s => toDependencies(m.name, DependencyScope.It     , s))
                                      val scalaVersions       = m.crossScalaVersions.toSeq.flatten
 
                                      RepositoryModule(
@@ -229,6 +231,14 @@ class ServiceDependenciesController @Inject()(
                                                                  artefact = "scala-library",
                                                                  versions = scalaVersions,
                                                                  scope    = DependencyScope.Test
+                                                               ),
+                                       dependenciesIt      = itDependencies ++
+                                                               dependencyIfMissing(
+                                                                 testDependencies,
+                                                                 group    = "org.scala-lang",
+                                                                 artefact = "scala-library",
+                                                                 versions = scalaVersions,
+                                                                 scope    = DependencyScope.It
                                                                ),
                                        crossScalaVersions  = m.crossScalaVersions
                                      )
@@ -258,6 +268,7 @@ class ServiceDependenciesController @Inject()(
                                         group               = "uk.gov.hmrc",
                                         dependenciesCompile = dependencies.filter(_.scope == Some(DependencyScope.Compile)),
                                         dependenciesTest    = dependencies.filter(_.scope == Some(DependencyScope.Test)),
+                                        dependenciesIt      = dependencies.filter(_.scope == Some(DependencyScope.It)),
                                         crossScalaVersions  = None
                                       )
                                     )
@@ -307,6 +318,7 @@ case class RepositoryModule(
   group              : String,
   dependenciesCompile: Seq[Dependency],
   dependenciesTest   : Seq[Dependency],
+  dependenciesIt     : Seq[Dependency],
   crossScalaVersions : Option[List[Version]]
 )
 
@@ -318,6 +330,7 @@ object RepositoryModule {
     ~ (__ \ "group"              ).write[String]
     ~ (__ \ "dependenciesCompile").write[Seq[Dependency]]
     ~ (__ \ "dependenciesTest"   ).write[Seq[Dependency]]
+    ~ (__ \ "dependenciesIt"     ).write[Seq[Dependency]]
     ~ (__ \ "crossScalaVersions" ).write[Seq[Version]].contramap[Option[Seq[Version]]](_.getOrElse(Seq.empty))
     )(unlift(RepositoryModule.unapply))
   }

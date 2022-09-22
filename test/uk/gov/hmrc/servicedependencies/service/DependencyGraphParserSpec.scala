@@ -16,7 +16,6 @@
 
 package uk.gov.hmrc.servicedependencies.service
 
-import org.scalatest.concurrent.Eventually.eventually
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 

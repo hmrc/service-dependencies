@@ -159,7 +159,8 @@ class DerivedServiceDependenciesRepositorySpec
           crossScalaVersions   = Some(List(Version("2.12.14"))),
           publishSkip          = Some(false),
           dependencyDotCompile = Some(scala.io.Source.fromResource("slugs/dependencies-compile.dot").mkString),
-          dependencyDotTest    = Some("ddt-graph")
+          dependencyDotTest    = Some("ddt-graph"),
+          dependencyDotIt      = Some("ddt-graph-it")
         )
 
       val metaArtefact =

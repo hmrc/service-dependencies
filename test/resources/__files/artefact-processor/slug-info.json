@@ -11,9 +11,10 @@
   "repoUrl"              : "https://github.com/hmrc/test.git",
   "dependencies"         : [],
   "dependencyDot"        : {
-                             "compile" : "some-dependencyDotCompile",
-                             "test"    : "some-dependencyDotTest",
-                             "build"   : "some-dependencyDotBuild"
+                             "compile": "some-dependencyDotCompile",
+                             "test"   : "some-dependencyDotTest",
+                             "it"     : "some-dependencyDotIt",
+                             "build"  : "some-dependencyDotBuild"
                            },
   "applicationConfig"    : "some-application-config",
   "slugConfig"           : "some-slug-config"

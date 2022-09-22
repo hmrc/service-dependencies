@@ -175,6 +175,7 @@ class SlugDependenciesService @Inject()(
     scope match {
       case DependencyScope.Compile => slugInfo.dependencyDotCompile
       case DependencyScope.Test    => slugInfo.dependencyDotTest
+      case DependencyScope.It      => slugInfo.dependencyDotIt
       case DependencyScope.Build   => slugInfo.dependencyDotBuild
     }
 }

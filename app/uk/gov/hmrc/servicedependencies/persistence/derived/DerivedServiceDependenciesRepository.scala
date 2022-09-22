@@ -39,7 +39,7 @@ import scala.concurrent.{ExecutionContext, Future}
 class DerivedServiceDependenciesRepository @Inject()(
   mongoComponent       : MongoComponent,
   dependencyGraphParser: DependencyGraphParser,
-  deploymentRepository : DeploymentRepository
+  deploymentRepository : DeploymentRepository,
 )(implicit
   ec: ExecutionContext
 ) extends PlayMongoRepository[ServiceDependency](
@@ -77,6 +77,7 @@ class DerivedServiceDependenciesRepository @Inject()(
                        )
                      )
   , optSchema      = None
+  , replaceIndexes = true
 ){
   private val logger = Logger(getClass)
 
@@ -158,46 +159,50 @@ class DerivedServiceDependenciesRepository @Inject()(
           .filterNot { case d => d.group == "uk.gov.hmrc" && d.artifact == slugInfo.name }
           .map(d =>
             ServiceDependencyWrite(
-              slugName         = slugInfo.name,
-              slugVersion      = slugInfo.version,
-              depGroup         = d.group,
-              depArtefact      = d.artifact,
-              depVersion       = d.version,
-              scalaVersion     = None,
-              compileFlag      = true,
-              testFlag         = false,
-              buildFlag        = false
+              slugName     = slugInfo.name,
+              slugVersion  = slugInfo.version,
+              depGroup     = d.group,
+              depArtefact  = d.artifact,
+              depVersion   = d.version,
+              scalaVersion = None,
+              compileFlag  = true,
+              testFlag     = false,
+              itFlag       = false,
+              buildFlag    = false,
             )
           )
       else {
         // java slugs do not have a meta-artefact - need to fall back on slugInfo
         val optSlugModule = meta.flatMap(x => x.modules.find(_.name == slugInfo.name).orElse(x.modules.headOption))
 
-        val graphBuild    = meta.flatMap(_.dependencyDotBuild           ).getOrElse(slugInfo.dependencyDotBuild  )
-        val graphCompile  = optSlugModule.flatMap(_.dependencyDotCompile).getOrElse(slugInfo.dependencyDotCompile)
-        val graphTest     = optSlugModule.flatMap(_.dependencyDotTest   ).getOrElse(slugInfo.dependencyDotTest   )
+        val graphBuild   = meta.flatMap(_.dependencyDotBuild           ).getOrElse(slugInfo.dependencyDotBuild  )
+        val graphCompile = optSlugModule.flatMap(_.dependencyDotCompile).getOrElse(slugInfo.dependencyDotCompile)
+        val graphTest    = optSlugModule.flatMap(_.dependencyDotTest   ).getOrElse(slugInfo.dependencyDotTest   )
+        val graphIt      = optSlugModule.flatMap(_.dependencyDotIt     ).getOrElse(slugInfo.dependencyDotIt     )
 
         val build   = dependencyGraphParser.parse(graphBuild  ).dependencies.map((_, DependencyScope.Build  ))
         val compile = dependencyGraphParser.parse(graphCompile).dependencies.map((_, DependencyScope.Compile))
         val test    = dependencyGraphParser.parse(graphTest   ).dependencies.map((_, DependencyScope.Test   ))
+        val it      = dependencyGraphParser.parse(graphIt     ).dependencies.map((_, DependencyScope.It     ))
 
         val dependencies: Map[DependencyGraphParser.Node, Set[DependencyScope]] =
-          (build ++ compile ++ test)
+          (build ++ compile ++ test ++ it)
             .foldLeft(Map.empty[DependencyGraphParser.Node, Set[DependencyScope]]){ case (acc, (n, flag)) =>
               acc + (n -> (acc.getOrElse(n, Set.empty) + flag))
             }
 
         def toServiceDependencyWrite(group: String, artefact: String, version: Version, scalaVersion: Option[String], scopes: Set[DependencyScope]) =
           ServiceDependencyWrite(
-            slugName         = slugInfo.name,
-            slugVersion      = slugInfo.version,
-            depGroup         = group,
-            depArtefact      = artefact,
-            depVersion       = version,
-            scalaVersion     = scalaVersion,
-            compileFlag      = scopes.contains(DependencyScope.Compile),
-            testFlag         = scopes.contains(DependencyScope.Test),
-            buildFlag        = scopes.contains(DependencyScope.Build)
+            slugName     = slugInfo.name,
+            slugVersion  = slugInfo.version,
+            depGroup     = group,
+            depArtefact  = artefact,
+            depVersion   = version,
+            scalaVersion = scalaVersion,
+            compileFlag  = scopes.contains(DependencyScope.Compile),
+            testFlag     = scopes.contains(DependencyScope.Test),
+            itFlag       = scopes.contains(DependencyScope.It),
+            buildFlag    = scopes.contains(DependencyScope.Build)
           )
 
         val scalaVersion =

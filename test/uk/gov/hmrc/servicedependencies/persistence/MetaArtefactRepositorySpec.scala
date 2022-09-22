@@ -46,7 +46,8 @@ class MetaArtefactRepositorySpec
       crossScalaVersions   = Some(List(Version("2.12.14"))),
       publishSkip          = Some(false),
       dependencyDotCompile = Some("ddc-graph"),
-      dependencyDotTest    = Some("ddt-graph")
+      dependencyDotTest    = Some("ddt-graph"),
+      dependencyDotIt      = Some("ddt-graph-it")
     )
 
   val metaArtefact =
