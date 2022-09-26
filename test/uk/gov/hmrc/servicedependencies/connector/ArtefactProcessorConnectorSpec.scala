@@ -77,7 +77,8 @@ class ArtefactProcessorConnectorSpec
                                  crossScalaVersions   = Some(List(Version("2.12.14"))),
                                  publishSkip          = Some(false),
                                  dependencyDotCompile = Some("dependencyDotCompile"),
-                                 dependencyDotTest    = Some("dependencyDotTest")
+                                 dependencyDotTest    = Some("dependencyDotTest"),
+                                 dependencyDotIt      = Some("dependencyDotIt")
                                )),
           created            = Instant.parse("2022-01-04T17:46:18.588Z")
         )
@@ -106,6 +107,7 @@ class ArtefactProcessorConnectorSpec
           dependencies         = List.empty,
           dependencyDotCompile = "some-dependencyDotCompile",
           dependencyDotTest    = "some-dependencyDotTest",
+          dependencyDotIt      = "some-dependencyDotIt",
           dependencyDotBuild   = "some-dependencyDotBuild",
           applicationConfig    = "some-application-config",
           slugConfig           = "some-slug-config",

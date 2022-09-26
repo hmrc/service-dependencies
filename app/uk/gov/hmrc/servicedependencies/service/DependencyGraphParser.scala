@@ -63,7 +63,7 @@ object DependencyGraphParser {
   private val optClassifier   = """(?::[^:]+)??"""      // a lazy non-capturing group to get optional classifier, lazy so it doesn't eat the version
   private val version         = """([^:]+)"""
   private val optScope        = """(?::(?:compile|runtime|test|system|provided))?""" // optional non-capturing group for scope
-  private val nodeRegex = (s"$group:$artefact$optScalaVersion$optType$optClassifier:$version$optScope").r
+  private val nodeRegex       = (s"$group:$artefact$optScalaVersion$optType$optClassifier:$version$optScope").r
 
   sealed trait Token
 

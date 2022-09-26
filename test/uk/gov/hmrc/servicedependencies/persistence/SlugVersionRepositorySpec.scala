@@ -71,6 +71,7 @@ class SlugVersionRepositorySpec
       dependencyDotBuild   = "",
       dependencyDotTest    = "",
       dependencyDotCompile = "",
+      dependencyDotIt      = "",
       applicationConfig    = "",
       slugConfig           = ""
     )

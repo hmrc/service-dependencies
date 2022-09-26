@@ -83,7 +83,8 @@ class TeamDependencyService @Inject()(
     Dependencies(
       repositoryName         = metaArtefact.name,
       libraryDependencies    = metaArtefact.modules.flatMap(m => m.dependencyDotCompile.fold(Seq.empty[Dependency])(s => toDependencies(m.name, DependencyScope.Compile, s))) ++
-                               metaArtefact.modules.flatMap(m => m.dependencyDotTest.fold(Seq.empty[Dependency])(s => toDependencies(m.name, DependencyScope.Test, s))),
+                               metaArtefact.modules.flatMap(m => m.dependencyDotTest   .fold(Seq.empty[Dependency])(s => toDependencies(m.name, DependencyScope.Test   , s))) ++
+                               metaArtefact.modules.flatMap(m => m.dependencyDotIt     .fold(Seq.empty[Dependency])(s => toDependencies(m.name, DependencyScope.It     , s))),
       sbtPluginsDependencies = metaArtefact.dependencyDotBuild.fold(Seq.empty[Dependency])(s => toDependencies(metaArtefact.name, DependencyScope.Build, s)),
       otherDependencies      = Seq.empty
     )
@@ -118,7 +119,8 @@ class TeamDependencyService @Inject()(
                                                      Some(
                                                        metaArtefact.dependencyDotBuild.fold(Seq.empty[Dependency])(s => toDependencies(metaArtefact.name, DependencyScope.Build, s)) ++
                                                          metaArtefact.modules.flatMap(m => m.dependencyDotCompile.fold(Seq.empty[Dependency])(s => toDependencies(m.name, DependencyScope.Compile, s))) ++
-                                                         metaArtefact.modules.flatMap(m => m.dependencyDotTest.fold(Seq.empty[Dependency])(s => toDependencies(m.name, DependencyScope.Test, s)))
+                                                         metaArtefact.modules.flatMap(m => m.dependencyDotTest   .fold(Seq.empty[Dependency])(s => toDependencies(m.name, DependencyScope.Test   , s))) ++
+                                                         metaArtefact.modules.flatMap(m => m.dependencyDotIt     .fold(Seq.empty[Dependency])(s => toDependencies(m.name, DependencyScope.It     , s)))
                                                      )
                                                    )
 

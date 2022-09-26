@@ -1,3 +1,11 @@
+# Migration to 2.78.0
+```javascript
+db.getCollection('DERIVED-slug-dependencies').updateMany(
+  { "scope_it": {$exists: false }},
+  { $set: {"scope_it": false }}
+);
+```
+
 # Migration to 2.42.0
 
 ```javascript
