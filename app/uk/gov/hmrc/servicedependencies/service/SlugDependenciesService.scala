@@ -165,10 +165,12 @@ class SlugDependenciesService @Inject()(
       }.toList
     val parentDepsOfViolations  = dependencies.filter(d => d.importBy.nonEmpty && d.bobbyRuleViolations.nonEmpty).flatMap(_.importBy).toSet
     dependencies.filter(dependency =>
-      (dependency.importBy.isEmpty && dependency.group.startsWith("uk.gov.hmrc"))                               || // any directly imported HMRC dependency
+      (dependency.importBy.isEmpty && (
+        dependency.group.startsWith("uk.gov.hmrc") ||
+        curatedDependencyConfig.allDependencies.exists(d => d.group == dependency.group && d.name == dependency.name)
+      ))                                                                                                        || // any directly imported HMRC or curated dependency
       dependency.bobbyRuleViolations.nonEmpty                                                                   || // or any dependency with a bobby rule violation
-      parentDepsOfViolations.contains(ImportedBy(dependency.name, dependency.group, dependency.currentVersion)) || // or the parent that imported the violation
-      (dependency.group == "com.typesafe.play" && dependency.name == "sbt-plugin")                                 // or the Play plugin
+      parentDepsOfViolations.contains(ImportedBy(dependency.name, dependency.group, dependency.currentVersion))    // or the parent that imported the violation
     )
   }
 

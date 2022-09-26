@@ -235,6 +235,8 @@ class SlugDependenciesServiceSpec extends AnyFreeSpec with MockitoSugar with Mat
 
 
   "gets dependencies from graphs where available" in new Fixture {
+    // Add stub to fix NullPointerException
+    stubCuratedLibrariesOf(DependencyConfig(name = Dependency1.artifact, group = Dependency1.group, latestVersion = None))
 
     val rootNode       = Node("root:root:1.0.0")
     val nodeHmrc       = Node("uk.gov.hmrc:hmrc-mongo:1.1.0")
@@ -278,6 +280,8 @@ class SlugDependenciesServiceSpec extends AnyFreeSpec with MockitoSugar with Mat
 
 
   "include parent of transitive dependency that violation bobby rule" in new Fixture {
+    // Add stub to fix NullPointerException
+    stubCuratedLibrariesOf(DependencyConfig(name = Dependency1.artifact, group = Dependency1.group, latestVersion = None))
 
     val rootNode       = Node("root:root:1.0.0")
     val nodeHmrc       = Node("uk.gov.hmrc:hmrc-mongo:1.1.0")
