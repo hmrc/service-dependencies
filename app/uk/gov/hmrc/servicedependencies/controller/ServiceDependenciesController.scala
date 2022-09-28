@@ -166,9 +166,13 @@ class ServiceDependenciesController @Inject()(
              scope          = scope
            )
 
-        val sbtVersion =
-          // sbt-versions will be the same for all modules,
-          meta.modules.flatMap(_.sbtVersion.toSeq).headOption
+         val sbtVersion =
+           // sbt-versions will be the same for all modules,
+           meta.modules.flatMap(_.sbtVersion.toSeq).headOption
+
+         def when[T](b: Boolean)(seq: => Seq[T]): Seq[T] =
+           if (b) seq
+           else   Nil
 
          def dependencyIfMissing(
            dependencies: Seq[Dependency],
@@ -216,30 +220,33 @@ class ServiceDependenciesController @Inject()(
                                      RepositoryModule(
                                        name                = m.name,
                                        group               = m.group,
-                                       dependenciesCompile = compileDependencies ++
+                                       dependenciesCompile = compileDependencies ++ when(compileDependencies.nonEmpty)(
                                                                dependencyIfMissing(
-                                                                 compileDependencies,
-                                                                 group    = "org.scala-lang",
-                                                                 artefact = "scala-library",
-                                                                 versions = scalaVersions,
-                                                                 scope    = DependencyScope.Compile
-                                                               ),
-                                       dependenciesTest    = testDependencies ++
+                                                                 dependencies = compileDependencies,
+                                                                 group        = "org.scala-lang",
+                                                                 artefact     = "scala-library",
+                                                                 versions     = scalaVersions,
+                                                                 scope        = DependencyScope.Compile
+                                                               )
+                                                             ),
+                                       dependenciesTest    = testDependencies ++ when(testDependencies.nonEmpty)(
                                                                dependencyIfMissing(
-                                                                 testDependencies,
-                                                                 group    = "org.scala-lang",
-                                                                 artefact = "scala-library",
-                                                                 versions = scalaVersions,
-                                                                 scope    = DependencyScope.Test
-                                                               ),
-                                       dependenciesIt      = itDependencies ++
+                                                                 dependencies = testDependencies,
+                                                                 group        = "org.scala-lang",
+                                                                 artefact     = "scala-library",
+                                                                 versions     = scalaVersions,
+                                                                 scope        = DependencyScope.Test
+                                                               )
+                                                             ),
+                                       dependenciesIt      = itDependencies ++ when(itDependencies.nonEmpty)(
                                                                dependencyIfMissing(
-                                                                 testDependencies,
-                                                                 group    = "org.scala-lang",
-                                                                 artefact = "scala-library",
-                                                                 versions = scalaVersions,
-                                                                 scope    = DependencyScope.It
-                                                               ),
+                                                                 dependencies = itDependencies,
+                                                                 group        = "org.scala-lang",
+                                                                 artefact     = "scala-library",
+                                                                 versions     = scalaVersions,
+                                                                 scope        = DependencyScope.It
+                                                               )
+                                                             ),
                                        crossScalaVersions  = m.crossScalaVersions
                                      )
                                    }
