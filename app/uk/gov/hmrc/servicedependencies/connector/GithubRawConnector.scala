@@ -39,7 +39,7 @@ class GithubRawConnector @Inject()(
     val url = url"${serviceDependenciesConfig.githubRawUrl}/hmrc/decommissioning/main/decommissioned-microservices.yaml"
     httpClientV2
       .get(url)
-      .addHeaders("Authorization" -> s"Token ${serviceDependenciesConfig.githubApiOpenConfigKey}")
+      .setHeader("Authorization" -> s"Token ${serviceDependenciesConfig.githubApiOpenConfigKey}")
       .withProxy
       .execute[Either[UpstreamErrorResponse, HttpResponse]]
       .flatMap(
