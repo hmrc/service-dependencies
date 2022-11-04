@@ -16,7 +16,6 @@
 
 package uk.gov.hmrc.servicedependencies.service
 
-import java.io.PrintStream
 import java.time.LocalDate
 import java.time.temporal.ChronoUnit
 
@@ -114,19 +113,4 @@ object DependencyLookupService {
                              }
     }
 
-  def printTree(
-      t  : Map[String, Map[Version, Set[String]]]
-    , out: PrintStream                            = System.out
-    ): Unit = {
-      val res = t.map {
-        case (k, v) =>
-          List(k + ":") ++
-            v.flatMap {
-              case (ver, slugs) =>
-                List(" |_" + ver.toString + " - (" + slugs.size + ")") ++
-                  slugs.map("  |_" + _.toLowerCase())
-            }
-      }
-      println(res.mkString("\n"))
-    }
 }
