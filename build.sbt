@@ -11,7 +11,7 @@ lazy val microservice = Project("service-dependencies", file("."))
   .settings(PlayKeys.playDefaultPort := 8459)
   .settings(libraryDependencies ++= AppDependencies.compile ++ AppDependencies.test)
   .settings(resolvers += Resolver.jcenterRepo)
-  .settings(scalaVersion := "2.13.8")
+  .settings(scalaVersion := "2.13.10")
   .settings(scalacOptions += "-Wconf:src=routes/.*:s")
   .settings(
     Test / resources := (Test / resources).value ++ Seq(baseDirectory.value / "conf" / "application.conf")
