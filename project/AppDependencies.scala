@@ -14,11 +14,11 @@ private object AppDependencies {
     "uk.gov.hmrc.mongo"  %% "hmrc-mongo-play-28"        % hmrcMongoVersion,
     "org.typelevel"      %% "cats-core"                 % "2.6.1",
     "org.apache.commons" %  "commons-compress"          % "1.20",
-    "com.lightbend.akka" %% "akka-stream-alpakka-sns"   % "2.0.2",
-    "com.lightbend.akka" %% "akka-stream-alpakka-sqs"   % "2.0.2",
-    // akka-stream-alpakka-sns depends on 10.1.11 which isn't compatible with play's akka version
+    "com.lightbend.akka" %% "akka-stream-alpakka-sns"   % "4.0.0",
+    "com.lightbend.akka" %% "akka-stream-alpakka-sqs"   % "4.0.0",
+    // ensure akka-stream-alpakka-sns dependencies don't conflict with play's akka version
     "com.typesafe.akka"  %% "akka-http"                 % PlayVersion.akkaHttpVersion,
-    "org.yaml"           %  "snakeyaml"                 % "1.27"
+    "org.yaml"           %  "snakeyaml"                 % "1.33"
   )
 
   val test = Seq(
