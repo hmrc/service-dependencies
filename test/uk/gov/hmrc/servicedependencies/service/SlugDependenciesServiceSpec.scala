@@ -250,7 +250,7 @@ class SlugDependenciesServiceSpec extends AnyFreeSpec with MockitoSugar with Mat
       Arrow(from = nodeNonHmrc, to =  nodeTransitive)
     )
 
-    val graph = new DependencyGraph(nodes, arrows, Set.empty)
+    val graph = DependencyGraph(nodes, arrows)
     when(mockGraphParser.parse(any[String])).thenReturn(graph)
 
     stubLatestLibraryVersionLookupSuccessfullyReturns(Seq.empty)
@@ -295,7 +295,7 @@ class SlugDependenciesServiceSpec extends AnyFreeSpec with MockitoSugar with Mat
       Arrow(from = nodeNonHmrc, to =  nodeTransitive)
     )
 
-    val graph = new DependencyGraph(nodes, arrows, Set.empty)
+    val graph = DependencyGraph(nodes, arrows)
     when(mockGraphParser.parse(any[String])).thenReturn(graph)
 
     stubLatestLibraryVersionLookupSuccessfullyReturns(Seq.empty)
@@ -309,7 +309,7 @@ class SlugDependenciesServiceSpec extends AnyFreeSpec with MockitoSugar with Mat
       .thenReturn(
         Future.successful(
           Some(slugInfo(
-            withName         = SlugName
+              withName         = SlugName
             , withVersion      = SlugVersion
             , withDependencies = List.empty
           ).copy(dependencyDotCompile = "non-blank value, wont actually be parsed as we're mocking the response")

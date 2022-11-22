@@ -24,11 +24,11 @@ class DependencyGraphParserSpec
      with Matchers {
   import DependencyGraphParser._
 
-  val dependencyGraphParser = new DependencyGraphParser
+  val dependencyGraphParser = new DependencyGraphParser()
 
   "DependencyGraphParser.parse" should {
     "return dependencies with evictions applied" in {
-      val source = scala.io.Source.fromResource("slugs/dependencies-compile.dot")
+      val source = scala.io.Source.fromResource("graphs/dependencies-compile.dot")
       val graph = dependencyGraphParser.parse(source.mkString)
       graph.dependencies shouldBe List(
         Node("com.typesafe.play:filters-helpers_2.12:2.7.5"),
@@ -39,7 +39,7 @@ class DependencyGraphParserSpec
     }
 
     "return dependencies from maven generated files" in {
-      val source = scala.io.Source.fromResource("slugs/dependencies-maven.dot")
+      val source = scala.io.Source.fromResource("graphs/dependencies-maven.dot")
       val graph = dependencyGraphParser.parse(source.mkString)
       graph.dependencies should contain allOf(
         Node("com.google.guava:guava:jar:18.0:compile"),
@@ -61,7 +61,7 @@ class DependencyGraphParserSpec
 
   "DependencyGraphParser.pathToRoot" should {
     "return path to root" in {
-      val source = scala.io.Source.fromResource("slugs/dependencies-compile.dot")
+      val source = scala.io.Source.fromResource("graphs/dependencies-compile.dot")
       val graph = dependencyGraphParser.parse(source.mkString)
       graph.pathToRoot(Node("org.typelevel:cats-kernel_2.12:2.2.0")) shouldBe List(
         Node("org.typelevel:cats-kernel_2.12:2.2.0"),
@@ -71,7 +71,7 @@ class DependencyGraphParserSpec
     }
 
     "work with maven dependencies" in {
-      val source = scala.io.Source.fromResource("slugs/dependencies-maven.dot")
+      val source = scala.io.Source.fromResource("graphs/dependencies-maven.dot")
       val graph = dependencyGraphParser.parse(source.mkString)
       graph.pathToRoot(Node("javax.xml.stream:stax-api:jar:1.0-2:compile")) shouldBe List(
         Node("javax.xml.stream:stax-api:jar:1.0-2:compile"),
@@ -82,7 +82,7 @@ class DependencyGraphParserSpec
     }
 
     "work with emcs dependencies" in {
-      val source = scala.io.Source.fromResource("slugs/dependencies-emcs.dot")
+      val source = scala.io.Source.fromResource("graphs/dependencies-emcs.dot")
       val graph = dependencyGraphParser.parse(source.mkString)
       graph.dependencies.map(d => (d.group, d.artefact, d.version, d.scalaVersion)) should not be empty
     }
@@ -99,13 +99,36 @@ class DependencyGraphParserSpec
       )
     }
 
-
     // BDOG-1884 if this test is hanging, its because pathToRoot's cycle detection has broken
     "not get stuck in an infinite loop when parsing a cyclical graph" in {
-      val source = scala.io.Source.fromResource("slugs/loop.dot") // baz -> bar , bar -> baz
+      val source = scala.io.Source.fromResource("graphs/loop.dot") // baz -> bar , bar -> baz
       val graph = dependencyGraphParser.parse(source.mkString)
-      val bar = graph.nodes.filter(_.artefact == "baz").head
-      graph.pathToRoot(bar).head shouldBe Node("org:baz:3.0.0")
+      val baz = graph.nodes.filter(_.artefact == "baz").head
+      graph.pathToRoot(baz).head shouldBe Node("org:baz:3.0.0")
+      val bar = graph.nodes.filter(_.artefact == "bar").head
+      graph.pathToRoot(bar).head shouldBe Node("org:bar:2.0.0")
+    }
+
+    "return the shortest path if multiple" in {
+      val source = scala.io.Source.fromResource("graphs/double-path.dot")
+      val graph = dependencyGraphParser.parse(source.mkString)
+      val sbtSettings = graph.nodes.filter(_.artefact == "sbt-settings").head
+      graph.pathToRoot(sbtSettings) shouldBe Seq(
+        Node("uk.gov.hmrc:sbt-settings:0.0.1"),
+        Node("default:project:0.1.0-SNAPSHOT")
+      )
+    }
+
+    "ignore evicted nodes" in {
+      val source = scala.io.Source.fromResource("graphs/evicted-paths.dot")
+      val graph = dependencyGraphParser.parse(source.mkString)
+      val log4j = graph.nodes.filter(_.artefact == "log4j").head
+      graph.pathToRoot(log4j) shouldBe Seq(
+        Node("uk.gov.hmrc:log4j:1.0.0"),
+        Node("uk.gov.hmrc:sbt-settings:0.0.2"),
+        Node("uk.gov.hmrc:sbt-auto-build:3.0.0"),
+        Node("default:project:0.1.0-SNAPSHOT")
+      )
     }
   }
 
