@@ -17,7 +17,6 @@
 package uk.gov.hmrc.servicedependencies.service
 
 import javax.inject.Singleton
-import scala.annotation.tailrec
 
 @Singleton
 class DependencyGraphParser {
@@ -25,7 +24,7 @@ class DependencyGraphParser {
 
   def parse(input: String): DependencyGraph = {
     val graph = lexer(input.split("\n").toIndexedSeq)
-      .foldLeft(DependencyGraph.empty){ (graph, t)  =>
+      .foldLeft(DependencyGraphWithEvictions.empty) { (graph, t)  =>
         t match {
           case n: Node     => graph.copy(nodes     = graph.nodes      + n)
           case a: Arrow    => graph.copy(arrows    = graph.arrows     + a)
@@ -36,10 +35,9 @@ class DependencyGraphParser {
     // maven generated digraphs don't add nodes, but the main dependency is named the same as the digraph
     if (graph.nodes.isEmpty) {
       val nodesFromRoot = graph.arrows.map(_.to) ++ graph.arrows.map(_.from)
-      graph.copy(nodes = nodesFromRoot)
-    } else {
-      graph
-    }
+      graph.copy(nodes = nodesFromRoot).applyEvictions
+    } else
+      graph.applyEvictions
   }
 
   private val eviction = """\s*"(.+)" -> "(.+)" \[(.+)\]\s*""".r
@@ -49,7 +47,7 @@ class DependencyGraphParser {
   private def lexer(lines: Seq[String]): Seq[Token] =
     lines.flatMap {
       case node(n, _)        => Some(Node(n))
-      case arrow(a,b)        => Some(Arrow(Node(a), Node(b)))
+      case arrow(a, b)       => Some(Arrow(Node(a), Node(b)))
       case eviction(a, b, r) => Some(Eviction(Node(a), Node(b), r))
       case _                 => None
     }
@@ -81,38 +79,54 @@ object DependencyGraphParser {
 
   case class Eviction(old: Node, by: Node, reason: String) extends Token
 
-  case class DependencyGraph(
+  // This is the uninterpretted graph data
+  // call `applyEvictions` to filter evicted nodes out
+  case class DependencyGraphWithEvictions(
     nodes    : Set[Node],
     arrows   : Set[Arrow],
     evictions: Set[Eviction]
   ) {
-    def dependencies: Seq[Node] =
-      nodes.toList
-        .filterNot(n => evictions.exists(_.old == n))
-        .sortBy(_.value)
-
-    private lazy val arrowsMap: Map[Node, Node] =
-      arrows.map(a => a.to -> a.from).toMap
-
-    def pathToRoot(node: Node): Seq[Node] = {
-      @tailrec
-      def go(node: Node, acc: Seq[Node], seen: Set[Node]): Seq[Node] = {
-        val acc2 = acc :+ node
-        arrowsMap.get(node) match {
-          case Some(n) if !seen.contains(n) => go(n, acc2, seen + node)
-          case _    => acc2
-        }
-      }
-      go(node, Seq.empty, Set.empty)
+    def applyEvictions: DependencyGraph = {
+      val evictedNodes = evictions.map(_.old)
+      DependencyGraph(
+        nodes  = nodes.filterNot(n => evictedNodes.contains(n)),
+        arrows = arrows.filterNot(a => evictedNodes.contains(a.from) || evictedNodes.contains(a.to))
+      )
     }
   }
 
-  object DependencyGraph {
-    def empty =
-      DependencyGraph(
+  object DependencyGraphWithEvictions {
+    def empty: DependencyGraphWithEvictions =
+      DependencyGraphWithEvictions(
         nodes     = Set.empty,
         arrows    = Set.empty,
         evictions = Set.empty
       )
+  }
+
+  case class DependencyGraph(
+    nodes    : Set[Node],
+    arrows   : Set[Arrow]
+  ) {
+    def dependencies: Seq[Node] =
+      nodes
+        .toList
+        .sortBy(_.value)
+
+    def pathToRoot(node: Node): Seq[Node] =
+      // return shortest path (if multiple)
+      pathsToRoot(node).sortBy(_.length).head
+
+    def pathsToRoot(node: Node): Seq[Seq[Node]] =
+      cats.Monad[Seq].tailRecM((node, Seq.empty[Node])) {
+        case (n, path) =>
+          arrows
+            .filter(_.to == n)
+            .toSeq match {
+              case Nil => Seq(Right(path :+ n))
+              case _ if path.contains(n) => Seq(Right(path)) // handle cyclical dependencies
+              case xs  => xs.map(x => Left((x.from, path :+ n)))
+            }
+      }
   }
 }

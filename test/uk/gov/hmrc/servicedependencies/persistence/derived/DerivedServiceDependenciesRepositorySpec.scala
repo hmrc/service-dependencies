@@ -109,7 +109,7 @@ class DerivedServiceDependenciesRepositorySpec
     }
 
     "populate dependencies from slug dependencyDot file if no meta-artefact" in {
-      val slugWithDependencies = slugInfo.copy(dependencyDotCompile = scala.io.Source.fromResource("slugs/dependencies-compile.dot").mkString)
+      val slugWithDependencies = slugInfo.copy(dependencyDotCompile = scala.io.Source.fromResource("graphs/dependencies-compile.dot").mkString)
 
       repository.populateDependencies(slugWithDependencies, meta = None).futureValue
 
@@ -158,7 +158,7 @@ class DerivedServiceDependenciesRepositorySpec
           sbtVersion           = Some(Version("1.4.9")),
           crossScalaVersions   = Some(List(Version("2.12.14"))),
           publishSkip          = Some(false),
-          dependencyDotCompile = Some(scala.io.Source.fromResource("slugs/dependencies-compile.dot").mkString),
+          dependencyDotCompile = Some(scala.io.Source.fromResource("graphs/dependencies-compile.dot").mkString),
           dependencyDotTest    = Some("ddt-graph"),
           dependencyDotIt      = Some("ddt-graph-it")
         )
