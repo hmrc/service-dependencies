@@ -59,11 +59,11 @@ class DependencyGraphParserSpec
     }
   }
 
-  "DependencyGraphParser.pathToRoot" should {
+  "DependencyGraphParser.anyPathToRoot" should {
     "return path to root" in {
       val source = scala.io.Source.fromResource("graphs/dependencies-compile.dot")
       val graph = dependencyGraphParser.parse(source.mkString)
-      graph.pathToRoot(Node("org.typelevel:cats-kernel_2.12:2.2.0")) shouldBe List(
+      graph.anyPathToRoot(Node("org.typelevel:cats-kernel_2.12:2.2.0")) shouldBe List(
         Node("org.typelevel:cats-kernel_2.12:2.2.0"),
         Node("org.typelevel:cats-core_2.12:2.2.0"),
         Node("uk.gov.hmrc:my-slug_2.12:2.22.0")
@@ -73,7 +73,7 @@ class DependencyGraphParserSpec
     "work with maven dependencies" in {
       val source = scala.io.Source.fromResource("graphs/dependencies-maven.dot")
       val graph = dependencyGraphParser.parse(source.mkString)
-      graph.pathToRoot(Node("javax.xml.stream:stax-api:jar:1.0-2:compile")) shouldBe List(
+      graph.anyPathToRoot(Node("javax.xml.stream:stax-api:jar:1.0-2:compile")) shouldBe List(
         Node("javax.xml.stream:stax-api:jar:1.0-2:compile"),
         Node("org.springframework.ws:spring-xml:jar:2.1.4.RELEASE:compile"),
         Node("org.springframework.ws:spring-ws-support:jar:2.1.4.RELEASE:compile"),
@@ -99,21 +99,21 @@ class DependencyGraphParserSpec
       )
     }
 
-    // BDOG-1884 if this test is hanging, its because pathToRoot's cycle detection has broken
+    // BDOG-1884 if this test is hanging, its because anyPathToRoot's cycle detection has broken
     "not get stuck in an infinite loop when parsing a cyclical graph" in {
       val source = scala.io.Source.fromResource("graphs/loop.dot") // baz -> bar , bar -> baz
       val graph = dependencyGraphParser.parse(source.mkString)
       val baz = graph.nodes.filter(_.artefact == "baz").head
-      graph.pathToRoot(baz).head shouldBe Node("org:baz:3.0.0")
+      graph.anyPathToRoot(baz).head shouldBe Node("org:baz:3.0.0")
       val bar = graph.nodes.filter(_.artefact == "bar").head
-      graph.pathToRoot(bar).head shouldBe Node("org:bar:2.0.0")
+      graph.anyPathToRoot(bar).head shouldBe Node("org:bar:2.0.0")
     }
 
     "return the shortest path if multiple" in {
       val source = scala.io.Source.fromResource("graphs/double-path.dot")
       val graph = dependencyGraphParser.parse(source.mkString)
       val sbtSettings = graph.nodes.filter(_.artefact == "sbt-settings").head
-      graph.pathToRoot(sbtSettings) shouldBe Seq(
+      graph.anyPathToRoot(sbtSettings) shouldBe Seq(
         Node("uk.gov.hmrc:sbt-settings:0.0.1"),
         Node("default:project:0.1.0-SNAPSHOT")
       )
@@ -123,7 +123,7 @@ class DependencyGraphParserSpec
       val source = scala.io.Source.fromResource("graphs/evicted-paths.dot")
       val graph = dependencyGraphParser.parse(source.mkString)
       val log4j = graph.nodes.filter(_.artefact == "log4j").head
-      graph.pathToRoot(log4j) shouldBe Seq(
+      graph.anyPathToRoot(log4j) shouldBe Seq(
         Node("uk.gov.hmrc:log4j:1.0.0"),
         Node("uk.gov.hmrc:sbt-settings:0.0.2"),
         Node("uk.gov.hmrc:sbt-auto-build:3.0.0"),

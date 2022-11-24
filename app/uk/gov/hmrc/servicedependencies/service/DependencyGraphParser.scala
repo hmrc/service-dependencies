@@ -113,7 +113,8 @@ object DependencyGraphParser {
         .toList
         .sortBy(_.value)
 
-    def pathToRoot(node: Node): Seq[Node] =
+    // This is accurate but slower than anyPathToRoot
+    def shortestPathToRoot(node: Node): Seq[Node] =
       // return shortest path (if multiple)
       pathsToRoot(node).sortBy(_.length).head
 
@@ -123,10 +124,27 @@ object DependencyGraphParser {
           arrows
             .filter(_.to == n)
             .toSeq match {
-              case Nil => Seq(Right(path :+ n))
+              case Nil                   => Seq(Right(path :+ n))
               case _ if path.contains(n) => Seq(Right(path)) // handle cyclical dependencies
-              case xs  => xs.map(x => Left((x.from, path :+ n)))
+              case xs                    => xs.map(x => Left((x.from, path :+ n)))
             }
       }
+
+    private lazy val arrowsMap: Map[Node, Node] =
+      // Note each `from` has multiple `to` we are just keeping one (at random)
+      arrows.map(a => a.to -> a.from).toMap
+
+    // This is fast but returns any random path for a dependency
+    def anyPathToRoot(node: Node): Seq[Node] = {
+       @scala.annotation.tailrec
+       def go(node: Node, acc: Seq[Node], seen: Set[Node]): Seq[Node] = {
+         val acc2 = acc :+ node
+         arrowsMap.get(node) match {
+           case Some(n) if !seen.contains(n) => go(n, acc2, seen + node)
+           case _                            => acc2
+         }
+       }
+       go(node, Seq.empty, Set.empty)
+    }
   }
 }

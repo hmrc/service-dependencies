@@ -156,7 +156,7 @@ class SlugDependenciesService @Inject()(
                                     , name    = graphDependency.artefact
                                     , version = Version(graphDependency.version)
                                   )
-          , importBy            = graph.pathToRoot(graphDependency)
+          , importBy            = graph.anyPathToRoot(graphDependency)
                                     .dropRight(1) // drop root node as its just the service jar itself
                                     .lastOption.map(n => ImportedBy(n.artefact, n.group, Version(n.version))) // the top level dep that imported it
                                     .filterNot(d => d.name == graphDependency.artefact && d.group == graphDependency.group) // filter out non-transient deps
