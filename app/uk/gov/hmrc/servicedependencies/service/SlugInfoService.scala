@@ -75,10 +75,10 @@ class SlugInfoService @Inject()(
     , group       : String
     , artefact    : String
     , versionRange: BobbyVersionRange
-    , scope       : Option[DependencyScope]
+    , scopes      : Option[List[DependencyScope]]
     )(implicit hc: HeaderCarrier): Future[Seq[ServiceDependency]] =
       for {
-        services            <- serviceDependencyRepository.findServicesWithDependency(flag, group, artefact, scope)
+        services            <- serviceDependencyRepository.findServicesWithDependency(flag, group, artefact, scopes)
         servicesWithinRange =  services.filter(s => versionRange.includes(s.depVersion))
         teamsForServices    <- teamsAndRepositoriesConnector.getTeamsForServices
       } yield servicesWithinRange.map { r =>
