@@ -16,6 +16,8 @@
 
 package uk.gov.hmrc.servicedependencies.persistence.derived
 
+import org.bson.conversions.Bson
+
 import javax.inject.{Inject, Singleton}
 import org.mongodb.scala.MongoCollection
 import org.mongodb.scala.bson.BsonDocument
@@ -85,14 +87,14 @@ class DerivedServiceDependenciesRepository @Inject()(
     flag    : SlugInfoFlag,
     group   : String,
     artefact: String,
-    scope   : Option[DependencyScope]
+    scopes  : Option[List[DependencyScope]]
   ): Future[Seq[ServiceDependency]] =
     findServiceDependenciesFromDeployments(
       deploymentsFilter = equal(flag.asString, true),
       dependencyFilter  = and(
                             equal("group", group),
                             equal("artefact", artefact),
-                            scope.fold[Bson](BsonDocument())(s => equal("scope_" + s.asString, true))
+                            scopes.fold[Bson](BsonDocument())(ss => or( ss.map(scope => equal(s"scope_${scope.asString}", value = true)): _*))
                           )
     )
 

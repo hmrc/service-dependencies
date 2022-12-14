@@ -18,6 +18,7 @@ package uk.gov.hmrc.servicedependencies.controller
 
 import cats.data.EitherT
 import cats.instances.all._
+import cats.implicits._
 import com.google.inject.{Inject, Singleton}
 import play.api.libs.functional.syntax._
 import play.api.libs.json.{__, Json, OWrites}
@@ -57,17 +58,16 @@ class ServiceDependenciesController @Inject()(
     group       : String,
     artefact    : String,
     versionRange: String,
-    scope       : Option[String]
+    scope       : Option[List[String]]
   ): Action[AnyContent] =
     Action.async { implicit request =>
       implicit val format = ApiServiceDependencyFormats.serviceDependencyFormat
       (for {
          f   <- EitherT.fromOption[Future](SlugInfoFlag.parse(flag), BadRequest(s"invalid flag '$flag'"))
-         sc  <- scope match {
-                  case None     => EitherT.pure[Future, Result](None)
-                  case Some(sc) => EitherT.fromEither[Future](DependencyScope.parse(sc))
-                                     .bimap(BadRequest(_), Some.apply)
-                }
+         sc  <- scope.fold(EitherT.pure[Future, Result](Option.empty[List[DependencyScope]]))(
+                  _.traverse( s => EitherT.fromEither[Future](DependencyScope.parse(s)).leftMap(BadRequest(_)))
+                    .map(Some.apply)
+                )
          vr  <- EitherT.fromOption[Future](BobbyVersionRange.parse(versionRange), BadRequest(s"invalid versionRange '$versionRange'"))
          res <- EitherT.right[Result] {
                   slugInfoService
