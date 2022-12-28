@@ -46,7 +46,7 @@ class ServiceConfigsConnector @Inject()(
   def getBobbyRules: Future[BobbyRules] =
     cache.getOrElseUpdate("bobby-rules", cacheExpiration) {
       httpClientV2
-        .get(url"$serviceUrl/bobby/rules")
+        .get(url"$serviceUrl/api/bobby/rules")
         .execute[DeprecatedDependencies]
         .map { dependencies =>
            BobbyRules(
