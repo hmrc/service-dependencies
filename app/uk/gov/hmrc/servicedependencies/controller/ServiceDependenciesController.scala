@@ -124,12 +124,12 @@ class ServiceDependenciesController @Inject()(
       ).merge
     }
 
-  def findJDKForEnvironment(flag: String): Action[AnyContent] =
-    Action.async {
+  def findJDKForEnvironment(team: Option[String], flag: String): Action[AnyContent] =
+    Action.async { implicit request =>
       (for {
          f   <- EitherT.fromOption[Future](SlugInfoFlag.parse(flag), BadRequest(s"invalid flag '$flag'"))
          res <- EitherT.liftF[Future, Result, Seq[JDKVersion]](
-                  slugInfoService.findJDKVersions(f)
+                  slugInfoService.findJDKVersions(team, f)
                 )
        } yield {
          implicit val jdkvf = JDKVersionFormats.jdkVersionFormat
