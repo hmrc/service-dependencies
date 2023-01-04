@@ -131,6 +131,12 @@ class SlugInfoService @Inject()(
     } yield ()
   }
 
-  def findJDKVersions(flag: SlugInfoFlag): Future[Seq[JDKVersion]] =
-    jdkVersionRepository.findJDKUsage(flag)
+  def findJDKVersions(teamName: Option[String], flag: SlugInfoFlag)(implicit hc: HeaderCarrier): Future[Seq[JDKVersion]] =
+    teamName match {
+      case Some(n) => for {
+                        team <- teamsAndRepositoriesConnector.getTeam(n)
+                        xs   <- jdkVersionRepository.findJDKUsage(flag)
+                      } yield xs.filter(x => team.services.contains(x.name))
+      case None    => jdkVersionRepository.findJDKUsage(flag)
+    }
 }
