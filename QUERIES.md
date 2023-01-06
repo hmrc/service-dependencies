@@ -25,3 +25,12 @@ db.getCollection('deployments').aggregate([
  //{ "$replaceRoot": { "newRoot": "$res" } }
 ]);
 ```
+
+how many slug-infos are missing latest flag?
+
+```javascript
+db.getCollection('deployments').aggregate([
+ {"$group":{_id: { "name": "$name" }, "latest": {"$addToSet": "$latest" }}},
+ {"$match": {"latest": {$nin: [true]}}}
+]);
+```

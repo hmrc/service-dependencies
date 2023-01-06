@@ -98,7 +98,7 @@ class SlugInfoService @Inject()(
                                   .map(_.map(_.name))
       decomissionedServices  <- githubRawConnector.decomissionedServices
       latestServices         <- deploymentRepository.getNames(SlugInfoFlag.Latest)
-      inactiveServices       =  latestServices.diff(activeRepos).toList
+      inactiveServices       =  latestServices.diff(activeRepos) // This will not work for slugs with different name to the repo (e.g. sa-filing-2223-helpdesk)
       allServiceDeployments  =  serviceNames.map { serviceName =>
                                   val deployments       = serviceDeploymentInfos.find(_.serviceName == serviceName).map(_.deployments)
                                   val deploymentsByFlag = List( (SlugInfoFlag.Production    , Environment.Production)
@@ -125,9 +125,14 @@ class SlugInfoService @Inject()(
                                   }
                                 }
       _                      <- deploymentRepository.clearFlags(SlugInfoFlag.values, decomissionedServices)
-      _                      = if (inactiveServices.nonEmpty) logger.info(s"Removing latest flag from the following inactive services: ${inactiveServices.mkString(", ")}")
-      _                      <- // we have found some "archived" projects which are still deployed, we will only remove the latest flag for them
-                                deploymentRepository.clearFlags(List(SlugInfoFlag.Latest), inactiveServices)
+      _                      <- if (inactiveServices.nonEmpty) {
+                                  logger.info(s"Removing latest flag from the following inactive services: ${inactiveServices.mkString(", ")}")
+                                  // we have found some "archived" projects which are still deployed, we will only remove the latest flag for them
+                                  deploymentRepository.clearFlags(List(SlugInfoFlag.Latest), inactiveServices.toList)
+                                } else Future.unit
+      missingLatestFlag      =  serviceNames.intersect(activeRepos).diff(decomissionedServices).diff(latestServices)
+      _                      =  if (missingLatestFlag.nonEmpty)
+                                  logger.warn(s"The following services are missing Latest flag: ${missingLatestFlag.mkString(",")}") // TODO add Latest flag to the latest version we have
     } yield ()
   }
 
