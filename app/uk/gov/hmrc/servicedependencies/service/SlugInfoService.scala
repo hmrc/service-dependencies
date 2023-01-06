@@ -133,7 +133,7 @@ class SlugInfoService @Inject()(
       missingLatestFlag      =  serviceNames.intersect(activeRepos).diff(decomissionedServices).diff(latestServices)
       _                      <-  if (missingLatestFlag.nonEmpty) {
                                   logger.warn(s"The following services are missing Latest flag - and will be added: ${missingLatestFlag.mkString(",")}")
-                                  missingLatestFlag.traverse { serviceName =>
+                                  missingLatestFlag.foldLeftM(()) { (_, serviceName) =>
                                     for {
                                       optVersion <- slugVersionRepository.getMaxVersion(serviceName)
                                       _          <- optVersion match {
