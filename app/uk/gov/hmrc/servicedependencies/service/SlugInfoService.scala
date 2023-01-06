@@ -131,8 +131,18 @@ class SlugInfoService @Inject()(
                                   deploymentRepository.clearFlags(List(SlugInfoFlag.Latest), inactiveServices.toList)
                                 } else Future.unit
       missingLatestFlag      =  serviceNames.intersect(activeRepos).diff(decomissionedServices).diff(latestServices)
-      _                      =  if (missingLatestFlag.nonEmpty)
-                                  logger.warn(s"The following services are missing Latest flag: ${missingLatestFlag.mkString(",")}") // TODO add Latest flag to the latest version we have
+      _                      <-  if (missingLatestFlag.nonEmpty) {
+                                  logger.warn(s"The following services are missing Latest flag - and will be added: ${missingLatestFlag.mkString(",")}")
+                                  missingLatestFlag.traverse { serviceName =>
+                                    for {
+                                      optVersion <- slugVersionRepository.getMaxVersion(serviceName)
+                                      _          <- optVersion match {
+                                                      case Some(version) => deploymentRepository.setFlag(SlugInfoFlag.Latest, serviceName, version)
+                                                      case None          => logger.warn(s"No max version found for $serviceName"); Future.unit
+                                                    }
+                                    } yield ()
+                                  }
+                                } else Future.unit
     } yield ()
   }
 
