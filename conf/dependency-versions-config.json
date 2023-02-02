@@ -4,7 +4,7 @@
   ],
   "libraries": [
     { "group": "org.reactivemongo", "name": "reactivemongo"  , "latestVersion": "0.20.3" },
-    { "group": "org.scala-lang"   , "name": "scala-library"  , "latestVersion": "2.13.10" },
+    { "group": "org.scala-lang"   , "name": "scala-library"  , "latestVersion": "2.13.8" },
     { "group": "com.typesafe.play", "name": "play"           , "latestVersion": "2.8.18" }
   ],
   "others": [
