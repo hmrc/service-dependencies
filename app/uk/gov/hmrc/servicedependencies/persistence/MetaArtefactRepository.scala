@@ -90,9 +90,7 @@ class MetaArtefactRepository @Inject()(
 
   def findAllVersions(repositoryName: String): Future[Seq[MetaArtefact]] =
     collection.find(
-      filter = and(
-        equal("name", repositoryName)
-      )
+      filter = equal("name", repositoryName)
     ).toFuture()
 
   // TODO we could store this data normalised to apply an index etc.
