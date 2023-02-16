@@ -107,6 +107,18 @@ class MetaArtefactRepositorySpec
     }
   }
 
+  "findAllVersions" should {
+    "return all versions" in {
+      (for {
+        _     <- repository.add(metaArtefact.copy(version = Version("2.0.0")))
+        _     <- repository.add(metaArtefact)
+        found <- repository.findAllVersions(metaArtefact.name)
+        _     =  found should contain theSameElementsAs Seq(metaArtefact, metaArtefact.copy(version = Version("2.0.0")))
+      } yield ()
+      ).futureValue
+    }
+  }
+
   "findRepoNameByModule" should {
     "find repo name" in {
       (for {
