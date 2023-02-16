@@ -303,8 +303,8 @@ class ServiceDependenciesController @Inject()(
                 )
               ),
               crossScalaVersions = m.crossScalaVersions,
-              activeBobbyRuleViolations.headOption,
-              pendingBobbyRuleViolations.headOption
+              activeBobbyRuleViolations,
+              pendingBobbyRuleViolations
             )
           }
       )
@@ -352,8 +352,8 @@ case class RepositoryModule(
   dependenciesTest   : Seq[Dependency],
   dependenciesIt     : Seq[Dependency],
   crossScalaVersions : Option[List[Version]],
-  activeBobbyRule    : Option[DependencyBobbyRule] = None,
-  pendingBobbyRule   : Option[DependencyBobbyRule] = None
+  activeBobbyRules   : Seq[DependencyBobbyRule] = Seq(),
+  pendingBobbyRules  : Seq[DependencyBobbyRule] = Seq()
 )
 
 object RepositoryModule {
@@ -367,8 +367,8 @@ object RepositoryModule {
     ~ (__ \ "dependenciesTest"   ).write[Seq[Dependency]]
     ~ (__ \ "dependenciesIt"     ).write[Seq[Dependency]]
     ~ (__ \ "crossScalaVersions" ).write[Seq[Version]].contramap[Option[Seq[Version]]](_.getOrElse(Seq.empty))
-    ~ (__ \ "activeBobbyRule"    ).writeNullable[DependencyBobbyRule]
-    ~ (__ \ "pendingBobbyRule"   ).writeNullable[DependencyBobbyRule]
+    ~ (__ \ "activeBobbyRules"    ).write[Seq[DependencyBobbyRule]]
+    ~ (__ \ "pendingBobbyRules"   ).write[Seq[DependencyBobbyRule]]
     )(unlift(RepositoryModule.unapply))
   }
 }
