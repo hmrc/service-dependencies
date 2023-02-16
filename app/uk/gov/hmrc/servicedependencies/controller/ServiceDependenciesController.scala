@@ -24,7 +24,7 @@ import play.api.libs.json.{Json, OWrites, __}
 import play.api.mvc._
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 import uk.gov.hmrc.servicedependencies.connector.ServiceConfigsConnector
-import uk.gov.hmrc.servicedependencies.controller.model.{Dependencies, Dependency}
+import uk.gov.hmrc.servicedependencies.controller.model.{Dependencies, Dependency, DependencyBobbyRule}
 import uk.gov.hmrc.servicedependencies.model._
 import uk.gov.hmrc.servicedependencies.persistence.{LatestVersionRepository, MetaArtefactRepository}
 import uk.gov.hmrc.servicedependencies.service.{SlugDependenciesService, SlugInfoService, TeamDependencyService}
@@ -151,7 +151,7 @@ class ServiceDependenciesController @Inject()(
         latestVersions <- latestVersionRepository.getAllEntries
         bobbyRules     <- serviceConfigsConnector.getBobbyRules
       } yield {
-        val allVersions = meta.map { info => generateRepository(info, latestVersions, bobbyRules) }
+        val allVersions = meta.map { info => getRepositoryInfo(info, latestVersions, bobbyRules) }
         implicit val rw = Repository.writes
         Ok(Json.toJson(allVersions))
       }
@@ -170,7 +170,7 @@ class ServiceDependenciesController @Inject()(
          latestVersions <- EitherT.liftF[Future, Result, Seq[LatestVersion]](latestVersionRepository.getAllEntries)
          bobbyRules     <- EitherT.liftF[Future, Result, BobbyRules](serviceConfigsConnector.getBobbyRules)
        } yield {
-        val repository = generateRepository(meta, latestVersions, bobbyRules)
+        val repository = getRepositoryInfo(meta, latestVersions, bobbyRules)
         implicit val rw = Repository.writes
          Ok(Json.toJson(repository))
        }
@@ -206,7 +206,7 @@ class ServiceDependenciesController @Inject()(
       ).merge
     }
 
-  private def generateRepository(meta: MetaArtefact, latestVersions: Seq[LatestVersion], bobbyRules: BobbyRules) = {
+  private def getRepositoryInfo(meta: MetaArtefact, latestVersions: Seq[LatestVersion], bobbyRules: BobbyRules) = {
     def toDependencies(name: String, scope: DependencyScope, dotFile: String) =
       slugDependenciesService.curatedLibrariesFromGraph(
         dotFile = dotFile,
@@ -303,8 +303,8 @@ class ServiceDependenciesController @Inject()(
                 )
               ),
               crossScalaVersions = m.crossScalaVersions,
-              activeBobbyRuleViolations.nonEmpty,
-              pendingBobbyRuleViolations.nonEmpty
+              activeBobbyRuleViolations.headOption,
+              pendingBobbyRuleViolations.headOption
             )
           }
       )
@@ -352,22 +352,23 @@ case class RepositoryModule(
   dependenciesTest   : Seq[Dependency],
   dependenciesIt     : Seq[Dependency],
   crossScalaVersions : Option[List[Version]],
-  activeBobbyRule    : Boolean = false,
-  pendingBobbyRule   : Boolean = false
+  activeBobbyRule    : Option[DependencyBobbyRule] = None,
+  pendingBobbyRule   : Option[DependencyBobbyRule] = None
 )
 
 object RepositoryModule {
   val writes: OWrites[RepositoryModule] = {
+    implicit val bf = DependencyBobbyRule.writes
     implicit val dw = Dependency.writes
-    implicit val vf  = Version.format
+    implicit val vf = Version.format
     ( (__ \ "name"               ).write[String]
     ~ (__ \ "group"              ).write[String]
     ~ (__ \ "dependenciesCompile").write[Seq[Dependency]]
     ~ (__ \ "dependenciesTest"   ).write[Seq[Dependency]]
     ~ (__ \ "dependenciesIt"     ).write[Seq[Dependency]]
     ~ (__ \ "crossScalaVersions" ).write[Seq[Version]].contramap[Option[Seq[Version]]](_.getOrElse(Seq.empty))
-    ~ (__ \ "activeBobbyRule"    ).write[Boolean]
-    ~ (__ \ "pendingBobbyRule"   ).write[Boolean]
+    ~ (__ \ "activeBobbyRule"    ).writeNullable[DependencyBobbyRule]
+    ~ (__ \ "pendingBobbyRule"   ).writeNullable[DependencyBobbyRule]
     )(unlift(RepositoryModule.unapply))
   }
 }
