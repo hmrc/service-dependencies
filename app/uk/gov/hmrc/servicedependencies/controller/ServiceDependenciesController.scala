@@ -144,20 +144,31 @@ class ServiceDependenciesController @Inject()(
         .map(_.fold(NotFound(""))(res => Ok(Json.toJson(res))))
     }
 
-  def moduleDependenciesAllVersions(repositoryName: String): Action[AnyContent] =
+  def moduleDependencies(repositoryName: String, versionOption: Option[String]): Action[AnyContent] =
     Action.async {
       for {
-        meta           <- metaArtefactRepository.findAllVersions(repositoryName)
+        metaArtefacts  <- versionOption match {
+                            case Some(version) if version equalsIgnoreCase("latest") => metaArtefactRepository.find(repositoryName) map {
+                              case Some(meta) => Seq(meta)
+                              case None => Seq()
+                            }
+                            case Some(version) => metaArtefactRepository.find(repositoryName, Version(version)) map {
+                              case Some(meta) => Seq(meta)
+                              case None => Seq()
+                            }
+                            case None        => metaArtefactRepository.findAllVersions(repositoryName)
+                          }
         latestVersions <- latestVersionRepository.getAllEntries
         bobbyRules     <- serviceConfigsConnector.getBobbyRules
       } yield {
-        val allVersions = meta.map { info => getRepositoryInfo(info, latestVersions, bobbyRules) }
-        implicit val rw = Repository.writes
-        Ok(Json.toJson(allVersions))
+        val repositories = metaArtefacts.map { info => toRepositoryInfo(info, latestVersions, bobbyRules) }
+        implicit val rw: OWrites[Repository] = Repository.writes
+        Ok(Json.toJson(repositories))
       }
     }
 
-  def moduleDependencies(repositoryName: String, version: Option[String]): Action[AnyContent] =
+  @deprecated
+  def moduleDependenciesDeprecated(repositoryName: String, version: Option[String]): Action[AnyContent] =
     Action.async {
       (for {
          meta           <- EitherT.fromOptionF(
@@ -170,7 +181,7 @@ class ServiceDependenciesController @Inject()(
          latestVersions <- EitherT.liftF[Future, Result, Seq[LatestVersion]](latestVersionRepository.getAllEntries)
          bobbyRules     <- EitherT.liftF[Future, Result, BobbyRules](serviceConfigsConnector.getBobbyRules)
        } yield {
-        val repository = getRepositoryInfo(meta, latestVersions, bobbyRules)
+        val repository = toRepositoryInfo(meta, latestVersions, bobbyRules)
         implicit val rw = Repository.writes
          Ok(Json.toJson(repository))
        }
@@ -206,7 +217,7 @@ class ServiceDependenciesController @Inject()(
       ).merge
     }
 
-  private def getRepositoryInfo(meta: MetaArtefact, latestVersions: Seq[LatestVersion], bobbyRules: BobbyRules) = {
+  private def toRepositoryInfo(meta: MetaArtefact, latestVersions: Seq[LatestVersion], bobbyRules: BobbyRules) = {
     def toDependencies(name: String, scope: DependencyScope, dotFile: String) =
       slugDependenciesService.curatedLibrariesFromGraph(
         dotFile = dotFile,
@@ -247,68 +258,66 @@ class ServiceDependenciesController @Inject()(
 
     val buildDependencies = meta.dependencyDotBuild.fold(Seq.empty[Dependency])(s => toDependencies(meta.name, DependencyScope.Build, s))
 
-    val repository =
-      Repository(
-        name = meta.name,
-        version = Some(meta.version),
-        dependenciesBuild = buildDependencies ++
-          dependencyIfMissing(
-            buildDependencies,
-            group = "org.scala-sbt",
-            artefact = "sbt",
-            versions = sbtVersion.toSeq,
-            scope = DependencyScope.Build
-          ),
-        modules = meta.modules
-          .filter(_.publishSkip.fold(true)(!_))
-          .map { m =>
-            val compileDependencies = m.dependencyDotCompile.fold(Seq.empty[Dependency])(s => toDependencies(m.name, DependencyScope.Compile, s))
-            val testDependencies = m.dependencyDotTest.fold(Seq.empty[Dependency])(s => toDependencies(m.name, DependencyScope.Test, s))
-            val itDependencies = m.dependencyDotIt.fold(Seq.empty[Dependency])(s => toDependencies(m.name, DependencyScope.It, s))
-            val scalaVersions = m.crossScalaVersions.toSeq.flatten
-            val (activeBobbyRuleViolations, pendingBobbyRuleViolations) =
-              bobbyRules.violationsFor(
-                group = m.group
-                , name = m.name
-                , version = meta.version
-              ).partition(rule => LocalDate.now().isAfter(rule.from))
-            RepositoryModule(
-              name = m.name,
-              group = m.group,
-              dependenciesCompile = compileDependencies ++ when(compileDependencies.nonEmpty)(
-                dependencyIfMissing(
-                  dependencies = compileDependencies,
-                  group = "org.scala-lang",
-                  artefact = "scala-library",
-                  versions = scalaVersions,
-                  scope = DependencyScope.Compile
-                )
-              ),
-              dependenciesTest = testDependencies ++ when(testDependencies.nonEmpty)(
-                dependencyIfMissing(
-                  dependencies = testDependencies,
-                  group = "org.scala-lang",
-                  artefact = "scala-library",
-                  versions = scalaVersions,
-                  scope = DependencyScope.Test
-                )
-              ),
-              dependenciesIt = itDependencies ++ when(itDependencies.nonEmpty)(
-                dependencyIfMissing(
-                  dependencies = itDependencies,
-                  group = "org.scala-lang",
-                  artefact = "scala-library",
-                  versions = scalaVersions,
-                  scope = DependencyScope.It
-                )
-              ),
-              crossScalaVersions = m.crossScalaVersions,
-              activeBobbyRuleViolations,
-              pendingBobbyRuleViolations
-            )
-          }
-      )
-    repository
+    Repository(
+      name              = meta.name,
+      version           = Some(meta.version),
+      dependenciesBuild = buildDependencies ++
+                            dependencyIfMissing(
+                              buildDependencies,
+                              group = "org.scala-sbt",
+                              artefact = "sbt",
+                              versions = sbtVersion.toSeq,
+                              scope = DependencyScope.Build
+                            ),
+      modules           = meta.modules
+                              .filter(_.publishSkip.fold(true)(!_))
+                              .map { m =>
+                                val compileDependencies = m.dependencyDotCompile.fold(Seq.empty[Dependency])(s => toDependencies(m.name, DependencyScope.Compile, s))
+                                val testDependencies = m.dependencyDotTest.fold(Seq.empty[Dependency])(s => toDependencies(m.name, DependencyScope.Test, s))
+                                val itDependencies = m.dependencyDotIt.fold(Seq.empty[Dependency])(s => toDependencies(m.name, DependencyScope.It, s))
+                                val scalaVersions = m.crossScalaVersions.toSeq.flatten
+                                val (activeBobbyRuleViolations, pendingBobbyRuleViolations) =
+                                  bobbyRules.violationsFor(
+                                    group = m.group
+                                    , name = m.name
+                                    , version = meta.version
+                                  ).partition(rule => LocalDate.now().isAfter(rule.from))
+                                RepositoryModule(
+                                  name = m.name,
+                                  group = m.group,
+                                  dependenciesCompile = compileDependencies ++ when(compileDependencies.nonEmpty)(
+                                    dependencyIfMissing(
+                                      dependencies = compileDependencies,
+                                      group = "org.scala-lang",
+                                      artefact = "scala-library",
+                                      versions = scalaVersions,
+                                      scope = DependencyScope.Compile
+                                    )
+                                  ),
+                                  dependenciesTest = testDependencies ++ when(testDependencies.nonEmpty)(
+                                    dependencyIfMissing(
+                                      dependencies = testDependencies,
+                                      group = "org.scala-lang",
+                                      artefact = "scala-library",
+                                      versions = scalaVersions,
+                                      scope = DependencyScope.Test
+                                    )
+                                  ),
+                                  dependenciesIt = itDependencies ++ when(itDependencies.nonEmpty)(
+                                    dependencyIfMissing(
+                                      dependencies = itDependencies,
+                                      group = "org.scala-lang",
+                                      artefact = "scala-library",
+                                      versions = scalaVersions,
+                                      scope = DependencyScope.It
+                                    )
+                                  ),
+                                  crossScalaVersions = m.crossScalaVersions,
+                                  activeBobbyRuleViolations,
+                                  pendingBobbyRuleViolations
+                                )
+                              }
+    )
   }
 
   def latestVersion(group: String, artefact: String): Action[AnyContent] =
