@@ -18,7 +18,7 @@ package uk.gov.hmrc.servicedependencies.persistence
 
 import org.mongodb.scala.bson.{BsonDocument, BsonString}
 import org.mongodb.scala.bson.conversions.Bson
-import org.mongodb.scala.model.{IndexModel, IndexOptions, Indexes, Projections, ReplaceOptions}
+import org.mongodb.scala.model.{Filters, IndexModel, IndexOptions, Indexes, Projections, ReplaceOptions}
 import org.mongodb.scala.model.Aggregates.{`match`, project, unwind}
 import org.mongodb.scala.model.Filters.{and, equal, exists, or}
 import org.mongodb.scala.model.Projections.{excludeId, fields, include}
@@ -87,6 +87,11 @@ class MetaArtefactRepository @Inject()(
                )
       )
       .headOption()
+
+  def findAllVersions(repositoryName: String): Future[Seq[MetaArtefact]] =
+    collection.find(
+      filter = equal("name", repositoryName)
+    ).toFuture()
 
   // TODO we could store this data normalised to apply an index etc.
   def findRepoNameByModule(group: String, artefact: String, version: Version): Future[Option[String]] =
