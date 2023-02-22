@@ -161,7 +161,7 @@ class ServiceDependenciesController @Inject()(
         latestVersions <- latestVersionRepository.getAllEntries
         bobbyRules     <- serviceConfigsConnector.getBobbyRules
       } yield {
-        val repositories = metaArtefacts.map { info => toRepositoryInfo(info, latestVersions, bobbyRules) }
+        val repositories = metaArtefacts.map { info => toRepository(info, latestVersions, bobbyRules) }
         implicit val rw: OWrites[Repository] = Repository.writes
         Ok(Json.toJson(repositories))
       }
@@ -181,7 +181,7 @@ class ServiceDependenciesController @Inject()(
          latestVersions <- EitherT.liftF[Future, Result, Seq[LatestVersion]](latestVersionRepository.getAllEntries)
          bobbyRules     <- EitherT.liftF[Future, Result, BobbyRules](serviceConfigsConnector.getBobbyRules)
        } yield {
-        val repository = toRepositoryInfo(meta, latestVersions, bobbyRules)
+        val repository = toRepository(meta, latestVersions, bobbyRules)
         implicit val rw = Repository.writes
          Ok(Json.toJson(repository))
        }
@@ -217,7 +217,7 @@ class ServiceDependenciesController @Inject()(
       ).merge
     }
 
-  private def toRepositoryInfo(meta: MetaArtefact, latestVersions: Seq[LatestVersion], bobbyRules: BobbyRules) = {
+  private def toRepository(meta: MetaArtefact, latestVersions: Seq[LatestVersion], bobbyRules: BobbyRules) = {
     def toDependencies(name: String, scope: DependencyScope, dotFile: String) =
       slugDependenciesService.curatedLibrariesFromGraph(
         dotFile = dotFile,
