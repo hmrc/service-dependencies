@@ -148,15 +148,15 @@ class ServiceDependenciesController @Inject()(
     Action.async {
       for {
         metaArtefacts  <- versionOption match {
-                            case Some(version) if version equalsIgnoreCase("latest") => metaArtefactRepository.find(repositoryName) map {
-                              case Some(meta) => Seq(meta)
-                              case None => Seq()
-                            }
-                            case Some(version) => metaArtefactRepository.find(repositoryName, Version(version)) map {
-                              case Some(meta) => Seq(meta)
-                              case None => Seq()
-                            }
-                            case None        => metaArtefactRepository.findAllVersions(repositoryName)
+                            case Some(version) if version equalsIgnoreCase("latest") =>
+                                                  metaArtefactRepository
+                                                    .find(repositoryName)
+                                                    .map(_.toSeq)
+                            case Some(version) => metaArtefactRepository
+                                                    .find(repositoryName, Version(version))
+                                                    .map(_.toSeq)
+                            case None          => metaArtefactRepository
+                                                    .findAllVersions(repositoryName)
                           }
         latestVersions <- latestVersionRepository.getAllEntries
         bobbyRules     <- serviceConfigsConnector.getBobbyRules
