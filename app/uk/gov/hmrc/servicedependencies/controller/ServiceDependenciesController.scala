@@ -147,25 +147,48 @@ class ServiceDependenciesController @Inject()(
   def moduleDependencies(repositoryName: String, versionOption: Option[String]): Action[AnyContent] =
     Action.async {
       for {
-        metaArtefacts  <- versionOption match {
-                            case Some(version) if version equalsIgnoreCase("latest") =>
-                                                  metaArtefactRepository
-                                                    .find(repositoryName)
-                                                    .map(_.toSeq)
-                            case Some(version) => metaArtefactRepository
-                                                    .find(repositoryName, Version(version))
-                                                    .map(_.toSeq)
-                            case None          => metaArtefactRepository
-                                                    .findAllVersions(repositoryName)
-                          }
         latestVersions <- latestVersionRepository.getAllEntries
         bobbyRules     <- serviceConfigsConnector.getBobbyRules
+        repositories   <- versionOption match {
+                            case Some(version) =>
+                                                  metaArtefactRepository
+                                                    .find(repositoryName)
+                                                    .flatMap(_ match {
+                                                      case Some(version) => Future.successful(toRepository(version, latestVersions, bobbyRules))
+                                                      case None => repositoryFromCuratedSlugDependencies(repositoryName, version)
+                                                    })
+                                                    .map(Seq(_))
+                            case None          => metaArtefactRepository
+                                                    .findAllVersions(repositoryName)
+                                                    .map { _.map { toRepository(_, latestVersions, bobbyRules) }}
+                          }
       } yield {
-        val repositories = metaArtefacts.map { info => toRepository(info, latestVersions, bobbyRules) }
         implicit val rw: OWrites[Repository] = Repository.writes
         Ok(Json.toJson(repositories))
       }
     }
+
+  def repositoryFromCuratedSlugDependencies(repositoryName: String, version: String): Future[Repository] = for {
+    dependencyOption <- version match {
+      case "latest" => slugDependenciesService.curatedLibrariesOfSlug(repositoryName, SlugInfoFlag.Latest)
+      case version => slugDependenciesService.curatedLibrariesOfSlug(repositoryName, Version(version))
+    }
+    dependencies = dependencyOption.getOrElse(List())
+  } yield Repository(
+      name              = repositoryName,
+      version           = None,
+      dependenciesBuild = dependencies.filter(_.scope.contains(DependencyScope.Build)),
+      modules           = Seq(
+                            RepositoryModule(
+                              name                = repositoryName,
+                              group               = "uk.gov.hmrc",
+                              dependenciesCompile = dependencies.filter(_.scope.contains(DependencyScope.Compile)),
+                              dependenciesTest    = dependencies.filter(_.scope.contains(DependencyScope.Test)),
+                              dependenciesIt      = dependencies.filter(_.scope.contains(DependencyScope.It)),
+                              crossScalaVersions  = None
+                            )
+      )
+    )
 
   @deprecated
   def moduleDependenciesDeprecated(repositoryName: String, version: Option[String]): Action[AnyContent] =
