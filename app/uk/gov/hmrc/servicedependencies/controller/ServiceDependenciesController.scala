@@ -155,12 +155,12 @@ class ServiceDependenciesController @Inject()(
                                                     .find(repositoryName)
                                                     .flatMap(_ match {
                                                       case Some(version) => Future.successful(toRepository(version, latestVersions, bobbyRules))
-                                                      case None => fallbackToDataFromCuratedSlugDependencies(repositoryName, version)
+                                                      case None => repositoryFromCuratedSlugDependencies(repositoryName, version)
                                                     })
                                                     .map(Seq(_))
                             case None          => metaArtefactRepository
                                                     .findAllVersions(repositoryName)
-                                                    .map { metaArtefacts => metaArtefacts.map { meta => toRepository(meta, latestVersions, bobbyRules) }}
+                                                    .map { _.map { toRepository(_, latestVersions, bobbyRules) }}
                           }
       } yield {
         implicit val rw: OWrites[Repository] = Repository.writes
@@ -168,7 +168,7 @@ class ServiceDependenciesController @Inject()(
       }
     }
 
-  def fallbackToDataFromCuratedSlugDependencies(repositoryName: String, version: String): Future[Repository] = for {
+  def repositoryFromCuratedSlugDependencies(repositoryName: String, version: String): Future[Repository] = for {
     dependencyOption <- version match {
       case "latest" => slugDependenciesService.curatedLibrariesOfSlug(repositoryName, SlugInfoFlag.Latest)
       case version => slugDependenciesService.curatedLibrariesOfSlug(repositoryName, Version(version))
