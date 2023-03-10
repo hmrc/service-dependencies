@@ -22,7 +22,7 @@ import org.scalatest.concurrent.{IntegrationPatience, ScalaFutures}
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 import uk.gov.hmrc.http.HeaderCarrier
-import uk.gov.hmrc.servicedependencies.connector.{GithubRawConnector, ReleasesApiConnector, TeamsAndRepositoriesConnector, TeamsForServices}
+import uk.gov.hmrc.servicedependencies.connector.{GitHubProxyConnector, ReleasesApiConnector, TeamsAndRepositoriesConnector, TeamsForServices}
 import uk.gov.hmrc.servicedependencies.connector.model.RepositoryInfo
 import uk.gov.hmrc.servicedependencies.model._
 import uk.gov.hmrc.servicedependencies.persistence.{DeploymentRepository, JdkVersionRepository, SlugInfoRepository, SlugVersionRepository}
@@ -230,7 +230,7 @@ class SlugInfoServiceSpec
       when(boot.mockedReleasesApiConnector.getWhatIsRunningWhere)
         .thenReturn(Future.successful(List.empty))
 
-      when(boot.mockedRawGithubConnector.decomissionedServices)
+      when(boot.mockedGitHubProxyConnector.decomissionedServices)
         .thenReturn(Future.successful(decomissionedServices))
 
       when(boot.mockedDeploymentRepository.getNames(SlugInfoFlag.Latest))
@@ -270,7 +270,7 @@ class SlugInfoServiceSpec
       when(boot.mockedReleasesApiConnector.getWhatIsRunningWhere)
         .thenReturn(Future.successful(List.empty))
 
-      when(boot.mockedRawGithubConnector.decomissionedServices)
+      when(boot.mockedGitHubProxyConnector.decomissionedServices)
         .thenReturn(Future.successful(List.empty))
 
       when(boot.mockedDeploymentRepository.getNames(SlugInfoFlag.Latest))
@@ -300,7 +300,7 @@ class SlugInfoServiceSpec
   , mockedDeploymentRepository          : DeploymentRepository
   , mockedTeamsAndRepositoriesConnector : TeamsAndRepositoriesConnector
   , mockedReleasesApiConnector          : ReleasesApiConnector
-  , mockedRawGithubConnector            : GithubRawConnector
+  , mockedGitHubProxyConnector          : GitHubProxyConnector
   , service                             : SlugInfoService
   )
 
@@ -314,7 +314,7 @@ class SlugInfoServiceSpec
       val mockedDeploymentRepository              = mock[DeploymentRepository]
       val mockedTeamsAndRepositoriesConnector     = mock[TeamsAndRepositoriesConnector]
       val mockedReleasesApiConnector              = mock[ReleasesApiConnector]
-      val mockedRawGithubConnector                = mock[GithubRawConnector]
+      val mockedGitHubProxyConnector              = mock[GitHubProxyConnector]
 
       val service = new SlugInfoService(
             mockedSlugInfoRepository
@@ -325,7 +325,7 @@ class SlugInfoServiceSpec
           , mockedDeploymentRepository
           , mockedTeamsAndRepositoriesConnector
           , mockedReleasesApiConnector
-          , mockedRawGithubConnector
+          , mockedGitHubProxyConnector
           )
       Boot(
           mockedSlugInfoRepository
@@ -336,7 +336,7 @@ class SlugInfoServiceSpec
         , mockedDeploymentRepository
         , mockedTeamsAndRepositoriesConnector
         , mockedReleasesApiConnector
-        , mockedRawGithubConnector
+        , mockedGitHubProxyConnector
         , service
         )
     }

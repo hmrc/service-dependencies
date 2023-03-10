@@ -32,20 +32,6 @@ class ServiceDependenciesConfigTest
      with MockitoSugar {
 
   "ServiceDependenciesConfig" should {
-    "load github credentials from config, when available" in {
-      val config =
-        Configuration(
-          "github.open.api.key" -> "key123"
-        ).withFallback(Configuration(ConfigFactory.load()))
-
-      val serviceConfig = mock[ServicesConfig]
-      when(serviceConfig.baseUrl(any())).thenReturn("")
-
-      val sdc = new ServiceDependenciesConfig(config, serviceConfig)
-
-      sdc.githubApiOpenConfigKey shouldBe "key123"
-    }
-
     "load the curatedDependencyConfig" in {
       val config =
         Configuration(
