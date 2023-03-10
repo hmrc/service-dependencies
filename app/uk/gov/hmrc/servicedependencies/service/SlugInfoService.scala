@@ -30,15 +30,15 @@ import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
 class SlugInfoService @Inject()(
- slugInfoRepository            : SlugInfoRepository,
- slugVersionRepository         : SlugVersionRepository,
- serviceDependencyRepository   : DerivedServiceDependenciesRepository,
- jdkVersionRepository          : JdkVersionRepository,
- groupArtefactRepository       : DerivedGroupArtefactRepository,
- deploymentRepository          : DeploymentRepository,
- teamsAndRepositoriesConnector : TeamsAndRepositoriesConnector,
- releasesApiConnector          : ReleasesApiConnector,
- gitHubProxyConnector          : GitHubProxyConnector,
+  slugInfoRepository            : SlugInfoRepository,
+  slugVersionRepository         : SlugVersionRepository,
+  serviceDependencyRepository   : DerivedServiceDependenciesRepository,
+  jdkVersionRepository          : JdkVersionRepository,
+  groupArtefactRepository       : DerivedGroupArtefactRepository,
+  deploymentRepository          : DeploymentRepository,
+  teamsAndRepositoriesConnector : TeamsAndRepositoriesConnector,
+  releasesApiConnector          : ReleasesApiConnector,
+  gitHubProxyConnector          : GitHubProxyConnector,
 )(implicit ec: ExecutionContext
 ) extends Logging {
 
