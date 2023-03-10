@@ -29,7 +29,7 @@ import uk.gov.hmrc.servicedependencies.config.ServiceDependenciesConfig
 
 import scala.concurrent.ExecutionContext
 
-class GithubRawConnectorSpec
+class GitHubProxyConnectorSpec
   extends AnyWordSpec
      with Matchers
      with MockitoSugar
@@ -40,7 +40,7 @@ class GithubRawConnectorSpec
 
   import ExecutionContext.Implicits.global
 
-  "GithubRawConnector" should {
+  "GitHubProxyConnector" should {
     "parse decommissioned services" in {
       val boot = Boot.init()
 
@@ -54,11 +54,11 @@ class GithubRawConnectorSpec
            """.stripMargin
 
       stubFor(
-        get(urlEqualTo("/github/raw/hmrc/decommissioning/main/decommissioned-microservices.yaml"))
+        get(urlEqualTo("/platops-github-proxy/github-raw/decommissioning/main/decommissioned-microservices.yaml"))
           .willReturn(aResponse().withBody(body))
       )
 
-      boot.githubRawConnector.decomissionedServices(HeaderCarrier()).futureValue shouldBe
+      boot.gitHubProxyConnector.decomissionedServices(HeaderCarrier()).futureValue shouldBe
         List(
           "cds-stub"
         , "journey-backend-transport"
@@ -67,28 +67,26 @@ class GithubRawConnectorSpec
   }
 
   case class Boot(
-    githubRawConnector: GithubRawConnector
+    gitHubProxyConnector: GitHubProxyConnector
   )
 
   object Boot {
     def init(): Boot = {
-      val mockServicesConfig = mock[ServicesConfig]
-
       val serviceDependenciesConfig = new ServiceDependenciesConfig(
-        Configuration.from(Map(
-          "github.open.api.rawurl" -> s"$wireMockUrl/github/raw",
-          "github.open.api.key"    -> "TOKEN"
-        )),
-        mockServicesConfig
+        Configuration(),
+        new ServicesConfig(Configuration(
+          "microservice.services.platops-github-proxy.port" -> wireMockPort,
+          "microservice.services.platops-github-proxy.host" -> wireMockHost
+        ))
       )
 
-      val githubRawConnector = new GithubRawConnector(
+      val gitHubProxyConnector = new GitHubProxyConnector(
           httpClientV2,
           serviceDependenciesConfig
         )
 
       Boot(
-        githubRawConnector
+        gitHubProxyConnector
       )
     }
   }

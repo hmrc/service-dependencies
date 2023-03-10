@@ -29,18 +29,17 @@ import scala.jdk.CollectionConverters._
 import scala.util.Try
 
 @Singleton
-class GithubRawConnector @Inject()(
+class GitHubProxyConnector @Inject()(
   httpClientV2             : HttpClientV2,
-  serviceDependenciesConfig: ServiceDependenciesConfig
+  serviceDependenciesConfig: ServiceDependenciesConfig,
+
 )(implicit
   ec: ExecutionContext
 ) {
   def decomissionedServices(implicit hc: HeaderCarrier): Future[List[String]] = {
-    val url = url"${serviceDependenciesConfig.githubRawUrl}/hmrc/decommissioning/main/decommissioned-microservices.yaml"
+    val url = url"${serviceDependenciesConfig.gitHubProxyBaseURL}/platops-github-proxy/github-raw/decommissioning/main/decommissioned-microservices.yaml"
     httpClientV2
       .get(url)
-      .setHeader("Authorization" -> s"Token ${serviceDependenciesConfig.githubApiOpenConfigKey}")
-      .withProxy
       .execute[Either[UpstreamErrorResponse, HttpResponse]]
       .flatMap(
         _.flatMap(res =>

@@ -21,7 +21,7 @@ import cats.syntax.all._
 import com.google.inject.{Inject, Singleton}
 import play.api.Logging
 import uk.gov.hmrc.http.HeaderCarrier
-import uk.gov.hmrc.servicedependencies.connector.{GithubRawConnector, ReleasesApiConnector, TeamsAndRepositoriesConnector}
+import uk.gov.hmrc.servicedependencies.connector.{GitHubProxyConnector, ReleasesApiConnector, TeamsAndRepositoriesConnector}
 import uk.gov.hmrc.servicedependencies.model._
 import uk.gov.hmrc.servicedependencies.persistence.{DeploymentRepository, JdkVersionRepository, SlugInfoRepository, SlugVersionRepository}
 import uk.gov.hmrc.servicedependencies.persistence.derived.{DerivedGroupArtefactRepository, DerivedServiceDependenciesRepository}
@@ -30,15 +30,15 @@ import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
 class SlugInfoService @Inject()(
-  slugInfoRepository            : SlugInfoRepository,
-  slugVersionRepository         : SlugVersionRepository,
-  serviceDependencyRepository   : DerivedServiceDependenciesRepository,
-  jdkVersionRepository          : JdkVersionRepository,
-  groupArtefactRepository       : DerivedGroupArtefactRepository,
-  deploymentRepository          : DeploymentRepository,
-  teamsAndRepositoriesConnector : TeamsAndRepositoriesConnector,
-  releasesApiConnector          : ReleasesApiConnector,
-  githubRawConnector            : GithubRawConnector,
+ slugInfoRepository            : SlugInfoRepository,
+ slugVersionRepository         : SlugVersionRepository,
+ serviceDependencyRepository   : DerivedServiceDependenciesRepository,
+ jdkVersionRepository          : JdkVersionRepository,
+ groupArtefactRepository       : DerivedGroupArtefactRepository,
+ deploymentRepository          : DeploymentRepository,
+ teamsAndRepositoriesConnector : TeamsAndRepositoriesConnector,
+ releasesApiConnector          : ReleasesApiConnector,
+ gitHubProxyConnector          : GitHubProxyConnector,
 )(implicit ec: ExecutionContext
 ) extends Logging {
 
@@ -96,7 +96,7 @@ class SlugInfoService @Inject()(
       serviceDeploymentInfos <- releasesApiConnector.getWhatIsRunningWhere
       activeRepos            <- teamsAndRepositoriesConnector.getAllRepositories(archived = Some(false))
                                   .map(_.map(_.name))
-      decomissionedServices  <- githubRawConnector.decomissionedServices
+      decomissionedServices  <- gitHubProxyConnector.decomissionedServices
       latestServices         <- deploymentRepository.getNames(SlugInfoFlag.Latest)
       inactiveServices       =  latestServices.diff(activeRepos) // This will not work for slugs with different name to the repo (e.g. sa-filing-2223-helpdesk)
       allServiceDeployments  =  serviceNames.map { serviceName =>

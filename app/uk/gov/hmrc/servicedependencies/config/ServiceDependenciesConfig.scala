@@ -36,8 +36,8 @@ class ServiceDependenciesConfig @Inject()(
   lazy val artefactProcessorServiceUrl: String =
     serviceConfig.baseUrl("artefact-processor")
 
-  val githubApiOpenConfigKey =
-    configuration.get[String]("github.open.api.key")
+  lazy val gitHubProxyBaseURL: String =
+    serviceConfig.baseUrl("platops-github-proxy")
 
   lazy val teamsAndRepositoriesCacheExpiration =
     configuration.get[Duration]("microservice.services.teams-and-repositories.cache.expiration")
@@ -59,7 +59,4 @@ class ServiceDependenciesConfig @Inject()(
     }
     json.as[CuratedDependencyConfig]
   }
-
-  val githubRawUrl =
-    configuration.get[String]("github.open.api.rawurl")
 }
