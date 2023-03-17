@@ -29,12 +29,12 @@ import uk.gov.hmrc.servicedependencies.persistence.derived.DerivedServiceDepende
 
 import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.duration.DurationInt
-import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpec
 
 
 class DependencyLookupServiceSpec
-  extends AnyFlatSpec
+  extends AnyWordSpec
      with Matchers
      with MockitoSugar
      with MongoSupport {
@@ -45,111 +45,115 @@ class DependencyLookupServiceSpec
 
   import ExecutionContext.Implicits.global
 
-  "findSlugsUsing" should "return a list of slugs inside the version range" in {
+  "findSlugsUsing" should {
+    "return a list of slugs inside the version range" in {
+      val slugLookup: Map[String, Map[Version, Set[String]]] = Map(
+        "org.libs:mylib" -> Map(
+            Version(1,0,0) -> Set("test1:1.99.3")
+          , Version(1,3,0) -> Set("test2:2.0.1" )
+          )
+      )
 
-    val slugLookup: Map[String, Map[Version, Set[String]]] = Map(
-      "org.libs:mylib" -> Map(
-          Version(1,0,0) -> Set("test1:1.99.3")
-        , Version(1,3,0) -> Set("test2:2.0.1" )
-        )
-    )
+      val res1 = DependencyLookupService.findSlugsUsing(
+        lookup   = slugLookup,
+        group    = "org.libs",
+        artifact = "mylib",
+        range    = BobbyVersionRange.parse("[1.1.0,]").get)
 
-    val res1 = DependencyLookupService.findSlugsUsing(
-      lookup   = slugLookup,
-      group    = "org.libs",
-      artifact = "mylib",
-      range    = BobbyVersionRange.parse("[1.1.0,]").get)
+      res1.length shouldBe 1
 
-    res1.length shouldBe 1
+      val res2 = DependencyLookupService.findSlugsUsing(
+        lookup   = slugLookup,
+        group    = "org.libs",
+        artifact = "mylib",
+        range    = BobbyVersionRange.parse("(1.0.0,]").get)
 
-    val res2 = DependencyLookupService.findSlugsUsing(
-      lookup   = slugLookup,
-      group    = "org.libs",
-      artifact = "mylib",
-      range    = BobbyVersionRange.parse("(1.0.0,]").get)
-
-    res2.length shouldBe 1
+      res2.length shouldBe 1
+    }
   }
 
+  "getLatestBobbyRuleViolations" should {
+      "return the number of slugs violating a bobby rule" in {
+      val configService         = mock[ServiceConfigsConnector]
+      val slugInfoRepository    = mock[SlugInfoRepository]
 
-  "getLatestBobbyRuleViolations" should "return the number of slugs violating a bobby rule" in {
-    val configService         = mock[ServiceConfigsConnector]
-    val slugInfoRepository    = mock[SlugInfoRepository]
+      val bobbyRulesSummaryRepo = new BobbyRulesSummaryRepository(mongoComponent) {
+        import scala.compat.java8.FunctionConverters._
 
-    val bobbyRulesSummaryRepo = new BobbyRulesSummaryRepository(mongoComponent) {
-      import scala.compat.java8.FunctionConverters._
+        private val store = new AtomicReference(List[BobbyRulesSummary]())
 
-      private val store = new AtomicReference(List[BobbyRulesSummary]())
+        override def add(summary: BobbyRulesSummary): Future[Unit] =
+          Future.successful {
+            store.updateAndGet(((l: List[BobbyRulesSummary]) => l ++ List(summary)).asJava)
+          }
 
-      override def add(summary: BobbyRulesSummary): Future[Unit] =
-        Future.successful {
-          store.updateAndGet(((l: List[BobbyRulesSummary]) => l ++ List(summary)).asJava)
+        override def getLatest: Future[Option[BobbyRulesSummary]] =
+          Future.successful(store.get.sortBy(_.date.toEpochDay).headOption)
+
+        override def getHistoric(query: List[BobbyRuleQuery], from: LocalDate, to: LocalDate): Future[List[BobbyRulesSummary]] =
+          Future.successful(store.get)
+
+        override def clearAllData: Future[Unit] = {
+          store.set(List.empty)
+          Future.unit
         }
-
-      override def getLatest: Future[Option[BobbyRulesSummary]] =
-        Future.successful(store.get.sortBy(_.date.toEpochDay).headOption)
-
-      override def getHistoric(query: List[BobbyRuleQuery], from: LocalDate, to: LocalDate): Future[List[BobbyRulesSummary]] =
-        Future.successful(store.get)
-
-      override def clearAllData: Future[Unit] = {
-        store.set(List.empty)
-        Future.unit
       }
+
+      val derivedServiceDependenciesRepository = mock[DerivedServiceDependenciesRepository]
+
+      when(configService.getBobbyRules())
+        .thenReturn(Future(BobbyRules(Map(("uk.gov.hmrc", "libs") -> List(bobbyRule)))))
+      when(derivedServiceDependenciesRepository.findDependencies(any[SlugInfoFlag], any[Option[DependencyScope]]))
+        .thenReturn(Future.successful(Seq.empty))
+      when(derivedServiceDependenciesRepository.findDependencies(SlugInfoFlag.Production, Some(DependencyScope.Compile)))
+        .thenReturn(Future.successful(Seq(serviceDep1, serviceDep11, serviceDep12)))
+
+      val lookupService = new DependencyLookupService(configService, slugInfoRepository, bobbyRulesSummaryRepo, derivedServiceDependenciesRepository)
+
+      lookupService.updateBobbyRulesSummary().futureValue
+      val res = lookupService.getLatestBobbyRuleViolations.futureValue
+      res.summary shouldBe Map(
+          (bobbyRule, SlugInfoFlag.Latest      ) -> 0
+        , (bobbyRule, SlugInfoFlag.Development ) -> 0
+        , (bobbyRule, SlugInfoFlag.ExternalTest) -> 0
+        , (bobbyRule, SlugInfoFlag.Production  ) -> 1
+        , (bobbyRule, SlugInfoFlag.QA          ) -> 0
+        , (bobbyRule, SlugInfoFlag.Staging     ) -> 0
+        , (bobbyRule, SlugInfoFlag.Integration ) -> 0
+        )
+    }
+  }
+
+  "combineBobbyRulesSummaries" should {
+    "handle empty summaries" in {
+      DependencyLookupService.combineBobbyRulesSummaries(List.empty) shouldBe HistoricBobbyRulesSummary(LocalDate.now(), Map.empty)
     }
 
-    val derivedServiceDependenciesRepository = mock[DerivedServiceDependenciesRepository]
+    "combine summaries" in {
+      DependencyLookupService.combineBobbyRulesSummaries(List(
+          bobbyRulesSummary(LocalDate.now()             , 1, 2)
+        , bobbyRulesSummary(LocalDate.now().plusDays(-1), 3, 4)
+        )) shouldBe historicBobbyRulesSummary(LocalDate.now().plusDays(-1), List(3, 1), List(4, 2))
+    }
 
-    when(configService.getBobbyRules)
-      .thenReturn(Future(BobbyRules(Map(("uk.gov.hmrc", "libs") -> List(bobbyRule)))))
-    when(derivedServiceDependenciesRepository.findDependencies(any[SlugInfoFlag], any[Option[DependencyScope]]))
-      .thenReturn(Future.successful(Seq.empty))
-    when(derivedServiceDependenciesRepository.findDependencies(SlugInfoFlag.Production, Some(DependencyScope.Compile)))
-      .thenReturn(Future.successful(Seq(serviceDep1, serviceDep11, serviceDep12)))
+    "extrapolate missing values" in {
+      DependencyLookupService.combineBobbyRulesSummaries(List(
+          bobbyRulesSummary(LocalDate.now()             , 1, 2)
+        , bobbyRulesSummary(LocalDate.now().plusDays(-2), 3, 4)
+        )) shouldBe historicBobbyRulesSummary(LocalDate.now().plusDays(-2), List(3, 3, 1), List(4, 4, 2))
+    }
 
-    val lookupService = new DependencyLookupService(configService, slugInfoRepository, bobbyRulesSummaryRepo, derivedServiceDependenciesRepository)
-
-    lookupService.updateBobbyRulesSummary().futureValue
-    val res = lookupService.getLatestBobbyRuleViolations.futureValue
-    res.summary shouldBe Map(
-        (bobbyRule, SlugInfoFlag.Latest      ) -> 0
-      , (bobbyRule, SlugInfoFlag.Development ) -> 0
-      , (bobbyRule, SlugInfoFlag.ExternalTest) -> 0
-      , (bobbyRule, SlugInfoFlag.Production  ) -> 1
-      , (bobbyRule, SlugInfoFlag.QA          ) -> 0
-      , (bobbyRule, SlugInfoFlag.Staging     ) -> 0
-      , (bobbyRule, SlugInfoFlag.Integration ) -> 0
-      )
-  }
-
-  "combineBobbyRulesSummaries" should "handle empty summaries" in {
-    DependencyLookupService.combineBobbyRulesSummaries(List.empty) shouldBe HistoricBobbyRulesSummary(LocalDate.now, Map.empty)
-  }
-
-  it should "combine summaries" in {
-    DependencyLookupService.combineBobbyRulesSummaries(List(
-        bobbyRulesSummary(LocalDate.now             , 1, 2)
-      , bobbyRulesSummary(LocalDate.now.plusDays(-1), 3, 4)
-      )) shouldBe historicBobbyRulesSummary(LocalDate.now.plusDays(-1), List(3, 1), List(4, 2))
-  }
-
-  it should "extrapolate missing values" in {
-    DependencyLookupService.combineBobbyRulesSummaries(List(
-        bobbyRulesSummary(LocalDate.now             , 1, 2)
-      , bobbyRulesSummary(LocalDate.now.plusDays(-2), 3, 4)
-      )) shouldBe historicBobbyRulesSummary(LocalDate.now.plusDays(-2), List(3, 3, 1), List(4, 4, 2))
-  }
-
- it should "drop values not in latest result" in {
-    DependencyLookupService.combineBobbyRulesSummaries(List(
-        bobbyRulesSummary(LocalDate.now             , 1, 2, bobbyRule)
-      , bobbyRulesSummary(LocalDate.now.plusDays(-2), 3, 4, bobbyRule.copy(name = "rule2"))
-      )) shouldBe
-        HistoricBobbyRulesSummary(LocalDate.now.plusDays(-2),
-          Map( (bobbyRule, SlugInfoFlag.Latest    ) -> List(1, 1, 1)
-             , (bobbyRule, SlugInfoFlag.Production) -> List(2, 2, 2)
-             )
-        )
+    "drop values not in latest result" in {
+      DependencyLookupService.combineBobbyRulesSummaries(List(
+          bobbyRulesSummary(LocalDate.now()             , 1, 2, bobbyRule)
+        , bobbyRulesSummary(LocalDate.now().plusDays(-2), 3, 4, bobbyRule.copy(name = "rule2"))
+        )) shouldBe
+          HistoricBobbyRulesSummary(LocalDate.now().plusDays(-2),
+            Map( (bobbyRule, SlugInfoFlag.Latest    ) -> List(1, 1, 1)
+              , (bobbyRule, SlugInfoFlag.Production) -> List(2, 2, 2)
+              )
+          )
+    }
   }
 }
 

@@ -23,14 +23,14 @@ import play.api.libs.json._
 import uk.gov.hmrc.mongo.play.json.formats.MongoJavatimeFormats
 
 case class BobbyRulesSummary(
-    date   : LocalDate
-  , summary: Map[(BobbyRule, SlugInfoFlag), Int]
-  )
+  date   : LocalDate
+, summary: Map[(BobbyRule, SlugInfoFlag), Int]
+)
 
 case class HistoricBobbyRulesSummary(
-    date   : LocalDate
-  , summary: Map[(BobbyRule, SlugInfoFlag), List[Int]]
-  )
+  date   : LocalDate
+, summary: Map[(BobbyRule, SlugInfoFlag), List[Int]]
+)
 
 private object DataFormat {
   private implicit val brvf = BobbyRule.format
@@ -49,11 +49,11 @@ private object DataFormat {
   private def g[A](map: Map[(BobbyRule, SlugInfoFlag), A]): List[(JsValue, Map[String, A])] =
     map.groupBy { case ((r, _), _) => r }
       .map {
-      case (r, v1) =>
-        ( Json.toJson(r)
-        , v1.map { case ((_, f), v2) => (f.asString, v2) }
-        )
-    }.toList
+        case (r, v1) =>
+          ( Json.toJson(r)
+          , v1.map { case ((_, f), v2) => (f.asString, v2) }
+          )
+      }.toList
 
   def dataFormat[A : Format]: Format[Map[(BobbyRule, SlugInfoFlag), A]] =
     implicitly[Format[List[(JsValue, Map[String, A])]]].inmap(f[A], g[A])
@@ -96,7 +96,7 @@ object HistoricBobbyRulesSummary {
 
   def fromBobbyRulesSummary(bobbyRulesSummary: BobbyRulesSummary): HistoricBobbyRulesSummary =
     HistoricBobbyRulesSummary(
-        date    = bobbyRulesSummary.date
-      , summary = bobbyRulesSummary.summary.view.mapValues(i => List(i)).toMap
-      )
+      date    = bobbyRulesSummary.date
+    , summary = bobbyRulesSummary.summary.view.mapValues(i => List(i)).toMap
+    )
 }

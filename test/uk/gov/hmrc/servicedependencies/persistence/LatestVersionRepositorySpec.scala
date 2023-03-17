@@ -47,7 +47,7 @@ class LatestVersionRepositorySpec
   "update" should {
     "inserts correctly" in {
       repository.update(latestVersion).futureValue
-      repository.getAllEntries.futureValue shouldBe Seq(latestVersion)
+      repository.getAllEntries().futureValue shouldBe Seq(latestVersion)
       repository.find(group = "uk.gov.hmrc", artefact = "some-library").futureValue shouldBe Some(latestVersion)
     }
 
@@ -56,7 +56,7 @@ class LatestVersionRepositorySpec
 
       repository.update(latestVersion).futureValue
       repository.update(newLibraryVersion).futureValue
-      repository.getAllEntries.futureValue shouldBe Seq(newLibraryVersion)
+      repository.getAllEntries().futureValue shouldBe Seq(newLibraryVersion)
       repository.find(group = "uk.gov.hmrc", artefact = "some-library").futureValue shouldBe Some(newLibraryVersion)
     }
   }
@@ -64,9 +64,9 @@ class LatestVersionRepositorySpec
   "clearAllDependencyEntries" should {
     "delete everything" in {
       repository.update(latestVersion).futureValue
-      repository.getAllEntries.futureValue should have size 1
-      repository.clearAllData.futureValue
-      repository.getAllEntries.futureValue shouldBe Nil
+      repository.getAllEntries().futureValue should have size 1
+      repository.clearAllData().futureValue
+      repository.getAllEntries().futureValue shouldBe Nil
       repository.find(group = "uk.gov.hmrc", artefact = "some-library").futureValue shouldBe None
     }
   }

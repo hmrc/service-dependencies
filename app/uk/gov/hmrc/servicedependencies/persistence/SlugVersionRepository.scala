@@ -25,20 +25,20 @@ import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
-class SlugVersionRepository  @Inject()(mongoComponent: MongoComponent)(implicit ec: ExecutionContext)
-  extends SlugInfoRepositoryBase[Version](
-    mongoComponent,
-    domainFormat = Version.mongoVersionRepositoryFormat
-  ){
-
-  def getMaxVersion(name: String) : Future[Option[Version]] = {
+class SlugVersionRepository @Inject()(
+  mongoComponent: MongoComponent
+)(implicit
+  ec            : ExecutionContext
+) extends SlugInfoRepositoryBase[Version](
+  mongoComponent,
+  domainFormat = Version.mongoVersionRepositoryFormat
+){
+  def getMaxVersion(name: String): Future[Option[Version]] =
     collection
       .find(equal("name", name))
       .projection(include("version"))
       .foldLeft(Option.empty[Version]){
         case (optMax, version) if optMax.exists(_ > version) => optMax
-        case (_, version) => Some(version)
+        case (_     , version)                               => Some(version)
       }.toFuture()
-  }
-
 }

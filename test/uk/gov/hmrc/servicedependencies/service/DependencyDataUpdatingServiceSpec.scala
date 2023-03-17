@@ -58,10 +58,22 @@ class DependencyDataUpdatingServiceSpec
       when(boot.mockLatestVersionRepository.update(any()))
         .thenReturn(Future.successful(mock[LatestVersion]))
 
+      when(boot.mockLatestVersionRepository.getAllEntries())
+        .thenReturn(Future.successful(List(
+          LatestVersion(name = "libXX", group= "uk.gov.hmrc", version = Version("1.0.0"), updateDate = timeForTest),
+          LatestVersion(name = "libYY", group= "uk.gov.hmrc", version = Version("1.0.0"), updateDate = timeForTest)
+        )))
+
+      when(boot.mockLatestVersionRepository.remove(any()))
+        .thenReturn(Future.unit)
+
       boot.dependencyUpdatingService.reloadLatestVersions().futureValue
 
       verify(boot.mockLatestVersionRepository, times(1))
         .update(LatestVersion(name = "libYY", group = "uk.gov.hmrc", version = Version("1.1.1"), updateDate = timeForTest))
+
+      verify(boot.mockLatestVersionRepository, times(1))
+        .remove(Seq(LatestVersion(name = "libXX", group = "uk.gov.hmrc", version = Version("1.0.0"), updateDate = timeForTest)))
     }
   }
 
@@ -89,39 +101,49 @@ class DependencyDataUpdatingServiceSpec
         DependencyConfig("libYY", "uk.gov.hmrc"    , None)
       )
     }
+
     "include any non HMRC dependencies with bobby rules" in {
       val boot = new Boot(CuratedDependencyConfig(sbtPlugins = Nil, libraries  = Nil, others     = Nil))
 
-      when(boot.mockServiceConfigsConnector.getBobbyRules)
+      when(boot.mockServiceConfigsConnector.getBobbyRules())
         .thenReturn(
           Future.successful(BobbyRules(Map(
-          ("com.other", "lib4") -> List(BobbyRule("com.other", "lib4",
-            BobbyVersionRange.parse("(1.1.0,1.3.0]").get,
-            "naughty lib",
-            LocalDate.of(2020,1,1)))
-        ))))
+            ("com.other", "lib4") -> List(BobbyRule(
+                                       "com.other",
+                                       "lib4",
+                                       BobbyVersionRange.parse("(1.1.0,1.3.0]").get,
+                                       "naughty lib",
+                                       LocalDate.of(2020,1,1)
+                                     ))
+          )))
+        )
 
       boot.dependencyUpdatingService.versionsToUpdate().futureValue shouldBe List(
         DependencyConfig("lib4", "com.other", None)
       )
     }
+
     "override non HMRC dependencies version with curated list" in {
       val boot = new Boot(CuratedDependencyConfig(
         sbtPlugins = Nil,
-        libraries = List(
-          DependencyConfig(name = "lib4" , group= "com.other", latestVersion = Some(Version("1.5.0"))),
-        ),
+        libraries  = List(
+                       DependencyConfig(name = "lib4" , group= "com.other", latestVersion = Some(Version("1.5.0"))),
+                     ),
         others = Nil
       ))
 
-      when(boot.mockServiceConfigsConnector.getBobbyRules)
+      when(boot.mockServiceConfigsConnector.getBobbyRules())
         .thenReturn(
           Future.successful(BobbyRules(Map(
-            ("com.other", "lib4") -> List(BobbyRule("com.other", "lib4",
-              BobbyVersionRange.parse("(1.1.0,1.3.0]").get,
-              "naughty lib",
-              LocalDate.of(2020,1,1)))
-          ))))
+            ("com.other", "lib4") -> List(BobbyRule(
+                                       "com.other",
+                                       "lib4",
+                                       BobbyVersionRange.parse("(1.1.0,1.3.0]").get,
+                                       "naughty lib",
+                                       LocalDate.of(2020,1,1)
+                                     ))
+          )))
+        )
 
       boot.dependencyUpdatingService.versionsToUpdate().futureValue shouldBe List(
         DependencyConfig("lib4", "com.other", Some(Version("1.5.0")))
@@ -143,7 +165,7 @@ class DependencyDataUpdatingServiceSpec
     when(derivedGroupArtefactRepository.findGroupsArtefacts)
       .thenReturn(Future.successful(Seq.empty))
 
-    when(mockServiceConfigsConnector.getBobbyRules)
+    when(mockServiceConfigsConnector.getBobbyRules())
       .thenReturn(Future.successful(BobbyRules(Map.empty)))
 
     val dependencyUpdatingService = new DependencyDataUpdatingService(
@@ -154,7 +176,7 @@ class DependencyDataUpdatingServiceSpec
       , mockArtifactoryConnector
       , mockServiceConfigsConnector
       ) {
-        override def now: Instant = timeForTest
+        override def now(): Instant = timeForTest
       }
   }
 }

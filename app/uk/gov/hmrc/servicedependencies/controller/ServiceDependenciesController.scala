@@ -34,14 +34,15 @@ import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
 class ServiceDependenciesController @Inject()(
-  slugInfoService              : SlugInfoService
-, slugDependenciesService      : SlugDependenciesService
-, serviceConfigsConnector      : ServiceConfigsConnector
-, teamDependencyService        : TeamDependencyService
-, metaArtefactRepository       : MetaArtefactRepository
-, latestVersionRepository      : LatestVersionRepository
-, cc                           : ControllerComponents
-)(implicit ec: ExecutionContext
+  slugInfoService        : SlugInfoService
+, slugDependenciesService: SlugDependenciesService
+, serviceConfigsConnector: ServiceConfigsConnector
+, teamDependencyService  : TeamDependencyService
+, metaArtefactRepository : MetaArtefactRepository
+, latestVersionRepository: LatestVersionRepository
+, cc                     : ControllerComponents
+)(implicit
+  ec                     : ExecutionContext
 ) extends BackendController(cc) {
 
   implicit val dw: OWrites[Dependencies] = Dependencies.writes
@@ -147,8 +148,8 @@ class ServiceDependenciesController @Inject()(
   def moduleDependencies(repositoryName: String, versionOption: Option[String]): Action[AnyContent] =
     Action.async {
       for {
-        latestVersions <- latestVersionRepository.getAllEntries
-        bobbyRules     <- serviceConfigsConnector.getBobbyRules
+        latestVersions <- latestVersionRepository.getAllEntries()
+        bobbyRules     <- serviceConfigsConnector.getBobbyRules()
         repositories   <- versionOption match {
                             case Some(version) =>
                                                   metaArtefactRepository
@@ -190,7 +191,7 @@ class ServiceDependenciesController @Inject()(
       )
     )
 
-  @deprecated
+  @deprecated("Use moduleDependencies", "21.02.2023")
   def moduleDependenciesDeprecated(repositoryName: String, version: Option[String]): Action[AnyContent] =
     Action.async {
       (for {
@@ -202,7 +203,7 @@ class ServiceDependenciesController @Inject()(
                              NotFound("")
                            )
          latestVersions <- EitherT.liftF[Future, Result, Seq[LatestVersion]](latestVersionRepository.getAllEntries)
-         bobbyRules     <- EitherT.liftF[Future, Result, BobbyRules](serviceConfigsConnector.getBobbyRules)
+         bobbyRules     <- EitherT.liftF[Future, Result, BobbyRules](serviceConfigsConnector.getBobbyRules())
        } yield {
         val repository = toRepository(meta, latestVersions, bobbyRules)
         implicit val rw = Repository.writes
@@ -243,11 +244,11 @@ class ServiceDependenciesController @Inject()(
   private def toRepository(meta: MetaArtefact, latestVersions: Seq[LatestVersion], bobbyRules: BobbyRules) = {
     def toDependencies(name: String, scope: DependencyScope, dotFile: String) =
       slugDependenciesService.curatedLibrariesFromGraph(
-        dotFile = dotFile,
-        rootName = name,
+        dotFile        = dotFile,
+        rootName       = name,
         latestVersions = latestVersions,
-        bobbyRules = bobbyRules,
-        scope = scope
+        bobbyRules     = bobbyRules,
+        scope          = scope
       )
 
     val sbtVersion =
@@ -259,24 +260,24 @@ class ServiceDependenciesController @Inject()(
       else Nil
 
     def dependencyIfMissing(
-                             dependencies: Seq[Dependency],
-                             group: String,
-                             artefact: String,
-                             versions: Seq[Version],
-                             scope: DependencyScope
-                           ): Seq[Dependency] =
+      dependencies: Seq[Dependency],
+      group       : String,
+      artefact    : String,
+      versions    : Seq[Version],
+      scope       : DependencyScope
+    ): Seq[Dependency] =
       for {
         v <- versions
         if dependencies.find(dep => dep.group == group && dep.name == artefact).isEmpty
       } yield
         Dependency(
-          name = artefact,
-          group = group,
-          currentVersion = v,
-          latestVersion = latestVersions.find(d => d.name == artefact && d.group == group).map(_.version),
+          name                = artefact,
+          group               = group,
+          currentVersion      = v,
+          latestVersion       = latestVersions.find(d => d.name == artefact && d.group == group).map(_.version),
           bobbyRuleViolations = List.empty,
-          importBy = None,
-          scope = Some(scope)
+          importBy            = None,
+          scope               = Some(scope)
         )
 
     val buildDependencies = meta.dependencyDotBuild.fold(Seq.empty[Dependency])(s => toDependencies(meta.name, DependencyScope.Build, s))
@@ -287,55 +288,58 @@ class ServiceDependenciesController @Inject()(
       dependenciesBuild = buildDependencies ++
                             dependencyIfMissing(
                               buildDependencies,
-                              group = "org.scala-sbt",
+                              group    = "org.scala-sbt",
                               artefact = "sbt",
                               versions = sbtVersion.toSeq,
-                              scope = DependencyScope.Build
+                              scope    = DependencyScope.Build
                             ),
       modules           = meta.modules
                               .filter(_.publishSkip.fold(true)(!_))
                               .map { m =>
                                 val compileDependencies = m.dependencyDotCompile.fold(Seq.empty[Dependency])(s => toDependencies(m.name, DependencyScope.Compile, s))
-                                val testDependencies = m.dependencyDotTest.fold(Seq.empty[Dependency])(s => toDependencies(m.name, DependencyScope.Test, s))
-                                val itDependencies = m.dependencyDotIt.fold(Seq.empty[Dependency])(s => toDependencies(m.name, DependencyScope.It, s))
-                                val scalaVersions = m.crossScalaVersions.toSeq.flatten
+                                val testDependencies    = m.dependencyDotTest   .fold(Seq.empty[Dependency])(s => toDependencies(m.name, DependencyScope.Test   , s))
+                                val itDependencies      = m.dependencyDotIt     .fold(Seq.empty[Dependency])(s => toDependencies(m.name, DependencyScope.It     , s))
+                                val scalaVersions       = m.crossScalaVersions.toSeq.flatten
                                 val (activeBobbyRuleViolations, pendingBobbyRuleViolations) =
                                   bobbyRules.violationsFor(
-                                    group = m.group
-                                    , name = m.name
-                                    , version = meta.version
+                                    group   = m.group,
+                                    name    = m.name,
+                                    version = meta.version
                                   ).partition(rule => LocalDate.now().isAfter(rule.from))
                                 RepositoryModule(
-                                  name = m.name,
-                                  group = m.group,
-                                  dependenciesCompile = compileDependencies ++ when(compileDependencies.nonEmpty)(
-                                    dependencyIfMissing(
-                                      dependencies = compileDependencies,
-                                      group = "org.scala-lang",
-                                      artefact = "scala-library",
-                                      versions = scalaVersions,
-                                      scope = DependencyScope.Compile
-                                    )
-                                  ),
-                                  dependenciesTest = testDependencies ++ when(testDependencies.nonEmpty)(
-                                    dependencyIfMissing(
-                                      dependencies = testDependencies,
-                                      group = "org.scala-lang",
-                                      artefact = "scala-library",
-                                      versions = scalaVersions,
-                                      scope = DependencyScope.Test
-                                    )
-                                  ),
-                                  dependenciesIt = itDependencies ++ when(itDependencies.nonEmpty)(
-                                    dependencyIfMissing(
-                                      dependencies = itDependencies,
-                                      group = "org.scala-lang",
-                                      artefact = "scala-library",
-                                      versions = scalaVersions,
-                                      scope = DependencyScope.It
-                                    )
-                                  ),
-                                  crossScalaVersions = m.crossScalaVersions,
+                                  name                = m.name,
+                                  group               = m.group,
+                                  dependenciesCompile = compileDependencies ++
+                                                          when(compileDependencies.nonEmpty)(
+                                                            dependencyIfMissing(
+                                                              dependencies = compileDependencies,
+                                                              group        = "org.scala-lang",
+                                                              artefact     = "scala-library",
+                                                              versions     = scalaVersions,
+                                                              scope        = DependencyScope.Compile
+                                                            )
+                                                          ),
+                                  dependenciesTest    = testDependencies ++
+                                                          when(testDependencies.nonEmpty)(
+                                                            dependencyIfMissing(
+                                                              dependencies = testDependencies,
+                                                              group        = "org.scala-lang",
+                                                              artefact     = "scala-library",
+                                                              versions     = scalaVersions,
+                                                              scope        = DependencyScope.Test
+                                                            )
+                                                          ),
+                                  dependenciesIt      = itDependencies ++
+                                                          when(itDependencies.nonEmpty)(
+                                                            dependencyIfMissing(
+                                                              dependencies = itDependencies,
+                                                              group        = "org.scala-lang",
+                                                              artefact     = "scala-library",
+                                                              versions     = scalaVersions,
+                                                              scope        = DependencyScope.It
+                                                            )
+                                                          ),
+                                  crossScalaVersions  = m.crossScalaVersions,
                                   activeBobbyRuleViolations,
                                   pendingBobbyRuleViolations
                                 )

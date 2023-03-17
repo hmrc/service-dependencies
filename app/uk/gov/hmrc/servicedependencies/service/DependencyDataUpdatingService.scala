@@ -42,42 +42,44 @@ class DependencyDataUpdatingService @Inject()(
 )(implicit ec: ExecutionContext
 ) extends Logging {
 
-  def now: Instant = Instant.now()
+  def now(): Instant = Instant.now()
 
   lazy val curatedDependencyConfig =
     serviceDependenciesConfig.curatedDependencyConfig
 
-  private[service] def versionsToUpdate(): Future[List[DependencyConfig]] = {
+  private[service] def versionsToUpdate(): Future[List[DependencyConfig]] =
     for {
       hmrcDependencies                  <- hmrcDependencies()
       nonHmrcDependenciesWithBobbyRules <- nonHmrcDependenciesWithBobbyRules()
     } yield
       ((hmrcDependencies ++ nonHmrcDependenciesWithBobbyRules).groupBy(a => a.group + ":" + a.name) ++
-        curatedDependencyConfig.allDependencies.groupBy(a => a.group + ":" + a.name)).values.flatten.toList
-  }
+        curatedDependencyConfig.allDependencies               .groupBy(a => a.group + ":" + a.name)
+      ).values.flatten.toList
 
-  def reloadLatestVersions(): Future[List[LatestVersion]] =
-    versionsToUpdate()
-      .flatMap(
-        _.foldLeftM[Future, List[LatestVersion]](List.empty) {
-          case (acc, config) =>
-            (for {
-              optVersion <- config.latestVersion
-                            .fold(
-                              artifactoryConnector
-                                .findLatestVersion(config.group, config.name)
-                                .map(vs => Max.maxOf(vs.values))
-                            )(v => Future.successful(Some(v)))
-              optDbVersion <- optVersion.traverse { version =>
-                              val dbVersion =
-                                LatestVersion(name = config.name, group = config.group, version = version, now)
-                              latestVersionRepository
-                                .update(dbVersion)
-                                .map(_ => dbVersion)
-                            }
-            } yield optDbVersion).map(acc ++ _)
-        }
-      )
+  def reloadLatestVersions(): Future[Unit] =
+    for {
+      toAdd <- versionsToUpdate()
+      _     <- toAdd.foldLeftM[Future, Unit](()) {
+                 case (_, config) =>
+                   for {
+                     optVersion <- config.latestVersion
+                                     .fold(
+                                       artifactoryConnector
+                                         .findLatestVersion(config.group, config.name)
+                                         .map(vs => Max.maxOf(vs.values))
+                                     )(v => Future.successful(Some(v)))
+                     _           <- optVersion.traverse { version =>
+                                     val dbVersion =
+                                       LatestVersion(name = config.name, group = config.group, version = version, now())
+                                     latestVersionRepository
+                                       .update(dbVersion)
+                                       .map(_ => dbVersion)
+                                   }
+                   } yield ()
+               }
+      allEntries <- latestVersionRepository.getAllEntries()
+      _          <- latestVersionRepository.remove(allEntries.filterNot(lv => toAdd.exists(lv2 => lv.name == lv2.name && lv.group == lv2.group)))
+    } yield ()
 
   private def hmrcDependencies(): Future[Seq[DependencyConfig]] =
     derivedGroupArtefactRepository.findGroupsArtefacts
@@ -92,7 +94,7 @@ class DependencyDataUpdatingService @Inject()(
       )
 
   private def nonHmrcDependenciesWithBobbyRules(): Future[Seq[DependencyConfig]] =
-    serviceConfigsConnector.getBobbyRules
+    serviceConfigsConnector.getBobbyRules()
       .map(bobbyRules =>
         bobbyRules
           .asMap

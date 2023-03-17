@@ -51,7 +51,7 @@ db.getCollection("slugInfos-bak").renameCollection("slugInfos")
 ## Backup
 
 ```javascript
-db.getCollection("slugInfos").copyTo("slugInfos-bak")
+db.getCollection("slugInfos").aggregate([{$match: {}}, {$out: "slugInfos-bak"}])
 ```
 
 ## Upgrade collections
@@ -69,7 +69,7 @@ db.runCommand({"collMod": "slugInfos", "validator": {}, "validationLevel": "off"
 
 * Need to duplicate the slugInfos collection as deployments
 ```javascript
-db.getCollection("slugInfos").copyTo("deployments")
+db.getCollection("slugInfos").aggregate([{$match: {}}, {$out: "deployments"}])
 ```
 
 (for newer mongo - i.e. development:
@@ -135,5 +135,5 @@ db.getCollection("deployments").drop()
 db.getCollection("DERIVED-slug-dependencies").drop()
 db.getCollection("DERIVED-artefact-lookup").drop()
 
-db.getCollection("slugInfos-bak").copyTo("slugInfos")
+db.getCollection("slugInfos-bak").aggregate([{$match: {}}, {$out: "slugInfos"}])
 ```

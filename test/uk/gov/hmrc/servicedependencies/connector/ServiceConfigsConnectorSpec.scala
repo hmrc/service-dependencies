@@ -65,7 +65,7 @@ class ServiceConfigsConnectorSpec
 
   "Retrieving bobby rules" should {
     "correctly parse json response" in {
-      val deprecatedDependencies = connector.getBobbyRules.futureValue
+      val deprecatedDependencies = connector.getBobbyRules().futureValue
 
       val playFrontend = BobbyRule(
         organisation = "uk.gov.hmrc",

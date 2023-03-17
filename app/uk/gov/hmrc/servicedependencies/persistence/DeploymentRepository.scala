@@ -174,7 +174,7 @@ class DeploymentRepository @Inject()(
       .toFuture()
       .map(_ => ())
 
-  def clearAllData: Future[Unit] =
+  def clearAllData(): Future[Unit] =
     collection.deleteMany(BsonDocument())
       .toFuture()
       .map(_ => ())

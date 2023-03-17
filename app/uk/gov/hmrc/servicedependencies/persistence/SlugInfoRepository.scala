@@ -59,11 +59,11 @@ class SlugInfoRepository @Inject()(
       .toFuture()
       .map(_ => ())
 
-  def getAllEntries: Future[Seq[SlugInfo]] =
+  def getAllEntries(): Future[Seq[SlugInfo]] =
     collection.find()
       .toFuture()
 
-  def clearAllData: Future[Unit] =
+  def clearAllData(): Future[Unit] =
     collection.deleteMany(BsonDocument())
       .toFuture()
       .map(_ => ())

@@ -40,8 +40,8 @@ class TeamDependencyService @Inject()(
 
   def findAllDepsForTeam(teamName: String)(implicit hc: HeaderCarrier): Future[Seq[Dependencies]] =
     for {
-      bobbyRules     <- serviceConfigsConnector.getBobbyRules
-      latestVersions <- latestVersionRepository.getAllEntries
+      bobbyRules     <- serviceConfigsConnector.getBobbyRules()
+      latestVersions <- latestVersionRepository.getAllEntries()
       team           <- teamsAndReposConnector.getTeam(teamName)
       libs           <- team.libraries.toList.traverse { repoName =>
                           metaArtefactRepository.find(repoName)
@@ -97,8 +97,8 @@ class TeamDependencyService @Inject()(
   ): Future[Map[String, Seq[Dependency]]] =
     for {
       team           <- teamsAndReposConnector.getTeam(teamName)
-      latestVersions <- latestVersionRepository.getAllEntries
-      bobbyRules     <- serviceConfigsConnector.getBobbyRules
+      latestVersions <- latestVersionRepository.getAllEntries()
+      bobbyRules     <- serviceConfigsConnector.getBobbyRules()
       res            <- team.services.toList.traverse { serviceName =>
                           for {
                             optMetaArtefact <- OptionT(slugInfoRepository.getSlugInfo(serviceName, flag))

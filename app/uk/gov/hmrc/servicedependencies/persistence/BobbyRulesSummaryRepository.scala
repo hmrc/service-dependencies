@@ -30,21 +30,24 @@ import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.play.json.PlayMongoRepository
 import uk.gov.hmrc.servicedependencies.model.{BobbyRuleQuery, BobbyRulesSummary}
 
+import java.util.concurrent.TimeUnit
 import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
 class BobbyRulesSummaryRepository @Inject()(
-    mongoComponent: MongoComponent
-  )(implicit ec: ExecutionContext
-  ) extends PlayMongoRepository[BobbyRulesSummary](
-    collectionName = "bobbyRulesSummary"
-  , mongoComponent = mongoComponent
-  , domainFormat   = BobbyRulesSummary.mongoFormat
-  , indexes        = Seq(
-                       IndexModel(ascending("date"), IndexOptions().name("dateIdx").unique(true))
-                     )
-  , optSchema      = Some(BsonDocument(BobbyRulesSummary.mongoSchema))
-  ) {
+  mongoComponent: MongoComponent
+)(implicit
+  ec            : ExecutionContext
+) extends PlayMongoRepository[BobbyRulesSummary](
+  collectionName = "bobbyRulesSummary"
+, mongoComponent = mongoComponent
+, domainFormat   = BobbyRulesSummary.mongoFormat
+, indexes        = Seq(
+                     IndexModel(ascending("date"), IndexOptions().name("dateIdx").unique(true).expireAfter(7 * 365, TimeUnit.DAYS))
+                   )
+, optSchema      = Some(BsonDocument(BobbyRulesSummary.mongoSchema))
+, replaceIndexes = true
+) {
 
   def add(summary: BobbyRulesSummary): Future[Unit] =
     collection
@@ -56,8 +59,8 @@ class BobbyRulesSummaryRepository @Inject()(
       .toFuture()
       .map(_ => ())
 
-  def getLatest: Future[Option[BobbyRulesSummary]] =
-    collection.find(equal("date", LocalDate.now))
+  def getLatest(): Future[Option[BobbyRulesSummary]] =
+    collection.find(equal("date", LocalDate.now()))
       .toFuture()
       .map(_.headOption)
       .flatMap {
@@ -100,7 +103,7 @@ class BobbyRulesSummaryRepository @Inject()(
       .map(_.toList)
   }
 
-  def clearAllData: Future[Unit] =
+  def clearAllData(): Future[Unit] =
     collection.deleteMany(BsonDocument())
       .toFuture()
       .map(_ => ())

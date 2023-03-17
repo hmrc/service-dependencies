@@ -37,26 +37,26 @@ class SlugInfoRepositorySpec
   "SlugInfoRepository.add" should {
     "insert correctly" in {
       repository.add(slugInfo).futureValue
-      repository.getAllEntries.futureValue shouldBe Seq(slugInfo)
+      repository.getAllEntries().futureValue shouldBe Seq(slugInfo)
     }
 
     "replace existing" in {
       repository.add(slugInfo).futureValue
-      repository.getAllEntries.futureValue should have size 1
+      repository.getAllEntries().futureValue should have size 1
 
       val duplicate = slugInfo.copy(name = "my-slug-2")
       repository.add(duplicate).futureValue
-      repository.getAllEntries.futureValue shouldBe Seq(duplicate)
+      repository.getAllEntries().futureValue shouldBe Seq(duplicate)
     }
   }
 
   "SlugInfoRepository.clearAllData" should {
     "delete everything" in {
       repository.add(slugInfo).futureValue
-      repository.getAllEntries.futureValue should have size 1
+      repository.getAllEntries().futureValue should have size 1
 
-      repository.clearAllData.futureValue
-      repository.getAllEntries.futureValue shouldBe Nil
+      repository.clearAllData().futureValue
+      repository.getAllEntries().futureValue shouldBe Nil
     }
   }
 
