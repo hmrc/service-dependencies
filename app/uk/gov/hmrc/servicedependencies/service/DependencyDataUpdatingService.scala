@@ -47,14 +47,14 @@ class DependencyDataUpdatingService @Inject()(
   lazy val curatedDependencyConfig =
     serviceDependenciesConfig.curatedDependencyConfig
 
-  private[service] def versionsToUpdate(): Future[List[DependencyConfig]] = {
+  private[service] def versionsToUpdate(): Future[List[DependencyConfig]] =
     for {
       hmrcDependencies                  <- hmrcDependencies()
       nonHmrcDependenciesWithBobbyRules <- nonHmrcDependenciesWithBobbyRules()
     } yield
       ((hmrcDependencies ++ nonHmrcDependenciesWithBobbyRules).groupBy(a => a.group + ":" + a.name) ++
-        curatedDependencyConfig.allDependencies.groupBy(a => a.group + ":" + a.name)).values.flatten.toList
-  }
+        curatedDependencyConfig.allDependencies               .groupBy(a => a.group + ":" + a.name)
+      ).values.flatten.toList
 
   def reloadLatestVersions(): Future[List[LatestVersion]] =
     versionsToUpdate()
@@ -62,20 +62,21 @@ class DependencyDataUpdatingService @Inject()(
         _.foldLeftM[Future, List[LatestVersion]](List.empty) {
           case (acc, config) =>
             (for {
-              optVersion <- config.latestVersion
-                            .fold(
-                              artifactoryConnector
-                                .findLatestVersion(config.group, config.name)
-                                .map(vs => Max.maxOf(vs.values))
-                            )(v => Future.successful(Some(v)))
-              optDbVersion <- optVersion.traverse { version =>
-                              val dbVersion =
-                                LatestVersion(name = config.name, group = config.group, version = version, now)
-                              latestVersionRepository
-                                .update(dbVersion)
-                                .map(_ => dbVersion)
-                            }
-            } yield optDbVersion).map(acc ++ _)
+               optVersion   <- config.latestVersion
+                                 .fold(
+                                   artifactoryConnector
+                                     .findLatestVersion(config.group, config.name)
+                                     .map(vs => Max.maxOf(vs.values))
+                                 )(v => Future.successful(Some(v)))
+               optDbVersion <- optVersion.traverse { version =>
+                                 val dbVersion =
+                                   LatestVersion(name = config.name, group = config.group, version = version, now)
+                                 latestVersionRepository
+                                   .update(dbVersion)
+                                   .map(_ => dbVersion)
+                               }
+             } yield optDbVersion
+            ).map(acc ++ _)
         }
       )
 

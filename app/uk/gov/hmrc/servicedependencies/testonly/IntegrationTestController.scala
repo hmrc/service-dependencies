@@ -61,7 +61,7 @@ class IntegrationTestController @Inject()(
 
   def deleteLatestVersions =
     Action.async {
-      latestVersionRepository.clearAllData
+      latestVersionRepository.clearAllData()
         .map(_ => NoContent)
     }
 
@@ -75,7 +75,7 @@ class IntegrationTestController @Inject()(
 
  def deleteMetaArtefacts =
     Action.async {
-      metaArtefactRepository.clearAllData
+      metaArtefactRepository.clearAllData()
         .map(_ => NoContent)
     }
 
@@ -110,7 +110,7 @@ class IntegrationTestController @Inject()(
   def deleteSluginfos =
     Action.async {
       for {
-        _ <- slugInfoRepo.clearAllData
+        _ <- slugInfoRepo.clearAllData()
         _ <- derivedServiceDependenciesRepository.collection.deleteMany(BsonDocument()).toFuture()
       } yield NoContent
     }
@@ -125,19 +125,19 @@ class IntegrationTestController @Inject()(
 
   def deleteBobbyRulesSummaries =
     Action.async {
-      bobbyRulesSummaryRepo.clearAllData
+      bobbyRulesSummaryRepo.clearAllData()
         .map(_ => NoContent)
     }
 
   def deleteAll =
     Action.async {
       List(
-          latestVersionRepository.clearAllData
-        , slugInfoRepo.clearAllData
-        , bobbyRulesSummaryRepo.clearAllData
-        , deploymentsRepo.clearAllData
+          latestVersionRepository.clearAllData()
+        , slugInfoRepo.clearAllData()
+        , bobbyRulesSummaryRepo.clearAllData()
+        , deploymentsRepo.clearAllData()
         , derivedServiceDependenciesRepository.collection.deleteMany(BsonDocument()).toFuture()
-        , metaArtefactRepository.clearAllData
+        , metaArtefactRepository.clearAllData()
         ).sequence
          .map(_ => NoContent)
     }

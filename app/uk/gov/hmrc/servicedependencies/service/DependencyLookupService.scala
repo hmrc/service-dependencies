@@ -42,8 +42,8 @@ class DependencyLookupService @Inject() (
   import DependencyLookupService._
 
   def getLatestBobbyRuleViolations: Future[BobbyRulesSummary] =
-    bobbyRulesSummaryRepo.getLatest
-      .map(_.getOrElse(BobbyRulesSummary(LocalDate.now, Map.empty)))
+    bobbyRulesSummaryRepo.getLatest()
+      .map(_.getOrElse(BobbyRulesSummary(LocalDate.now(), Map.empty)))
 
   def updateBobbyRulesSummary(): Future[Unit] = {
     def calculateCounts(rules: Seq[BobbyRule])(env: SlugInfoFlag): Future[Seq[((BobbyRule, SlugInfoFlag), Int)]] = {
@@ -73,7 +73,7 @@ class DependencyLookupService @Inject() (
         calculateCounts(rules)(env).map(acc ++ _)
       )
       summary = counts.toMap
-      _ <- bobbyRulesSummaryRepo.add(BobbyRulesSummary(LocalDate.now, summary))
+      _ <- bobbyRulesSummaryRepo.add(BobbyRulesSummary(LocalDate.now(), summary))
     } yield ()
   }
 
@@ -102,7 +102,7 @@ object DependencyLookupService {
 
   def combineBobbyRulesSummaries(l: List[BobbyRulesSummary]): HistoricBobbyRulesSummary =
     l match {
-      case Nil          => HistoricBobbyRulesSummary(LocalDate.now, Map.empty)
+      case Nil          => HistoricBobbyRulesSummary(LocalDate.now(), Map.empty)
       case head :: rest => rest
                              .foldLeft(HistoricBobbyRulesSummary.fromBobbyRulesSummary(head)){ (acc, s) =>
                                val daysBetween = ChronoUnit.DAYS.between(s.date, acc.date).toInt

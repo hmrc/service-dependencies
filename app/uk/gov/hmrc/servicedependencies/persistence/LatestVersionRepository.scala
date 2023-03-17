@@ -41,6 +41,9 @@ class LatestVersionRepository @Inject()(
   , optSchema      = Some(BsonDocument(LatestVersion.schema))
   ) with Logging {
 
+  // TODO add putAll function
+  override lazy val requiresTtlIndex = false
+
   def update(latestVersion: LatestVersion): Future[Unit] = {
     logger.debug(s"writing $latestVersion")
     collection
@@ -64,7 +67,7 @@ class LatestVersionRepository @Inject()(
       .toFuture()
       .map(_.headOption)
 
-  def clearAllData: Future[Unit] =
+  def clearAllData(): Future[Unit] =
     collection.deleteMany(BsonDocument())
       .toFuture()
       .map(_ => ())

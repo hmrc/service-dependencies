@@ -36,7 +36,7 @@ class BobbyRulesSummaryRepositorySpec
   override protected lazy val repository = new BobbyRulesSummaryRepository(mongoComponent)
 
   "BobbyRulesSummaryRepository.add" should {
-    val summary = bobbyRulesSummary(playFrontendBobbyRule, LocalDate.now, SlugInfoFlag.Development, 1)
+    val summary = bobbyRulesSummary(playFrontendBobbyRule, LocalDate.now(), SlugInfoFlag.Development, 1)
 
     "insert correctly" in {
       repository.add(summary).futureValue
@@ -56,15 +56,15 @@ class BobbyRulesSummaryRepositorySpec
   "BobbyRulesSummaryRepository.getLatest" should {
 
     "only search the latest slugs" in {
-      val now = LocalDate.now
+      val now = LocalDate.now()
 
-      val latest = bobbyRulesSummary(playFrontendBobbyRule, now, SlugInfoFlag.Development, count              = 1)
-      val older  = bobbyRulesSummary(playFrontendBobbyRule, now.minusDays(1), SlugInfoFlag.Latest, count     = 2)
-      val oldest = bobbyRulesSummary(playFrontendBobbyRule, now.minusDays(2), SlugInfoFlag.Production, count = 3)
+      val latest = bobbyRulesSummary(playFrontendBobbyRule, now             , SlugInfoFlag.Development, count = 1)
+      val older  = bobbyRulesSummary(playFrontendBobbyRule, now.minusDays(1), SlugInfoFlag.Latest     , count = 2)
+      val oldest = bobbyRulesSummary(playFrontendBobbyRule, now.minusDays(2), SlugInfoFlag.Production , count = 3)
 
       List(latest, older, oldest).traverse(repository.add).futureValue
 
-      repository.getLatest.futureValue shouldBe Some(latest)
+      repository.getLatest().futureValue shouldBe Some(latest)
     }
   }
 
@@ -76,7 +76,7 @@ class BobbyRulesSummaryRepositorySpec
     )
 
     "return bobbyRulesSummaries for queried rules only" in {
-      val now = LocalDate.now
+      val now = LocalDate.now()
 
       val summaryNow = BobbyRulesSummary(now, Map(
         (playFrontendBobbyRule, SlugInfoFlag.Development) -> 1,
@@ -114,7 +114,7 @@ class BobbyRulesSummaryRepositorySpec
     }
 
     "return BobbyRuleSummaries within the date range provided only" in {
-      val now = LocalDate.now
+      val now = LocalDate.now()
       val from = now.minusYears(2)
       val to = now
 

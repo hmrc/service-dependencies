@@ -18,7 +18,7 @@ package uk.gov.hmrc.servicedependencies.persistence
 
 import org.mongodb.scala.bson.{BsonDocument, BsonString}
 import org.mongodb.scala.bson.conversions.Bson
-import org.mongodb.scala.model.{Filters, IndexModel, IndexOptions, Indexes, Projections, ReplaceOptions}
+import org.mongodb.scala.model.{IndexModel, IndexOptions, Indexes, Projections, ReplaceOptions}
 import org.mongodb.scala.model.Aggregates.{`match`, project, unwind}
 import org.mongodb.scala.model.Filters.{and, equal, exists, or}
 import org.mongodb.scala.model.Projections.{excludeId, fields, include}
@@ -70,13 +70,13 @@ class MetaArtefactRepository @Inject()(
   def find(repositoryName: String): Future[Option[MetaArtefact]] =
     for {
       version <- mongoComponent.database.getCollection("metaArtefacts")
-        .find(equal("name", repositoryName))
-        .projection(Projections.include("version"))
-        .map(bson => Version(bson.getString("version")))
-        .filter(_.isReleaseCandidate == false)
-        .foldLeft(Version("0.0.0"))((prev,cur) => if(cur > prev) cur else prev)
-        .toFuture()
-      meta <- find(repositoryName, version)
+                   .find(equal("name", repositoryName))
+                   .projection(Projections.include("version"))
+                   .map(bson => Version(bson.getString("version")))
+                   .filter(_.isReleaseCandidate == false)
+                   .foldLeft(Version("0.0.0"))((prev,cur) => if(cur > prev) cur else prev)
+                   .toFuture()
+      meta    <- find(repositoryName, version)
     } yield meta
 
   def find(repositoryName: String, version: Version): Future[Option[MetaArtefact]] =
@@ -129,7 +129,7 @@ class MetaArtefactRepository @Inject()(
       .headOption()
       .map(_.flatMap(_.get[BsonString]("name")).map(_.getValue))
 
-  def clearAllData: Future[Unit] =
+  def clearAllData(): Future[Unit] =
     collection.deleteMany(BsonDocument())
       .toFuture()
       .map(_ => ())

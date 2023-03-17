@@ -30,23 +30,27 @@ import scala.reflect.ClassTag
 
 @Singleton
 abstract class SlugInfoRepositoryBase[A: ClassTag] @Inject()(
-    mongoComponent: MongoComponent
-  , domainFormat  : Format[A]
-  )(implicit ec: ExecutionContext
-  ) extends PlayMongoRepository[A](
-    collectionName = "slugInfos"
-  , mongoComponent = mongoComponent
-  , domainFormat   = domainFormat
-  , indexes        = Seq(
-                       IndexModel(ascending("uri"),
-                         IndexOptions().name("uniqueIdx").unique(true)
-                       ),
-                       IndexModel(hashed("name"),
-                         IndexOptions().name("name_idx").background(true)
-                       ),
-                       IndexModel(compoundIndex(ascending("name"), descending("version")),
-                         IndexOptions().name("name_version_idx").background(true)
-                       )
+  mongoComponent: MongoComponent
+, domainFormat  : Format[A]
+)(implicit
+  ec            : ExecutionContext
+) extends PlayMongoRepository[A](
+  collectionName = "slugInfos"
+, mongoComponent = mongoComponent
+, domainFormat   = domainFormat
+, indexes        = Seq(
+                     IndexModel(ascending("uri"),
+                       IndexOptions().name("uniqueIdx").unique(true)
+                     ),
+                     IndexModel(hashed("name"),
+                       IndexOptions().name("name_idx").background(true)
+                     ),
+                     IndexModel(compoundIndex(ascending("name"), descending("version")),
+                       IndexOptions().name("name_version_idx").background(true)
                      )
-  , optSchema      = Some(BsonDocument(MongoSlugInfoFormats.schema))
-  )
+                   )
+, optSchema      = Some(BsonDocument(MongoSlugInfoFormats.schema))
+) {
+  // we delete explicitly when we get a delete notification
+  override lazy val requiresTtlIndex = false
+}
