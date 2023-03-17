@@ -101,7 +101,7 @@ class DependencyLookupServiceSpec
 
       val derivedServiceDependenciesRepository = mock[DerivedServiceDependenciesRepository]
 
-      when(configService.getBobbyRules)
+      when(configService.getBobbyRules())
         .thenReturn(Future(BobbyRules(Map(("uk.gov.hmrc", "libs") -> List(bobbyRule)))))
       when(derivedServiceDependenciesRepository.findDependencies(any[SlugInfoFlag], any[Option[DependencyScope]]))
         .thenReturn(Future.successful(Seq.empty))

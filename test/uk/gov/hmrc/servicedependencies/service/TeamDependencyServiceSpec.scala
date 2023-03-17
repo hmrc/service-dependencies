@@ -79,10 +79,10 @@ class TeamDependencyServiceSpec
       when(mockTeamsAndReposConnector.getTeam("foo"))
         .thenReturn(Future.successful(team))
 
-      when(mockServiceConfigsConnector.getBobbyRules)
+      when(mockServiceConfigsConnector.getBobbyRules())
         .thenReturn(Future.successful(BobbyRules(Map.empty)))
 
-      when(mockLatestVersionRepository.getAllEntries)
+      when(mockLatestVersionRepository.getAllEntries())
         .thenReturn(Future.successful(Seq()))
 
       when(mockMetaArtefactRepository.find("foo-service"))

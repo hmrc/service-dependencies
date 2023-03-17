@@ -72,7 +72,7 @@ class SlugDependenciesServiceSpec extends AnyFreeSpec with MockitoSugar with Mat
         .thenReturn(aCuratedDependencyConfig(libraryNames.toList))
 
     def stubLatestLibraryVersionLookupSuccessfullyReturns(versionsByName: Seq[(SlugDependency, Version)]): Unit =
-      when(mockLatestVersionRepository.getAllEntries)
+      when(mockLatestVersionRepository.getAllEntries())
         .thenReturn(
           Future.successful(
             versionsByName.map { case (sd, v) =>
@@ -87,7 +87,7 @@ class SlugDependenciesServiceSpec extends AnyFreeSpec with MockitoSugar with Mat
           ((g, a), rs.map(r => BobbyRule(organisation = g, name = a, range = r.range, reason = r.reason, from = r.from)))
         }
       )
-      when(mockServiceConfigsConnector.getBobbyRules)
+      when(mockServiceConfigsConnector.getBobbyRules())
         .thenReturn(Future.successful(bobbyRules2))
     }
 
@@ -133,7 +133,7 @@ class SlugDependenciesServiceSpec extends AnyFreeSpec with MockitoSugar with Mat
     "returning None when the slug is not recognised" in new Fixture {
       stubLatestLibraryVersionLookupSuccessfullyReturns(Seq.empty)
 
-      when(mockServiceConfigsConnector.getBobbyRules)
+      when(mockServiceConfigsConnector.getBobbyRules())
         .thenReturn(Future.successful(BobbyRules(Map.empty)))
 
       when(mockSlugInfoService.getSlugInfo(SlugName, flag))
@@ -188,10 +188,10 @@ class SlugDependenciesServiceSpec extends AnyFreeSpec with MockitoSugar with Mat
               ))
           ))
 
-        when(mockServiceConfigsConnector.getBobbyRules)
+        when(mockServiceConfigsConnector.getBobbyRules())
           .thenReturn(Future.successful(BobbyRules(Map.empty)))
 
-        when(mockLatestVersionRepository.getAllEntries)
+        when(mockLatestVersionRepository.getAllEntries())
           .thenReturn(Future.failed(failure))
 
         underTest.curatedLibrariesOfSlug(SlugName, flag).failed.futureValue shouldBe failure

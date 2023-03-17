@@ -19,7 +19,7 @@ package uk.gov.hmrc.servicedependencies.persistence
 import com.google.inject.{Inject, Singleton}
 import org.mongodb.scala.bson.BsonDocument
 import org.mongodb.scala.model.Filters.{and, equal}
-import org.mongodb.scala.model.{Indexes, IndexModel, IndexOptions, ReplaceOptions}
+import org.mongodb.scala.model.{DeleteOneModel, Indexes, IndexModel, IndexOptions, ReplaceOptions}
 import play.api.Logging
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.play.json.PlayMongoRepository
@@ -41,7 +41,7 @@ class LatestVersionRepository @Inject()(
   , optSchema      = Some(BsonDocument(LatestVersion.schema))
   ) with Logging {
 
-  // TODO add putAll function
+  // unnecessary data is cleared with remove
   override lazy val requiresTtlIndex = false
 
   def update(latestVersion: LatestVersion): Future[Unit] = {
@@ -58,9 +58,23 @@ class LatestVersionRepository @Inject()(
       .map(_ => ())
   }
 
-  def getAllEntries: Future[Seq[LatestVersion]] =
+  def getAllEntries(): Future[Seq[LatestVersion]] =
     collection.find()
       .toFuture()
+
+  def remove(latestVersions: Seq[LatestVersion]): Future[Unit] =
+    if (latestVersions.isEmpty)
+      Future.unit
+    else
+      collection.bulkWrite(latestVersions.map(latestVersion =>
+        DeleteOneModel(
+          and( equal("name" , latestVersion.name)
+             , equal("group", latestVersion.group)
+             )
+        )
+      ))
+        .toFuture()
+        .map(_ => ())
 
   def find(group: String, artefact: String): Future[Option[LatestVersion]] =
     collection.find(and(equal("group", group), equal("name", artefact)))

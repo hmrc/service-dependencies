@@ -45,8 +45,8 @@ class SlugDependenciesService @Inject()(
    */
   def curatedLibrariesOfSlug(name: String, flag: SlugInfoFlag): Future[Option[List[Dependency]]] =
     for {
-      bobbyRules       <- serviceConfigsConnector.getBobbyRules
-      latestVersions   <- latestVersionRepository.getAllEntries
+      bobbyRules       <- serviceConfigsConnector.getBobbyRules()
+      latestVersions   <- latestVersionRepository.getAllEntries()
       curatedLibraries <- curatedLibrariesOfSlug(name, flag, bobbyRules, latestVersions)
     } yield curatedLibraries
 
@@ -66,8 +66,8 @@ class SlugDependenciesService @Inject()(
 
   def curatedLibrariesOfSlug(name: String, version: Version): Future[Option[List[Dependency]]] =
     for {
-      bobbyRules       <- serviceConfigsConnector.getBobbyRules
-      latestVersions   <- latestVersionRepository.getAllEntries
+      bobbyRules       <- serviceConfigsConnector.getBobbyRules()
+      latestVersions   <- latestVersionRepository.getAllEntries()
       curatedLibraries <- curatedLibrariesOfSlug(name, version, bobbyRules, latestVersions)
     } yield curatedLibraries
 
