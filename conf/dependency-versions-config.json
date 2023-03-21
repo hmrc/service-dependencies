@@ -1,6 +1,6 @@
 {
   "sbtPlugins": [
-    { "group": "com.typesafe.play", "name": "sbt-plugin", "latestVersion": "2.8.18" }
+    { "group": "com.typesafe.play", "name": "sbt-plugin", "latestVersion": "2.8.19" }
   ],
   "libraries": [
     { "group": "org.reactivemongo", "name": "reactivemongo"  , "latestVersion": "0.20.3" },
