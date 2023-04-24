@@ -55,9 +55,7 @@ class ServiceConfigsConnectorSpec
     new GuiceApplicationBuilder()
       .configure(
         "microservice.services.service-configs.host" -> wireMockHost,
-        "microservice.services.service-configs.port" -> wireMockPort,
-        "play.http.requestHandler"                   -> "play.api.http.DefaultHttpRequestHandler",
-        "metrics.jvm"                                -> false
+        "microservice.services.service-configs.port" -> wireMockPort
       )
       .build()
 
