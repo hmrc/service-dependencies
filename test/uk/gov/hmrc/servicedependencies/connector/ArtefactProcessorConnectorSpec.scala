@@ -30,6 +30,7 @@ import play.api.inject.guice.GuiceApplicationBuilder
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.http.test.WireMockSupport
 import uk.gov.hmrc.servicedependencies.model.{JavaInfo, MetaArtefact, MetaArtefactModule, SlugInfo, Version}
+import play.api.Configuration
 
 class ArtefactProcessorConnectorSpec
   extends AnyWordSpec
@@ -47,9 +48,7 @@ class ArtefactProcessorConnectorSpec
     new GuiceApplicationBuilder()
       .configure(
         "microservice.services.artefact-processor.host" -> wireMockHost,
-        "microservice.services.artefact-processor.port" -> wireMockPort,
-        "play.http.requestHandler"                      -> "play.api.http.DefaultHttpRequestHandler",
-        "metrics.jvm"                                   -> false
+        "microservice.services.artefact-processor.port" -> wireMockPort
       )
       .build()
 

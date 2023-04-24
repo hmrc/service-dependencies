@@ -47,9 +47,7 @@ class TeamsAndRepositoriesConnectorSpec
     new GuiceApplicationBuilder()
       .configure(
         "microservice.services.teams-and-repositories.host" -> wireMockHost,
-        "microservice.services.teams-and-repositories.port" -> wireMockPort,
-        "play.http.requestHandler" -> "play.api.http.DefaultHttpRequestHandler",
-        "metrics.jvm" -> false
+        "microservice.services.teams-and-repositories.port" -> wireMockPort
       ).build()
 
   private val connector = app.injector.instanceOf[TeamsAndRepositoriesConnector]

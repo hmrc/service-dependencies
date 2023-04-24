@@ -31,14 +31,14 @@ import scala.concurrent.duration.DurationInt
 
 @Singleton
 class LatestVersionsReloadScheduler @Inject()(
-      schedulerConfigs             : SchedulerConfigs
-    , dependencyDataUpdatingService: DependencyDataUpdatingService
-    , mongoLockRepository          : MongoLockRepository
-    )(implicit
-      actorSystem         : ActorSystem
-    , applicationLifecycle: ApplicationLifecycle
-    , ec                  : ExecutionContext
-    ) extends SchedulerUtils {
+  schedulerConfigs             : SchedulerConfigs
+, dependencyDataUpdatingService: DependencyDataUpdatingService
+, mongoLockRepository          : MongoLockRepository
+)(implicit
+  actorSystem         : ActorSystem
+, applicationLifecycle: ApplicationLifecycle
+, ec                  : ExecutionContext
+) extends SchedulerUtils {
 
   private val lock =
     LockService(mongoLockRepository, "dependencyVersions-reload-scheduler", 1.hour)
