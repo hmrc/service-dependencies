@@ -25,7 +25,7 @@ import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.servicedependencies.connector.{GitHubProxyConnector, ReleasesApiConnector, TeamsAndRepositoriesConnector, TeamsForServices}
 import uk.gov.hmrc.servicedependencies.connector.model.RepositoryInfo
 import uk.gov.hmrc.servicedependencies.model._
-import uk.gov.hmrc.servicedependencies.persistence.{DeploymentRepository, JdkVersionRepository, SlugInfoRepository, SlugVersionRepository}
+import uk.gov.hmrc.servicedependencies.persistence.{DeploymentRepository, JdkVersionRepository, SbtVersionRepository, SlugInfoRepository, SlugVersionRepository}
 import uk.gov.hmrc.servicedependencies.persistence.derived.{DerivedGroupArtefactRepository, DerivedServiceDependenciesRepository}
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -295,7 +295,8 @@ class SlugInfoServiceSpec
     mockedSlugInfoRepository            : SlugInfoRepository
   , mockedSlugVersionRepository         : SlugVersionRepository
   , mockedServiceDependenciesRepository : DerivedServiceDependenciesRepository
-  , mockedJdkVersionRespository         : JdkVersionRepository
+  , mockedJdkVersionRepository          : JdkVersionRepository
+  , mockedSbtVersionRepository          : SbtVersionRepository
   , mockedGroupArtefactRepository       : DerivedGroupArtefactRepository
   , mockedDeploymentRepository          : DeploymentRepository
   , mockedTeamsAndRepositoriesConnector : TeamsAndRepositoriesConnector
@@ -310,6 +311,7 @@ class SlugInfoServiceSpec
       val mockedSlugVersionRepository             = mock[SlugVersionRepository]
       val mockedDerivedSlugDependenciesRepository = mock[DerivedServiceDependenciesRepository]
       val mockedJdkVersionRepository              = mock[JdkVersionRepository]
+      val mockedSbtVersionRepository              = mock[SbtVersionRepository]
       val mockedGroupArtefactRepository           = mock[DerivedGroupArtefactRepository]
       val mockedDeploymentRepository              = mock[DeploymentRepository]
       val mockedTeamsAndRepositoriesConnector     = mock[TeamsAndRepositoriesConnector]
@@ -321,6 +323,7 @@ class SlugInfoServiceSpec
           , mockedSlugVersionRepository
           , mockedDerivedSlugDependenciesRepository
           , mockedJdkVersionRepository
+          , mockedSbtVersionRepository
           , mockedGroupArtefactRepository
           , mockedDeploymentRepository
           , mockedTeamsAndRepositoriesConnector
@@ -332,6 +335,7 @@ class SlugInfoServiceSpec
         , mockedSlugVersionRepository
         , mockedDerivedSlugDependenciesRepository
         , mockedJdkVersionRepository
+        , mockedSbtVersionRepository
         , mockedGroupArtefactRepository
         , mockedDeploymentRepository
         , mockedTeamsAndRepositoriesConnector

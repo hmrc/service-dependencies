@@ -139,6 +139,20 @@ class ServiceDependenciesController @Inject()(
       ).merge
     }
 
+  def findSBTForEnvironment(team: Option[String], flag: String): Action[AnyContent] =
+    Action.async { implicit request =>
+      (for {
+         f   <- EitherT.fromOption[Future](SlugInfoFlag.parse(flag), BadRequest(s"invalid flag '$flag'"))
+         res <- EitherT.liftF[Future, Result, Seq[SBTVersion]](
+                  slugInfoService.findSBTVersions(team, f)
+                )
+       } yield {
+         implicit val sbtvf = SBTVersionFormats.sbtVersionFormat
+         Ok(Json.toJson(res))
+       }
+      ).merge
+    }
+
   def repositoryName(group: String, artefact: String, version: String): Action[AnyContent] =
     Action.async {
       metaArtefactRepository.findRepoNameByModule(group, artefact, Version(version))

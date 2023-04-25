@@ -23,7 +23,7 @@ import play.api.Logging
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.servicedependencies.connector.{GitHubProxyConnector, ReleasesApiConnector, TeamsAndRepositoriesConnector}
 import uk.gov.hmrc.servicedependencies.model._
-import uk.gov.hmrc.servicedependencies.persistence.{DeploymentRepository, JdkVersionRepository, SlugInfoRepository, SlugVersionRepository}
+import uk.gov.hmrc.servicedependencies.persistence.{DeploymentRepository, JdkVersionRepository, SbtVersionRepository, SlugInfoRepository, SlugVersionRepository}
 import uk.gov.hmrc.servicedependencies.persistence.derived.{DerivedGroupArtefactRepository, DerivedServiceDependenciesRepository}
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -34,6 +34,7 @@ class SlugInfoService @Inject()(
   slugVersionRepository         : SlugVersionRepository,
   serviceDependencyRepository   : DerivedServiceDependenciesRepository,
   jdkVersionRepository          : JdkVersionRepository,
+  sbtVersionRepository          : SbtVersionRepository,
   groupArtefactRepository       : DerivedGroupArtefactRepository,
   deploymentRepository          : DeploymentRepository,
   teamsAndRepositoriesConnector : TeamsAndRepositoriesConnector,
@@ -153,5 +154,14 @@ class SlugInfoService @Inject()(
                         xs   <- jdkVersionRepository.findJDKUsage(flag)
                       } yield xs.filter(x => team.services.contains(x.name))
       case None    => jdkVersionRepository.findJDKUsage(flag)
+    }
+
+  def findSBTVersions(teamName: Option[String], flag: SlugInfoFlag)(implicit hc: HeaderCarrier): Future[Seq[SBTVersion]] =
+    teamName match {
+      case Some(n) => for {
+                        team <- teamsAndRepositoriesConnector.getTeam(n)
+                        xs   <- sbtVersionRepository.findSBTUsage(flag)
+                      } yield xs.filter(x => team.services.contains(x.name))
+      case None    => sbtVersionRepository.findSBTUsage(flag)
     }
 }
