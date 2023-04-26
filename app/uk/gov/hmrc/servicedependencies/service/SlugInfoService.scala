@@ -161,7 +161,7 @@ class SlugInfoService @Inject()(
       case Some(n) => for {
                         team <- teamsAndRepositoriesConnector.getTeam(n)
                         xs   <- sbtVersionRepository.findSBTUsage(flag)
-                      } yield xs.filter(x => team.services.contains(x.name))
+                      } yield xs.filter(x => team.services.contains(x.serviceName))
       case None    => sbtVersionRepository.findSBTUsage(flag)
     }
 }

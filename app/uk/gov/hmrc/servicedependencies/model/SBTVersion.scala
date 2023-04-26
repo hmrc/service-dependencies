@@ -20,15 +20,15 @@ import play.api.libs.json.{__, OFormat}
 import play.api.libs.functional.syntax._
 
 case class SBTVersion(
-  name   : String,
-  version: String
+  serviceName : String,
+  version     : String
 )
 
 trait SBTVersionFormats {
 
   val sbtVersionFormat: OFormat[SBTVersion] =
-    ( (__ \ "name"   ).format[String]
-    ~ (__ \ "version").format[String]
+    ( (__ \ "serviceName").format[String]
+    ~ (__ \ "version"    ).format[String]
     )(SBTVersion.apply, unlift(SBTVersion.unapply))
 }
 

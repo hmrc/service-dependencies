@@ -47,7 +47,7 @@ class SbtVersionRepository @Inject()(
       pipeline          = Seq(
                             project(
                               fields(
-                                computed("name", "$name"),
+                                computed("serviceName", "$name"),
                                 computed("version", "$sbtVersion")
                               )
                             )
