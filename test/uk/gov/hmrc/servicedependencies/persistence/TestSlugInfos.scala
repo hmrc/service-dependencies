@@ -91,6 +91,7 @@ object TestSlugInfos {
   val nonJavaSlugInfo = slugInfo.copy(
     uri  = "https://store/slugs/nodejs-app/nodejs-app_0.1.0_0.5.2.tgz",
     name = "nodejs-app",
-    java = JavaInfo("", "", "")
+    java = JavaInfo("", "", ""),
+    sbtVersion = None
   )
 }

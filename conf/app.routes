@@ -3,6 +3,7 @@ GET     /api/teams/:team/dependencies                      @uk.gov.hmrc.serviced
 GET     /api/serviceDeps                                   @uk.gov.hmrc.servicedependencies.controller.ServiceDependenciesController.getServicesWithDependency(flag: String ?= "latest", group: String, artefact: String, versionRange: String, scope: Option[List[String]] ?= None)
 GET     /api/groupArtefacts                                @uk.gov.hmrc.servicedependencies.controller.ServiceDependenciesController.getGroupArtefacts
 GET     /api/jdkVersions                                   @uk.gov.hmrc.servicedependencies.controller.ServiceDependenciesController.findJDKForEnvironment(team: Option[String], flag: String ?= "latest")
+GET     /api/sbtVersions                                   @uk.gov.hmrc.servicedependencies.controller.ServiceDependenciesController.findSBTForEnvironment(team: Option[String], flag: String ?= "latest")
 GET     /api/bobbyViolations                               @uk.gov.hmrc.servicedependencies.controller.BobbyRuleViolationController.findBobbyRuleViolations
 GET     /api/historicBobbyViolations                       @uk.gov.hmrc.servicedependencies.controller.BobbyRuleViolationController.findHistoricBobbyRuleViolations(query: List[BobbyRuleQuery], from: java.time.LocalDate, to: java.time.LocalDate)
 GET     /api/teams/:team/slug-dependencies                 @uk.gov.hmrc.servicedependencies.controller.ServiceDependenciesController.dependenciesOfSlugForTeam(team, flag ?= "latest")
