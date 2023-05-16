@@ -166,6 +166,7 @@ class DerivedServiceDependenciesRepository @Inject()(
               depVersion   = d.version,
               scalaVersion = None,
               compileFlag  = true,
+              providedFlag = false,
               testFlag     = false,
               itFlag       = false,
               buildFlag    = false,
@@ -175,18 +176,20 @@ class DerivedServiceDependenciesRepository @Inject()(
         // java slugs do not have a meta-artefact - need to fall back on slugInfo
         val optSlugModule = meta.flatMap(x => x.modules.find(_.name == slugInfo.name).orElse(x.modules.headOption))
 
-        val graphBuild   = meta.flatMap(_.dependencyDotBuild           ).getOrElse(slugInfo.dependencyDotBuild  )
-        val graphCompile = optSlugModule.flatMap(_.dependencyDotCompile).getOrElse(slugInfo.dependencyDotCompile)
-        val graphTest    = optSlugModule.flatMap(_.dependencyDotTest   ).getOrElse(slugInfo.dependencyDotTest   )
-        val graphIt      = optSlugModule.flatMap(_.dependencyDotIt     ).getOrElse(slugInfo.dependencyDotIt     )
+        val graphBuild    = meta.flatMap(_.dependencyDotBuild            ).getOrElse(slugInfo.dependencyDotBuild   )
+        val graphCompile  = optSlugModule.flatMap(_.dependencyDotCompile ).getOrElse(slugInfo.dependencyDotCompile )
+        val graphProvided = optSlugModule.flatMap(_.dependencyDotProvided).getOrElse(slugInfo.dependencyDotProvided)
+        val graphTest     = optSlugModule.flatMap(_.dependencyDotTest    ).getOrElse(slugInfo.dependencyDotTest    )
+        val graphIt       = optSlugModule.flatMap(_.dependencyDotIt      ).getOrElse(slugInfo.dependencyDotIt      )
 
-        val build   = dependencyGraphParser.parse(graphBuild  ).dependencies.map((_, DependencyScope.Build  ))
-        val compile = dependencyGraphParser.parse(graphCompile).dependencies.map((_, DependencyScope.Compile))
-        val test    = dependencyGraphParser.parse(graphTest   ).dependencies.map((_, DependencyScope.Test   ))
-        val it      = dependencyGraphParser.parse(graphIt     ).dependencies.map((_, DependencyScope.It     ))
+        val build    = dependencyGraphParser.parse(graphBuild   ).dependencies.map((_, DependencyScope.Build   ))
+        val compile  = dependencyGraphParser.parse(graphCompile ).dependencies.map((_, DependencyScope.Compile ))
+        val provided = dependencyGraphParser.parse(graphProvided).dependencies.map((_, DependencyScope.Provided))
+        val test     = dependencyGraphParser.parse(graphTest    ).dependencies.map((_, DependencyScope.Test    ))
+        val it       = dependencyGraphParser.parse(graphIt      ).dependencies.map((_, DependencyScope.It      ))
 
         val dependencies: Map[DependencyGraphParser.Node, Set[DependencyScope]] =
-          (build ++ compile ++ test ++ it)
+          (build ++ compile ++ provided ++ test ++ it)
             .foldLeft(Map.empty[DependencyGraphParser.Node, Set[DependencyScope]]){ case (acc, (n, flag)) =>
               acc + (n -> (acc.getOrElse(n, Set.empty) + flag))
             }
@@ -200,6 +203,7 @@ class DerivedServiceDependenciesRepository @Inject()(
             depVersion   = version,
             scalaVersion = scalaVersion,
             compileFlag  = scopes.contains(DependencyScope.Compile),
+            providedFlag = scopes.contains(DependencyScope.Provided),
             testFlag     = scopes.contains(DependencyScope.Test),
             itFlag       = scopes.contains(DependencyScope.It),
             buildFlag    = scopes.contains(DependencyScope.Build)

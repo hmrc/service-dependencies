@@ -59,27 +59,29 @@ object MetaArtefact {
 }
 
 case class MetaArtefactModule(
-  name                : String,
-  group               : String,
-  sbtVersion          : Option[Version],
-  crossScalaVersions  : Option[List[Version]],
-  publishSkip         : Option[Boolean],
-  dependencyDotCompile: Option[String],
-  dependencyDotTest   : Option[String],
-  dependencyDotIt     : Option[String]
+  name                 : String,
+  group                : String,
+  sbtVersion           : Option[Version],
+  crossScalaVersions   : Option[List[Version]],
+  publishSkip          : Option[Boolean],
+  dependencyDotCompile : Option[String],
+  dependencyDotProvided: Option[String],
+  dependencyDotTest    : Option[String],
+  dependencyDotIt      : Option[String]
 )
 
 object MetaArtefactModule {
   val format: OFormat[MetaArtefactModule] = {
     implicit val vf = Version.format
-    ( (__ \ "name"                ).format[String]
-    ~ (__ \ "group"               ).formatWithDefault[String]("uk.gov.hmrc")
-    ~ (__ \ "sbtVersion"          ).formatNullable[Version]
-    ~ (__ \ "crossScalaVersions"  ).formatNullable[List[Version]]
-    ~ (__ \ "publishSkip"         ).formatNullable[Boolean]
-    ~ (__ \ "dependencyDotCompile").formatNullable[String]
-    ~ (__ \ "dependencyDotTest"   ).formatNullable[String]
-    ~ (__ \ "dependencyDotIt"     ).formatNullable[String]
+    ( (__ \ "name"                 ).format[String]
+    ~ (__ \ "group"                ).formatWithDefault[String]("uk.gov.hmrc")
+    ~ (__ \ "sbtVersion"           ).formatNullable[Version]
+    ~ (__ \ "crossScalaVersions"   ).formatNullable[List[Version]]
+    ~ (__ \ "publishSkip"          ).formatNullable[Boolean]
+    ~ (__ \ "dependencyDotCompile" ).formatNullable[String]
+    ~ (__ \ "dependencyDotProvided").formatNullable[String]
+    ~ (__ \ "dependencyDotTest"    ).formatNullable[String]
+    ~ (__ \ "dependencyDotIt"      ).formatNullable[String]
     )(MetaArtefactModule.apply, unlift(MetaArtefactModule.unapply))
   }
 }

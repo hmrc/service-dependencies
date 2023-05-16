@@ -337,23 +337,24 @@ private object SlugDependenciesServiceSpec {
 
   def slugInfo(withName: String, withVersion: Version, withDependencies: List[SlugDependency]): SlugInfo =
     SlugInfo(
-      uri                  = "some-uri",
-      created              = Instant.now(),
-      name                 = withName,
-      version              = withVersion,
-      teams                = Nil,
-      runnerVersion        = "some-runner-version",
-      classpath            = "some-classpath",
-      java                 = JavaInfo("some-java-version", "some-java-vendor", "some-java-kind"),
-      sbtVersion           = Some("1.4.9"),
-      repoUrl              = Some("https://github.com/hmrc/test.git"),
-      dependencies         = withDependencies,
-      dependencyDotCompile = "",
-      dependencyDotTest    = "",
-      dependencyDotIt      = "",
-      dependencyDotBuild   = "",
-      applicationConfig    = "some-application-config",
-      slugConfig           = "some-slug-config"
+      uri                   = "some-uri",
+      created               = Instant.now(),
+      name                  = withName,
+      version               = withVersion,
+      teams                 = Nil,
+      runnerVersion         = "some-runner-version",
+      classpath             = "some-classpath",
+      java                  = JavaInfo("some-java-version", "some-java-vendor", "some-java-kind"),
+      sbtVersion            = Some("1.4.9"),
+      repoUrl               = Some("https://github.com/hmrc/test.git"),
+      dependencies          = withDependencies,
+      dependencyDotCompile  = "",
+      dependencyDotProvided = "",
+      dependencyDotTest     = "",
+      dependencyDotIt       = "",
+      dependencyDotBuild    = "",
+      applicationConfig     = "some-application-config",
+      slugConfig            = "some-slug-config"
     )
 
   def aCuratedDependencyConfig(withLibraries: List[DependencyConfig]) =

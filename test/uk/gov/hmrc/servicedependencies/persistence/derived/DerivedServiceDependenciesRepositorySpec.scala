@@ -153,14 +153,15 @@ class DerivedServiceDependenciesRepositorySpec
     "populate dependencies from meta-artefact" in {
       val metaArtefactModule =
         MetaArtefactModule(
-          name                 = "service",
-          group                = "uk.gov.hmrc",
-          sbtVersion           = Some(Version("1.4.9")),
-          crossScalaVersions   = Some(List(Version("2.12.14"))),
-          publishSkip          = Some(false),
-          dependencyDotCompile = Some(scala.io.Source.fromResource("graphs/dependencies-compile.dot").mkString),
-          dependencyDotTest    = Some("ddt-graph"),
-          dependencyDotIt      = Some("ddt-graph-it")
+          name                  = "service",
+          group                 = "uk.gov.hmrc",
+          sbtVersion            = Some(Version("1.4.9")),
+          crossScalaVersions    = Some(List(Version("2.12.14"))),
+          publishSkip           = Some(false),
+          dependencyDotCompile  = Some(scala.io.Source.fromResource("graphs/dependencies-compile.dot").mkString),
+          dependencyDotProvided = Some("ddp-graph"),
+          dependencyDotTest     = Some("ddt-graph"),
+          dependencyDotIt       = Some("ddt-graph-it")
         )
 
       val metaArtefact =

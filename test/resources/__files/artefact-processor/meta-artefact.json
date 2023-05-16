@@ -6,14 +6,15 @@
   "dependencyDotBuild" : "dependencyDotBuild",
   "buildInfo"          : { "k": "v" },
   "modules"            : [{
-                           "name"                : "module-1",
-                           "group"               : "uk.gov.hmrc",
-                           "sbtVersion"          : "1.4.9",
-                           "crossScalaVersions"  : ["2.12.14"],
-                           "publishSkip"         : false,
-                           "dependencyDotCompile": "dependencyDotCompile",
-                           "dependencyDotTest"   : "dependencyDotTest",
-                           "dependencyDotIt"     : "dependencyDotIt"
+                           "name"                 : "module-1",
+                           "group"                : "uk.gov.hmrc",
+                           "sbtVersion"           : "1.4.9",
+                           "crossScalaVersions"   : ["2.12.14"],
+                           "publishSkip"          : false,
+                           "dependencyDotCompile" : "dependencyDotCompile",
+                           "dependencyDotProvided": "dependencyDotProvided",
+                           "dependencyDotTest"    : "dependencyDotTest",
+                           "dependencyDotIt"      : "dependencyDotIt"
                          }],
   "created"            : "2022-01-04T17:46:18.588Z"
 }
