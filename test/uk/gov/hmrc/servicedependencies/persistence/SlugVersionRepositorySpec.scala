@@ -57,22 +57,23 @@ class SlugVersionRepositorySpec
 
   def sampleSlugInfo(version: Version, uri: String): SlugInfo =
     SlugInfo(
-      created              = Instant.parse("2019-06-28T11:51:23.000Z"),
-      uri                  = uri,
-      name                 = "my-slug",
-      version              = version,
-      teams                = List.empty,
-      runnerVersion        = "0.5.2",
-      classpath            = "",
-      dependencies         = List.empty,
-      java                 = JavaInfo("1.8.1", "OpenJDK", "JRE"),
-      sbtVersion           = Some("1.4.9"),
-      repoUrl              = Some("https://github.com/hmrc/test.git"),
-      dependencyDotBuild   = "",
-      dependencyDotTest    = "",
-      dependencyDotCompile = "",
-      dependencyDotIt      = "",
-      applicationConfig    = "",
-      slugConfig           = ""
+      created               = Instant.parse("2019-06-28T11:51:23.000Z"),
+      uri                   = uri,
+      name                  = "my-slug",
+      version               = version,
+      teams                 = List.empty,
+      runnerVersion         = "0.5.2",
+      classpath             = "",
+      dependencies          = List.empty,
+      java                  = JavaInfo("1.8.1", "OpenJDK", "JRE"),
+      sbtVersion            = Some("1.4.9"),
+      repoUrl               = Some("https://github.com/hmrc/test.git"),
+      dependencyDotBuild    = "",
+      dependencyDotTest     = "",
+      dependencyDotCompile  = "",
+      dependencyDotProvided = "",
+      dependencyDotIt       = "",
+      applicationConfig     = "",
+      slugConfig            = ""
     )
 }

@@ -82,9 +82,10 @@ class TeamDependencyService @Inject()(
       )
     Dependencies(
       repositoryName         = metaArtefact.name,
-      libraryDependencies    = metaArtefact.modules.flatMap(m => m.dependencyDotCompile.fold(Seq.empty[Dependency])(s => toDependencies(m.name, DependencyScope.Compile, s))) ++
-                               metaArtefact.modules.flatMap(m => m.dependencyDotTest   .fold(Seq.empty[Dependency])(s => toDependencies(m.name, DependencyScope.Test   , s))) ++
-                               metaArtefact.modules.flatMap(m => m.dependencyDotIt     .fold(Seq.empty[Dependency])(s => toDependencies(m.name, DependencyScope.It     , s))),
+      libraryDependencies    = metaArtefact.modules.flatMap(m => m.dependencyDotCompile .fold(Seq.empty[Dependency])(s => toDependencies(m.name, DependencyScope.Compile , s))) ++
+                               metaArtefact.modules.flatMap(m => m.dependencyDotProvided.fold(Seq.empty[Dependency])(s => toDependencies(m.name, DependencyScope.Provided, s))) ++
+                               metaArtefact.modules.flatMap(m => m.dependencyDotTest    .fold(Seq.empty[Dependency])(s => toDependencies(m.name, DependencyScope.Test    , s))) ++
+                               metaArtefact.modules.flatMap(m => m.dependencyDotIt      .fold(Seq.empty[Dependency])(s => toDependencies(m.name, DependencyScope.It      , s))),
       sbtPluginsDependencies = metaArtefact.dependencyDotBuild.fold(Seq.empty[Dependency])(s => toDependencies(metaArtefact.name, DependencyScope.Build, s)),
       otherDependencies      = Seq.empty
     )
@@ -118,9 +119,10 @@ class TeamDependencyService @Inject()(
                                                    Future.successful(
                                                      Some(
                                                        metaArtefact.dependencyDotBuild.fold(Seq.empty[Dependency])(s => toDependencies(metaArtefact.name, DependencyScope.Build, s)) ++
-                                                         metaArtefact.modules.flatMap(m => m.dependencyDotCompile.fold(Seq.empty[Dependency])(s => toDependencies(m.name, DependencyScope.Compile, s))) ++
-                                                         metaArtefact.modules.flatMap(m => m.dependencyDotTest   .fold(Seq.empty[Dependency])(s => toDependencies(m.name, DependencyScope.Test   , s))) ++
-                                                         metaArtefact.modules.flatMap(m => m.dependencyDotIt     .fold(Seq.empty[Dependency])(s => toDependencies(m.name, DependencyScope.It     , s)))
+                                                       metaArtefact.modules.flatMap(m => m.dependencyDotCompile .fold(Seq.empty[Dependency])(s => toDependencies(m.name, DependencyScope.Compile , s))) ++
+                                                       metaArtefact.modules.flatMap(m => m.dependencyDotProvided.fold(Seq.empty[Dependency])(s => toDependencies(m.name, DependencyScope.Provided, s))) ++
+                                                       metaArtefact.modules.flatMap(m => m.dependencyDotTest    .fold(Seq.empty[Dependency])(s => toDependencies(m.name, DependencyScope.Test    , s))) ++
+                                                       metaArtefact.modules.flatMap(m => m.dependencyDotIt      .fold(Seq.empty[Dependency])(s => toDependencies(m.name, DependencyScope.It      , s)))
                                                      )
                                                    )
 

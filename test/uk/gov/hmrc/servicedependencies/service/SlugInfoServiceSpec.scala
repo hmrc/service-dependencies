@@ -349,23 +349,24 @@ class SlugInfoServiceSpec
   private trait GetSlugInfoFixture {
     val SlugName = "a-slug-name"
     val sampleSlugInfo = SlugInfo(
-      uri                  = "sample-uri",
-      created              = Instant.parse("2019-12-12T13:14:00.000Z"),
-      name                 = SlugName,
-      version              = Version(major = 1, minor = 2, patch = 3),
-      teams                = Nil,
-      runnerVersion        = "sample-runner-version",
-      classpath            = "sample-classpath",
-      java                 = JavaInfo(version = "sample-java-version", vendor = "sample-java-vendor", kind = "sample-java-kind"),
-      sbtVersion           = Some("1.4.9"),
-      repoUrl              = Some("https://github.com/hmrc/test.git"),
-      dependencies         = Nil,
-      dependencyDotCompile = "",
-      dependencyDotTest    = "",
-      dependencyDotIt      = "",
-      dependencyDotBuild   = "",
-      applicationConfig    = "sample-applcation-config",
-      slugConfig           = "sample-slug-config"
+      uri                   = "sample-uri",
+      created               = Instant.parse("2019-12-12T13:14:00.000Z"),
+      name                  = SlugName,
+      version               = Version(major = 1, minor = 2, patch = 3),
+      teams                 = Nil,
+      runnerVersion         = "sample-runner-version",
+      classpath             = "sample-classpath",
+      java                  = JavaInfo(version = "sample-java-version", vendor = "sample-java-vendor", kind = "sample-java-kind"),
+      sbtVersion            = Some("1.4.9"),
+      repoUrl               = Some("https://github.com/hmrc/test.git"),
+      dependencies          = Nil,
+      dependencyDotCompile  = "",
+      dependencyDotProvided = "",
+      dependencyDotTest     = "",
+      dependencyDotIt       = "",
+      dependencyDotBuild    = "",
+      applicationConfig     = "sample-applcation-config",
+      slugConfig            = "sample-slug-config"
     )
 
     val boot = Boot.init

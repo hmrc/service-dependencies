@@ -22,10 +22,11 @@ import play.api.libs.functional.syntax._
 sealed trait DependencyScope { def asString: String }
 
 object DependencyScope {
-  case object Compile extends DependencyScope { override val asString = "compile" }
-  case object Test    extends DependencyScope { override val asString = "test"    }
-  case object It      extends DependencyScope { override val asString = "it"      }
-  case object Build   extends DependencyScope { override val asString = "build"   }
+  case object Compile  extends DependencyScope { override val asString = "compile"  }
+  case object Provided extends DependencyScope { override val asString = "provided" }
+  case object Test     extends DependencyScope { override val asString = "test"     }
+  case object It       extends DependencyScope { override val asString = "it"       }
+  case object Build    extends DependencyScope { override val asString = "build"    }
 
   val values: List[DependencyScope] =
     List(Compile, Test, It, Build)
@@ -52,6 +53,7 @@ case class ServiceDependencyWrite(
   scalaVersion: Option[String],
   // scope flag
   compileFlag : Boolean,
+  providedFlag: Boolean,
   testFlag    : Boolean,
   itFlag      : Boolean,
   buildFlag   : Boolean,
@@ -60,16 +62,17 @@ case class ServiceDependencyWrite(
 object ServiceDependencyWrite {
   val format: OFormat[ServiceDependencyWrite] = {
     implicit val vf = Version.format
-    ( (__ \ "slugName"     ).format[String]
-    ~ (__ \ "slugVersion"  ).format[Version]
-    ~ (__ \ "group"        ).format[String]
-    ~ (__ \ "artefact"     ).format[String]
-    ~ (__ \ "version"      ).format[Version]
-    ~ (__ \ "scalaVersion" ).formatNullable[String]
-    ~ (__ \ "scope_compile").format[Boolean]
-    ~ (__ \ "scope_test"   ).format[Boolean]
-    ~ (__ \ "scope_it"     ).format[Boolean]
-    ~ (__ \ "scope_build"  ).format[Boolean]
+    ( (__ \ "slugName"      ).format[String]
+    ~ (__ \ "slugVersion"   ).format[Version]
+    ~ (__ \ "group"         ).format[String]
+    ~ (__ \ "artefact"      ).format[String]
+    ~ (__ \ "version"       ).format[Version]
+    ~ (__ \ "scalaVersion"  ).formatNullable[String]
+    ~ (__ \ "scope_compile" ).format[Boolean]
+    ~ (__ \ "scope_provided").format[Boolean]
+    ~ (__ \ "scope_test"    ).format[Boolean]
+    ~ (__ \ "scope_it"      ).format[Boolean]
+    ~ (__ \ "scope_build"   ).format[Boolean]
     )(ServiceDependencyWrite.apply _, unlift(ServiceDependencyWrite.unapply _))
   }
 }
@@ -88,17 +91,18 @@ case class ServiceDependency(
 trait ApiServiceDependencyFormats {
   implicit val vf = Version.format
   val derivedMongoFormat: OFormat[ServiceDependency] =
-    ( (__ \ "slugName"     ).format[String]
-    ~ (__ \ "slugVersion"  ).format[Version]
-    ~ (__ \ "group"        ).format[String]
-    ~ (__ \ "artefact"     ).format[String]
-    ~ (__ \ "version"      ).format[Version]
-    ~ (__ \ "scalaVersion" ).formatNullable[String]
-    ~ (__ \ "scope_compile").format[Boolean]
-    ~ (__ \ "scope_test"   ).format[Boolean]
-    ~ (__ \ "scope_it"     ).format[Boolean]
-    ~ (__ \ "scope_build"  ).format[Boolean]
-    )( (sn, sv, g, a, v, scv, c, t, i, b) =>
+    ( (__ \ "slugName"      ).format[String]
+    ~ (__ \ "slugVersion"   ).format[Version]
+    ~ (__ \ "group"         ).format[String]
+    ~ (__ \ "artefact"      ).format[String]
+    ~ (__ \ "version"       ).format[Version]
+    ~ (__ \ "scalaVersion"  ).formatNullable[String]
+    ~ (__ \ "scope_compile" ).format[Boolean]
+    ~ (__ \ "scope_provided").format[Boolean]
+    ~ (__ \ "scope_test"    ).format[Boolean]
+    ~ (__ \ "scope_it"      ).format[Boolean]
+    ~ (__ \ "scope_build"   ).format[Boolean]
+    )( (sn, sv, g, a, v, scv, c, p, t, i, b) =>
          ServiceDependency(
            slugName     = sn,
            slugVersion  = sv,
@@ -107,10 +111,11 @@ trait ApiServiceDependencyFormats {
            depArtefact  = a,
            depVersion   = v,
            scalaVersion = scv,
-           scopes       =  Set[DependencyScope](DependencyScope.Compile).filter(_ => c) ++
-                           Set[DependencyScope](DependencyScope.Test   ).filter(_ => t) ++
-                           Set[DependencyScope](DependencyScope.It     ).filter(_ => i) ++
-                           Set[DependencyScope](DependencyScope.Build  ).filter(_ => b)
+           scopes       =  Set[DependencyScope](DependencyScope.Compile ).filter(_ => c) ++
+                           Set[DependencyScope](DependencyScope.Provided).filter(_ => p) ++
+                           Set[DependencyScope](DependencyScope.Test    ).filter(_ => t) ++
+                           Set[DependencyScope](DependencyScope.It      ).filter(_ => i) ++
+                           Set[DependencyScope](DependencyScope.Build   ).filter(_ => b)
        )
      , sd =>
          (sd.slugName,
@@ -120,6 +125,7 @@ trait ApiServiceDependencyFormats {
           sd.depVersion,
           sd.scalaVersion,
           sd.scopes.contains(DependencyScope.Compile),
+          sd.scopes.contains(DependencyScope.Provided),
           sd.scopes.contains(DependencyScope.Test),
           sd.scopes.contains(DependencyScope.It),
           sd.scopes.contains(DependencyScope.Build)

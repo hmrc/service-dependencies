@@ -70,14 +70,15 @@ class ArtefactProcessorConnectorSpec
           dependencyDotBuild = Some("dependencyDotBuild"),
           buildInfo          = Map("k" -> "v"),
           modules            = Seq(MetaArtefactModule(
-                                 name                 = "module-1",
-                                 group                = "uk.gov.hmrc",
-                                 sbtVersion           = Some(Version("1.4.9")),
-                                 crossScalaVersions   = Some(List(Version("2.12.14"))),
-                                 publishSkip          = Some(false),
-                                 dependencyDotCompile = Some("dependencyDotCompile"),
-                                 dependencyDotTest    = Some("dependencyDotTest"),
-                                 dependencyDotIt      = Some("dependencyDotIt")
+                                 name                  = "module-1",
+                                 group                 = "uk.gov.hmrc",
+                                 sbtVersion            = Some(Version("1.4.9")),
+                                 crossScalaVersions    = Some(List(Version("2.12.14"))),
+                                 publishSkip           = Some(false),
+                                 dependencyDotCompile  = Some("dependencyDotCompile"),
+                                 dependencyDotProvided = Some("dependencyDotProvided"),
+                                 dependencyDotTest     = Some("dependencyDotTest"),
+                                 dependencyDotIt       = Some("dependencyDotIt")
                                )),
           created            = Instant.parse("2022-01-04T17:46:18.588Z")
         )
@@ -94,23 +95,24 @@ class ArtefactProcessorConnectorSpec
 
       connector.getSlugInfo("name", Version("1.0.0")).futureValue shouldBe Some(
         SlugInfo(
-          created              = Instant.parse("2019-06-28T11:51:23Z"),
-          uri                  = "https://store/slugs/my-slug/my-slug_0.27.0_0.5.2.tgz",
-          name                 = "my-slug",
-          version              = Version.apply("0.27.0"),
-          runnerVersion        = "0.5.2",
-          classpath            = "some-classpath",
-          java                 = JavaInfo("1.181.0", "Oracle", "JDK"),
-          sbtVersion           = Some("1.4.9"),
-          repoUrl              = Some("https://github.com/hmrc/test.git"),
-          dependencies         = List.empty,
-          dependencyDotCompile = "some-dependencyDotCompile",
-          dependencyDotTest    = "some-dependencyDotTest",
-          dependencyDotIt      = "some-dependencyDotIt",
-          dependencyDotBuild   = "some-dependencyDotBuild",
-          applicationConfig    = "some-application-config",
-          slugConfig           = "some-slug-config",
-          teams                = List.empty
+          created               = Instant.parse("2019-06-28T11:51:23Z"),
+          uri                   = "https://store/slugs/my-slug/my-slug_0.27.0_0.5.2.tgz",
+          name                  = "my-slug",
+          version               = Version.apply("0.27.0"),
+          runnerVersion         = "0.5.2",
+          classpath             = "some-classpath",
+          java                  = JavaInfo("1.181.0", "Oracle", "JDK"),
+          sbtVersion            = Some("1.4.9"),
+          repoUrl               = Some("https://github.com/hmrc/test.git"),
+          dependencies          = List.empty,
+          dependencyDotCompile  = "some-dependencyDotCompile",
+          dependencyDotProvided = "some-dependencyDotProvided",
+          dependencyDotTest     = "some-dependencyDotTest",
+          dependencyDotIt       = "some-dependencyDotIt",
+          dependencyDotBuild    = "some-dependencyDotBuild",
+          applicationConfig     = "some-application-config",
+          slugConfig            = "some-slug-config",
+          teams                 = List.empty
         )
       )
     }

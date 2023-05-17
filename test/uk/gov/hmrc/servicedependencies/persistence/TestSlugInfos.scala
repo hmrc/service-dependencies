@@ -23,36 +23,37 @@ import uk.gov.hmrc.servicedependencies.model._
 object TestSlugInfos {
   val slugInfo =
     SlugInfo(
-      created              = Instant.parse("2019-06-28T11:51:23.000Z"),
-      uri                  = "https://store/slugs/my-slug/my-slug_0.27.0_0.5.2.tgz",
-      name                 = "my-slug",
-      version              = Version("0.27.0"),
-      teams                = List.empty,
-      runnerVersion        = "0.5.2",
-      classpath            = "",
-      java                 = JavaInfo("1.181.0", "OpenJDK", "JRE"),
-      sbtVersion           = Some("1.4.9"),
-      repoUrl              = Some("https://github.com/hmrc/test.git"),
-      dependencies         = List(
-                               SlugDependency(
-                                 path     = "lib1",
-                                 version  = Version("1.2.0"),
-                                 group    = "com.test.group",
-                                 artifact = "lib1"
-                               ),
-                               SlugDependency(
-                                 path     = "lib2",
-                                 version  = Version("0.66"),
-                                 group    = "com.test.group",
-                                 artifact = "lib2"
-                               )
-                             ),
-      dependencyDotCompile = "",
-      dependencyDotTest    = "",
-      dependencyDotIt      = "",
-      dependencyDotBuild   = "",
-      applicationConfig    = "",
-      slugConfig           = ""
+      created               = Instant.parse("2019-06-28T11:51:23.000Z"),
+      uri                   = "https://store/slugs/my-slug/my-slug_0.27.0_0.5.2.tgz",
+      name                  = "my-slug",
+      version               = Version("0.27.0"),
+      teams                 = List.empty,
+      runnerVersion         = "0.5.2",
+      classpath             = "",
+      java                  = JavaInfo("1.181.0", "OpenJDK", "JRE"),
+      sbtVersion            = Some("1.4.9"),
+      repoUrl               = Some("https://github.com/hmrc/test.git"),
+      dependencies          = List(
+                                SlugDependency(
+                                  path     = "lib1",
+                                  version  = Version("1.2.0"),
+                                  group    = "com.test.group",
+                                  artifact = "lib1"
+                                ),
+                                SlugDependency(
+                                  path     = "lib2",
+                                  version  = Version("0.66"),
+                                  group    = "com.test.group",
+                                  artifact = "lib2"
+                                )
+                              ),
+      dependencyDotCompile  = "",
+      dependencyDotProvided = "",
+      dependencyDotTest     = "",
+      dependencyDotIt       = "",
+      dependencyDotBuild    = "",
+      applicationConfig     = "",
+      slugConfig            = ""
     )
 
   val oldSlugInfo = slugInfo.copy(
@@ -62,30 +63,31 @@ object TestSlugInfos {
 
   val otherSlug =
     SlugInfo(
-      created              = Instant.parse("2019-06-28T11:51:23.000Z"),
-      uri                  = "https://store/slugs/other-slug/other-slug_0.55.0_0.5.2.tgz",
-      name                 = "other-slug",
-      version              = Version("0.55.0"),
-      teams                = List.empty,
-      runnerVersion        = "0.5.2",
-      classpath            = "",
-      java                 = JavaInfo("1.191.0", "Oracle", "JDK"),
-      sbtVersion           = Some("1.4.9"),
-      repoUrl              = Some("https://github.com/hmrc/test.git"),
-      dependencies         = List(
-                               SlugDependency(
-                                 path     = "lib3",
-                                 version  = Version("1.66.1"),
-                                 group    = "io.stuff",
-                                 artifact = "lib3"
-                               )
-                             ),
-      dependencyDotCompile = "",
-      dependencyDotTest    = "",
-      dependencyDotIt      = "",
-      dependencyDotBuild   = "",
-      applicationConfig    = "",
-      slugConfig           = ""
+      created               = Instant.parse("2019-06-28T11:51:23.000Z"),
+      uri                   = "https://store/slugs/other-slug/other-slug_0.55.0_0.5.2.tgz",
+      name                  = "other-slug",
+      version               = Version("0.55.0"),
+      teams                 = List.empty,
+      runnerVersion         = "0.5.2",
+      classpath             = "",
+      java                  = JavaInfo("1.191.0", "Oracle", "JDK"),
+      sbtVersion            = Some("1.4.9"),
+      repoUrl               = Some("https://github.com/hmrc/test.git"),
+      dependencies          = List(
+                                SlugDependency(
+                                  path     = "lib3",
+                                  version  = Version("1.66.1"),
+                                  group    = "io.stuff",
+                                  artifact = "lib3"
+                                )
+                              ),
+      dependencyDotCompile  = "",
+      dependencyDotProvided = "",
+      dependencyDotTest     = "",
+      dependencyDotIt       = "",
+      dependencyDotBuild    = "",
+      applicationConfig     = "",
+      slugConfig            = ""
     )
 
   val nonJavaSlugInfo = slugInfo.copy(

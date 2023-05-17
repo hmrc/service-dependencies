@@ -58,7 +58,7 @@ class DerivedGroupArtefactRepository @Inject()(
           project(
             fields(
               excludeId(),
-              include("group", "artefact", "scope_compile", "scope_test", "scope_it", "scope_build")
+              include("group", "artefact", "scope_compile", "scope_provided", "scope_test", "scope_it", "scope_build")
             )
           ),
           BsonDocument("$group" ->
@@ -74,10 +74,11 @@ class DerivedGroupArtefactRepository @Inject()(
             exclude("_id")
           )),
           addFields(
-            Field("scope_compile", true),
-            Field("scope_test"   , true),
-            Field("scope_it"     , true),
-            Field("scope_build"  , true)
+            Field("scope_compile" , true),
+            Field("scope_provided", true),
+            Field("scope_test"    , true),
+            Field("scope_it"      , true),
+            Field("scope_build"   , true)
           ),
           // replace content of target collection
           out("DERIVED-artefact-lookup")
