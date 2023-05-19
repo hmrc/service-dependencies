@@ -29,7 +29,7 @@ object DependencyScope {
   case object Build    extends DependencyScope { override val asString = "build"    }
 
   val values: List[DependencyScope] =
-    List(Compile, Test, It, Build)
+    List(Compile, Provided, Test, It, Build)
 
   def parse(s: String): Either[String, DependencyScope] =
     values
