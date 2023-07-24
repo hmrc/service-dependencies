@@ -1,11 +1,11 @@
 {
   "sbtPlugins": [
-    { "group": "com.typesafe.play", "name": "sbt-plugin", "latestVersion": "2.8.19" }
+    { "group": "com.typesafe.play", "name": "sbt-plugin", "latestVersion": "2.8.20" }
   ],
   "libraries": [
     { "group": "org.reactivemongo", "name": "reactivemongo"  , "latestVersion": "0.20.3" },
     { "group": "org.scala-lang"   , "name": "scala-library"  , "latestVersion": "2.13.8" },
-    { "group": "com.typesafe.play", "name": "play"           , "latestVersion": "2.8.18" }
+    { "group": "com.typesafe.play", "name": "play"           , "latestVersion": "2.8.20" }
   ],
   "others": [
     { "group": "org.scala-sbt", "name": "sbt", "latestVersion": "1.7.2" }
