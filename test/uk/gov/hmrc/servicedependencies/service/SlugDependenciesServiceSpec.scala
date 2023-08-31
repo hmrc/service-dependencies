@@ -84,7 +84,7 @@ class SlugDependenciesServiceSpec extends AnyFreeSpec with MockitoSugar with Mat
     def stubBobbyRulesViolations(bobbyRules: Map[(String, String), List[DependencyBobbyRule]]): Unit = {
       val bobbyRules2 = BobbyRules(
         bobbyRules.map { case ((g, a), rs) =>
-          ((g, a), rs.map(r => BobbyRule(organisation = g, name = a, range = r.range, reason = r.reason, from = r.from)))
+          ((g, a), rs.map(r => BobbyRule(organisation = g, name = a, range = r.range, reason = r.reason, from = r.from, exemptProjects = r.exemptProjects)))
         }
       )
       when(mockServiceConfigsConnector.getBobbyRules())
@@ -231,6 +231,42 @@ class SlugDependenciesServiceSpec extends AnyFreeSpec with MockitoSugar with Mat
         )
       }
     }
+
+    "enriches dependencies with Bobby rule violations and exemptions" - {
+      "only adding rule violations when there are active violations and the service is not in the exemption list" in new Fixture {
+        stubCuratedLibrariesOf(
+          DependencyConfig(name = Dependency1.artifact, group = Dependency1.group, latestVersion = None)
+          , DependencyConfig(name = Dependency2.artifact, group = Dependency2.group, latestVersion = None)
+          , DependencyConfig(name = Dependency3.artifact, group = Dependency3.group, latestVersion = None)
+        )
+        stubLatestLibraryVersionLookupSuccessfullyReturns(Seq.empty)
+        val bobbyRuleViolation1 = DependencyBobbyRule(reason = "a reason", from = LocalDate.now(), range = BobbyVersionRange("(,6.6.6)"))
+        val bobbyRuleViolation2 = DependencyBobbyRule(reason = "another reason", from = LocalDate.now(), range = BobbyVersionRange("(,9.9.9)"))
+        val bobbyRuleViolation3 = DependencyBobbyRule(reason = "another reason with exemption", from = LocalDate.now(), range = BobbyVersionRange("(,9.9.9)"), exemptProjects = Seq(SlugName))
+        stubBobbyRulesViolations(Map(
+          (Dependency1.group, Dependency1.artifact) -> List(bobbyRuleViolation1)
+          , (Dependency3.group, Dependency3.artifact) -> List(bobbyRuleViolation1, bobbyRuleViolation2, bobbyRuleViolation3)
+        ))
+
+        when(mockSlugInfoService.getSlugInfo(SlugName, flag))
+          .thenReturn(
+            Future.successful(
+              Some(slugInfo(
+                withName = SlugName
+                , withVersion = SlugVersion
+                , withDependencies = List(Dependency1, Dependency2, Dependency3)
+              ))
+            )
+          )
+
+        underTest.curatedLibrariesOfSlug(SlugName, flag).futureValue.value should contain theSameElementsAs Seq(
+          Dependency(name = Dependency1.artifact, group = Dependency1.group, currentVersion = Dependency1.version, latestVersion = None, bobbyRuleViolations = List(bobbyRuleViolation1), scope = Some(Compile)),
+          Dependency(name = Dependency2.artifact, group = Dependency2.group, currentVersion = Dependency2.version, latestVersion = None, bobbyRuleViolations = Nil, scope = Some(Compile)),
+          Dependency(name = Dependency3.artifact, group = Dependency3.group, currentVersion = Dependency3.version, latestVersion = None, bobbyRuleViolations = List(bobbyRuleViolation1, bobbyRuleViolation2), scope = Some(Compile))
+        )
+      }
+    }
+
   }
 
 

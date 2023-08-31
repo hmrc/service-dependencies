@@ -169,10 +169,10 @@ class ServiceDependenciesController @Inject()(
                             case Some(version) =>
                                                   metaArtefactRepository
                                                     .find(repositoryName)
-                                                    .flatMap(_ match {
+                                                    .flatMap{
                                                       case Some(version) => Future.successful(toRepository(version, latestVersions, bobbyRules))
                                                       case None => repositoryFromCuratedSlugDependencies(repositoryName, version)
-                                                    })
+                                                    }
                                                     .map(Seq(_))
                             case None          => metaArtefactRepository
                                                     .findAllVersions(repositoryName)

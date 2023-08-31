@@ -30,17 +30,19 @@ final case class BobbyVersion(
 
 
 final case class BobbyRule(
-  organisation: String,
-  name        : String,
-  range       : BobbyVersionRange,
-  reason      : String,
-  from        : LocalDate) {
+  organisation  : String,
+  name          : String,
+  range         : BobbyVersionRange,
+  reason        : String,
+  from          : LocalDate,
+  exemptProjects: Seq[String] = Seq.empty ) {
 
   def asDependencyBobbyRule: DependencyBobbyRule =
     DependencyBobbyRule(
-      reason = this.reason,
-      from   = this.from,
-      range  = this.range
+      reason         = this.reason,
+      from           = this.from,
+      range          = this.range,
+      exemptProjects = this.exemptProjects
     )
 }
 
@@ -49,11 +51,12 @@ object BobbyRule {
   val format: OFormat[BobbyRule] = {
     @annotation.nowarn implicit val ldw  = Formats.localDateFormat
     implicit val bvwf = BobbyVersionRange.format
-    ( (__ \ "organisation").format[String]
-    ~ (__ \ "name"        ).format[String]
-    ~ (__ \ "range"       ).format[BobbyVersionRange]
-    ~ (__ \ "reason"      ).format[String]
-    ~ (__ \ "from"        ).format[LocalDate]
+    ( (__ \ "organisation"  ).format[String]
+    ~ (__ \ "name"          ).format[String]
+    ~ (__ \ "range"         ).format[BobbyVersionRange]
+    ~ (__ \ "reason"        ).format[String]
+    ~ (__ \ "from"          ).format[LocalDate]
+    ~ (__ \ "exemptProjects").formatWithDefault[Seq[String]](Seq.empty)
     )(BobbyRule.apply, unlift(BobbyRule.unapply))
   }
 }

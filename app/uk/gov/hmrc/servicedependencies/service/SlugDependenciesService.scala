@@ -16,14 +16,14 @@
 
 package uk.gov.hmrc.servicedependencies.service
 
-import javax.inject.{Inject, Singleton}
 import uk.gov.hmrc.servicedependencies.config.ServiceDependenciesConfig
 import uk.gov.hmrc.servicedependencies.config.model.CuratedDependencyConfig
 import uk.gov.hmrc.servicedependencies.connector.ServiceConfigsConnector
 import uk.gov.hmrc.servicedependencies.controller.model.{Dependency, ImportedBy}
-import uk.gov.hmrc.servicedependencies.model.{BobbyRules, DependencyScope, LatestVersion, SlugInfo, SlugInfoFlag, Version}
+import uk.gov.hmrc.servicedependencies.model._
 import uk.gov.hmrc.servicedependencies.persistence.LatestVersionRepository
 
+import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
 
 
@@ -35,7 +35,7 @@ class SlugDependenciesService @Inject()(
 , serviceConfigsConnector  : ServiceConfigsConnector
 , graphParser              : DependencyGraphParser
 )(implicit ec: ExecutionContext
-) {
+){
 
   private lazy val curatedDependencyConfig: CuratedDependencyConfig =
     serviceDependenciesConfig.curatedDependencyConfig
@@ -59,7 +59,7 @@ class SlugDependenciesService @Inject()(
     slugInfoService.getSlugInfo(name, flag)
       .map(_.map(slugInfo =>
         if (slugInfo.dependencyDotCompile == "")
-          curatedLibrariesOfSlugInfo(slugInfo, bobbyRules, latestVersions)
+          curatedLibrariesOfSlugInfo(slugInfo, bobbyRules, latestVersions, name)
         else
           curatedLibrariesOfSlugInfoFromGraph(slugInfo, bobbyRules, latestVersions)
       ))
@@ -80,7 +80,7 @@ class SlugDependenciesService @Inject()(
     slugInfoService.getSlugInfo(name, version)
       .map(_.map(slugInfo =>
         if (slugInfo.dependencyDotCompile == "")
-          curatedLibrariesOfSlugInfo(slugInfo, bobbyRules, latestVersions)
+          curatedLibrariesOfSlugInfo(slugInfo, bobbyRules, latestVersions, name)
         else
           curatedLibrariesOfSlugInfoFromGraph(slugInfo, bobbyRules, latestVersions)
       ))
@@ -89,6 +89,7 @@ class SlugDependenciesService @Inject()(
     slugInfo      : SlugInfo,
     bobbyRules    : BobbyRules,
     latestVersions: Seq[LatestVersion],
+    name          : String
   ): List[Dependency] =
     slugInfo
       .dependencies
@@ -107,6 +108,9 @@ class SlugDependenciesService @Inject()(
                                       , name    = slugDependency.artifact
                                       , version = slugDependency.version
                                       )
+                                        .filterNot(
+                                            _.exemptProjects.contains(name)
+                                        )
             , scope               = Some(DependencyScope.Compile)
             )
       }
@@ -154,8 +158,10 @@ class SlugDependenciesService @Inject()(
           , bobbyRuleViolations = bobbyRules.violationsFor(
                                       group   = graphDependency.group
                                     , name    = graphDependency.artefact
-                                    , version = Version(graphDependency.version)
-                                  )
+                                    , version = Version(graphDependency.version))
+                                      .filterNot(
+                                          _.exemptProjects.contains(rootName)
+                                      )
           , importBy            = graph.anyPathToRoot(graphDependency)
                                     .dropRight(1) // drop root node as its just the service jar itself
                                     .lastOption.map(n => ImportedBy(n.artefact, n.group, Version(n.version))) // the top level dep that imported it

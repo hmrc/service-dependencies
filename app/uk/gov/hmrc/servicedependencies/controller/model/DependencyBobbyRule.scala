@@ -22,18 +22,20 @@ import play.api.libs.json.{OWrites, __}
 import uk.gov.hmrc.servicedependencies.model.BobbyVersionRange
 
 case class DependencyBobbyRule(
-  reason: String,
-  from  : LocalDate,
-  range : BobbyVersionRange
+  reason        : String,
+  from          : LocalDate,
+  range         : BobbyVersionRange,
+  exemptProjects: Seq[String] = Seq.empty
 )
 
 object DependencyBobbyRule {
 
   val writes: OWrites[DependencyBobbyRule] = {
     implicit val bvrf = BobbyVersionRange.format
-    ( (__ \ "reason").write[String]
-    ~ (__ \ "from"  ).write[LocalDate]
-    ~ (__ \ "range" ).write[BobbyVersionRange]
+    ( (__ \ "reason"         ).write[String]
+    ~ (__ \ "from"           ).write[LocalDate]
+    ~ (__ \ "range"          ).write[BobbyVersionRange]
+    ~ (__ \ "exemptProjects" ).write[Seq[String]]
     )(unlift(DependencyBobbyRule.unapply))
   }
 }
