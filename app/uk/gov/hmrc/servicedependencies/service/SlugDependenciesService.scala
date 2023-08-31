@@ -16,16 +16,14 @@
 
 package uk.gov.hmrc.servicedependencies.service
 
-import play.api.Logging
-
-import javax.inject.{Inject, Singleton}
 import uk.gov.hmrc.servicedependencies.config.ServiceDependenciesConfig
 import uk.gov.hmrc.servicedependencies.config.model.CuratedDependencyConfig
 import uk.gov.hmrc.servicedependencies.connector.ServiceConfigsConnector
 import uk.gov.hmrc.servicedependencies.controller.model.{Dependency, ImportedBy}
-import uk.gov.hmrc.servicedependencies.model.{BobbyRules, DependencyScope, LatestVersion, SlugInfo, SlugInfoFlag, Version}
+import uk.gov.hmrc.servicedependencies.model._
 import uk.gov.hmrc.servicedependencies.persistence.LatestVersionRepository
 
+import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
 
 
@@ -37,7 +35,7 @@ class SlugDependenciesService @Inject()(
 , serviceConfigsConnector  : ServiceConfigsConnector
 , graphParser              : DependencyGraphParser
 )(implicit ec: ExecutionContext
-) extends Logging{
+){
 
   private lazy val curatedDependencyConfig: CuratedDependencyConfig =
     serviceDependenciesConfig.curatedDependencyConfig
