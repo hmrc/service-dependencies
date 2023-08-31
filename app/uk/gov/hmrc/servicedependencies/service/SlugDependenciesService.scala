@@ -109,7 +109,7 @@ class SlugDependenciesService @Inject()(
                                       , version = slugDependency.version
                                       )
                                         .filterNot(
-                                            _.exemptProjects.getOrElse(Seq.empty).contains(name)
+                                            _.exemptProjects.contains(name)
                                         )
             , scope               = Some(DependencyScope.Compile)
             )
@@ -160,7 +160,7 @@ class SlugDependenciesService @Inject()(
                                     , name    = graphDependency.artefact
                                     , version = Version(graphDependency.version))
                                       .filterNot(
-                                          _.exemptProjects.getOrElse(Seq.empty).contains(rootName)
+                                          _.exemptProjects.contains(rootName)
                                       )
           , importBy            = graph.anyPathToRoot(graphDependency)
                                     .dropRight(1) // drop root node as its just the service jar itself

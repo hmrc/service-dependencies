@@ -25,7 +25,7 @@ case class DependencyBobbyRule(
   reason        : String,
   from          : LocalDate,
   range         : BobbyVersionRange,
-  exemptProjects: Option[Seq[String]] = None
+  exemptProjects: Seq[String] = Seq.empty
 )
 
 object DependencyBobbyRule {
@@ -35,7 +35,7 @@ object DependencyBobbyRule {
     ( (__ \ "reason"         ).write[String]
     ~ (__ \ "from"           ).write[LocalDate]
     ~ (__ \ "range"          ).write[BobbyVersionRange]
-    ~ (__ \ "exemptProjects" ).writeNullable[Seq[String]]
+    ~ (__ \ "exemptProjects" ).write[Seq[String]]
     )(unlift(DependencyBobbyRule.unapply))
   }
 }

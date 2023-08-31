@@ -35,7 +35,7 @@ final case class BobbyRule(
   range         : BobbyVersionRange,
   reason        : String,
   from          : LocalDate,
-  exemptProjects: Option[Seq[String]] = None ) {
+  exemptProjects: Seq[String] = Seq.empty ) {
 
   def asDependencyBobbyRule: DependencyBobbyRule =
     DependencyBobbyRule(
@@ -56,7 +56,7 @@ object BobbyRule {
     ~ (__ \ "range"         ).format[BobbyVersionRange]
     ~ (__ \ "reason"        ).format[String]
     ~ (__ \ "from"          ).format[LocalDate]
-    ~ (__ \ "exemptProjects").formatNullable[Seq[String]]
+    ~ (__ \ "exemptProjects").formatWithDefault[Seq[String]](Seq.empty)
     )(BobbyRule.apply, unlift(BobbyRule.unapply))
   }
 }
