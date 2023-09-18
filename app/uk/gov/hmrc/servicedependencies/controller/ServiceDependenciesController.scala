@@ -166,12 +166,15 @@ class ServiceDependenciesController @Inject()(
         latestVersions <- latestVersionRepository.getAllEntries()
         bobbyRules     <- serviceConfigsConnector.getBobbyRules()
         repositories   <- versionOption match {
-                            case Some(version) =>
-                                                  metaArtefactRepository
-                                                    .find(repositoryName)
-                                                    .flatMap{
-                                                      case Some(version) => Future.successful(toRepository(version, latestVersions, bobbyRules))
-                                                      case None => repositoryFromCuratedSlugDependencies(repositoryName, version)
+                            case Some(version) => (if (version == "latest")
+                                                     metaArtefactRepository.find(repositoryName)
+                                                   else
+                                                     metaArtefactRepository
+                                                     .find(repositoryName, Version(version))
+                                                  )
+                                                    .flatMap {
+                                                      case Some(metaArtefact) => Future.successful(toRepository(metaArtefact, latestVersions, bobbyRules))
+                                                      case None               => repositoryFromCuratedSlugDependencies(repositoryName, version)
                                                     }
                                                     .map(Seq(_))
                             case None          => metaArtefactRepository
@@ -184,7 +187,7 @@ class ServiceDependenciesController @Inject()(
       }
     }
 
-  def repositoryFromCuratedSlugDependencies(repositoryName: String, version: String): Future[Repository] = for {
+  private def repositoryFromCuratedSlugDependencies(repositoryName: String, version: String): Future[Repository] = for {
     dependencyOption <- version match {
       case "latest" => slugDependenciesService.curatedLibrariesOfSlug(repositoryName, SlugInfoFlag.Latest)
       case version => slugDependenciesService.curatedLibrariesOfSlug(repositoryName, Version(version))
