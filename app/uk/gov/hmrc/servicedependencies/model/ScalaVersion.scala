@@ -22,10 +22,12 @@ sealed trait ScalaVersion { def asString: String; def asClassifier: String }
 case object ScalaVersion {
   case object SV_2_11 extends ScalaVersion { override def asString = "2.11"; def asClassifier = s"_$asString" }
   case object SV_2_12 extends ScalaVersion { override def asString = "2.12"; def asClassifier = s"_$asString" }
+  case object SV_2_13 extends ScalaVersion { override def asString = "2.13"; def asClassifier = s"_$asString" }
+  case object SV_3    extends ScalaVersion { override def asString = "3";    def asClassifier = s"_$asString" }
   case object SV_None extends ScalaVersion { override def asString = "none"; def asClassifier = ""            }
 
   val values: List[ScalaVersion] =
-    List(SV_None, SV_2_11, SV_2_12)
+    List(SV_None, SV_2_11, SV_2_12, SV_2_13, SV_3)
 
   implicit val ordering = new Ordering[ScalaVersion] {
     def compare(x: ScalaVersion, y: ScalaVersion): Int =
