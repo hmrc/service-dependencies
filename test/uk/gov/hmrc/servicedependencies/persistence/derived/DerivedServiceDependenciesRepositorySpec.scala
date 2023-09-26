@@ -20,7 +20,7 @@ import org.mockito.MockitoSugar
 import org.scalatest.OptionValues
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpecLike
-import uk.gov.hmrc.mongo.test.{CleanMongoCollectionSupport, PlayMongoRepositorySupport}
+import uk.gov.hmrc.mongo.test.DefaultPlayMongoRepositorySupport
 import uk.gov.hmrc.servicedependencies.model.{DependencyScope, MetaArtefact, MetaArtefactModule, ServiceDependency, SlugDependency, Version}
 import uk.gov.hmrc.servicedependencies.persistence.TestSlugInfos.slugInfo
 import uk.gov.hmrc.servicedependencies.persistence.{DeploymentRepository, SlugInfoRepository}
@@ -35,9 +35,7 @@ class DerivedServiceDependenciesRepositorySpec
     with Matchers
     with OptionValues
     with MockitoSugar
-    // We don't mixin IndexedMongoQueriesSupport here, as this repo makes use of queries not satisfied by an index
-    with PlayMongoRepositorySupport[ServiceDependency]
-    with CleanMongoCollectionSupport {
+    with DefaultPlayMongoRepositorySupport[ServiceDependency] {
 
   lazy val deploymentRepository  = new DeploymentRepository(mongoComponent)
   lazy val slugInfoRepo          = new SlugInfoRepository(mongoComponent, deploymentRepository)

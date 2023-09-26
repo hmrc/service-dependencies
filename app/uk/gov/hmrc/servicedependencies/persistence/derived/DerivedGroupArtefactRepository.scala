@@ -22,7 +22,6 @@ import org.mongodb.scala.model.Accumulators._
 import org.mongodb.scala.model.Aggregates._
 import org.mongodb.scala.model.Projections._
 import org.mongodb.scala.model.{Field, Sorts}
-import play.api.Logger
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.play.json.PlayMongoRepository
 import uk.gov.hmrc.servicedependencies.model._
@@ -41,7 +40,9 @@ class DerivedGroupArtefactRepository @Inject()(
   indexes        = Seq.empty,
   optSchema      = None
 ){
-  private val logger = Logger(getClass)
+
+  // we replace all the data for each call to populateAll
+  override lazy val requiresTtlIndex = false
 
   def findGroupsArtefacts: Future[Seq[GroupArtefacts]] =
     collection
@@ -50,8 +51,7 @@ class DerivedGroupArtefactRepository @Inject()(
       .map(g => g.copy(artefacts = g.artefacts.sorted))
       .toFuture()
 
-  def populate(): Future[Unit] = {
-    logger.info(s"Running DerivedGroupArtefactRepository.populate")
+  def populateAll(): Future[Unit] =
     mongoComponent.database.getCollection("DERIVED-slug-dependencies")
       .aggregate(
         List(
@@ -86,8 +86,5 @@ class DerivedGroupArtefactRepository @Inject()(
       )
       .allowDiskUse(true)
       .toFuture()
-      .map(_ =>
-        logger.info(s"Finished running DerivedGroupArtefactRepository.populate")
-      )
-  }
+      .map(_ => ())
 }

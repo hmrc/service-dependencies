@@ -30,16 +30,16 @@ import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
 class SlugInfoService @Inject()(
-  slugInfoRepository            : SlugInfoRepository,
-  slugVersionRepository         : SlugVersionRepository,
-  serviceDependencyRepository   : DerivedServiceDependenciesRepository,
-  jdkVersionRepository          : JdkVersionRepository,
-  sbtVersionRepository          : SbtVersionRepository,
-  groupArtefactRepository       : DerivedGroupArtefactRepository,
-  deploymentRepository          : DeploymentRepository,
-  teamsAndRepositoriesConnector : TeamsAndRepositoriesConnector,
-  releasesApiConnector          : ReleasesApiConnector,
-  gitHubProxyConnector          : GitHubProxyConnector,
+  slugInfoRepository                 : SlugInfoRepository,
+  slugVersionRepository              : SlugVersionRepository,
+  jdkVersionRepository               : JdkVersionRepository,
+  sbtVersionRepository               : SbtVersionRepository,
+  deploymentRepository               : DeploymentRepository,
+  teamsAndRepositoriesConnector      : TeamsAndRepositoriesConnector,
+  releasesApiConnector               : ReleasesApiConnector,
+  gitHubProxyConnector               : GitHubProxyConnector,
+  derivedServiceDependencyRepository : DerivedServiceDependenciesRepository,
+  derivedGroupArtefactRepository     : DerivedGroupArtefactRepository,
 )(implicit ec: ExecutionContext
 ) extends Logging {
 
@@ -55,13 +55,13 @@ class SlugInfoService @Inject()(
                                                isLatest
                     }
       _        <- if (isLatest) deploymentRepository.markLatest(slug.name, slug.version) else Future.unit
-      _        <- serviceDependencyRepository.populateDependencies(slug, metaArtefact)
+      _        <- derivedServiceDependencyRepository.populateDependencies(slug, metaArtefact)
     } yield ()
 
   def deleteSlugInfo(name: String, version: Version): Future[Unit] =
     for {
       _ <- deploymentRepository.delete(name, version)
-      _ <- serviceDependencyRepository.delete(name, version)
+      _ <- derivedServiceDependencyRepository.delete(name, version)
       _ <- slugInfoRepository.delete(name, version)
     } yield ()
 
@@ -79,7 +79,7 @@ class SlugInfoService @Inject()(
     , scopes      : Option[List[DependencyScope]]
     )(implicit hc: HeaderCarrier): Future[Seq[ServiceDependency]] =
       for {
-        services            <- serviceDependencyRepository.findServicesWithDependency(flag, group, artefact, scopes)
+        services            <- derivedServiceDependencyRepository.findServicesWithDependency(flag, group, artefact, scopes)
         servicesWithinRange =  services.filter(s => versionRange.includes(s.depVersion))
         teamsForServices    <- teamsAndRepositoriesConnector.getTeamsForServices
       } yield servicesWithinRange.map { r =>
@@ -87,7 +87,7 @@ class SlugInfoService @Inject()(
         }
 
   def findGroupsArtefacts: Future[Seq[GroupArtefacts]] =
-    groupArtefactRepository
+    derivedGroupArtefactRepository
       .findGroupsArtefacts
 
   def updateMetadata()(implicit hc: HeaderCarrier): Future[Unit] = {

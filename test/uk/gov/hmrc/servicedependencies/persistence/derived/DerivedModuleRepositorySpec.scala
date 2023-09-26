@@ -14,25 +14,28 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.servicedependencies.persistence
-
-import java.time.Instant
+package uk.gov.hmrc.servicedependencies.persistence.derived
 
 import org.mockito.MockitoSugar
-import org.scalatest.matchers.should.Matchers
-import org.scalatest.wordspec.AnyWordSpecLike
+import org.scalatest.OptionValues
 import uk.gov.hmrc.mongo.test.DefaultPlayMongoRepositorySupport
 import uk.gov.hmrc.servicedependencies.model.{MetaArtefact, MetaArtefactModule, Version}
 
 import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.duration.DurationInt
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpecLike
 
-class MetaArtefactRepositorySpec
+class DerivedModuleSpec
   extends AnyWordSpecLike
-     with Matchers
-     with MockitoSugar
-     with DefaultPlayMongoRepositorySupport[MetaArtefact] {
+    with Matchers
+    with OptionValues
+    with MockitoSugar
+    with DefaultPlayMongoRepositorySupport[DerivedModule] {
 
-  override lazy val repository = new MetaArtefactRepository(mongoComponent)
+  override lazy val repository = new DerivedModuleRepository(mongoComponent)
+
+  override implicit val patienceConfig = PatienceConfig(timeout = 30.seconds, interval = 100.millis)
 
   val metaArtefactModule =
     MetaArtefactModule(
@@ -61,58 +64,57 @@ class MetaArtefactRepositorySpec
                              metaArtefactModule,
                              metaArtefactModule.copy(name = "sub-module2")
                            ),
-      created            = Instant.parse("2007-12-03T10:15:30.00Z")
+      created            = java.time.Instant.parse("2007-12-03T10:15:30.00Z")
     )
 
-  val updatedMetaArtefact = metaArtefact.copy(modules = Seq(metaArtefactModule.copy(name = "sub-module3")))
 
-  "add" should {
-    "add correctly" in {
+  "DerivedModuleSpec.findRepoNameByModule" should {
+    "find repo name" in {
       (for {
-         before <- repository.find(metaArtefact.name)
-         _      =  before shouldBe None
          _      <- repository.add(metaArtefact)
-         after  <- repository.find(metaArtefact.name)
-         _      =  after shouldBe Some(metaArtefact)
+         name   <- repository.findNameByModule(
+                     group    = "uk.gov.hmrc",
+                     artefact = "sub-module",
+                     version  = Version("1.0.0")
+                   )
+         _      =  name shouldBe Some("library")
        } yield ()
       ).futureValue
     }
-    "upsert correctly" in {
-      (for {
-         before  <- repository.find(metaArtefact.name)
-         _       =  before shouldBe None
-         _       <- repository.add(metaArtefact)
-         after   <- repository.find(metaArtefact.name)
-         _       =  after shouldBe Some(metaArtefact)
-         _       <- repository.add(updatedMetaArtefact)
-         updated <- repository.find(metaArtefact.name)
-         _       =  updated shouldBe Some(updatedMetaArtefact)
-       } yield ()
-     ).futureValue
-    }
-  }
 
-  "find" should {
-    "return the latest" in {
+    "return data for any version if no match" in {
       (for {
-         _      <- repository.add(metaArtefact.copy(version = Version("2.0.0")))
          _      <- repository.add(metaArtefact)
-         found  <- repository.find(metaArtefact.name)
-         _      =  found shouldBe Some(metaArtefact.copy(version = Version("2.0.0")))
+         name   <- repository.findNameByModule(
+                     group    = "uk.gov.hmrc",
+                     artefact = "sub-module",
+                     version  = Version("0.0.1") // no match for this
+                   )
+         _      =  name shouldBe Some("library")
+       } yield ()
+      ).futureValue
+    }
+
+    "return none if no match" in {
+      (for {
+         _      <- repository.add(metaArtefact)
+         name   <- repository.findNameByModule(
+                     group    = "uk.gov.hmrc",
+                     artefact = "sub-module",
+                     version  = Version("0.0.1") // no match for this
+                   )
+         _      =  name shouldBe Some("library")
+
+         _      <- repository.delete(metaArtefact.name, metaArtefact.version)
+         name2  <- repository.findNameByModule(
+                     group    = "uk.gov.hmrc",
+                     artefact = "sub-module",
+                     version  = Version("0.0.1") // no match for this
+                   )
+         _      =  name2 shouldBe None
        } yield ()
       ).futureValue
     }
   }
 
-  "findAllVersions" should {
-    "return all versions" in {
-      (for {
-        _     <- repository.add(metaArtefact.copy(version = Version("2.0.0")))
-        _     <- repository.add(metaArtefact)
-        found <- repository.findAllVersions(metaArtefact.name)
-        _     =  found should contain theSameElementsAs Seq(metaArtefact, metaArtefact.copy(version = Version("2.0.0")))
-      } yield ()
-      ).futureValue
-    }
-  }
 }

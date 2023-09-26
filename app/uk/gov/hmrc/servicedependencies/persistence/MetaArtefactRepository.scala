@@ -16,12 +16,8 @@
 
 package uk.gov.hmrc.servicedependencies.persistence
 
-import org.mongodb.scala.bson.{BsonDocument, BsonString}
-import org.mongodb.scala.bson.conversions.Bson
-import org.mongodb.scala.model.{IndexModel, IndexOptions, Indexes, Projections, ReplaceOptions}
-import org.mongodb.scala.model.Aggregates.{`match`, project, unwind}
-import org.mongodb.scala.model.Filters.{and, equal, exists, or}
-import org.mongodb.scala.model.Projections.{excludeId, fields, include}
+import org.mongodb.scala.bson.{BsonDocument}
+import org.mongodb.scala.model.{Filters, IndexModel, IndexOptions, Indexes, Projections, ReplaceOptions}
 import play.api.Logging
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.play.json.PlayMongoRepository
@@ -29,7 +25,6 @@ import uk.gov.hmrc.servicedependencies.model.{MetaArtefact, Version}
 
 import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
-import cats.data.OptionT
 
 @Singleton
 class MetaArtefactRepository @Inject()(
@@ -43,12 +38,15 @@ class MetaArtefactRepository @Inject()(
   indexes        = Seq(IndexModel(Indexes.ascending("name", "version"), IndexOptions().unique(true)))
 ) with Logging {
 
+  // we remove meta-artefacts when, artefactProcess detects, they've been deleted from artifactory
+  override lazy val requiresTtlIndex = false
+
   def add(metaArtefact: MetaArtefact): Future[Unit] =
     collection
       .replaceOne(
-          filter      = and(
-                          equal("name"   , metaArtefact.name),
-                          equal("version", metaArtefact.version.toString)
+          filter      = Filters.and(
+                          Filters.equal("name"   , metaArtefact.name),
+                          Filters.equal("version", metaArtefact.version.toString)
                         )
         , replacement = metaArtefact
         , options     = ReplaceOptions().upsert(true)
@@ -59,9 +57,9 @@ class MetaArtefactRepository @Inject()(
   def delete(repositoryName: String, version: Version): Future[Unit] =
     collection
       .deleteOne(
-          and(
-            equal("name"   , repositoryName),
-            equal("version", version.toString)
+          Filters.and(
+            Filters.equal("name"   , repositoryName),
+            Filters.equal("version", version.toString)
           )
         )
       .toFuture()
@@ -70,7 +68,7 @@ class MetaArtefactRepository @Inject()(
   def find(repositoryName: String): Future[Option[MetaArtefact]] =
     for {
       version <- mongoComponent.database.getCollection("metaArtefacts")
-                   .find(equal("name", repositoryName))
+                   .find(Filters.equal("name", repositoryName))
                    .projection(Projections.include("version"))
                    .map(bson => Version(bson.getString("version")))
                    .filter(_.isReleaseCandidate == false)
@@ -81,53 +79,17 @@ class MetaArtefactRepository @Inject()(
 
   def find(repositoryName: String, version: Version): Future[Option[MetaArtefact]] =
     collection.find(
-      filter = and(
-                 equal("name"   , repositoryName),
-                 equal("version", version.toString)
+      filter = Filters.and(
+                 Filters.equal("name"   , repositoryName),
+                 Filters.equal("version", version.toString)
                )
       )
       .headOption()
 
   def findAllVersions(repositoryName: String): Future[Seq[MetaArtefact]] =
     collection.find(
-      filter = equal("name", repositoryName)
+      filter = Filters.equal("name", repositoryName)
     ).toFuture()
-
-  // TODO we could store this data normalised to apply an index etc.
-  def findRepoNameByModule(group: String, artefact: String, version: Version): Future[Option[String]] =
-    OptionT(findRepoNameByModule2(group, artefact, Some(version)))
-      // in-case the version predates collecting meta-data, just ignore Version
-      .orElse(OptionT(findRepoNameByModule2(group, artefact, None)))
-      .value
-
-  private def findRepoNameByModule2(group: String, artefact: String, version: Option[Version]): Future[Option[String]] =
-    mongoComponent.database.getCollection("metaArtefacts")
-      .aggregate(
-        List(
-          project(
-            fields(
-              excludeId(),
-              include("version"),
-              include("name"),
-              include("modules.group"),
-              include("modules.name")
-            )
-          ),
-          unwind("$modules"),
-          `match`(
-            and(
-              or(
-                exists("modules.group", false),
-                equal("modules.group", group)
-              ),
-              equal("modules.name", artefact),
-              version.fold[Bson](BsonDocument())(v => equal("version", v.toString))
-            )
-          )
-        )
-      )
-      .headOption()
-      .map(_.flatMap(_.get[BsonString]("name")).map(_.getValue))
 
   def clearAllData(): Future[Unit] =
     collection.deleteMany(BsonDocument())

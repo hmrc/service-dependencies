@@ -46,12 +46,6 @@ class SlugMetadataUpdateScheduler @Inject()(
 
   implicit val hc: HeaderCarrier = HeaderCarrier()
 
-  // create derived views if the scheduler is disabled, i.e. local dev etc
-  if (!schedulerConfigs.slugMetadataUpdate.enabled) {
-    logger.info("Pre-populating derived views...")
-    derivedViewsService.generateAllViews()
-  }
-
   scheduleWithLock("Slug Metadata Updater", schedulerConfigs.slugMetadataUpdate, lock) {
     logger.info("Updating slug metadata")
     for {

@@ -30,7 +30,6 @@ import play.api.inject.guice.GuiceApplicationBuilder
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.http.test.WireMockSupport
 import uk.gov.hmrc.servicedependencies.model.{JavaInfo, MetaArtefact, MetaArtefactModule, SlugInfo, Version}
-import play.api.Configuration
 
 class ArtefactProcessorConnectorSpec
   extends AnyWordSpec

@@ -81,6 +81,9 @@ class DerivedServiceDependenciesRepository @Inject()(
 ){
   private val logger = Logger(getClass)
 
+  // we remove slugs when, artefactProcess detects, they've been deleted from artifactory
+  override lazy val requiresTtlIndex = false
+
   def findServicesWithDependency(
     flag    : SlugInfoFlag,
     group   : String,

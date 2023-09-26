@@ -20,7 +20,7 @@ package uk.gov.hmrc.servicedependencies.persistence
 
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpecLike
-import uk.gov.hmrc.mongo.test.{CleanMongoCollectionSupport, PlayMongoRepositorySupport}
+import uk.gov.hmrc.mongo.test.DefaultPlayMongoRepositorySupport
 import uk.gov.hmrc.servicedependencies.model.{JavaInfo, SlugInfo, Version}
 
 import java.time.Instant
@@ -31,9 +31,7 @@ import org.scalatest.concurrent.IntegrationPatience
 class SlugVersionRepositorySpec
   extends AnyWordSpecLike
      with Matchers
-     with PlayMongoRepositorySupport[Version]
-     with CleanMongoCollectionSupport
-     with IntegrationPatience {
+     with DefaultPlayMongoRepositorySupport[Version] {
 
   import ExecutionContext.Implicits.global
 

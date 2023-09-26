@@ -26,6 +26,7 @@ import play.api.test.Helpers._
 import uk.gov.hmrc.servicedependencies.connector.ServiceConfigsConnector
 import uk.gov.hmrc.servicedependencies.model.{LatestVersion, Version}
 import uk.gov.hmrc.servicedependencies.persistence.{LatestVersionRepository, MetaArtefactRepository}
+import uk.gov.hmrc.servicedependencies.persistence.derived.DerivedModuleRepository
 import uk.gov.hmrc.servicedependencies.service._
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -45,7 +46,7 @@ class ServiceDependenciesControllerSpec
   "repositoryName" should {
     "get repositoryName for a SlugInfoFlag" in {
       val boot = Boot.init
-      when(boot.mockMetaArtefactRepository.findRepoNameByModule(group, artefact, version))
+      when(boot.mockDerivedModuleRepository.findNameByModule(group, artefact, version))
         .thenReturn(Future.successful(Some("hmrc-mongo")))
 
       val result = boot.controller.repositoryName(group, artefact, version.toString).apply(FakeRequest())
@@ -55,7 +56,7 @@ class ServiceDependenciesControllerSpec
 
     "return Not Found when the requested repo is not recognised" in {
       val boot = Boot.init
-       when(boot.mockMetaArtefactRepository.findRepoNameByModule(group, artefact, version))
+       when(boot.mockDerivedModuleRepository.findNameByModule(group, artefact, version))
         .thenReturn(Future.successful(None))
 
       val result = boot.controller.repositoryName(group, artefact, version.toString).apply(FakeRequest())
@@ -93,6 +94,7 @@ class ServiceDependenciesControllerSpec
     , mockTeamDependencyService        : TeamDependencyService
     , mockMetaArtefactRepository       : MetaArtefactRepository
     , mockLatestVersionRepository      : LatestVersionRepository
+    , mockDerivedModuleRepository      : DerivedModuleRepository
     , controller                       : ServiceDependenciesController
     )
 
@@ -104,6 +106,7 @@ class ServiceDependenciesControllerSpec
       val mockTeamDependencyService         = mock[TeamDependencyService]
       val mockMetaArtefactRepository        = mock[MetaArtefactRepository]
       val mockLatestVersionRepository       = mock[LatestVersionRepository]
+      val mockDerivedModuleRepository       = mock[DerivedModuleRepository]
       val controller = new ServiceDependenciesController(
           mockSlugInfoService
         , mockSlugDependenciesService
@@ -111,6 +114,7 @@ class ServiceDependenciesControllerSpec
         , mockTeamDependencyService
         , mockMetaArtefactRepository
         , mockLatestVersionRepository
+        , mockDerivedModuleRepository
         , stubControllerComponents()
         )
       Boot(
@@ -120,6 +124,7 @@ class ServiceDependenciesControllerSpec
         , mockTeamDependencyService
         , mockMetaArtefactRepository
         , mockLatestVersionRepository
+        , mockDerivedModuleRepository
         , controller
         )
     }
