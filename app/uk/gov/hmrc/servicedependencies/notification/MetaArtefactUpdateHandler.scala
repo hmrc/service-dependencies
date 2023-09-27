@@ -33,6 +33,7 @@ import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.servicedependencies.config.ArtefactReceivingConfig
 import uk.gov.hmrc.servicedependencies.connector.ArtefactProcessorConnector
 import uk.gov.hmrc.servicedependencies.persistence.MetaArtefactRepository
+import uk.gov.hmrc.servicedependencies.persistence.derived.DerivedModuleRepository
 
 import javax.inject.Singleton
 import scala.concurrent.{ExecutionContext, Future}
@@ -43,7 +44,8 @@ import scala.util.control.NonFatal
 class MetaArtefactUpdateHandler @Inject()(
   config                    : ArtefactReceivingConfig,
   artefactProcessorConnector: ArtefactProcessorConnector,
-  metaArtefactRepository    : MetaArtefactRepository
+  metaArtefactRepository    : MetaArtefactRepository,
+  derivedModuleRepository   : DerivedModuleRepository
 )(implicit
   actorSystem : ActorSystem,
   materializer: Materializer,
@@ -102,37 +104,33 @@ class MetaArtefactUpdateHandler @Inject()(
       action   <- payload match {
                     case available: MessagePayload.JobAvailable =>
                       for {
-                        _            <- EitherT.cond[Future](available.jobType == "meta", (), s"${available.jobType} was not 'meta'")
-                        metaArtefact <- EitherT.fromOptionF(
-                                          artefactProcessorConnector.getMetaArtefact(available.name, available.version),
-                                          s"MetaArtefact for name: ${available.name}, version: ${available.version} was not found"
-                                        )
-                        _            <- EitherT(
-                                          metaArtefactRepository.add(metaArtefact)
-                                            .map(Right.apply)
-                                            .recover {
-                                              case e =>
-                                                val errorMessage = s"Could not store MetaArtefact for message with ID '${message.messageId()}' (${metaArtefact.name} ${metaArtefact.version})"
-                                                logger.error(errorMessage, e)
-                                                Left(s"$errorMessage ${e.getMessage}")
-                                            }
-                                        )
-                      } yield {
-                        logger.info(s"MetaArtefact available message with ID '${message.messageId()}' (${metaArtefact.name} ${metaArtefact.version}) successfully processed.")
+                        _    <- EitherT.cond[Future](available.jobType == "meta", (), s"${available.jobType} was not 'meta'")
+                        meta <- EitherT.fromOptionF(
+                                  artefactProcessorConnector.getMetaArtefact(available.name, available.version),
+                                  s"MetaArtefact for name: ${available.name}, version: ${available.version} was not found"
+                                )
+                        _    <- recoverFutureInEitherT(
+                                  metaArtefactRepository.add(meta)
+                                , errorMessage = s"Could not store MetaArtefact for message with ID '${message.messageId()}' (${meta.name} ${meta.version})"
+                                )
+                        _    <- recoverFutureInEitherT(
+                                  derivedModuleRepository.add(meta)
+                                , errorMessage = s"Could not store Derived Modules for message with ID '${message.messageId()}' (${meta.name} ${meta.version})"
+                                )
+                       } yield {
+                        logger.info(s"MetaArtefact available message with ID '${message.messageId()}' (${meta.name} ${meta.version}) successfully processed.")
                         MessageAction.Delete(message)
                       }
                     case deleted: MessagePayload.JobDeleted =>
                       for {
                         _ <- EitherT.cond[Future](deleted.jobType == "meta", (), s"${deleted.jobType} was not 'meta'")
-                        _ <- EitherT(
+                        _ <- recoverFutureInEitherT(
                                metaArtefactRepository.delete(deleted.name, deleted.version)
-                                 .map(Right.apply)
-                                 .recover {
-                                   case e =>
-                                     val errorMessage = s"Could not delete MetaArtefact for message with ID '${message.messageId()}' (${deleted.name} ${deleted.version})"
-                                     logger.error(errorMessage, e)
-                                     Left(s"$errorMessage ${e.getMessage}")
-                                 }
+                             , errorMessage = s"Could not delete MetaArtefact for message with ID '${message.messageId()}' (${deleted.name} ${deleted.version})"
+                             )
+                        _ <- recoverFutureInEitherT(
+                               derivedModuleRepository.delete(deleted.name, deleted.version)
+                             , errorMessage = s"Could not delete Derived Modules for message with ID '${message.messageId()}' (${deleted.name} ${deleted.version})"
                              )
                        } yield {
                          logger.info(s"MetaArtefact deleted message with ID '${message.messageId()}' (${deleted.name} ${deleted.version}) successfully processed.")
@@ -148,4 +146,12 @@ class MetaArtefactUpdateHandler @Inject()(
         action
     }
   }
+
+  private def recoverFutureInEitherT[A](f: Future[A], errorMessage: String) = EitherT(
+    f.map(Right.apply)
+     .recover {case e =>
+       logger.error(errorMessage, e)
+       Left(s"$errorMessage ${e.getMessage}")
+     }
+  )
 }

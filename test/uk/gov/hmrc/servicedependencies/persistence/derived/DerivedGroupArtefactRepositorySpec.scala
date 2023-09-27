@@ -18,7 +18,7 @@ package uk.gov.hmrc.servicedependencies.persistence.derived
 
 import org.mockito.MockitoSugar
 import org.scalatest.OptionValues
-import uk.gov.hmrc.mongo.test.{CleanMongoCollectionSupport, PlayMongoRepositorySupport}
+import uk.gov.hmrc.mongo.test.DefaultPlayMongoRepositorySupport
 import uk.gov.hmrc.servicedependencies.model.GroupArtefacts
 import uk.gov.hmrc.servicedependencies.persistence.TestSlugInfos.slugInfo
 import uk.gov.hmrc.servicedependencies.persistence.{DeploymentRepository, SlugInfoRepository}
@@ -34,9 +34,7 @@ class DerivedGroupArtefactRepositorySpec
     with Matchers
     with OptionValues
     with MockitoSugar
-    // We don't mixin IndexedMongoQueriesSupport here, as this repo makes use of queries not satisfied by an index
-    with PlayMongoRepositorySupport[GroupArtefacts]
-    with CleanMongoCollectionSupport {
+    with DefaultPlayMongoRepositorySupport[GroupArtefacts] {
 
   override lazy val repository = new DerivedGroupArtefactRepository(mongoComponent)
 
@@ -52,11 +50,11 @@ class DerivedGroupArtefactRepositorySpec
 
   override implicit val patienceConfig = PatienceConfig(timeout = 30.seconds, interval = 100.millis)
 
-  "GroupArtefactsRepository.findGroupsArtefacts" should {
+  "DerivedGroupArtefactRepository.findGroupsArtefacts" should {
     "return a map of artefact group to list of found artefacts" in {
       val slugWithDependencies = slugInfo.copy(dependencyDotCompile = scala.io.Source.fromResource("graphs/dependencies-compile.dot").mkString)
       derivedServiceDependenciesRepository.populateDependencies(slugWithDependencies, meta = None).futureValue
-      repository.populate().futureValue
+      repository.populateAll().futureValue
 
       val result = repository.findGroupsArtefacts.futureValue
 

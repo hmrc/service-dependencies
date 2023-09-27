@@ -27,6 +27,7 @@ import uk.gov.hmrc.servicedependencies.connector.ServiceConfigsConnector
 import uk.gov.hmrc.servicedependencies.controller.model.{Dependencies, Dependency, DependencyBobbyRule}
 import uk.gov.hmrc.servicedependencies.model._
 import uk.gov.hmrc.servicedependencies.persistence.{LatestVersionRepository, MetaArtefactRepository}
+import uk.gov.hmrc.servicedependencies.persistence.derived.DerivedModuleRepository
 import uk.gov.hmrc.servicedependencies.service.{SlugDependenciesService, SlugInfoService, TeamDependencyService}
 
 import java.time.LocalDate
@@ -34,13 +35,14 @@ import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
 class ServiceDependenciesController @Inject()(
-  slugInfoService        : SlugInfoService
-, slugDependenciesService: SlugDependenciesService
-, serviceConfigsConnector: ServiceConfigsConnector
-, teamDependencyService  : TeamDependencyService
-, metaArtefactRepository : MetaArtefactRepository
-, latestVersionRepository: LatestVersionRepository
-, cc                     : ControllerComponents
+  slugInfoService         : SlugInfoService
+, slugDependenciesService : SlugDependenciesService
+, serviceConfigsConnector : ServiceConfigsConnector
+, teamDependencyService   : TeamDependencyService
+, metaArtefactRepository  : MetaArtefactRepository
+, latestVersionRepository : LatestVersionRepository
+, derivedModuleRepository : DerivedModuleRepository
+, cc                      : ControllerComponents
 )(implicit
   ec                     : ExecutionContext
 ) extends BackendController(cc) {
@@ -156,7 +158,7 @@ class ServiceDependenciesController @Inject()(
 
   def repositoryName(group: String, artefact: String, version: String): Action[AnyContent] =
     Action.async {
-      metaArtefactRepository.findRepoNameByModule(group, artefact, Version(version))
+      derivedModuleRepository.findNameByModule(group, artefact, Version(version))
         .map(_.fold(NotFound(""))(res => Ok(Json.toJson(res))))
     }
 

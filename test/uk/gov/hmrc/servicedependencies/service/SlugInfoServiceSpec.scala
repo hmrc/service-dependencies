@@ -84,7 +84,7 @@ class SlugInfoServiceSpec
     "filter results by version" in {
       val boot = Boot.init
 
-      when(boot.mockedServiceDependenciesRepository.findServicesWithDependency(SlugInfoFlag.Latest, group, artefact, Some(List(scope))))
+      when(boot.mockedDerivedServiceDependenciesRepository.findServicesWithDependency(SlugInfoFlag.Latest, group, artefact, Some(List(scope))))
         .thenReturn(Future(Seq(v100, v200, v205)))
 
       when(boot.mockedTeamsAndRepositoriesConnector.getTeamsForServices)
@@ -103,7 +103,7 @@ class SlugInfoServiceSpec
 
       val bad = v100.copy(depVersion = Version("r938"))
 
-      when(boot.mockedServiceDependenciesRepository.findServicesWithDependency(SlugInfoFlag.Latest, group, artefact, Some(List(scope))))
+      when(boot.mockedDerivedServiceDependenciesRepository.findServicesWithDependency(SlugInfoFlag.Latest, group, artefact, Some(List(scope))))
         .thenReturn(Future(Seq(v100, v200, v205, bad)))
 
       when(boot.mockedTeamsAndRepositoriesConnector.getTeamsForServices)
@@ -156,7 +156,7 @@ class SlugInfoServiceSpec
         .thenReturn(Future.unit)
       when(boot.mockedDeploymentRepository.markLatest(any, any))
         .thenReturn(Future.unit)
-      when(boot.mockedServiceDependenciesRepository.populateDependencies(any, any))
+      when(boot.mockedDerivedServiceDependenciesRepository.populateDependencies(any, any))
         .thenReturn(Future.unit)
 
       boot.service.addSlugInfo(sampleSlugInfo, metaArtefact = None).futureValue
@@ -175,7 +175,7 @@ class SlugInfoServiceSpec
         .thenReturn(Future.unit)
       when(boot.mockedDeploymentRepository.markLatest(any, any))
         .thenReturn(Future.unit)
-      when(boot.mockedServiceDependenciesRepository.populateDependencies(any, any))
+      when(boot.mockedDerivedServiceDependenciesRepository.populateDependencies(any, any))
         .thenReturn(Future.unit)
 
       boot.service.addSlugInfo(slugv2, metaArtefact = None).futureValue
@@ -192,7 +192,7 @@ class SlugInfoServiceSpec
         .thenReturn(Future.successful(Some(slugv2.version)))
       when(boot.mockedSlugInfoRepository.add(any))
         .thenReturn(Future.unit)
-      when(boot.mockedServiceDependenciesRepository.populateDependencies(any, any))
+      when(boot.mockedDerivedServiceDependenciesRepository.populateDependencies(any, any))
         .thenReturn(Future.unit)
 
       boot.service.addSlugInfo(slugv1, metaArtefact = None).futureValue
@@ -209,7 +209,7 @@ class SlugInfoServiceSpec
         .thenReturn(Future.successful(Some(slugv2.version)))
       when(boot.mockedSlugInfoRepository.add(any))
         .thenReturn(Future.unit)
-      when(boot.mockedServiceDependenciesRepository.populateDependencies(any, any))
+      when(boot.mockedDerivedServiceDependenciesRepository.populateDependencies(any, any))
         .thenReturn(Future.unit)
 
       boot.service.addSlugInfo(slugv1, metaArtefact = None).futureValue
@@ -292,56 +292,56 @@ class SlugInfoServiceSpec
   }
 
   case class Boot(
-    mockedSlugInfoRepository            : SlugInfoRepository
-  , mockedSlugVersionRepository         : SlugVersionRepository
-  , mockedServiceDependenciesRepository : DerivedServiceDependenciesRepository
-  , mockedJdkVersionRepository          : JdkVersionRepository
-  , mockedSbtVersionRepository          : SbtVersionRepository
-  , mockedGroupArtefactRepository       : DerivedGroupArtefactRepository
-  , mockedDeploymentRepository          : DeploymentRepository
-  , mockedTeamsAndRepositoriesConnector : TeamsAndRepositoriesConnector
-  , mockedReleasesApiConnector          : ReleasesApiConnector
-  , mockedGitHubProxyConnector          : GitHubProxyConnector
-  , service                             : SlugInfoService
+    mockedSlugInfoRepository                  : SlugInfoRepository
+  , mockedSlugVersionRepository               : SlugVersionRepository
+  , mockedJdkVersionRepository                : JdkVersionRepository
+  , mockedSbtVersionRepository                : SbtVersionRepository
+  , mockedDeploymentRepository                : DeploymentRepository
+  , mockedTeamsAndRepositoriesConnector       : TeamsAndRepositoriesConnector
+  , mockedReleasesApiConnector                : ReleasesApiConnector
+  , mockedGitHubProxyConnector                : GitHubProxyConnector
+  , service                                   : SlugInfoService
+  , mockedDerivedServiceDependenciesRepository: DerivedServiceDependenciesRepository
+  , mockedDerivedGroupArtefactRepository      : DerivedGroupArtefactRepository
   )
 
   object Boot {
     def init: Boot = {
       val mockedSlugInfoRepository                = mock[SlugInfoRepository]
       val mockedSlugVersionRepository             = mock[SlugVersionRepository]
-      val mockedDerivedSlugDependenciesRepository = mock[DerivedServiceDependenciesRepository]
       val mockedJdkVersionRepository              = mock[JdkVersionRepository]
       val mockedSbtVersionRepository              = mock[SbtVersionRepository]
-      val mockedGroupArtefactRepository           = mock[DerivedGroupArtefactRepository]
       val mockedDeploymentRepository              = mock[DeploymentRepository]
       val mockedTeamsAndRepositoriesConnector     = mock[TeamsAndRepositoriesConnector]
       val mockedReleasesApiConnector              = mock[ReleasesApiConnector]
       val mockedGitHubProxyConnector              = mock[GitHubProxyConnector]
+      val mockedDerivedGroupArtefactRepository    = mock[DerivedGroupArtefactRepository]
+      val mockedDerivedSlugDependenciesRepository = mock[DerivedServiceDependenciesRepository]
 
       val service = new SlugInfoService(
             mockedSlugInfoRepository
           , mockedSlugVersionRepository
-          , mockedDerivedSlugDependenciesRepository
           , mockedJdkVersionRepository
           , mockedSbtVersionRepository
-          , mockedGroupArtefactRepository
           , mockedDeploymentRepository
           , mockedTeamsAndRepositoriesConnector
           , mockedReleasesApiConnector
           , mockedGitHubProxyConnector
+          , mockedDerivedSlugDependenciesRepository
+          , mockedDerivedGroupArtefactRepository
           )
       Boot(
           mockedSlugInfoRepository
         , mockedSlugVersionRepository
-        , mockedDerivedSlugDependenciesRepository
         , mockedJdkVersionRepository
         , mockedSbtVersionRepository
-        , mockedGroupArtefactRepository
         , mockedDeploymentRepository
         , mockedTeamsAndRepositoriesConnector
         , mockedReleasesApiConnector
         , mockedGitHubProxyConnector
         , service
+        , mockedDerivedSlugDependenciesRepository
+        , mockedDerivedGroupArtefactRepository
         )
     }
   }
