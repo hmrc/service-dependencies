@@ -4,21 +4,18 @@ private object AppDependencies {
   import play.core.PlayVersion
   import play.sbt.PlayImport.{ehcache, ws}
 
-  val bootstrapPlayVersion = "7.20.0"
-  val hmrcMongoVersion     = "1.2.0"
+  val bootstrapPlayVersion = "7.22.0"
+  val hmrcMongoVersion     = "1.3.0"
 
   val compile = Seq(
     ws,
     ehcache,
-    "uk.gov.hmrc"        %% "bootstrap-backend-play-28" % bootstrapPlayVersion,
-    "uk.gov.hmrc.mongo"  %% "hmrc-mongo-play-28"        % hmrcMongoVersion,
-    "org.typelevel"      %% "cats-core"                 % "2.6.1",
-    "org.apache.commons" %  "commons-compress"          % "1.20",
-    "com.lightbend.akka" %% "akka-stream-alpakka-sns"   % "4.0.0",
-    "com.lightbend.akka" %% "akka-stream-alpakka-sqs"   % "4.0.0",
-    // ensure akka-stream-alpakka-sns dependencies don't conflict with play's akka version
-    "com.typesafe.akka"  %% "akka-http"                 % PlayVersion.akkaHttpVersion,
-    "org.yaml"           %  "snakeyaml"                 % "1.33"
+    "uk.gov.hmrc"            %% "bootstrap-backend-play-28" % bootstrapPlayVersion,
+    "uk.gov.hmrc.mongo"      %% "hmrc-mongo-play-28"        % hmrcMongoVersion,
+    "org.typelevel"          %% "cats-core"                 % "2.10.0",
+    "org.apache.commons"     %  "commons-compress"          % "1.20",
+    "software.amazon.awssdk" %  "sqs"                       % "2.20.155",
+    "org.yaml"               %  "snakeyaml"                 % "1.33"
   )
 
   val test = Seq(

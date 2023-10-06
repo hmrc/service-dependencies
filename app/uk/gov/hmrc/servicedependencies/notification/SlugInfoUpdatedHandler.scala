@@ -16,78 +16,39 @@
 
 package uk.gov.hmrc.servicedependencies.notification
 
-import akka.NotUsed
 import akka.actor.ActorSystem
-import akka.stream.{ActorAttributes, Materializer, Supervision}
-import akka.stream.alpakka.sqs.{MessageAction, SqsSourceSettings}
-import akka.stream.alpakka.sqs.scaladsl.{SqsAckSink, SqsSource}
-import akka.stream.scaladsl.Source
 import cats.data.{EitherT, OptionT}
-import com.github.matsluni.akkahttpspi.AkkaHttpClient
-import com.google.inject.Inject
-import play.api.Logging
+import play.api.Configuration
 import play.api.libs.json.Json
-import software.amazon.awssdk.services.sqs.SqsAsyncClient
 import software.amazon.awssdk.services.sqs.model.Message
 import uk.gov.hmrc.http.HeaderCarrier
-import uk.gov.hmrc.servicedependencies.config.ArtefactReceivingConfig
 import uk.gov.hmrc.servicedependencies.connector.ArtefactProcessorConnector
 import uk.gov.hmrc.servicedependencies.service.SlugInfoService
 
+import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future, Promise}
 import scala.concurrent.duration.FiniteDuration
-import scala.util.{Failure, Try}
-import scala.util.control.NonFatal
 
+@Singleton
 class SlugInfoUpdatedHandler @Inject()(
-  config                    : ArtefactReceivingConfig,
+  configuration             : Configuration,
   artefactProcessorConnector: ArtefactProcessorConnector,
   slugInfoService           : SlugInfoService
 )(implicit
-   actorSystem : ActorSystem,
-   materializer: Materializer,
-   ec          : ExecutionContext
-) extends Logging {
-
-  private lazy val queueUrl = config.sqsSlugQueue
-  private lazy val settings = SqsSourceSettings()
+  actorSystem               : ActorSystem,
+  ec                        : ExecutionContext
+) extends SqsConsumer(
+  name                      = "SlugInfo"
+, config                    = SqsConfig("aws.sqs.slug", configuration)
+)(actorSystem, ec) {
 
   private implicit val hc = HeaderCarrier()
 
-  private lazy val awsSqsClient =
-    Try {
-      val client = SqsAsyncClient.builder()
-        .httpClient(AkkaHttpClient.builder().withActorSystem(actorSystem).build())
-        .build()
+  lazy val metaArtefactRetryDelay: FiniteDuration =
+    configuration.get[FiniteDuration]("aws.sqs.slug.retryDelay")
 
-      actorSystem.registerOnTermination(client.close())
-      client
-    }.recoverWith {
-      case NonFatal(e) => logger.error(s"Failed to set up awsSqsClient: ${e.getMessage}", e); Failure(e)
-    }.get
-
-  def dedupe(source: Source[Message, NotUsed]): Source[Message, NotUsed] =
-      Source.single(Message.builder.messageId("----------").build) // dummy value since the dedupe will ignore the first entry
-      .concat(source)
-      // are we getting duplicates?
-      .sliding(2, 1)
-      .mapConcat { case prev +: current +: _=>
-          if (prev.messageId == current.messageId) {
-            logger.warn(s"Read the same slug message ID twice ${prev.messageId} - ignoring duplicate")
-            List.empty
-          }
-          else List(current)
-      }
-
-  if (config.isEnabled)
-    dedupe(SqsSource(queueUrl, settings)(awsSqsClient))
-      .mapAsync(10)(processMessage)
-      .withAttributes(ActorAttributes.supervisionStrategy {
-        case NonFatal(e) => logger.error(s"Failed to process sqs messages: ${e.getMessage}", e); Supervision.Restart
-      })
-      .runWith(SqsAckSink(queueUrl)(awsSqsClient))
-  else
-    logger.info("SlugInfoUpdatedHandler is disabled")
+  lazy val metaArtefactRetryTimes: Int =
+    configuration.get[Int]("aws.sqs.slug.retryTimes")
 
   private def after[A](delay: FiniteDuration)(task: => Future[A]): Future[A] = {
     val promise = Promise[A]()
@@ -103,7 +64,7 @@ class SlugInfoUpdatedHandler @Inject()(
     else
       Future.successful(None)
 
-  private def processMessage(message: Message): Future[MessageAction] = {
+  override protected def processMessage(message: Message): Future[MessageAction] = {
     logger.debug(s"Starting processing SlugInfo message with ID '${message.messageId()}'")
     (for {
        payload <- EitherT.fromEither[Future](
@@ -123,7 +84,7 @@ class SlugInfoUpdatedHandler @Inject()(
                                      EitherT.liftF(
                                        // try a few times, the meta-artefact may not have been processed yet
                                        // or it may just not be available (e.g. java slugs)
-                                       attempt(delay = config.metaArtefactRetryDelay, times = config.metaArtefactRetryTimes)(() =>
+                                       attempt(delay = metaArtefactRetryDelay, times = metaArtefactRetryTimes)(() =>
                                          artefactProcessorConnector.getMetaArtefact(slugInfo.name, slugInfo.version)
                                        )
                                      )
