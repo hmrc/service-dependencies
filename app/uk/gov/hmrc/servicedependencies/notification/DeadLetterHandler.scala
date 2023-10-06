@@ -16,61 +16,51 @@
 
 package uk.gov.hmrc.servicedependencies.notification
 
+import play.api.Configuration
 import akka.actor.ActorSystem
-import akka.stream.Materializer
-import akka.stream.alpakka.sqs.MessageAction.Delete
-import akka.stream.alpakka.sqs.SqsSourceSettings
-import akka.stream.alpakka.sqs.scaladsl.{SqsAckSink, SqsSource}
-import com.github.matsluni.akkahttpspi.AkkaHttpClient
-import com.google.inject.Inject
-import play.api.Logging
-import software.amazon.awssdk.services.sqs.SqsAsyncClient
 import software.amazon.awssdk.services.sqs.model.Message
-import uk.gov.hmrc.servicedependencies.config.ArtefactReceivingConfig
 
+import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
-import scala.util.{Failure, Try}
-import scala.util.control.NonFatal
 
-class DeadLetterHandler @Inject()(
-  config: ArtefactReceivingConfig
+@Singleton
+class SlugInfoDeadLetterHandler @Inject()(
+  configuration: Configuration
 )(implicit
-  actorSystem : ActorSystem,
-  materializer: Materializer,
-  ec          : ExecutionContext
-) extends Logging {
+  actorSystem  : ActorSystem,
+  ec           : ExecutionContext
+) extends SqsConsumer(
+  name         = "Slug Dead Letter"
+, config       = SqsConfig("aws.sqs.slugDeadLetter", configuration)
+)(actorSystem, ec) {
 
-  private lazy val settings = SqsSourceSettings()
-
-  private lazy val awsSqsClient =
-    Try {
-      val client = SqsAsyncClient.builder()
-        .httpClient(AkkaHttpClient.builder().withActorSystem(actorSystem).build())
-        .build()
-      actorSystem.registerOnTermination(client.close())
-      client
-    }.recoverWith {
-      case NonFatal(e) => logger.error(e.getMessage, e); Failure(e)
-    }.get
-
-  if (config.isEnabled)
-    config.sqsDeadLetterQueues.foreach(queueUrl =>
-      SqsSource(queueUrl, settings)(awsSqsClient)
-        .mapAsync(10)(processMessage)
-        .runWith(SqsAckSink(queueUrl)(awsSqsClient))
-        .recoverWith {
-          case NonFatal(e) => logger.error(s"Failed to process from $queueUrl: ${e.getMessage}", e); Future.failed(e)
-        }
-    )
-  else
-    logger.debug("DeadLetterHandler is disabled.")
-
-  private def processMessage(message: Message) = {
+  protected def processMessage(message: Message) = {
     logger.warn(
-      s"""Dead letter message with
+      s"""Slug dead letter message with
          |ID: '${message.messageId}'
          |Body: '${message.body}'""".stripMargin
     )
-    Future(Delete(message))
+    Future.successful(MessageAction.Delete(message))
+  }
+}
+
+@Singleton
+class MetaArtefactDeadLetterHandler @Inject()(
+  configuration: Configuration
+)(implicit
+  actorSystem  : ActorSystem,
+  ec           : ExecutionContext
+) extends SqsConsumer(
+  name         = "Meta Artefact Dead Letter"
+, config       = SqsConfig("aws.sqs.metaDeadLetter", configuration)
+)(actorSystem, ec) {
+
+  protected def processMessage(message: Message) = {
+    logger.warn(
+      s"""Meta Artefact dead letter message with
+         |ID: '${message.messageId}'
+         |Body: '${message.body}'""".stripMargin
+    )
+    Future.successful(MessageAction.Delete(message))
   }
 }

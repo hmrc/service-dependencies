@@ -17,17 +17,36 @@
 package uk.gov.hmrc.servicedependencies
 
 import akka.stream.Materializer
-import com.google.inject.AbstractModule
+import play.api.{Configuration, Environment, Logger}
+import play.api.inject.Binding
 import play.api.libs.concurrent.MaterializerProvider
+import uk.gov.hmrc.servicedependencies.notification.{MetaArtefactUpdateHandler, MetaArtefactDeadLetterHandler, SlugInfoUpdatedHandler, SlugInfoDeadLetterHandler}
+import uk.gov.hmrc.servicedependencies.scheduler.{BobbyRulesSummaryScheduler, LatestVersionsReloadScheduler, SlugMetadataUpdateScheduler}
 
-class Module() extends AbstractModule {
-  override def configure(): Unit = {
-    bind(classOf[scheduler.LatestVersionsReloadScheduler]).asEagerSingleton()
-    bind(classOf[scheduler.SlugMetadataUpdateScheduler  ]).asEagerSingleton()
-    bind(classOf[scheduler.BobbyRulesSummaryScheduler   ]).asEagerSingleton()
-    bind(classOf[notification.SlugInfoUpdatedHandler    ]).asEagerSingleton()
-    bind(classOf[notification.MetaArtefactUpdateHandler ]).asEagerSingleton()
-    bind(classOf[notification.DeadLetterHandler         ]).asEagerSingleton()
-    bind(classOf[Materializer                           ]).toProvider(classOf[MaterializerProvider])
+class Module extends play.api.inject.Module {
+
+  private val logger = Logger(getClass)
+
+  private def ecsDeploymentsBindings(configuration: Configuration): Seq[Binding[_]] = {
+    if (configuration.get[Boolean]("aws.sqs.enabled"))
+      Seq(
+        bind[MetaArtefactUpdateHandler    ].toSelf.eagerly()
+      , bind[MetaArtefactDeadLetterHandler].toSelf.eagerly()
+      , bind[SlugInfoUpdatedHandler       ].toSelf.eagerly()
+      , bind[SlugInfoDeadLetterHandler    ].toSelf.eagerly()
+      )
+    else {
+      logger.warn("SQS handlers are disabled")
+      Seq.empty
+    }
   }
+
+  override def bindings(environment: Environment, configuration: Configuration): Seq[Binding[_]] =
+    Seq(
+      bind[LatestVersionsReloadScheduler].toSelf.eagerly()
+    , bind[SlugMetadataUpdateScheduler  ].toSelf.eagerly()
+    , bind[BobbyRulesSummaryScheduler   ].toSelf.eagerly()
+    , bind[Materializer                 ].toProvider(classOf[MaterializerProvider])
+    ) ++
+    ecsDeploymentsBindings(configuration)
 }

@@ -16,84 +16,36 @@
 
 package uk.gov.hmrc.servicedependencies.notification
 
-import akka.NotUsed
 import akka.actor.ActorSystem
-import akka.stream.{ActorAttributes, Materializer, Supervision}
-import akka.stream.alpakka.sqs.{MessageAction, SqsSourceSettings}
-import akka.stream.alpakka.sqs.scaladsl.{SqsAckSink, SqsSource}
-import akka.stream.scaladsl.Source
 import cats.data.EitherT
-import com.github.matsluni.akkahttpspi.AkkaHttpClient
-import com.google.inject.Inject
-import play.api.Logging
+import play.api.Configuration
 import play.api.libs.json.Json
-import software.amazon.awssdk.services.sqs.SqsAsyncClient
 import software.amazon.awssdk.services.sqs.model.Message
 import uk.gov.hmrc.http.HeaderCarrier
-import uk.gov.hmrc.servicedependencies.config.ArtefactReceivingConfig
 import uk.gov.hmrc.servicedependencies.connector.ArtefactProcessorConnector
 import uk.gov.hmrc.servicedependencies.persistence.MetaArtefactRepository
 import uk.gov.hmrc.servicedependencies.persistence.derived.DerivedModuleRepository
 
-import javax.inject.Singleton
+import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
-import scala.util.{Failure, Try}
-import scala.util.control.NonFatal
 
 @Singleton
 class MetaArtefactUpdateHandler @Inject()(
-  config                    : ArtefactReceivingConfig,
+  configuration             : Configuration,
   artefactProcessorConnector: ArtefactProcessorConnector,
   metaArtefactRepository    : MetaArtefactRepository,
   derivedModuleRepository   : DerivedModuleRepository
 )(implicit
-  actorSystem : ActorSystem,
-  materializer: Materializer,
-  ec          : ExecutionContext
-) extends Logging {
-
-  private lazy val metaQueueUrl = config.sqsMetaArtefactQueue
-  private lazy val settings = SqsSourceSettings()
+  actorSystem               : ActorSystem,
+  ec                        : ExecutionContext
+) extends SqsConsumer(
+  name                      = "MetaArtefact"
+, config                    = SqsConfig("aws.sqs.meta", configuration)
+)(actorSystem, ec) {
 
   private implicit val hc = HeaderCarrier()
 
-  private lazy val awsSqsClient =
-    Try {
-      val client = SqsAsyncClient.builder()
-        .httpClient(AkkaHttpClient.builder().withActorSystem(actorSystem).build())
-        .build()
-
-      actorSystem.registerOnTermination(client.close())
-      client
-    }.recoverWith {
-      case NonFatal(e) => logger.error(s"Failed to set up awsSqsClient: ${e.getMessage}", e); Failure(e)
-    }.get
-
-  def dedupe(source: Source[Message, NotUsed]): Source[Message, NotUsed] =
-      Source.single(Message.builder.messageId("----------").build) // dummy value since the dedupe will ignore the first entry
-      .concat(source)
-      // are we getting duplicates?
-      .sliding(2, 1)
-      .mapConcat { case prev +: current +: _=>
-          if (prev.messageId == current.messageId) {
-            logger.warn(s"Read the same meta-artefact message ID twice ${prev.messageId} - ignoring duplicate")
-            List.empty
-          }
-          else List(current)
-      }
-
-  if (config.isEnabled)
-    dedupe(SqsSource(metaQueueUrl, settings)(awsSqsClient))
-      .mapAsync(10)(processMetaArtefactMessage)
-      .withAttributes(ActorAttributes.supervisionStrategy {
-        case NonFatal(e) => logger.error(s"Failed to process meta artefact sqs messages: ${e.getMessage}", e); Supervision.Restart
-      })
-      .runWith(SqsAckSink(metaQueueUrl)(awsSqsClient))
-  else
-    logger.info("MetaArtefactUpdateHandler is disabled")
-
-
-  private def processMetaArtefactMessage(message: Message): Future[MessageAction] = {
+  override protected def processMessage(message: Message): Future[MessageAction] = {
     logger.debug(s"Starting processing MetaArtefact message with ID '${message.messageId()}'")
     (for {
        payload <- EitherT.fromEither[Future](
