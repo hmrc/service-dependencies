@@ -8,6 +8,7 @@
     { "group": "com.typesafe.play", "name": "play"           , "latestVersion": "2.8.20" }
   ],
   "others": [
-    { "group": "org.scala-sbt", "name": "sbt", "latestVersion": "1.7.2" }
+    { "group": "org.scala-sbt", "name": "sbt", "latestVersion": "1.7.2" },
+    { "group": "uk.gov.hmrc", "name": "sbt-distributables", "latestVersion": "2.2.0" }
   ]
 }
