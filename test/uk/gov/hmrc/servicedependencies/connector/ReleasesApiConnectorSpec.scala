@@ -38,7 +38,7 @@ class ReleasesApiConnectorSpec
      with WireMockSupport
      with HttpClientV2Support {
 
-  implicit val hc = HeaderCarrier()
+  implicit val hc: HeaderCarrier = HeaderCarrier()
 
   val config = new ReleasesApiConfig(null) {
     override lazy val serviceUrl: String = wireMockUrl

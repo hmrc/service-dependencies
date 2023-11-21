@@ -33,7 +33,7 @@ case class MetaArtefact(
 )
 
 object MetaArtefact {
-  private implicit val mamf = MetaArtefactModule.format
+  private implicit val mamf: Format[MetaArtefactModule] = MetaArtefactModule.format
 
   val mongoFormat: OFormat[MetaArtefact] =
     ( (__ \ "name"              ).format[String]

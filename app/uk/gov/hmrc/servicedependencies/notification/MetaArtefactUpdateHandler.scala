@@ -16,8 +16,8 @@
 
 package uk.gov.hmrc.servicedependencies.notification
 
-import akka.actor.ActorSystem
 import cats.data.EitherT
+import org.apache.pekko.actor.ActorSystem
 import play.api.Configuration
 import play.api.libs.json.Json
 import software.amazon.awssdk.services.sqs.model.Message
@@ -43,7 +43,7 @@ class MetaArtefactUpdateHandler @Inject()(
 , config                    = SqsConfig("aws.sqs.meta", configuration)
 )(actorSystem, ec) {
 
-  private implicit val hc = HeaderCarrier()
+  private implicit val hc: HeaderCarrier = HeaderCarrier()
 
   override protected def processMessage(message: Message): Future[MessageAction] = {
     logger.debug(s"Starting processing MetaArtefact message with ID '${message.messageId()}'")

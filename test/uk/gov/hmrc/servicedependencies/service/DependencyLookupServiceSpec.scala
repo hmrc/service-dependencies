@@ -16,30 +16,28 @@
 
 package uk.gov.hmrc.servicedependencies.service
 
-import java.time.LocalDate
-import java.util.concurrent.atomic.AtomicReference
-
 import org.mockito.ArgumentMatchers.any
 import org.mockito.MockitoSugar
+import org.scalatest.concurrent.IntegrationPatience
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpec
 import uk.gov.hmrc.mongo.test.MongoSupport
 import uk.gov.hmrc.servicedependencies.connector.ServiceConfigsConnector
 import uk.gov.hmrc.servicedependencies.model._
 import uk.gov.hmrc.servicedependencies.persistence.{BobbyRulesSummaryRepository, SlugInfoRepository}
 import uk.gov.hmrc.servicedependencies.persistence.derived.DerivedServiceDependenciesRepository
 
+import java.time.LocalDate
+import java.util.concurrent.atomic.AtomicReference
 import scala.concurrent.{ExecutionContext, Future}
-import scala.concurrent.duration.DurationInt
-import org.scalatest.matchers.should.Matchers
-import org.scalatest.wordspec.AnyWordSpec
 
 
 class DependencyLookupServiceSpec
   extends AnyWordSpec
      with Matchers
      with MockitoSugar
-     with MongoSupport {
-
-  override implicit val patienceConfig = PatienceConfig(timeout = 2.seconds, interval = 15.millis)
+     with MongoSupport
+     with IntegrationPatience {
 
   import DependencyLookupServiceTestData._
 
@@ -78,7 +76,7 @@ class DependencyLookupServiceSpec
       val slugInfoRepository    = mock[SlugInfoRepository]
 
       val bobbyRulesSummaryRepo = new BobbyRulesSummaryRepository(mongoComponent) {
-        import scala.compat.java8.FunctionConverters._
+        import scala.jdk.FunctionConverters._
 
         private val store = new AtomicReference(List[BobbyRulesSummary]())
 
@@ -87,13 +85,13 @@ class DependencyLookupServiceSpec
             store.updateAndGet(((l: List[BobbyRulesSummary]) => l ++ List(summary)).asJava)
           }
 
-        override def getLatest: Future[Option[BobbyRulesSummary]] =
+        override def getLatest(): Future[Option[BobbyRulesSummary]] =
           Future.successful(store.get.sortBy(_.date.toEpochDay).headOption)
 
         override def getHistoric(query: List[BobbyRuleQuery], from: LocalDate, to: LocalDate): Future[List[BobbyRulesSummary]] =
           Future.successful(store.get)
 
-        override def clearAllData: Future[Unit] = {
+        override def clearAllData(): Future[Unit] = {
           store.set(List.empty)
           Future.unit
         }

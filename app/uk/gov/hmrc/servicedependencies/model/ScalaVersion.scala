@@ -29,10 +29,11 @@ case object ScalaVersion {
   val values: List[ScalaVersion] =
     List(SV_None, SV_2_11, SV_2_12, SV_2_13, SV_3)
 
-  implicit val ordering = new Ordering[ScalaVersion] {
-    def compare(x: ScalaVersion, y: ScalaVersion): Int =
-      values.indexOf(x).compare(values.indexOf(y))
-  }
+  implicit val ordering: Ordering[ScalaVersion] =
+    new Ordering[ScalaVersion] {
+      def compare(x: ScalaVersion, y: ScalaVersion): Int =
+        values.indexOf(x).compare(values.indexOf(y))
+    }
 
   def parse(s: String): Option[ScalaVersion] =
     values.find(_.asString == s)

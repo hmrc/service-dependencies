@@ -16,8 +16,8 @@
 
 package uk.gov.hmrc.servicedependencies.notification
 
+import org.apache.pekko.actor.ActorSystem
 import play.api.Configuration
-import akka.actor.ActorSystem
 import software.amazon.awssdk.services.sqs.model.Message
 
 import javax.inject.{Inject, Singleton}

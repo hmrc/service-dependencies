@@ -16,8 +16,8 @@
 
 package uk.gov.hmrc.servicedependencies.notification
 
-import akka.actor.ActorSystem
 import cats.data.{EitherT, OptionT}
+import org.apache.pekko.actor.ActorSystem
 import play.api.Configuration
 import play.api.libs.json.Json
 import software.amazon.awssdk.services.sqs.model.Message
@@ -42,7 +42,7 @@ class SlugInfoUpdatedHandler @Inject()(
 , config                    = SqsConfig("aws.sqs.slug", configuration)
 )(actorSystem, ec) {
 
-  private implicit val hc = HeaderCarrier()
+  private implicit val hc: HeaderCarrier = HeaderCarrier()
 
   lazy val metaArtefactRetryDelay: FiniteDuration =
     configuration.get[FiniteDuration]("aws.sqs.slug.retryDelay")

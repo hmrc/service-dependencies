@@ -22,20 +22,17 @@ import uk.gov.hmrc.mongo.test.DefaultPlayMongoRepositorySupport
 import uk.gov.hmrc.servicedependencies.model.{MetaArtefact, MetaArtefactModule, Version}
 
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.duration.DurationInt
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpecLike
 
 class DerivedModuleSpec
   extends AnyWordSpecLike
-    with Matchers
-    with OptionValues
-    with MockitoSugar
-    with DefaultPlayMongoRepositorySupport[DerivedModule] {
+     with Matchers
+     with OptionValues
+     with MockitoSugar
+     with DefaultPlayMongoRepositorySupport[DerivedModule] {
 
   override lazy val repository = new DerivedModuleRepository(mongoComponent)
-
-  override implicit val patienceConfig = PatienceConfig(timeout = 30.seconds, interval = 100.millis)
 
   val metaArtefactModule =
     MetaArtefactModule(

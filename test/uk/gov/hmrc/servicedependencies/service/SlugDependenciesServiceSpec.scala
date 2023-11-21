@@ -17,7 +17,7 @@
 package uk.gov.hmrc.servicedependencies.service
 
 import java.time.{LocalDate, Instant}
-import akka.Done
+import org.apache.pekko.Done
 import org.mockito.ArgumentMatchers.any
 import org.mockito.MockitoSugar
 import org.scalatest.OptionValues

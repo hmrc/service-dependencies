@@ -25,16 +25,15 @@ import uk.gov.hmrc.servicedependencies.persistence.{DeploymentRepository, SlugIn
 import uk.gov.hmrc.servicedependencies.service.DependencyGraphParser
 
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.duration.DurationInt
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpecLike
 
 class DerivedGroupArtefactRepositorySpec
   extends AnyWordSpecLike
-    with Matchers
-    with OptionValues
-    with MockitoSugar
-    with DefaultPlayMongoRepositorySupport[GroupArtefacts] {
+     with Matchers
+     with OptionValues
+     with MockitoSugar
+     with DefaultPlayMongoRepositorySupport[GroupArtefacts] {
 
   override lazy val repository = new DerivedGroupArtefactRepository(mongoComponent)
 
@@ -47,8 +46,6 @@ class DerivedGroupArtefactRepositorySpec
       dependencyGraphParser,
       deploymentRepository
     )
-
-  override implicit val patienceConfig = PatienceConfig(timeout = 30.seconds, interval = 100.millis)
 
   "DerivedGroupArtefactRepository.findGroupsArtefacts" should {
     "return a map of artefact group to list of found artefacts" in {

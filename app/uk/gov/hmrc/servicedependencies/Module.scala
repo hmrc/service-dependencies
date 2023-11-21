@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.servicedependencies
 
-import akka.stream.Materializer
+import org.apache.pekko.stream.Materializer
 import play.api.{Configuration, Environment, Logger}
 import play.api.inject.Binding
 import play.api.libs.concurrent.MaterializerProvider

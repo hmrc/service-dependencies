@@ -16,9 +16,9 @@
 
 package uk.gov.hmrc.servicedependencies.scheduler
 
-import akka.actor.ActorSystem
 import com.google.inject.Singleton
 import javax.inject.Inject
+import org.apache.pekko.actor.ActorSystem
 import play.api.inject.ApplicationLifecycle
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.mongo.lock.{MongoLockRepository, LockService}

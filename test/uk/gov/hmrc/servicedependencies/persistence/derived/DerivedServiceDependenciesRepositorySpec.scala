@@ -28,14 +28,13 @@ import uk.gov.hmrc.servicedependencies.service.DependencyGraphParser
 
 import java.time.Instant
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.duration.DurationInt
 
 class DerivedServiceDependenciesRepositorySpec
   extends AnyWordSpecLike
-    with Matchers
-    with OptionValues
-    with MockitoSugar
-    with DefaultPlayMongoRepositorySupport[ServiceDependency] {
+     with Matchers
+     with OptionValues
+     with MockitoSugar
+     with DefaultPlayMongoRepositorySupport[ServiceDependency] {
 
   lazy val deploymentRepository  = new DeploymentRepository(mongoComponent)
   lazy val slugInfoRepo          = new SlugInfoRepository(mongoComponent, deploymentRepository)
@@ -46,8 +45,6 @@ class DerivedServiceDependenciesRepositorySpec
       dependencyGraphParser,
       deploymentRepository
     )
-
-  override implicit val patienceConfig = PatienceConfig(timeout = 30.seconds, interval = 100.millis)
 
   "DerivedServiceDependenciesRepository.populateDependencies" should {
     "populate dependencies from dependencies" in {

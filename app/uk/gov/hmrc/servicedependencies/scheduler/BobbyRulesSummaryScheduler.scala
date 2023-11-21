@@ -16,8 +16,8 @@
 
 package uk.gov.hmrc.servicedependencies.scheduler
 
-import akka.actor.ActorSystem
 import javax.inject.Inject
+import org.apache.pekko.actor.ActorSystem
 import play.api.Logging
 import play.api.inject.ApplicationLifecycle
 import uk.gov.hmrc.http.HeaderCarrier

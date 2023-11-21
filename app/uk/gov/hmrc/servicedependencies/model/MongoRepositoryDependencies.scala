@@ -66,8 +66,8 @@ case class MongoRepositoryDependencies(
 
 object MongoRepositoryDependencies {
 
-  implicit val format = {
-    implicit val iF = MongoJavatimeFormats.instantFormat
+  implicit val format: Format[MongoRepositoryDependencies] = {
+    implicit val iF: Format[Instant] = MongoJavatimeFormats.instantFormat
     Json.format[MongoRepositoryDependencies]
     ( (__ \ "repositoryName"       ).format[String]
     ~ (__ \ "libraryDependencies"  ).format[Seq[MongoRepositoryDependency]]
