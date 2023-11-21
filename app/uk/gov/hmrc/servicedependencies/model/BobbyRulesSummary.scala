@@ -33,7 +33,7 @@ case class HistoricBobbyRulesSummary(
 )
 
 private object DataFormat {
-  private implicit val brvf = BobbyRule.format
+  private implicit val brvf: Format[BobbyRule] = BobbyRule.format
 
   private def f[A](map: List[(JsValue, Map[String, A])]): Map[(BobbyRule, SlugInfoFlag), A] =
     map.flatMap { case (k1, v1) =>
@@ -60,7 +60,7 @@ private object DataFormat {
 }
 
 object BobbyRulesSummary {
-  private implicit val df = DataFormat.dataFormat[Int]
+  private implicit val df: Format[Map[(BobbyRule, SlugInfoFlag), Int]] = DataFormat.dataFormat[Int]
 
   val apiFormat: OFormat[BobbyRulesSummary] =
     ( (__ \ "date"     ).format[LocalDate]
@@ -87,7 +87,7 @@ object BobbyRulesSummary {
 }
 
 object HistoricBobbyRulesSummary {
-  private implicit val df = DataFormat.dataFormat[List[Int]]
+  private implicit val df: Format[Map[(BobbyRule, SlugInfoFlag), List[Int]]] = DataFormat.dataFormat[List[Int]]
 
   val apiFormat: OFormat[HistoricBobbyRulesSummary] =
     ( (__ \ "date"     ).format[LocalDate]

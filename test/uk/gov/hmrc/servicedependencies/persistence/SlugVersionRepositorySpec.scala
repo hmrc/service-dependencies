@@ -16,8 +16,6 @@
 
 package uk.gov.hmrc.servicedependencies.persistence
 
-
-
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpecLike
 import uk.gov.hmrc.mongo.test.DefaultPlayMongoRepositorySupport
@@ -25,7 +23,6 @@ import uk.gov.hmrc.servicedependencies.model.{JavaInfo, SlugInfo, Version}
 
 import java.time.Instant
 import scala.concurrent.ExecutionContext
-import org.scalatest.concurrent.IntegrationPatience
 
 
 class SlugVersionRepositorySpec
@@ -39,7 +36,7 @@ class SlugVersionRepositorySpec
   val deploymentRepository = new DeploymentRepository(mongoComponent)
   val slugInfoRepository = new SlugInfoRepository(mongoComponent, deploymentRepository)
 
-  "SlugVersionRepository"  should {
+  "SlugVersionRepository" should {
     "return the max version" in {
       slugInfoRepository.add(sampleSlugInfo(Version(1, 1, 0), "/my-slug/1.1.0")).futureValue
       slugInfoRepository.add(sampleSlugInfo(Version(1, 0, 0), "/my-slug/1.0.0")).futureValue

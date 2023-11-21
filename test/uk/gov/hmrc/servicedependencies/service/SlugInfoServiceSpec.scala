@@ -38,7 +38,7 @@ class SlugInfoServiceSpec
      with ScalaFutures
      with IntegrationPatience {
 
-  implicit val hc = HeaderCarrier()
+  implicit val hc: HeaderCarrier = HeaderCarrier()
 
   val group        = "group"
   val artefact     = "artefact"

@@ -58,7 +58,7 @@ class DeploymentRepository @Inject()(
 ) with Transactions {
   val logger = Logger(getClass)
 
-  private implicit val tc = TransactionConfiguration.strict
+  private implicit val tc: TransactionConfiguration = TransactionConfiguration.strict
 
   def clearFlag(flag: SlugInfoFlag, name: String): Future[Unit] =
     withSessionAndTransaction { session =>

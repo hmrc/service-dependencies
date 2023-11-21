@@ -89,7 +89,7 @@ case class ServiceDependency(
 )
 
 trait ApiServiceDependencyFormats {
-  implicit val vf = Version.format
+  implicit val vf: Format[Version] = Version.format
   val derivedMongoFormat: OFormat[ServiceDependency] =
     ( (__ \ "slugName"      ).format[String]
     ~ (__ \ "slugVersion"   ).format[Version]

@@ -39,7 +39,7 @@ class TeamsAndRepositoriesConnectorSpec
      with GuiceOneAppPerSuite
      with WireMockSupport {
 
-  implicit val hc = HeaderCarrier()
+  implicit val hc: HeaderCarrier = HeaderCarrier()
 
   override lazy val resetWireMockMappings = false
 

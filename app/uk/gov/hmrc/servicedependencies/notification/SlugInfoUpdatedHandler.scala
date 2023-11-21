@@ -42,7 +42,7 @@ class SlugInfoUpdatedHandler @Inject()(
 , config                    = SqsConfig("aws.sqs.slug", configuration)
 )(actorSystem, ec) {
 
-  private implicit val hc = HeaderCarrier()
+  private implicit val hc: HeaderCarrier = HeaderCarrier()
 
   lazy val metaArtefactRetryDelay: FiniteDuration =
     configuration.get[FiniteDuration]("aws.sqs.slug.retryDelay")
