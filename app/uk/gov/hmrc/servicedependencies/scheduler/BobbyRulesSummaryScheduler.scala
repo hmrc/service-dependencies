@@ -21,18 +21,19 @@ import org.apache.pekko.actor.ActorSystem
 import play.api.Logging
 import play.api.inject.ApplicationLifecycle
 import uk.gov.hmrc.http.HeaderCarrier
-import uk.gov.hmrc.mongo.lock.{MongoLockRepository, LockService}
+import uk.gov.hmrc.mongo.TimestampSupport
+import uk.gov.hmrc.mongo.lock.{MongoLockRepository, ScheduledLockService}
 import uk.gov.hmrc.servicedependencies.config.SchedulerConfigs
 import uk.gov.hmrc.servicedependencies.util.SchedulerUtils
 import uk.gov.hmrc.servicedependencies.service.DependencyLookupService
 
 import scala.concurrent.ExecutionContext
-import scala.concurrent.duration.DurationInt
 
 class BobbyRulesSummaryScheduler @Inject()(
     schedulerConfigs       : SchedulerConfigs,
     dependencyLookupService: DependencyLookupService,
-    mongoLockRepository    : MongoLockRepository
+    mongoLockRepository    : MongoLockRepository,
+    timestampSupport       : TimestampSupport
   )(implicit
     actorSystem         : ActorSystem,
     applicationLifecycle: ApplicationLifecycle,
@@ -40,8 +41,13 @@ class BobbyRulesSummaryScheduler @Inject()(
   ) extends SchedulerUtils
     with Logging {
 
-  private val lock =
-    LockService(mongoLockRepository, "bobby-rules-summary-scheduler", 1.hour)
+  private val lock: ScheduledLockService =
+    ScheduledLockService(
+      lockRepository    = mongoLockRepository,
+      lockId            = "bobby-rules-summary-scheduler",
+      timestampSupport  = timestampSupport,
+      schedulerInterval = schedulerConfigs.bobbyRulesSummary.interval
+    )
 
   implicit val hc: HeaderCarrier = HeaderCarrier()
 
