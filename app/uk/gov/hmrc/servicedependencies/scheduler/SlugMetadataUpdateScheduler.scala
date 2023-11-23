@@ -21,19 +21,20 @@ import org.apache.pekko.actor.ActorSystem
 import play.api.Logging
 import play.api.inject.ApplicationLifecycle
 import uk.gov.hmrc.http.HeaderCarrier
-import uk.gov.hmrc.mongo.lock.{MongoLockRepository, LockService}
+import uk.gov.hmrc.mongo.TimestampSupport
+import uk.gov.hmrc.mongo.lock.{ScheduledLockService, MongoLockRepository}
 import uk.gov.hmrc.servicedependencies.config.SchedulerConfigs
 import uk.gov.hmrc.servicedependencies.service.{DerivedViewsService, SlugInfoService}
 import uk.gov.hmrc.servicedependencies.util.SchedulerUtils
 
 import scala.concurrent.ExecutionContext
-import scala.concurrent.duration.DurationInt
 
 class SlugMetadataUpdateScheduler @Inject()(
    schedulerConfigs          : SchedulerConfigs,
    slugInfoService           : SlugInfoService,
    derivedViewsService       : DerivedViewsService,
-   mongoLockRepository       : MongoLockRepository
+   mongoLockRepository       : MongoLockRepository,
+   timestampSupport          : TimestampSupport
  )(implicit
    actorSystem               : ActorSystem,
    applicationLifecycle      : ApplicationLifecycle,
@@ -41,8 +42,13 @@ class SlugMetadataUpdateScheduler @Inject()(
  ) extends SchedulerUtils
    with Logging {
 
-  private val lock =
-    LockService(mongoLockRepository, "slug-job-scheduler", 1.hour)
+  private val lock: ScheduledLockService =
+    ScheduledLockService(
+      lockRepository    = mongoLockRepository,
+      lockId            = "slug-job-scheduler",
+      timestampSupport  = timestampSupport,
+      schedulerInterval = schedulerConfigs.slugMetadataUpdate.interval
+    )
 
   implicit val hc: HeaderCarrier = HeaderCarrier()
 

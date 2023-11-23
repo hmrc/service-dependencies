@@ -19,17 +19,17 @@ package uk.gov.hmrc.servicedependencies.util
 import org.apache.pekko.actor.ActorSystem
 import play.api.Logging
 import play.api.inject.ApplicationLifecycle
-import uk.gov.hmrc.mongo.lock.LockService
+import uk.gov.hmrc.mongo.lock.ScheduledLockService
 import uk.gov.hmrc.servicedependencies.config.SchedulerConfig
 
 import scala.concurrent.{ExecutionContext, Future}
 
 trait SchedulerUtils extends Logging {
-  def schedule(
+  private def schedule(
       label          : String
     , schedulerConfig: SchedulerConfig
     )(f: => Future[Unit]
-    )(implicit actorSystem: ActorSystem, applicationLifecycle: ApplicationLifecycle, ec: ExecutionContext) =
+    )(implicit actorSystem: ActorSystem, applicationLifecycle: ApplicationLifecycle, ec: ExecutionContext): Unit =
       if (schedulerConfig.enabled) {
         val initialDelay = schedulerConfig.initialDelay
         val interval     = schedulerConfig.interval
@@ -55,9 +55,9 @@ trait SchedulerUtils extends Logging {
   def scheduleWithLock(
       label          : String
     , schedulerConfig: SchedulerConfig
-    , lock           : LockService
+    , lock           : ScheduledLockService
     )(f: => Future[Unit]
-    )(implicit actorSystem: ActorSystem, applicationLifecycle: ApplicationLifecycle, ec: ExecutionContext) =
+    )(implicit actorSystem: ActorSystem, applicationLifecycle: ApplicationLifecycle, ec: ExecutionContext): Unit =
       schedule(label, schedulerConfig) {
         lock.withLock(f).map {
           case Some(_) => logger.debug(s"$label finished - releasing lock")
