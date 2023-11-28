@@ -1,14 +1,15 @@
 {
   "sbtPlugins": [
-    { "group": "com.typesafe.play", "name": "sbt-plugin", "latestVersion": "2.8.20" }
+    { "group": "com.typesafe.play", "name": "sbt-plugin", "latestVersion": "2.9.0" },
+    { "group": "org.playframework", "name": "sbt-plugin", "latestVersion": "3.0.0" }
   ],
   "libraries": [
     { "group": "org.reactivemongo", "name": "reactivemongo"  , "latestVersion": "0.20.3" },
-    { "group": "org.scala-lang"   , "name": "scala-library"  , "latestVersion": "2.13.8" },
-    { "group": "com.typesafe.play", "name": "play"           , "latestVersion": "2.8.20" }
+    { "group": "org.scala-lang"   , "name": "scala-library"  , "latestVersion": "2.13.12" },
+    { "group": "com.typesafe.play", "name": "play"           , "latestVersion": "2.9.0" },
+    { "group": "org.playframework", "name": "play"           , "latestVersion": "3.0.0" }
   ],
   "others": [
-    { "group": "org.scala-sbt", "name": "sbt", "latestVersion": "1.7.2" },
-    { "group": "uk.gov.hmrc", "name": "sbt-distributables", "latestVersion": "2.2.0" }
+    { "group": "org.scala-sbt", "name": "sbt", "latestVersion": "1.9.7" }
   ]
 }
