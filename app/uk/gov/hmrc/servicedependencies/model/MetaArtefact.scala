@@ -30,7 +30,9 @@ case class MetaArtefact(
   buildInfo         : Map[String, String] = Map.empty,
   modules           : Seq[MetaArtefactModule],
   created           : Instant             = Instant.now()
-)
+) {
+  def subModuleNames = modules.collect { case x if x.name != name => x.name }
+}
 
 object MetaArtefact {
   private implicit val mamf: Format[MetaArtefactModule] = MetaArtefactModule.format

@@ -78,7 +78,8 @@ class TeamDependencyService @Inject()(
         rootName       = name,
         latestVersions = latestVersions,
         bobbyRules     = bobbyRules,
-        scope          = scope
+        scope          = scope,
+        subModuleNames = metaArtefact.subModuleNames
       )
     Dependencies(
       repositoryName         = metaArtefact.name,
@@ -107,25 +108,8 @@ class TeamDependencyService @Inject()(
                                                  .value
                             optDeps         <- optMetaArtefact match {
                                                  case Some(metaArtefact) =>
-                                                   def toDependencies(name: String, scope: DependencyScope, dotFile: String) =
-                                                     slugDependenciesService.curatedLibrariesFromGraph(
-                                                       dotFile        = dotFile,
-                                                       rootName       = name,
-                                                       latestVersions = latestVersions,
-                                                       bobbyRules     = bobbyRules,
-                                                       scope          = scope
-                                                     )
-
-                                                   Future.successful(
-                                                     Some(
-                                                       metaArtefact.dependencyDotBuild.fold(Seq.empty[Dependency])(s => toDependencies(metaArtefact.name, DependencyScope.Build, s)) ++
-                                                       metaArtefact.modules.flatMap(m => m.dependencyDotCompile .fold(Seq.empty[Dependency])(s => toDependencies(m.name, DependencyScope.Compile , s))) ++
-                                                       metaArtefact.modules.flatMap(m => m.dependencyDotProvided.fold(Seq.empty[Dependency])(s => toDependencies(m.name, DependencyScope.Provided, s))) ++
-                                                       metaArtefact.modules.flatMap(m => m.dependencyDotTest    .fold(Seq.empty[Dependency])(s => toDependencies(m.name, DependencyScope.Test    , s))) ++
-                                                       metaArtefact.modules.flatMap(m => m.dependencyDotIt      .fold(Seq.empty[Dependency])(s => toDependencies(m.name, DependencyScope.It      , s)))
-                                                     )
-                                                   )
-
+                                                  val x = dependenciesFromMetaArtefact(metaArtefact, bobbyRules, latestVersions)
+                                                  Future.successful(Some(x.sbtPluginsDependencies ++ x.libraryDependencies))
                                                  case None => slugDependenciesService.curatedLibrariesOfSlug(serviceName, flag, bobbyRules, latestVersions)
                                                }
                           } yield optDeps.map(serviceName -> _)

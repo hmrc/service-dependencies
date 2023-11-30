@@ -128,9 +128,9 @@ class SlugDependenciesService @Inject()(
     bobbyRules    : BobbyRules,
     latestVersions: Seq[LatestVersion],
   ): List[Dependency] = {
-    val compile    =  curatedLibrariesFromGraph(dotFileForScope(slugInfo, DependencyScope.Compile), slugInfo.name, latestVersions, bobbyRules, DependencyScope.Compile)
-    val test       =  curatedLibrariesFromGraph(dotFileForScope(slugInfo, DependencyScope.Test   ), slugInfo.name, latestVersions, bobbyRules, DependencyScope.Test).filterNot(n => compile.exists(_.name == n.name))
-    val build      =  curatedLibrariesFromGraph(dotFileForScope(slugInfo, DependencyScope.Build  ), slugInfo.name, latestVersions, bobbyRules, DependencyScope.Build)
+    val compile    =  curatedLibrariesFromGraph(dotFileForScope(slugInfo, DependencyScope.Compile), slugInfo.name, latestVersions, bobbyRules, DependencyScope.Compile, subModuleNames = Nil)
+    val test       =  curatedLibrariesFromGraph(dotFileForScope(slugInfo, DependencyScope.Test   ), slugInfo.name, latestVersions, bobbyRules, DependencyScope.Test,    subModuleNames = Nil).filterNot(n => compile.exists(_.name == n.name))
+    val build      =  curatedLibrariesFromGraph(dotFileForScope(slugInfo, DependencyScope.Build  ), slugInfo.name, latestVersions, bobbyRules, DependencyScope.Build,   subModuleNames = Nil)
     compile ++ test ++ build
   }
 
@@ -139,12 +139,13 @@ class SlugDependenciesService @Inject()(
     rootName      : String,
     latestVersions: Seq[LatestVersion],
     bobbyRules    : BobbyRules,
-    scope         : DependencyScope
+    scope         : DependencyScope,
+    subModuleNames: Seq[String]
   ): List[Dependency] = {
     val graph = graphParser.parse(dotFile)
     val dependencies = graph
       .dependencies
-      .filterNot(_.artefact == rootName)
+      .filterNot(x => x.artefact == rootName || scope == DependencyScope.It && subModuleNames.contains(x.artefact)) // remove root or any submodules (for integration tests)
       .map { graphDependency =>
         val latestVersion = latestVersions
             .find(v => v.group == graphDependency.group && v.name == graphDependency.artefact)
@@ -156,20 +157,22 @@ class SlugDependenciesService @Inject()(
           , currentVersion      = Version(graphDependency.version)
           , latestVersion       = latestVersion
           , bobbyRuleViolations = bobbyRules.violationsFor(
-                                      group   = graphDependency.group
-                                    , name    = graphDependency.artefact
-                                    , version = Version(graphDependency.version))
-                                      .filterNot(
-                                          _.exemptProjects.contains(rootName)
-                                      )
+                                    group   = graphDependency.group
+                                  , name    = graphDependency.artefact
+                                  , version = Version(graphDependency.version)
+                                  ).filterNot(
+                                    _.exemptProjects.contains(rootName)
+                                  )
           , importBy            = graph.anyPathToRoot(graphDependency)
-                                    .dropRight(1) // drop root node as its just the service jar itself
+                                    .dropRight(if (scope == DependencyScope.It && subModuleNames.nonEmpty) 2 else 1) // drop root node as its just the service jar itself
                                     .lastOption.map(n => ImportedBy(n.artefact, n.group, Version(n.version))) // the top level dep that imported it
                                     .filterNot(d => d.name == graphDependency.artefact && d.group == graphDependency.group) // filter out non-transient deps
           , scope               = Some(scope)
         )
       }.toList
+
     val parentDepsOfViolations  = dependencies.filter(d => d.importBy.nonEmpty && d.bobbyRuleViolations.nonEmpty).flatMap(_.importBy).toSet
+
     dependencies.filter(dependency =>
       (dependency.importBy.isEmpty && (
         dependency.group.startsWith("uk.gov.hmrc") ||
