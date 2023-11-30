@@ -171,14 +171,11 @@ class ServiceDependenciesController @Inject()(
                             case Some(version) => (if (version == "latest")
                                                      metaArtefactRepository.find(repositoryName)
                                                    else
-                                                     metaArtefactRepository
-                                                     .find(repositoryName, Version(version))
-                                                  )
-                                                    .flatMap {
-                                                      case Some(metaArtefact) => Future.successful(toRepository(metaArtefact, latestVersions, bobbyRules))
-                                                      case None               => repositoryFromCuratedSlugDependencies(repositoryName, version)
-                                                    }
-                                                    .map(Seq(_))
+                                                     metaArtefactRepository.find(repositoryName, Version(version))
+                                                  ).flatMap {
+                                                    case Some(metaArtefact) => Future.successful(toRepository(metaArtefact, latestVersions, bobbyRules))
+                                                    case None               => repositoryFromCuratedSlugDependencies(repositoryName, version)
+                                                  }.map(Seq(_))
                             case None          => metaArtefactRepository
                                                     .findAllVersions(repositoryName)
                                                     .map { _.map { toRepository(_, latestVersions, bobbyRules) }}
@@ -189,13 +186,14 @@ class ServiceDependenciesController @Inject()(
       }
     }
 
-  private def repositoryFromCuratedSlugDependencies(repositoryName: String, version: String): Future[Repository] = for {
-    dependencyOption <- version match {
-      case "latest" => slugDependenciesService.curatedLibrariesOfSlug(repositoryName, SlugInfoFlag.Latest)
-      case version => slugDependenciesService.curatedLibrariesOfSlug(repositoryName, Version(version))
-    }
-    dependencies = dependencyOption.getOrElse(List())
-  } yield Repository(
+  private def repositoryFromCuratedSlugDependencies(repositoryName: String, version: String): Future[Repository] =
+    for {
+      dependencyOption <- version match {
+                            case "latest" => slugDependenciesService.curatedLibrariesOfSlug(repositoryName, SlugInfoFlag.Latest)
+                            case version  => slugDependenciesService.curatedLibrariesOfSlug(repositoryName, Version(version))
+                          }
+      dependencies     =  dependencyOption.getOrElse(Nil)
+    } yield Repository(
       name              = repositoryName,
       version           = None,
       dependenciesBuild = dependencies.filter(_.scope.contains(DependencyScope.Build)),
@@ -270,7 +268,8 @@ class ServiceDependenciesController @Inject()(
         rootName       = name,
         latestVersions = latestVersions,
         bobbyRules     = bobbyRules,
-        scope          = scope
+        scope          = scope,
+        subModuleNames = meta.subModuleNames
       )
 
     val sbtVersion =
