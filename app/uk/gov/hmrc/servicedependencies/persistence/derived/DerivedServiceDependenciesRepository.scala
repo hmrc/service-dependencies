@@ -154,122 +154,102 @@ class DerivedServiceDependenciesRepository @Inject()(
       .toFuture()
       .map(_ => ())
 
-  def populateDependencies(slugInfo: SlugInfo, meta: Option[MetaArtefact]): Future[Unit] = {
-    logger.info(s"Processing ${slugInfo.name} ${slugInfo.version} - metaArtefact: ${meta.isDefined}, slugInfo.dependencyDotCompile: ${slugInfo.dependencyDotCompile.nonEmpty}")
+  def populateDependencies(slugInfo: SlugInfo, meta: MetaArtefact): Future[Unit] = {
+    logger.info(s"Processing ${slugInfo.name} ${slugInfo.version}")
+
+    val optMetaModule = meta.modules.find(_.name == slugInfo.name).orElse(meta.modules.headOption)
+
+    val graphBuild    = meta.dependencyDotBuild.getOrElse("")                         //.getOrElse(slugInfo.dependencyDotBuild   )
+    val graphCompile  = optMetaModule.flatMap(_.dependencyDotCompile ).getOrElse("")  //.getOrElse(slugInfo.dependencyDotCompile )
+    val graphProvided = optMetaModule.flatMap(_.dependencyDotProvided).getOrElse("")  //.getOrElse(slugInfo.dependencyDotProvided)
+    val graphTest     = optMetaModule.flatMap(_.dependencyDotTest    ).getOrElse("")  //.getOrElse(slugInfo.dependencyDotTest    )
+    val graphIt       = optMetaModule.flatMap(_.dependencyDotIt      ).getOrElse("")  //.getOrElse(slugInfo.dependencyDotIt      )
+
+    val build    = dependencyGraphParser.parse(graphBuild   ).dependencies.map((_, DependencyScope.Build   ))
+    val compile  = dependencyGraphParser.parse(graphCompile ).dependencies.map((_, DependencyScope.Compile ))
+    val provided = dependencyGraphParser.parse(graphProvided).dependencies.map((_, DependencyScope.Provided))
+    val test     = dependencyGraphParser.parse(graphTest    ).dependencies.map((_, DependencyScope.Test    ))
+    val it       = dependencyGraphParser.parse(graphIt      ).dependencies.map((_, DependencyScope.It      ))
+
+    val dependencies: Map[DependencyGraphParser.Node, Set[DependencyScope]] =
+      (build ++ compile ++ provided ++ test ++ it)
+        .foldLeft(Map.empty[DependencyGraphParser.Node, Set[DependencyScope]]){ case (acc, (n, flag)) =>
+          acc + (n -> (acc.getOrElse(n, Set.empty) + flag))
+        }
+
+    def toServiceDependencyWrite(group: String, artefact: String, version: Version, scalaVersion: Option[String], scopes: Set[DependencyScope]) =
+      ServiceDependencyWrite(
+        slugName     = slugInfo.name,
+        slugVersion  = slugInfo.version,
+        depGroup     = group,
+        depArtefact  = artefact,
+        depVersion   = version,
+        scalaVersion = scalaVersion,
+        compileFlag  = scopes.contains(DependencyScope.Compile),
+        providedFlag = scopes.contains(DependencyScope.Provided),
+        testFlag     = scopes.contains(DependencyScope.Test),
+        itFlag       = scopes.contains(DependencyScope.It),
+        buildFlag    = scopes.contains(DependencyScope.Build)
+      )
+
+    val scalaVersion =
+      meta.modules.flatMap(_.crossScalaVersions.toSeq.flatten).headOption
+
+    val sbtVersion =
+      meta.modules.flatMap(_.sbtVersion).headOption
+
+    def dependencyIfMissing(
+      group       : String,
+      artefact    : String,
+      version     : Option[Version],
+      scalaVersion: Option[String],
+      scopes      : Set[DependencyScope]
+    ): Option[ServiceDependencyWrite] =
+      for {
+        v                <- version
+        applicableScopes = scopes.collect {
+                              case scope if dependencies.find(dep => dep._2.contains(scope) &&
+                                                                    dep._1.group    == group &&
+                                                                    dep._1.artefact == artefact
+                                                            ).isEmpty => scope
+                            }
+        if applicableScopes.nonEmpty
+      } yield
+        toServiceDependencyWrite(
+          group        = group,
+          artefact     = artefact,
+          version      = v,
+          scalaVersion = scalaVersion,
+          scopes       = applicableScopes
+        )
+
     val writes =
-      if (meta.isEmpty && slugInfo.dependencyDotCompile.isEmpty) // legacy java slug
-        slugInfo.dependencies
-          .filterNot { case d => d.group == "uk.gov.hmrc" && d.artifact == slugInfo.name }
-          .map(d =>
-            ServiceDependencyWrite(
-              slugName     = slugInfo.name,
-              slugVersion  = slugInfo.version,
-              depGroup     = d.group,
-              depArtefact  = d.artifact,
-              depVersion   = d.version,
-              scalaVersion = None,
-              compileFlag  = true,
-              providedFlag = false,
-              testFlag     = false,
-              itFlag       = false,
-              buildFlag    = false,
-            )
+      dependencies
+        .filterNot { case (node, _) => node.group == "default"     && node.artefact == "project"     }
+        .filterNot { case (node, _) => node.group == "uk.gov.hmrc" && node.artefact == slugInfo.name }
+        .map { case (node, scopes) =>
+          toServiceDependencyWrite(
+            group        = node.group,
+            artefact     = node.artefact,
+            version      = Version(node.version),
+            scalaVersion = node.scalaVersion,
+            scopes       = scopes
           )
-      else {
-        // java slugs do not have a meta-artefact - need to fall back on slugInfo
-        val optSlugModule = meta.flatMap(x => x.modules.find(_.name == slugInfo.name).orElse(x.modules.headOption))
-
-        val graphBuild    = meta.flatMap(_.dependencyDotBuild            ).getOrElse(slugInfo.dependencyDotBuild   )
-        val graphCompile  = optSlugModule.flatMap(_.dependencyDotCompile ).getOrElse(slugInfo.dependencyDotCompile )
-        val graphProvided = optSlugModule.flatMap(_.dependencyDotProvided).getOrElse(slugInfo.dependencyDotProvided)
-        val graphTest     = optSlugModule.flatMap(_.dependencyDotTest    ).getOrElse(slugInfo.dependencyDotTest    )
-        val graphIt       = optSlugModule.flatMap(_.dependencyDotIt      ).getOrElse(slugInfo.dependencyDotIt      )
-
-        val build    = dependencyGraphParser.parse(graphBuild   ).dependencies.map((_, DependencyScope.Build   ))
-        val compile  = dependencyGraphParser.parse(graphCompile ).dependencies.map((_, DependencyScope.Compile ))
-        val provided = dependencyGraphParser.parse(graphProvided).dependencies.map((_, DependencyScope.Provided))
-        val test     = dependencyGraphParser.parse(graphTest    ).dependencies.map((_, DependencyScope.Test    ))
-        val it       = dependencyGraphParser.parse(graphIt      ).dependencies.map((_, DependencyScope.It      ))
-
-        val dependencies: Map[DependencyGraphParser.Node, Set[DependencyScope]] =
-          (build ++ compile ++ provided ++ test ++ it)
-            .foldLeft(Map.empty[DependencyGraphParser.Node, Set[DependencyScope]]){ case (acc, (n, flag)) =>
-              acc + (n -> (acc.getOrElse(n, Set.empty) + flag))
-            }
-
-        def toServiceDependencyWrite(group: String, artefact: String, version: Version, scalaVersion: Option[String], scopes: Set[DependencyScope]) =
-          ServiceDependencyWrite(
-            slugName     = slugInfo.name,
-            slugVersion  = slugInfo.version,
-            depGroup     = group,
-            depArtefact  = artefact,
-            depVersion   = version,
-            scalaVersion = scalaVersion,
-            compileFlag  = scopes.contains(DependencyScope.Compile),
-            providedFlag = scopes.contains(DependencyScope.Provided),
-            testFlag     = scopes.contains(DependencyScope.Test),
-            itFlag       = scopes.contains(DependencyScope.It),
-            buildFlag    = scopes.contains(DependencyScope.Build)
-          )
-
-        val scalaVersion =
-          meta.toSeq.flatMap(_.modules).flatMap(_.crossScalaVersions.toSeq.flatten).headOption
-
-        val sbtVersion =
-          meta.toSeq.flatMap(_.modules).flatMap(_.sbtVersion).headOption
-
-        def dependencyIfMissing(
-          group       : String,
-          artefact    : String,
-          version     : Option[Version],
-          scalaVersion: Option[String],
-          scopes      : Set[DependencyScope]
-        ): Option[ServiceDependencyWrite] =
-          for {
-            v                <- version
-            applicableScopes = scopes.collect {
-                                 case scope if dependencies.find(dep => dep._2.contains(scope) &&
-                                                                        dep._1.group    == group &&
-                                                                        dep._1.artefact == artefact
-                                                                ).isEmpty => scope
-                               }
-            if applicableScopes.nonEmpty
-          } yield
-            toServiceDependencyWrite(
-              group        = group,
-              artefact     = artefact,
-              version      = v,
-              scalaVersion = scalaVersion,
-              scopes       = applicableScopes
-            )
-
-        dependencies
-          .filterNot { case (node, _) => node.group == "default"     && node.artefact == "project"     }
-          .filterNot { case (node, _) => node.group == "uk.gov.hmrc" && node.artefact == slugInfo.name }
-          .map { case (node, scopes) =>
-            toServiceDependencyWrite(
-              group        = node.group,
-              artefact     = node.artefact,
-              version      = Version(node.version),
-              scalaVersion = node.scalaVersion,
-              scopes       = scopes
-            )
-          } ++
-          dependencyIfMissing(
-            group        = "org.scala-lang",
-            artefact     = "scala-library",
-            version      = scalaVersion,
-            scalaVersion = None,
-            scopes       = Set(DependencyScope.Compile, DependencyScope.Test)
-          ).toList ++
-          dependencyIfMissing(
-            group        = "org.scala-sbt",
-            artefact     = "sbt",
-            version      = sbtVersion,
-            scalaVersion = None,
-            scopes       = Set(DependencyScope.Build)
-          ).toList
-      }
+        } ++
+        scalaVersion.flatMap(_ => dependencyIfMissing(
+          group        = "org.scala-lang",
+          artefact     = "scala-library",
+          version      = scalaVersion,
+          scalaVersion = None,
+          scopes       = Set(DependencyScope.Compile, DependencyScope.Test)
+        )).toList ++
+        sbtVersion.flatMap(_ => dependencyIfMissing(
+          group        = "org.scala-sbt",
+          artefact     = "sbt",
+          version      = sbtVersion,
+          scalaVersion = None,
+          scopes       = Set(DependencyScope.Build)
+        )).toList
 
     if (writes.isEmpty)
       Future.unit

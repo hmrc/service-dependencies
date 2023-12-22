@@ -21,12 +21,10 @@ import org.scalatest.OptionValues
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpecLike
 import uk.gov.hmrc.mongo.test.DefaultPlayMongoRepositorySupport
-import uk.gov.hmrc.servicedependencies.model.{DependencyScope, MetaArtefact, MetaArtefactModule, ServiceDependency, SlugDependency, Version}
-import uk.gov.hmrc.servicedependencies.persistence.TestSlugInfos.slugInfo
-import uk.gov.hmrc.servicedependencies.persistence.{DeploymentRepository, SlugInfoRepository}
+import uk.gov.hmrc.servicedependencies.model.{DependencyScope, ServiceDependency, Version}
+import uk.gov.hmrc.servicedependencies.persistence.{DeploymentRepository, SlugInfoRepository, TestSlugInfos}
 import uk.gov.hmrc.servicedependencies.service.DependencyGraphParser
 
-import java.time.Instant
 import scala.concurrent.ExecutionContext.Implicits.global
 
 class DerivedServiceDependenciesRepositorySpec
@@ -47,134 +45,11 @@ class DerivedServiceDependenciesRepositorySpec
     )
 
   "DerivedServiceDependenciesRepository.populateDependencies" should {
-    "populate dependencies from dependencies" in {
-      val slugWithDependencies = slugInfo.copy(dependencies =
-        List(
-          SlugDependency(
-            path       = "./my-slug-0.27.0/lib/com.typesafe.play.filters-helpers-2.7.5.jar",
-            version    = Version("2.7.5"),
-            group      = "com.typesafe.play",
-            artifact   = "filters-helpers",
-            meta       = ""
-         ),
-         SlugDependency(
-            path       = "./my-slug-0.27.0/lib/org.typelevel.cats-core_2.12-2.2.0.jar",
-            version    = Version("2.2.0"),
-            group      = "org.typelevel",
-            artifact   = "cats-core",
-            meta       = ""
-         ),
-         SlugDependency(
-            path       = "./my-slug-0.27.0/lib/uk.gov.hmrc.my-slug_2.12-0.27.0.jar",
-            version    = Version("0.27.0"),
-            group      = "uk.gov.hmrc",
-            artifact   = "my-slug",
-            meta       = ""
-         )
-        )
-      )
-
-      repository.populateDependencies(slugWithDependencies, meta = None).futureValue
-
-      val result = repository.collection.find().toFuture().futureValue
-
-      result should have size 2
-      result shouldEqual List(
-        ServiceDependency(
-          slugName     = "my-slug",
-          slugVersion  = Version("0.27.0"),
-          teams        = List.empty,
-          depGroup     = "com.typesafe.play",
-          depArtefact  = "filters-helpers",
-          depVersion   = Version("2.7.5"),
-          scalaVersion = None,
-          scopes       = Set(DependencyScope.Compile)
-        ),
-        ServiceDependency(
-          slugName     = "my-slug",
-          slugVersion  = Version("0.27.0"),
-          teams        = List.empty,
-          depGroup     = "org.typelevel",
-          depArtefact  = "cats-core",
-          depVersion   = Version("2.2.0"),
-          scalaVersion = None,
-          scopes       = Set(DependencyScope.Compile)
-        )
-      )
-    }
-
-    "populate dependencies from slug dependencyDot file if no meta-artefact" in {
-      val slugWithDependencies = slugInfo.copy(dependencyDotCompile = scala.io.Source.fromResource("graphs/dependencies-compile.dot").mkString)
-
-      repository.populateDependencies(slugWithDependencies, meta = None).futureValue
-
-      val result = repository.collection.find().toFuture().futureValue
-
-      result should have size 3
-      result shouldEqual List(
-        ServiceDependency(
-          slugName     = "my-slug",
-          slugVersion  = Version("0.27.0"),
-          teams        = List.empty,
-          depGroup     = "com.typesafe.play",
-          depArtefact  = "filters-helpers",
-          depVersion   = Version("2.7.5"),
-          scalaVersion = Some("2.12"),
-          scopes       = Set(DependencyScope.Compile)
-        ),
-        ServiceDependency(
-          slugName     = "my-slug",
-          slugVersion  = Version("0.27.0"),
-          teams        = List.empty,
-          depGroup     = "org.typelevel",
-          depArtefact  = "cats-core",
-          depVersion   = Version("2.2.0"),
-          scalaVersion = Some("2.12"),
-          scopes       = Set(DependencyScope.Compile)
-        ),
-        ServiceDependency(
-          slugName     = "my-slug",
-          slugVersion  = Version("0.27.0"),
-          teams        = List.empty,
-          depGroup     = "org.typelevel",
-          depArtefact  = "cats-kernel",
-          depVersion   = Version("2.2.0"),
-          scalaVersion = Some("2.12"),
-          scopes       = Set(DependencyScope.Compile)
-        )
-      )
-    }
-
     "populate dependencies from meta-artefact" in {
-      val metaArtefactModule =
-        MetaArtefactModule(
-          name                  = "service",
-          group                 = "uk.gov.hmrc",
-          sbtVersion            = Some(Version("1.4.9")),
-          crossScalaVersions    = Some(List(Version("2.12.14"))),
-          publishSkip           = Some(false),
-          dependencyDotCompile  = Some(scala.io.Source.fromResource("graphs/dependencies-compile.dot").mkString),
-          dependencyDotProvided = Some("ddp-graph"),
-          dependencyDotTest     = Some("ddt-graph"),
-          dependencyDotIt       = Some("ddt-graph-it")
-        )
-
-      val metaArtefact =
-        MetaArtefact(
-          name               = "service",
-          version            = Version("1.0.0"),
-          uri                = "https://artefacts/metadata/service/service-1.0.0.meta.tgz",
-          gitUrl             = Some("https://github.com/hmrc/service.git"),
-          dependencyDotBuild = Some("ddb-graph"),
-          buildInfo          = Map(
-                                 "GIT_URL" -> "https://github.com/hmrc/service.git"
-                               ),
-          modules            = Seq(metaArtefactModule),
-          created            = Instant.now()
-        )
-
-
-      repository.populateDependencies(slugInfo, meta = Some(metaArtefact)).futureValue
+      repository.populateDependencies(
+        TestSlugInfos.slugInfo
+      , TestSlugInfos.metaArtefact.copy(modules = TestSlugInfos.metaArtefact.modules.map(_.copy(dependencyDotCompile = Some(scala.io.Source.fromResource("graphs/dependencies-compile.dot").mkString))))
+      ).futureValue
 
       val result = repository.collection.find().toFuture().futureValue
 

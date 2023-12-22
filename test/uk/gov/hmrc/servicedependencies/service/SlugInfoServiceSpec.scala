@@ -159,7 +159,7 @@ class SlugInfoServiceSpec
       when(boot.mockedDerivedServiceDependenciesRepository.populateDependencies(any, any))
         .thenReturn(Future.unit)
 
-      boot.service.addSlugInfo(sampleSlugInfo, metaArtefact = None).futureValue
+      boot.service.addSlugInfo(sampleSlugInfo, sammpleMetaArtefact).futureValue
 
       verify(boot.mockedDeploymentRepository, times(1)).markLatest(sampleSlugInfo.name, sampleSlugInfo.version)
       verifyNoMoreInteractions(boot.mockedSlugInfoRepository)
@@ -178,7 +178,7 @@ class SlugInfoServiceSpec
       when(boot.mockedDerivedServiceDependenciesRepository.populateDependencies(any, any))
         .thenReturn(Future.unit)
 
-      boot.service.addSlugInfo(slugv2, metaArtefact = None).futureValue
+      boot.service.addSlugInfo(slugv2, sammpleMetaArtefact).futureValue
       verify(boot.mockedDeploymentRepository, times(1)).markLatest(slugv2.name, Version("2.0.0"))
 
       verifyNoMoreInteractions(boot.mockedSlugInfoRepository)
@@ -195,7 +195,7 @@ class SlugInfoServiceSpec
       when(boot.mockedDerivedServiceDependenciesRepository.populateDependencies(any, any))
         .thenReturn(Future.unit)
 
-      boot.service.addSlugInfo(slugv1, metaArtefact = None).futureValue
+      boot.service.addSlugInfo(slugv1, sammpleMetaArtefact).futureValue
 
       verify(boot.mockedSlugInfoRepository, times(1)).add(slugv1)
       verifyNoMoreInteractions(boot.mockedSlugInfoRepository)
@@ -212,7 +212,7 @@ class SlugInfoServiceSpec
       when(boot.mockedDerivedServiceDependenciesRepository.populateDependencies(any, any))
         .thenReturn(Future.unit)
 
-      boot.service.addSlugInfo(slugv1, metaArtefact = None).futureValue
+      boot.service.addSlugInfo(slugv1, sammpleMetaArtefact).futureValue
 
       verifyNoMoreInteractions(boot.mockedSlugInfoRepository)
     }
@@ -359,14 +359,17 @@ class SlugInfoServiceSpec
       java                  = JavaInfo(version = "sample-java-version", vendor = "sample-java-vendor", kind = "sample-java-kind"),
       sbtVersion            = Some("1.4.9"),
       repoUrl               = Some("https://github.com/hmrc/test.git"),
-      dependencies          = Nil,
-      dependencyDotCompile  = "",
-      dependencyDotProvided = "",
-      dependencyDotTest     = "",
-      dependencyDotIt       = "",
-      dependencyDotBuild    = "",
       applicationConfig     = "sample-applcation-config",
       slugConfig            = "sample-slug-config"
+    )
+
+    val sammpleMetaArtefact = MetaArtefact(
+      name    = sampleSlugInfo.name,
+      version = sampleSlugInfo.version,
+      uri     = sampleSlugInfo.uri,
+      gitUrl  = sampleSlugInfo.repoUrl,
+      modules = Nil,
+      created = sampleSlugInfo.created
     )
 
     val boot = Boot.init

@@ -18,121 +18,20 @@ package uk.gov.hmrc.servicedependencies.service
 
 import uk.gov.hmrc.servicedependencies.config.ServiceDependenciesConfig
 import uk.gov.hmrc.servicedependencies.config.model.CuratedDependencyConfig
-import uk.gov.hmrc.servicedependencies.connector.ServiceConfigsConnector
 import uk.gov.hmrc.servicedependencies.controller.model.{Dependency, ImportedBy}
 import uk.gov.hmrc.servicedependencies.model._
-import uk.gov.hmrc.servicedependencies.persistence.LatestVersionRepository
 
 import javax.inject.{Inject, Singleton}
-import scala.concurrent.{ExecutionContext, Future}
 
 
 @Singleton
 class SlugDependenciesService @Inject()(
-  slugInfoService          : SlugInfoService
-, serviceDependenciesConfig: ServiceDependenciesConfig
-, latestVersionRepository  : LatestVersionRepository
-, serviceConfigsConnector  : ServiceConfigsConnector
+  serviceDependenciesConfig: ServiceDependenciesConfig
 , graphParser              : DependencyGraphParser
-)(implicit ec: ExecutionContext
-){
+) {
 
   private lazy val curatedDependencyConfig: CuratedDependencyConfig =
     serviceDependenciesConfig.curatedDependencyConfig
-
-  /*
-   * We may want to evolve the model - but for this initial version we reuse the existing Dependency definition.
-   */
-  def curatedLibrariesOfSlug(name: String, flag: SlugInfoFlag): Future[Option[List[Dependency]]] =
-    for {
-      bobbyRules       <- serviceConfigsConnector.getBobbyRules()
-      latestVersions   <- latestVersionRepository.getAllEntries()
-      curatedLibraries <- curatedLibrariesOfSlug(name, flag, bobbyRules, latestVersions)
-    } yield curatedLibraries
-
-  def curatedLibrariesOfSlug(
-    name          : String,
-    flag          : SlugInfoFlag,
-    bobbyRules    : BobbyRules,
-    latestVersions: Seq[LatestVersion],
-  ): Future[Option[List[Dependency]]] =
-    slugInfoService.getSlugInfo(name, flag)
-      .map(_.map(slugInfo =>
-        if (slugInfo.dependencyDotCompile == "")
-          curatedLibrariesOfSlugInfo(slugInfo, bobbyRules, latestVersions, name)
-        else
-          curatedLibrariesOfSlugInfoFromGraph(slugInfo, bobbyRules, latestVersions)
-      ))
-
-  def curatedLibrariesOfSlug(name: String, version: Version): Future[Option[List[Dependency]]] =
-    for {
-      bobbyRules       <- serviceConfigsConnector.getBobbyRules()
-      latestVersions   <- latestVersionRepository.getAllEntries()
-      curatedLibraries <- curatedLibrariesOfSlug(name, version, bobbyRules, latestVersions)
-    } yield curatedLibraries
-
-  def curatedLibrariesOfSlug(
-    name          : String,
-    version       : Version,
-    bobbyRules    : BobbyRules,
-    latestVersions: Seq[LatestVersion],
-  ): Future[Option[List[Dependency]]] =
-    slugInfoService.getSlugInfo(name, version)
-      .map(_.map(slugInfo =>
-        if (slugInfo.dependencyDotCompile == "")
-          curatedLibrariesOfSlugInfo(slugInfo, bobbyRules, latestVersions, name)
-        else
-          curatedLibrariesOfSlugInfoFromGraph(slugInfo, bobbyRules, latestVersions)
-      ))
-
-  private def curatedLibrariesOfSlugInfo(
-    slugInfo      : SlugInfo,
-    bobbyRules    : BobbyRules,
-    latestVersions: Seq[LatestVersion],
-    name          : String
-  ): List[Dependency] =
-    slugInfo
-      .dependencies
-      .map { slugDependency =>
-          val latestVersion =
-            latestVersions
-              .find(v => v.group == slugDependency.group && v.name == slugDependency.artifact)
-              .map(_.version)
-          Dependency(
-              name                = slugDependency.artifact
-            , group               = slugDependency.group
-            , currentVersion      = slugDependency.version
-            , latestVersion       = latestVersion
-            , bobbyRuleViolations = bobbyRules.violationsFor(
-                                        group   = slugDependency.group
-                                      , name    = slugDependency.artifact
-                                      , version = slugDependency.version
-                                      )
-                                        .filterNot(
-                                            _.exemptProjects.contains(name)
-                                        )
-            , scope               = Some(DependencyScope.Compile)
-            )
-      }
-      .filter(dependency =>
-        dependency.group.startsWith("uk.gov.hmrc") ||
-        curatedDependencyConfig.allDependencies.exists(lib =>
-          lib.name  == dependency.name &&
-          lib.group == dependency.group
-        ) ||
-        dependency.bobbyRuleViolations.nonEmpty
-      )
-
-  private def curatedLibrariesOfSlugInfoFromGraph(
-    slugInfo      : SlugInfo,
-    bobbyRules    : BobbyRules,
-    latestVersions: Seq[LatestVersion],
-  ): List[Dependency] = {
-    val compile    =  curatedLibrariesFromGraph(dotFileForScope(slugInfo, DependencyScope.Compile), slugInfo.name, latestVersions, bobbyRules, DependencyScope.Compile, subModuleNames = Nil)
-    val test       =  curatedLibrariesFromGraph(dotFileForScope(slugInfo, DependencyScope.Test   ), slugInfo.name, latestVersions, bobbyRules, DependencyScope.Test,    subModuleNames = Nil).filterNot(n => compile.exists(_.name == n.name))
-    val build      =  curatedLibrariesFromGraph(dotFileForScope(slugInfo, DependencyScope.Build  ), slugInfo.name, latestVersions, bobbyRules, DependencyScope.Build,   subModuleNames = Nil)
-    compile ++ test ++ build
-  }
 
   def curatedLibrariesFromGraph(
     dotFile       : String,
@@ -182,13 +81,4 @@ class SlugDependenciesService @Inject()(
       parentDepsOfViolations.contains(ImportedBy(dependency.name, dependency.group, dependency.currentVersion))    // or the parent that imported the violation
     )
   }
-
-  private def dotFileForScope(slugInfo: SlugInfo, scope: DependencyScope) : String =
-    scope match {
-      case DependencyScope.Compile  => slugInfo.dependencyDotCompile
-      case DependencyScope.Provided => slugInfo.dependencyDotProvided
-      case DependencyScope.Test     => slugInfo.dependencyDotTest
-      case DependencyScope.It       => slugInfo.dependencyDotIt
-      case DependencyScope.Build    => slugInfo.dependencyDotBuild
-    }
 }

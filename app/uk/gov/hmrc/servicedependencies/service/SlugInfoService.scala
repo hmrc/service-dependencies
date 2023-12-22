@@ -43,7 +43,7 @@ class SlugInfoService @Inject()(
 )(implicit ec: ExecutionContext
 ) extends Logging {
 
-  def addSlugInfo(slug: SlugInfo, metaArtefact: Option[MetaArtefact]): Future[Unit] =
+  def addSlugInfo(slug: SlugInfo, metaArtefact: MetaArtefact): Future[Unit] =
     for {
       // Determine which slug is latest from the existing collection
       _        <- slugInfoRepository.add(slug)
@@ -83,12 +83,13 @@ class SlugInfoService @Inject()(
         servicesWithinRange =  services.filter(s => versionRange.includes(s.depVersion))
         teamsForServices    <- teamsAndRepositoriesConnector.getTeamsForServices
       } yield servicesWithinRange.map { r =>
-          r.copy(teams = teamsForServices.getTeams(r.slugName).toList.sorted)
-        }
+        r.copy(teams = teamsForServices.getTeams(r.slugName).toList.sorted)
+      }
 
-  def findGroupsArtefacts: Future[Seq[GroupArtefacts]] =
+  // TODO move to DerivedViewsService
+  def findGroupsArtefacts(): Future[Seq[GroupArtefacts]] =
     derivedGroupArtefactRepository
-      .findGroupsArtefacts
+      .findGroupsArtefacts()
 
   def updateMetadata()(implicit hc: HeaderCarrier): Future[Unit] = {
     import ReleasesApiConnector._

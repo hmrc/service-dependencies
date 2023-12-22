@@ -104,7 +104,11 @@ class DependencyLookupServiceSpec
       when(derivedServiceDependenciesRepository.findDependencies(any[SlugInfoFlag], any[Option[DependencyScope]]))
         .thenReturn(Future.successful(Seq.empty))
       when(derivedServiceDependenciesRepository.findDependencies(SlugInfoFlag.Production, Some(DependencyScope.Compile)))
-        .thenReturn(Future.successful(Seq(serviceDep1, serviceDep11, serviceDep12)))
+        .thenReturn(Future.successful(Seq(
+          serviceDep
+        , serviceDep.copy(slugVersion = Version("1.1.0"))
+        , serviceDep.copy(slugVersion = Version("1.2.0"), depVersion = Version("5.12.0"))
+        )))
 
       val lookupService = new DependencyLookupService(configService, slugInfoRepository, bobbyRulesSummaryRepo, derivedServiceDependenciesRepository)
 
@@ -157,37 +161,20 @@ class DependencyLookupServiceSpec
 
 
 object DependencyLookupServiceTestData {
-
-  val dep1: SlugDependency = SlugDependency("", Version("5.11.0"), "org.libs", "mylib")
-  val dep2: SlugDependency = SlugDependency("", Version("5.12.0"), "org.libs", "mylib")
-
-  val serviceDep1 = ServiceDependency(
-      slugName     = "test"
-    , slugVersion  = Version("1.0.0")
-    , teams        = List.empty
-    , depGroup     = dep1.group
-    , depArtefact  = dep1.artifact
-    , depVersion   = dep1.version
-    , scalaVersion = None
-    , scopes       = Set(DependencyScope.Compile)
-    )
-
-  val serviceDep11 = serviceDep1.copy(slugVersion = Version("1.1.0"))
-
-  val serviceDep12 = ServiceDependency(
-      slugName     = "test"
-    , slugVersion  = Version("1.2.0")
-    , teams        = List.empty
-    , depGroup     = dep2.group
-    , depArtefact  = dep2.artifact
-    , depVersion   = dep2.version
-    , scalaVersion = None
-    , scopes       = Set(DependencyScope.Compile)
-    )
+  val serviceDep = ServiceDependency(
+    slugName     = "test"
+  , slugVersion  = Version("1.0.0")
+  , teams        = List.empty
+  , depGroup     = "org.libs"
+  , depArtefact  = "mylib"
+  , depVersion   = Version("5.11.0")
+  , scalaVersion = None
+  , scopes       = Set(DependencyScope.Compile)
+  )
 
   val bobbyRule = BobbyRule(
-    organisation = dep1.group,
-    name         = dep1.artifact,
+    organisation = "org.libs",
+    name         = "mylib",
     range        = BobbyVersionRange.parse("(5.11.0,]").get,
     "testing",
     LocalDate.of(2000,1,1)

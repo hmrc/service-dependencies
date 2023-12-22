@@ -88,7 +88,7 @@ class DependencyDataUpdatingServiceSpec
       , others     = Nil
       ))
 
-      when(boot.derivedGroupArtefactRepository.findGroupsArtefacts)
+      when(boot.derivedGroupArtefactRepository.findGroupsArtefacts())
         .thenReturn(Future.successful(List(
           GroupArtefacts("uk.gov.hmrc"    , List("lib1", "lib2")),
           GroupArtefacts("uk.gov.hmrc.sub", List("lib3")),
@@ -162,7 +162,7 @@ class DependencyDataUpdatingServiceSpec
     when(mockServiceDependenciesConfig.curatedDependencyConfig)
       .thenReturn(dependencyConfig)
 
-    when(derivedGroupArtefactRepository.findGroupsArtefacts)
+    when(derivedGroupArtefactRepository.findGroupsArtefacts())
       .thenReturn(Future.successful(Seq.empty))
 
     when(mockServiceConfigsConnector.getBobbyRules())

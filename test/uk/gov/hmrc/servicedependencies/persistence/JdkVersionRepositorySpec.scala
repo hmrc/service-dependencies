@@ -23,7 +23,7 @@ import uk.gov.hmrc.mongo.MongoUtils
 import uk.gov.hmrc.mongo.test.DefaultPlayMongoRepositorySupport
 import uk.gov.hmrc.servicedependencies.model.JDKVersion
 import uk.gov.hmrc.servicedependencies.model.SlugInfoFlag.Latest
-import uk.gov.hmrc.servicedependencies.persistence.TestSlugInfos._
+import uk.gov.hmrc.servicedependencies.persistence.TestSlugInfos
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
@@ -46,23 +46,23 @@ class JdkVersionRepositorySpec
 
   "JdkVersionRepository.findJDKUsage" should {
     "find all the jdk version for a given environment" in {
-      slugInfoRepo.add(slugInfo).futureValue
-      deploymentRepository.markLatest(slugInfo.name, slugInfo.version).futureValue
+      slugInfoRepo.add(TestSlugInfos.slugInfo).futureValue
+      deploymentRepository.markLatest(TestSlugInfos.slugInfo.name, TestSlugInfos.slugInfo.version).futureValue
 
       val result = repository.findJDKUsage(Latest).futureValue
 
       result.length       shouldBe 1
-      result.head.name    shouldBe slugInfo.name
-      result.head.version shouldBe slugInfo.java.version
-      result.head.vendor  shouldBe slugInfo.java.vendor
-      result.head.kind    shouldBe slugInfo.java.kind
+      result.head.name    shouldBe TestSlugInfos.slugInfo.name
+      result.head.version shouldBe TestSlugInfos.slugInfo.java.version
+      result.head.vendor  shouldBe TestSlugInfos.slugInfo.java.vendor
+      result.head.kind    shouldBe TestSlugInfos.slugInfo.java.kind
     }
 
     "ignore non-java slugs" in {
-      slugInfoRepo.add(slugInfo).futureValue
-      slugInfoRepo.add(nonJavaSlugInfo).futureValue
-      deploymentRepository.markLatest(slugInfo.name, slugInfo.version).futureValue
-      deploymentRepository.markLatest(nonJavaSlugInfo.name, nonJavaSlugInfo.version).futureValue
+      slugInfoRepo.add(TestSlugInfos.slugInfo).futureValue
+      slugInfoRepo.add(TestSlugInfos.nonJavaSlugInfo).futureValue
+      deploymentRepository.markLatest(TestSlugInfos.slugInfo.name, TestSlugInfos.slugInfo.version).futureValue
+      deploymentRepository.markLatest(TestSlugInfos.nonJavaSlugInfo.name, TestSlugInfos.nonJavaSlugInfo.version).futureValue
 
       val result = repository.findJDKUsage(Latest).futureValue
 

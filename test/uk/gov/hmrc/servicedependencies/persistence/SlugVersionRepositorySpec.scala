@@ -59,15 +59,10 @@ class SlugVersionRepositorySpec
       teams                 = List.empty,
       runnerVersion         = "0.5.2",
       classpath             = "",
-      dependencies          = List.empty,
+      // dependencies          = List.empty,
       java                  = JavaInfo("1.8.1", "OpenJDK", "JRE"),
       sbtVersion            = Some("1.4.9"),
       repoUrl               = Some("https://github.com/hmrc/test.git"),
-      dependencyDotBuild    = "",
-      dependencyDotTest     = "",
-      dependencyDotCompile  = "",
-      dependencyDotProvided = "",
-      dependencyDotIt       = "",
       applicationConfig     = "",
       slugConfig            = ""
     )

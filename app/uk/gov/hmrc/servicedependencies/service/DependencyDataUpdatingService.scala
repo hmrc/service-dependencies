@@ -82,7 +82,7 @@ class DependencyDataUpdatingService @Inject()(
     } yield ()
 
   private def hmrcDependencies(): Future[Seq[DependencyConfig]] =
-    derivedGroupArtefactRepository.findGroupsArtefacts
+    derivedGroupArtefactRepository.findGroupsArtefacts()
       .map(groupsArtefacts =>
         groupsArtefacts
           .filter(_.group.startsWith("uk.gov.hmrc"))

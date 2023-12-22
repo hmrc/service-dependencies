@@ -23,7 +23,7 @@ import uk.gov.hmrc.mongo.MongoUtils
 import uk.gov.hmrc.mongo.test.DefaultPlayMongoRepositorySupport
 import uk.gov.hmrc.servicedependencies.model.SBTVersion
 import uk.gov.hmrc.servicedependencies.model.SlugInfoFlag.Latest
-import uk.gov.hmrc.servicedependencies.persistence.TestSlugInfos._
+import uk.gov.hmrc.servicedependencies.persistence.TestSlugInfos
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
@@ -46,21 +46,21 @@ class SbtVersionRepositorySpec
 
   "SbtVersionRepository.findSBTUsage" should {
     "find all the sbt versions for a given environment" in {
-      slugInfoRepo.add(slugInfo).futureValue
-      deploymentRepository.markLatest(slugInfo.name, slugInfo.version).futureValue
+      slugInfoRepo.add(TestSlugInfos.slugInfo).futureValue
+      deploymentRepository.markLatest(TestSlugInfos.slugInfo.name, TestSlugInfos.slugInfo.version).futureValue
 
       val result = repository.findSBTUsage(Latest).futureValue
 
       result.length           shouldBe 1
-      result.head.serviceName shouldBe slugInfo.name
-      result.head.version     shouldBe slugInfo.sbtVersion.get
+      result.head.serviceName shouldBe TestSlugInfos.slugInfo.name
+      result.head.version     shouldBe TestSlugInfos.slugInfo.sbtVersion.get
     }
 
     "ignore slugs with no sbtVersion" in {
-      slugInfoRepo.add(slugInfo).futureValue
-      slugInfoRepo.add(nonJavaSlugInfo).futureValue
-      deploymentRepository.markLatest(slugInfo.name, slugInfo.version).futureValue
-      deploymentRepository.markLatest(nonJavaSlugInfo.name, nonJavaSlugInfo.version).futureValue
+      slugInfoRepo.add(TestSlugInfos.slugInfo).futureValue
+      slugInfoRepo.add(TestSlugInfos.nonJavaSlugInfo).futureValue
+      deploymentRepository.markLatest(TestSlugInfos.slugInfo.name, TestSlugInfos.slugInfo.version).futureValue
+      deploymentRepository.markLatest(TestSlugInfos.nonJavaSlugInfo.name, TestSlugInfos.nonJavaSlugInfo.version).futureValue
 
       val result = repository.findSBTUsage(Latest).futureValue
 
