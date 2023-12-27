@@ -50,7 +50,7 @@ class TeamDependencyServiceSpec
       mockTeamsAndReposConnector
     , mockSlugInfoRepository
     , mockServiceConfigsConnector
-    , new SlugDependenciesService(mockServiceDependenciesConfig, new DependencyGraphParser())
+    , new CuratedLibrariesService(mockServiceDependenciesConfig)
     , mockLatestVersionRepository
     , mockMetaArtefactRepository
     )

@@ -24,21 +24,22 @@ import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.mongo.TimestampSupport
 import uk.gov.hmrc.mongo.lock.{ScheduledLockService, MongoLockRepository}
 import uk.gov.hmrc.servicedependencies.config.SchedulerConfigs
-import uk.gov.hmrc.servicedependencies.service.{DerivedViewsService, SlugInfoService}
+import uk.gov.hmrc.servicedependencies.service.{DerivedViewsService}
+import uk.gov.hmrc.servicedependencies.service.MetaArtefactService
 import uk.gov.hmrc.servicedependencies.util.SchedulerUtils
 
 import scala.concurrent.ExecutionContext
 
 class SlugMetadataUpdateScheduler @Inject()(
-   schedulerConfigs          : SchedulerConfigs,
-   slugInfoService           : SlugInfoService,
-   derivedViewsService       : DerivedViewsService,
-   mongoLockRepository       : MongoLockRepository,
-   timestampSupport          : TimestampSupport
+   schedulerConfigs   : SchedulerConfigs,
+   metaArtefactService: MetaArtefactService,
+   derivedViewsService: DerivedViewsService,
+   mongoLockRepository: MongoLockRepository,
+   timestampSupport   : TimestampSupport
  )(implicit
-   actorSystem               : ActorSystem,
-   applicationLifecycle      : ApplicationLifecycle,
-   ec                        : ExecutionContext
+   actorSystem         : ActorSystem,
+   applicationLifecycle: ApplicationLifecycle,
+   ec                  : ExecutionContext
  ) extends SchedulerUtils
    with Logging {
 
@@ -55,7 +56,7 @@ class SlugMetadataUpdateScheduler @Inject()(
   scheduleWithLock("Slug Metadata Updater", schedulerConfigs.slugMetadataUpdate, lock) {
     logger.info("Updating slug metadata")
     for {
-      _ <- slugInfoService.updateMetadata()
+      _ <- metaArtefactService.updateMetadata()
       _ =  logger.info("Finished updating slug metadata")
       _ <- derivedViewsService.generateAllViews()
       _ =  logger.info("Finished updating derived views")

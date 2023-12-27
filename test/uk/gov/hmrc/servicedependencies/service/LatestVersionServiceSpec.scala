@@ -34,7 +34,7 @@ import uk.gov.hmrc.servicedependencies.persistence.derived.DerivedGroupArtefactR
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
-class DependencyDataUpdatingServiceSpec
+class LatestVersionServiceSpec
   extends AnyWordSpec
      with MockitoSugar
      with Matchers
@@ -67,7 +67,7 @@ class DependencyDataUpdatingServiceSpec
       when(boot.mockLatestVersionRepository.remove(any()))
         .thenReturn(Future.unit)
 
-      boot.dependencyUpdatingService.reloadLatestVersions().futureValue
+      boot.latestVersionService.reloadLatestVersions().futureValue
 
       verify(boot.mockLatestVersionRepository, times(1))
         .update(LatestVersion(name = "libYY", group = "uk.gov.hmrc", version = Version("1.1.1"), updateDate = timeForTest))
@@ -94,7 +94,7 @@ class DependencyDataUpdatingServiceSpec
           GroupArtefacts("uk.gov.hmrc.sub", List("lib3")),
         )))
 
-      boot.dependencyUpdatingService.versionsToUpdate().futureValue should contain theSameElementsAs List(
+      boot.latestVersionService.versionsToUpdate().futureValue should contain theSameElementsAs List(
         DependencyConfig("lib1" , "uk.gov.hmrc"    , None),
         DependencyConfig("lib2" , "uk.gov.hmrc"    , Some(Version("1.0.0"))),
         DependencyConfig("lib3" , "uk.gov.hmrc.sub", None),
@@ -118,7 +118,7 @@ class DependencyDataUpdatingServiceSpec
           )))
         )
 
-      boot.dependencyUpdatingService.versionsToUpdate().futureValue shouldBe List(
+      boot.latestVersionService.versionsToUpdate().futureValue shouldBe List(
         DependencyConfig("lib4", "com.other", None)
       )
     }
@@ -145,19 +145,19 @@ class DependencyDataUpdatingServiceSpec
           )))
         )
 
-      boot.dependencyUpdatingService.versionsToUpdate().futureValue shouldBe List(
+      boot.latestVersionService.versionsToUpdate().futureValue shouldBe List(
         DependencyConfig("lib4", "com.other", Some(Version("1.5.0")))
       )
     }
   }
 
   class Boot(dependencyConfig: CuratedDependencyConfig) {
-    val mockServiceDependenciesConfig        = mock[ServiceDependenciesConfig]
-    val mockLatestVersionRepository          = mock[LatestVersionRepository]
-    val derivedGroupArtefactRepository       = mock[DerivedGroupArtefactRepository]
-    val mockTeamsAndRepositoriesConnector    = mock[TeamsAndRepositoriesConnector]
-    val mockArtifactoryConnector             = mock[ArtifactoryConnector]
-    val mockServiceConfigsConnector          = mock[ServiceConfigsConnector]
+    val mockServiceDependenciesConfig     = mock[ServiceDependenciesConfig]
+    val mockLatestVersionRepository       = mock[LatestVersionRepository]
+    val derivedGroupArtefactRepository    = mock[DerivedGroupArtefactRepository]
+    val mockTeamsAndRepositoriesConnector = mock[TeamsAndRepositoriesConnector]
+    val mockArtifactoryConnector          = mock[ArtifactoryConnector]
+    val mockServiceConfigsConnector       = mock[ServiceConfigsConnector]
 
     when(mockServiceDependenciesConfig.curatedDependencyConfig)
       .thenReturn(dependencyConfig)
@@ -168,7 +168,7 @@ class DependencyDataUpdatingServiceSpec
     when(mockServiceConfigsConnector.getBobbyRules())
       .thenReturn(Future.successful(BobbyRules(Map.empty)))
 
-    val dependencyUpdatingService = new DependencyDataUpdatingService(
+    val latestVersionService = new LatestVersionService(
         mockServiceDependenciesConfig
       , mockLatestVersionRepository
       , derivedGroupArtefactRepository

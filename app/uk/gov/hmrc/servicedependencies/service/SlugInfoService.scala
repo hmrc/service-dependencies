@@ -16,12 +16,10 @@
 
 package uk.gov.hmrc.servicedependencies.service
 
-import cats.instances.all._
-import cats.syntax.all._
 import com.google.inject.{Inject, Singleton}
 import play.api.Logging
 import uk.gov.hmrc.http.HeaderCarrier
-import uk.gov.hmrc.servicedependencies.connector.{GitHubProxyConnector, ReleasesApiConnector, TeamsAndRepositoriesConnector}
+import uk.gov.hmrc.servicedependencies.connector.TeamsAndRepositoriesConnector
 import uk.gov.hmrc.servicedependencies.model._
 import uk.gov.hmrc.servicedependencies.persistence.{DeploymentRepository, JdkVersionRepository, SbtVersionRepository, SlugInfoRepository, SlugVersionRepository}
 import uk.gov.hmrc.servicedependencies.persistence.derived.{DerivedGroupArtefactRepository, DerivedServiceDependenciesRepository}
@@ -36,8 +34,6 @@ class SlugInfoService @Inject()(
   sbtVersionRepository               : SbtVersionRepository,
   deploymentRepository               : DeploymentRepository,
   teamsAndRepositoriesConnector      : TeamsAndRepositoriesConnector,
-  releasesApiConnector               : ReleasesApiConnector,
-  gitHubProxyConnector               : GitHubProxyConnector,
   derivedServiceDependencyRepository : DerivedServiceDependenciesRepository,
   derivedGroupArtefactRepository     : DerivedGroupArtefactRepository,
 )(implicit ec: ExecutionContext
@@ -55,7 +51,7 @@ class SlugInfoService @Inject()(
                                                isLatest
                     }
       _        <- if (isLatest) deploymentRepository.markLatest(slug.name, slug.version) else Future.unit
-      _        <- derivedServiceDependencyRepository.populateDependencies(slug, metaArtefact)
+      _        <- derivedServiceDependencyRepository.populateDependencies(metaArtefact)
     } yield ()
 
   def deleteSlugInfo(name: String, version: Version): Future[Unit] =
@@ -86,67 +82,8 @@ class SlugInfoService @Inject()(
         r.copy(teams = teamsForServices.getTeams(r.slugName).toList.sorted)
       }
 
-  // TODO move to DerivedViewsService
   def findGroupsArtefacts(): Future[Seq[GroupArtefacts]] =
-    derivedGroupArtefactRepository
-      .findGroupsArtefacts()
-
-  def updateMetadata()(implicit hc: HeaderCarrier): Future[Unit] = {
-    import ReleasesApiConnector._
-    for {
-      serviceNames           <- slugInfoRepository.getUniqueSlugNames
-      serviceDeploymentInfos <- releasesApiConnector.getWhatIsRunningWhere
-      activeRepos            <- teamsAndRepositoriesConnector.getAllRepositories(archived = Some(false))
-                                  .map(_.map(_.name))
-      decomissionedServices  <- gitHubProxyConnector.decomissionedServices
-      latestServices         <- deploymentRepository.getNames(SlugInfoFlag.Latest)
-      inactiveServices       =  latestServices.diff(activeRepos) // This will not work for slugs with different name to the repo (e.g. sa-filing-2223-helpdesk)
-      allServiceDeployments  =  serviceNames.map { serviceName =>
-                                  val deployments       = serviceDeploymentInfos.find(_.serviceName == serviceName).map(_.deployments)
-                                  val deploymentsByFlag = List( (SlugInfoFlag.Production    , Environment.Production)
-                                                              , (SlugInfoFlag.QA            , Environment.QA)
-                                                              , (SlugInfoFlag.Staging       , Environment.Staging)
-                                                              , (SlugInfoFlag.Development   , Environment.Development)
-                                                              , (SlugInfoFlag.ExternalTest  , Environment.ExternalTest)
-                                                              , (SlugInfoFlag.Integration   , Environment.Integration)
-                                                              )
-                                                           .map { case (flag, env) =>
-                                                                    ( flag
-                                                                    , deployments.flatMap(
-                                                                          _.find(_.optEnvironment.contains(env))
-                                                                           .map(_.version)
-                                                                        )
-                                                                    )
-                                                                }
-                                  (serviceName, deploymentsByFlag)
-                                }
-      _                      <- allServiceDeployments.toList.traverse { case (serviceName, deployments) =>
-                                  deployments.traverse {
-                                    case (flag, None         ) => deploymentRepository.clearFlag(flag, serviceName)
-                                    case (flag, Some(version)) => deploymentRepository.setFlag(flag, serviceName, version)
-                                  }
-                                }
-      _                      <- deploymentRepository.clearFlags(SlugInfoFlag.values, decomissionedServices)
-      _                      <- if (inactiveServices.nonEmpty) {
-                                  logger.info(s"Removing latest flag from the following inactive services: ${inactiveServices.mkString(", ")}")
-                                  // we have found some "archived" projects which are still deployed, we will only remove the latest flag for them
-                                  deploymentRepository.clearFlags(List(SlugInfoFlag.Latest), inactiveServices.toList)
-                                } else Future.unit
-      missingLatestFlag      =  serviceNames.intersect(activeRepos).diff(decomissionedServices).diff(latestServices)
-      _                      <-  if (missingLatestFlag.nonEmpty) {
-                                  logger.warn(s"The following services are missing Latest flag - and will be added: ${missingLatestFlag.mkString(",")}")
-                                  missingLatestFlag.foldLeftM(()) { (_, serviceName) =>
-                                    for {
-                                      optVersion <- slugVersionRepository.getMaxVersion(serviceName)
-                                      _          <- optVersion match {
-                                                      case Some(version) => deploymentRepository.setFlag(SlugInfoFlag.Latest, serviceName, version)
-                                                      case None          => logger.warn(s"No max version found for $serviceName"); Future.unit
-                                                    }
-                                    } yield ()
-                                  }
-                                } else Future.unit
-    } yield ()
-  }
+    derivedGroupArtefactRepository.findGroupsArtefacts()
 
   def findJDKVersions(teamName: Option[String], flag: SlugInfoFlag)(implicit hc: HeaderCarrier): Future[Seq[JDKVersion]] =
     teamName match {

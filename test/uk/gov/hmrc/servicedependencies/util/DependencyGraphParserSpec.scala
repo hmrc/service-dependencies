@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.servicedependencies.service
+package uk.gov.hmrc.servicedependencies.util
 
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
@@ -22,14 +22,13 @@ import org.scalatest.wordspec.AnyWordSpec
 class DependencyGraphParserSpec
   extends AnyWordSpec
      with Matchers {
-  import DependencyGraphParser._
 
-  val dependencyGraphParser = new DependencyGraphParser()
+  import DependencyGraphParser.Node
 
   "DependencyGraphParser.parse" should {
     "return dependencies with evictions applied" in {
       val source = scala.io.Source.fromResource("graphs/dependencies-compile.dot")
-      val graph = dependencyGraphParser.parse(source.mkString)
+      val graph = DependencyGraphParser.parse(source.mkString)
       graph.dependencies shouldBe List(
         Node("com.typesafe.play:filters-helpers_2.12:2.7.5"),
         Node("org.typelevel:cats-core_2.12:2.2.0"),
@@ -40,8 +39,8 @@ class DependencyGraphParserSpec
 
     "return dependencies from maven generated files" in {
       val source = scala.io.Source.fromResource("graphs/dependencies-maven.dot")
-      val graph = dependencyGraphParser.parse(source.mkString)
-      graph.dependencies should contain allOf(
+      val graph = DependencyGraphParser.parse(source.mkString)
+      graph.dependencies should contain allElementsOf(List(
         Node("com.google.guava:guava:jar:18.0:compile"),
         Node("com.zaxxer:HikariCP:jar:2.5.1:compile"),
         Node("javax.xml.stream:stax-api:jar:1.0-2:compile"),
@@ -55,14 +54,14 @@ class DependencyGraphParserSpec
         Node("uk.gov.hmrc.rehoming:rehoming-common:jar:7.41.0:compile"),
         Node("wsdl4j:wsdl4j:jar:1.6.1:compile"),
         Node("xerces:xercesImpl:jar:2.12.0:compile")
-      )
+      ))
     }
   }
 
   "DependencyGraphParser.anyPathToRoot" should {
     "return path to root" in {
       val source = scala.io.Source.fromResource("graphs/dependencies-compile.dot")
-      val graph = dependencyGraphParser.parse(source.mkString)
+      val graph = DependencyGraphParser.parse(source.mkString)
       graph.anyPathToRoot(Node("org.typelevel:cats-kernel_2.12:2.2.0")) shouldBe List(
         Node("org.typelevel:cats-kernel_2.12:2.2.0"),
         Node("org.typelevel:cats-core_2.12:2.2.0"),
@@ -72,7 +71,7 @@ class DependencyGraphParserSpec
 
     "work with maven dependencies" in {
       val source = scala.io.Source.fromResource("graphs/dependencies-maven.dot")
-      val graph = dependencyGraphParser.parse(source.mkString)
+      val graph = DependencyGraphParser.parse(source.mkString)
       graph.anyPathToRoot(Node("javax.xml.stream:stax-api:jar:1.0-2:compile")) shouldBe List(
         Node("javax.xml.stream:stax-api:jar:1.0-2:compile"),
         Node("org.springframework.ws:spring-xml:jar:2.1.4.RELEASE:compile"),
@@ -83,7 +82,7 @@ class DependencyGraphParserSpec
 
     "work with emcs dependencies" in {
       val source = scala.io.Source.fromResource("graphs/dependencies-emcs.dot")
-      val graph = dependencyGraphParser.parse(source.mkString)
+      val graph = DependencyGraphParser.parse(source.mkString)
       graph.dependencies.map(d => (d.group, d.artefact, d.version, d.scalaVersion)) should not be empty
     }
 
@@ -92,17 +91,17 @@ class DependencyGraphParserSpec
       val input = "digraph \"uk.gov.hmrc.jdc:platops-example-classic-service:war:0.53.0\" { \n" +
         "\t\"uk.gov.hmrc.jdc:platops-example-classic-service:war:0.53.0\" -> \"uk.gov.hmrc.jdc:platops-example-classic-service-business:jar:0.53.0:compile\" ; \n" +
         " } "
-      val graph = dependencyGraphParser.parse(input)
-      graph.dependencies should contain allOf(
+      val graph = DependencyGraphParser.parse(input)
+      graph.dependencies should contain allElementsOf(List(
         Node("uk.gov.hmrc.jdc:platops-example-classic-service:war:0.53.0"),
         Node("uk.gov.hmrc.jdc:platops-example-classic-service-business:jar:0.53.0:compile"),
-      )
+      ))
     }
 
     // BDOG-1884 if this test is hanging, its because anyPathToRoot's cycle detection has broken
     "not get stuck in an infinite loop when parsing a cyclical graph" in {
       val source = scala.io.Source.fromResource("graphs/loop.dot") // baz -> bar , bar -> baz
-      val graph = dependencyGraphParser.parse(source.mkString)
+      val graph = DependencyGraphParser.parse(source.mkString)
       val baz = graph.nodes.filter(_.artefact == "baz").head
       graph.anyPathToRoot(baz).head shouldBe Node("org:baz:3.0.0")
       val bar = graph.nodes.filter(_.artefact == "bar").head
@@ -111,7 +110,7 @@ class DependencyGraphParserSpec
 
     "return the shortest path if multiple" in {
       val source = scala.io.Source.fromResource("graphs/double-path.dot")
-      val graph = dependencyGraphParser.parse(source.mkString)
+      val graph = DependencyGraphParser.parse(source.mkString)
       val sbtSettings = graph.nodes.filter(_.artefact == "sbt-settings").head
       graph.anyPathToRoot(sbtSettings) shouldBe Seq(
         Node("uk.gov.hmrc:sbt-settings:0.0.1"),
@@ -121,7 +120,7 @@ class DependencyGraphParserSpec
 
     "ignore evicted nodes" in {
       val source = scala.io.Source.fromResource("graphs/evicted-paths.dot")
-      val graph = dependencyGraphParser.parse(source.mkString)
+      val graph = DependencyGraphParser.parse(source.mkString)
       val log4j = graph.nodes.filter(_.artefact == "log4j").head
       graph.anyPathToRoot(log4j) shouldBe Seq(
         Node("uk.gov.hmrc:log4j:1.0.0"),

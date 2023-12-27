@@ -33,25 +33,6 @@ object TestSlugInfos {
       java                  = JavaInfo("1.181.0", "OpenJDK", "JRE"),
       sbtVersion            = Some("1.4.9"),
       repoUrl               = Some("https://github.com/hmrc/test.git"),
-      // dependencies          = List(
-      //                           SlugDependency(
-      //                             path     = "lib1",
-      //                             version  = Version("1.2.0"),
-      //                             group    = "com.test.group",
-      //                             artifact = "lib1"
-      //                           ),
-      //                           SlugDependency(
-      //                             path     = "lib2",
-      //                             version  = Version("0.66"),
-      //                             group    = "com.test.group",
-      //                             artifact = "lib2"
-      //                           )
-      //                         ),
-      // dependencyDotCompile  = "",
-      // dependencyDotProvided = "",
-      // dependencyDotTest     = "",
-      // dependencyDotIt       = "",
-      // dependencyDotBuild    = "",
       applicationConfig     = "",
       slugConfig            = ""
     )

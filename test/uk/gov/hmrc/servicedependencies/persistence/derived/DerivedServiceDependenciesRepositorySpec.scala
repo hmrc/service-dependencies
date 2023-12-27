@@ -23,7 +23,6 @@ import org.scalatest.wordspec.AnyWordSpecLike
 import uk.gov.hmrc.mongo.test.DefaultPlayMongoRepositorySupport
 import uk.gov.hmrc.servicedependencies.model.{DependencyScope, ServiceDependency, Version}
 import uk.gov.hmrc.servicedependencies.persistence.{DeploymentRepository, SlugInfoRepository, TestSlugInfos}
-import uk.gov.hmrc.servicedependencies.service.DependencyGraphParser
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
@@ -36,19 +35,18 @@ class DerivedServiceDependenciesRepositorySpec
 
   lazy val deploymentRepository  = new DeploymentRepository(mongoComponent)
   lazy val slugInfoRepo          = new SlugInfoRepository(mongoComponent, deploymentRepository)
-  lazy val dependencyGraphParser = new DependencyGraphParser()
   override lazy val repository =
     new DerivedServiceDependenciesRepository(
       mongoComponent,
-      dependencyGraphParser,
       deploymentRepository
     )
 
   "DerivedServiceDependenciesRepository.populateDependencies" should {
     "populate dependencies from meta-artefact" in {
       repository.populateDependencies(
-        TestSlugInfos.slugInfo
-      , TestSlugInfos.metaArtefact.copy(modules = TestSlugInfos.metaArtefact.modules.map(_.copy(dependencyDotCompile = Some(scala.io.Source.fromResource("graphs/dependencies-compile.dot").mkString))))
+        TestSlugInfos.metaArtefact.copy(
+          modules = TestSlugInfos.metaArtefact.modules.map(_.copy(dependencyDotCompile = Some(scala.io.Source.fromResource("graphs/dependencies-compile.dot").mkString)))
+        )
       ).futureValue
 
       val result = repository.collection.find().toFuture().futureValue

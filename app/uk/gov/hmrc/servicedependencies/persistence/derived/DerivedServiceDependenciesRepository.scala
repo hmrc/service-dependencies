@@ -26,9 +26,9 @@ import org.mongodb.scala.model.Indexes.{ascending, compoundIndex}
 import play.api.Logger
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.play.json.{CollectionFactory, PlayMongoRepository}
-import uk.gov.hmrc.servicedependencies.model.{ApiServiceDependencyFormats, DependencyScope, MetaArtefact, ServiceDependency, ServiceDependencyWrite, SlugInfo, SlugInfoFlag, Version}
+import uk.gov.hmrc.servicedependencies.model.{ApiServiceDependencyFormats, DependencyScope, MetaArtefact, ServiceDependency, ServiceDependencyWrite, SlugInfoFlag, Version}
 import uk.gov.hmrc.servicedependencies.persistence.DeploymentRepository
-import uk.gov.hmrc.servicedependencies.service.DependencyGraphParser
+import uk.gov.hmrc.servicedependencies.util.DependencyGraphParser
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -38,46 +38,45 @@ import scala.concurrent.{ExecutionContext, Future}
 @Singleton
 class DerivedServiceDependenciesRepository @Inject()(
   mongoComponent       : MongoComponent,
-  dependencyGraphParser: DependencyGraphParser,
   deploymentRepository : DeploymentRepository,
 )(implicit
   ec: ExecutionContext
 ) extends PlayMongoRepository[ServiceDependency](
-    collectionName = DerivedServiceDependenciesRepository.collectionName
-  , mongoComponent = mongoComponent
-  , domainFormat   = ApiServiceDependencyFormats.derivedMongoFormat
-  , indexes        = Seq(
-                       IndexModel(
-                         compoundIndex(
-                           ascending("slugName"),
-                           ascending("slugVersion")
-                         ),
-                         IndexOptions().name("slugName_slugVersion_idx").background(true)
-                       ),
-                       IndexModel(
-                         compoundIndex(
-                           ascending("group"),
-                           ascending("artefact")
-                         ),
-                         IndexOptions().name("group_artefact_idx").background(true)
-                       ),
-                       IndexModel(
-                         compoundIndex(DependencyScope.values.map(s => ascending("scope_" + s.asString)) :_*),
-                         IndexOptions().name("dependencyScope_idx").background(true)
-                       ),
-                       IndexModel(
-                         compoundIndex(
-                           ascending("slugName"),
-                           ascending("slugVersion"),
-                           ascending("group"),
-                           ascending("artefact"),
-                           ascending("version")
-                         ),
-                         IndexOptions().name("uniqueIdx").unique(true).background(true)
-                       )
-                     )
-  , optSchema      = None
-  , replaceIndexes = true
+  collectionName = "DERIVED-slug-dependencies"
+, mongoComponent = mongoComponent
+, domainFormat   = ApiServiceDependencyFormats.derivedMongoFormat
+, indexes        = Seq(
+                      IndexModel(
+                        compoundIndex(
+                          ascending("slugName"),
+                          ascending("slugVersion")
+                        ),
+                        IndexOptions().name("slugName_slugVersion_idx").background(true)
+                      ),
+                      IndexModel(
+                        compoundIndex(
+                          ascending("group"),
+                          ascending("artefact")
+                        ),
+                        IndexOptions().name("group_artefact_idx").background(true)
+                      ),
+                      IndexModel(
+                        compoundIndex(DependencyScope.values.map(s => ascending("scope_" + s.asString)) :_*),
+                        IndexOptions().name("dependencyScope_idx").background(true)
+                      ),
+                      IndexModel(
+                        compoundIndex(
+                          ascending("slugName"),
+                          ascending("slugVersion"),
+                          ascending("group"),
+                          ascending("artefact"),
+                          ascending("version")
+                        ),
+                        IndexOptions().name("uniqueIdx").unique(true).background(true)
+                      )
+                    )
+, optSchema      = None
+, replaceIndexes = true
 ){
   private val logger = Logger(getClass)
 
@@ -99,19 +98,6 @@ class DerivedServiceDependenciesRepository @Inject()(
                           )
     )
 
-  def findDependenciesForService(
-    name : String,
-    flag : SlugInfoFlag,
-    scope: Option[DependencyScope]
-  ): Future[Seq[ServiceDependency]] =
-    findServiceDependenciesFromDeployments(
-      deploymentsFilter = and(
-                            equal("slugName", name),
-                            equal(flag.asString, true)
-                          ),
-      dependencyFilter  = scope.fold[Bson](BsonDocument())(s => equal("scope_" + s.asString, true))
-    )
-
   def findDependencies(
     flag: SlugInfoFlag,
     scope: Option[DependencyScope]
@@ -126,7 +112,7 @@ class DerivedServiceDependenciesRepository @Inject()(
     dependencyFilter : Bson
   ): Future[Seq[ServiceDependency]] =
     deploymentRepository.lookupAgainstDeployments(
-      collectionName   = DerivedServiceDependenciesRepository.collectionName,
+      collectionName   = collectionName,
       domainFormat     = ApiServiceDependencyFormats.derivedMongoFormat,
       slugNameField    = "slugName",
       slugVersionField = "slugVersion"
@@ -139,7 +125,7 @@ class DerivedServiceDependenciesRepository @Inject()(
   private def targetCollection: MongoCollection[ServiceDependencyWrite] =
     CollectionFactory.collection(
       mongoComponent.database,
-      DerivedServiceDependenciesRepository.collectionName,
+      collectionName,
       ServiceDependencyWrite.format
     )
 
@@ -154,22 +140,22 @@ class DerivedServiceDependenciesRepository @Inject()(
       .toFuture()
       .map(_ => ())
 
-  def populateDependencies(slugInfo: SlugInfo, meta: MetaArtefact): Future[Unit] = {
-    logger.info(s"Processing ${slugInfo.name} ${slugInfo.version}")
+  def populateDependencies(meta: MetaArtefact): Future[Unit] = {
+    logger.info(s"Processing ${meta.name} ${meta.version}")
 
-    val optMetaModule = meta.modules.find(_.name == slugInfo.name).orElse(meta.modules.headOption)
+    val optMetaModule = meta.modules.find(_.name == meta.name).orElse(meta.modules.headOption)
 
-    val graphBuild    = meta.dependencyDotBuild.getOrElse("")                         //.getOrElse(slugInfo.dependencyDotBuild   )
-    val graphCompile  = optMetaModule.flatMap(_.dependencyDotCompile ).getOrElse("")  //.getOrElse(slugInfo.dependencyDotCompile )
-    val graphProvided = optMetaModule.flatMap(_.dependencyDotProvided).getOrElse("")  //.getOrElse(slugInfo.dependencyDotProvided)
-    val graphTest     = optMetaModule.flatMap(_.dependencyDotTest    ).getOrElse("")  //.getOrElse(slugInfo.dependencyDotTest    )
-    val graphIt       = optMetaModule.flatMap(_.dependencyDotIt      ).getOrElse("")  //.getOrElse(slugInfo.dependencyDotIt      )
+    val graphBuild    = meta.dependencyDotBuild.getOrElse("")
+    val graphCompile  = optMetaModule.flatMap(_.dependencyDotCompile ).getOrElse("")
+    val graphProvided = optMetaModule.flatMap(_.dependencyDotProvided).getOrElse("")
+    val graphTest     = optMetaModule.flatMap(_.dependencyDotTest    ).getOrElse("")
+    val graphIt       = optMetaModule.flatMap(_.dependencyDotIt      ).getOrElse("")
 
-    val build    = dependencyGraphParser.parse(graphBuild   ).dependencies.map((_, DependencyScope.Build   ))
-    val compile  = dependencyGraphParser.parse(graphCompile ).dependencies.map((_, DependencyScope.Compile ))
-    val provided = dependencyGraphParser.parse(graphProvided).dependencies.map((_, DependencyScope.Provided))
-    val test     = dependencyGraphParser.parse(graphTest    ).dependencies.map((_, DependencyScope.Test    ))
-    val it       = dependencyGraphParser.parse(graphIt      ).dependencies.map((_, DependencyScope.It      ))
+    val build    = DependencyGraphParser.parse(graphBuild   ).dependencies.map((_, DependencyScope.Build   ))
+    val compile  = DependencyGraphParser.parse(graphCompile ).dependencies.map((_, DependencyScope.Compile ))
+    val provided = DependencyGraphParser.parse(graphProvided).dependencies.map((_, DependencyScope.Provided))
+    val test     = DependencyGraphParser.parse(graphTest    ).dependencies.map((_, DependencyScope.Test    ))
+    val it       = DependencyGraphParser.parse(graphIt      ).dependencies.map((_, DependencyScope.It      ))
 
     val dependencies: Map[DependencyGraphParser.Node, Set[DependencyScope]] =
       (build ++ compile ++ provided ++ test ++ it)
@@ -179,8 +165,8 @@ class DerivedServiceDependenciesRepository @Inject()(
 
     def toServiceDependencyWrite(group: String, artefact: String, version: Version, scalaVersion: Option[String], scopes: Set[DependencyScope]) =
       ServiceDependencyWrite(
-        slugName     = slugInfo.name,
-        slugVersion  = slugInfo.version,
+        slugName     = meta.name,
+        slugVersion  = meta.version,
         depGroup     = group,
         depArtefact  = artefact,
         depVersion   = version,
@@ -226,7 +212,7 @@ class DerivedServiceDependenciesRepository @Inject()(
     val writes =
       dependencies
         .filterNot { case (node, _) => node.group == "default"     && node.artefact == "project"     }
-        .filterNot { case (node, _) => node.group == "uk.gov.hmrc" && node.artefact == slugInfo.name }
+        .filterNot { case (node, _) => node.group == "uk.gov.hmrc" && node.artefact == meta.name }
         .map { case (node, scopes) =>
           toServiceDependencyWrite(
             group        = node.group,
@@ -254,7 +240,7 @@ class DerivedServiceDependenciesRepository @Inject()(
     if (writes.isEmpty)
       Future.unit
     else {
-      logger.info(s"Inserting ${writes.size} dependencies for ${slugInfo.name} ${slugInfo.version}")
+      logger.info(s"Inserting ${writes.size} dependencies for ${meta.name} ${meta.version}")
       targetCollection
         .bulkWrite(
           writes.map(d =>
@@ -274,8 +260,4 @@ class DerivedServiceDependenciesRepository @Inject()(
         .map(_ => ())
     }
   }
-}
-
-object DerivedServiceDependenciesRepository {
-  val collectionName = "DERIVED-slug-dependencies"
 }

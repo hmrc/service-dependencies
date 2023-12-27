@@ -19,21 +19,20 @@ package uk.gov.hmrc.servicedependencies.service
 import uk.gov.hmrc.servicedependencies.config.ServiceDependenciesConfig
 import uk.gov.hmrc.servicedependencies.config.model.CuratedDependencyConfig
 import uk.gov.hmrc.servicedependencies.controller.model.{Dependency, ImportedBy}
+import uk.gov.hmrc.servicedependencies.util.DependencyGraphParser
 import uk.gov.hmrc.servicedependencies.model._
 
 import javax.inject.{Inject, Singleton}
 
-
 @Singleton
-class SlugDependenciesService @Inject()(
+class CuratedLibrariesService @Inject()(
   serviceDependenciesConfig: ServiceDependenciesConfig
-, graphParser              : DependencyGraphParser
 ) {
 
   private lazy val curatedDependencyConfig: CuratedDependencyConfig =
     serviceDependenciesConfig.curatedDependencyConfig
 
-  def curatedLibrariesFromGraph(
+  def fromGraph(
     dotFile       : String,
     rootName      : String,
     latestVersions: Seq[LatestVersion],
@@ -41,7 +40,7 @@ class SlugDependenciesService @Inject()(
     scope         : DependencyScope,
     subModuleNames: Seq[String]
   ): List[Dependency] = {
-    val graph = graphParser.parse(dotFile)
+    val graph = DependencyGraphParser.parse(dotFile)
     val dependencies = graph
       .dependencies
       .filterNot(x => x.artefact == rootName || scope == DependencyScope.It && subModuleNames.contains(x.artefact)) // remove root or any submodules (for integration tests)

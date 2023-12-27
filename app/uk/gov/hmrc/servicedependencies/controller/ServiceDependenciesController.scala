@@ -28,7 +28,7 @@ import uk.gov.hmrc.servicedependencies.controller.model.{Dependencies, Dependenc
 import uk.gov.hmrc.servicedependencies.model._
 import uk.gov.hmrc.servicedependencies.persistence.{LatestVersionRepository, MetaArtefactRepository}
 import uk.gov.hmrc.servicedependencies.persistence.derived.DerivedModuleRepository
-import uk.gov.hmrc.servicedependencies.service.{SlugDependenciesService, SlugInfoService, TeamDependencyService}
+import uk.gov.hmrc.servicedependencies.service.{CuratedLibrariesService, SlugInfoService, TeamDependencyService}
 
 import java.time.LocalDate
 import scala.concurrent.{ExecutionContext, Future}
@@ -36,7 +36,7 @@ import scala.concurrent.{ExecutionContext, Future}
 @Singleton
 class ServiceDependenciesController @Inject()(
   slugInfoService         : SlugInfoService
-, slugDependenciesService : SlugDependenciesService
+, curatedLibrariesService : CuratedLibrariesService
 , serviceConfigsConnector : ServiceConfigsConnector
 , teamDependencyService   : TeamDependencyService
 , metaArtefactRepository  : MetaArtefactRepository
@@ -193,7 +193,7 @@ class ServiceDependenciesController @Inject()(
 
   private def toRepository(meta: MetaArtefact, latestVersions: Seq[LatestVersion], bobbyRules: BobbyRules) = {
     def toDependencies(name: String, scope: DependencyScope, dotFile: String) =
-      slugDependenciesService.curatedLibrariesFromGraph(
+      curatedLibrariesService.fromGraph(
         dotFile        = dotFile,
         rootName       = name,
         latestVersions = latestVersions,

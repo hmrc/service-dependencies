@@ -29,12 +29,12 @@ import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
 class TeamDependencyService @Inject()(
-  teamsAndReposConnector       : TeamsAndRepositoriesConnector
-, slugInfoRepository           : SlugInfoRepository
-, serviceConfigsConnector      : ServiceConfigsConnector
-, slugDependenciesService      : SlugDependenciesService
-, latestVersionRepository      : LatestVersionRepository
-, metaArtefactRepository       : MetaArtefactRepository
+  teamsAndReposConnector : TeamsAndRepositoriesConnector
+, slugInfoRepository     : SlugInfoRepository
+, serviceConfigsConnector: ServiceConfigsConnector
+, curatedLibrariesService: CuratedLibrariesService
+, latestVersionRepository: LatestVersionRepository
+, metaArtefactRepository : MetaArtefactRepository
 )(implicit ec: ExecutionContext
 ) {
 
@@ -83,7 +83,7 @@ class TeamDependencyService @Inject()(
     latestVersions: Seq[LatestVersion]
   ): Dependencies = {
     def toDependencies(name: String, scope: DependencyScope, dotFile: String) =
-      slugDependenciesService.curatedLibrariesFromGraph(
+      curatedLibrariesService.fromGraph(
         dotFile        = dotFile,
         rootName       = name,
         latestVersions = latestVersions,
@@ -101,6 +101,4 @@ class TeamDependencyService @Inject()(
       otherDependencies      = Seq.empty
     )
   }
-
-
 }
