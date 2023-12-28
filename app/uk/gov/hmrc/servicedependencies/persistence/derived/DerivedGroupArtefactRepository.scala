@@ -18,19 +18,19 @@ package uk.gov.hmrc.servicedependencies.persistence.derived
 
 import javax.inject.{Inject, Singleton}
 import org.mongodb.scala.bson.BsonDocument
-import org.mongodb.scala.model.Accumulators._
-import org.mongodb.scala.model.Aggregates._
-import org.mongodb.scala.model.Projections._
-import org.mongodb.scala.model.{Field, Sorts}
+
+import org.mongodb.scala.model.{Aggregates, Field, Filters, Projections, Sorts}
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.play.json.PlayMongoRepository
-import uk.gov.hmrc.servicedependencies.model._
+import uk.gov.hmrc.servicedependencies.model.{GroupArtefacts, MongoSlugInfoFormats, SlugInfoFlag}
+import uk.gov.hmrc.servicedependencies.persistence.DeploymentRepository
 
 import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
 class DerivedGroupArtefactRepository @Inject()(
-  mongoComponent: MongoComponent
+  mongoComponent      : MongoComponent
+, deploymentRepository: DeploymentRepository
 )(implicit
   ec: ExecutionContext
 ) extends PlayMongoRepository[GroupArtefacts](
@@ -52,39 +52,41 @@ class DerivedGroupArtefactRepository @Inject()(
       .toFuture()
 
   def populateAll(): Future[Unit] =
-    mongoComponent.database.getCollection("DERIVED-slug-dependencies")
-      .aggregate(
-        List(
-          project(
-            fields(
-              excludeId(),
-              include("group", "artefact", "scope_compile", "scope_provided", "scope_test", "scope_it", "scope_build")
-            )
-          ),
-          BsonDocument("$group" ->
-            BsonDocument(
-              "_id"       -> BsonDocument("group"     -> "$group"),
-              "artifacts" -> BsonDocument("$addToSet" -> "$artefact")
-            )
-          ),
-          // reproject the result so fields are at the root level
-          project(fields(
-            computed("group"  , "$_id.group"),
-            include("artifacts"),
-            exclude("_id")
-          )),
-          addFields(
-            Field("scope_compile" , true),
-            Field("scope_provided", true),
-            Field("scope_test"    , true),
-            Field("scope_it"      , true),
-            Field("scope_build"   , true)
-          ),
-          // replace content of target collection
-          out("DERIVED-artefact-lookup")
-        )
-      )
-      .allowDiskUse(true)
-      .toFuture()
-      .map(_ => ())
+    deploymentRepository.lookupAgainstDeployments(
+      collectionName   = "DERIVED-slug-dependencies"
+    , domainFormat     = MongoSlugInfoFormats.groupArtefactsFormat
+    , slugNameField    = "slugName"
+    , slugVersionField = "slugVersion"
+    )(
+      deploymentsFilter = Filters.or(SlugInfoFlag.values.map(flag => Filters.equal(flag.asString, true)): _*)
+    , domainFilter      = BsonDocument()
+    , pipeline          = Aggregates.project(
+                            Projections.fields(
+                              Projections.excludeId()
+                            , Projections.include("group", "artefact", "scope_compile", "scope_provided", "scope_test", "scope_it", "scope_build")
+                            )
+                          ) ::
+                          BsonDocument(
+                            "$group" -> BsonDocument(
+                                          "_id"       -> BsonDocument("group"     -> "$group")
+                                        , "artifacts" -> BsonDocument("$addToSet" -> "$artefact")
+                                        )
+                          ) ::
+                          Aggregates.project( // reproject the result so fields are at the root level
+                            Projections.fields(
+                              Projections.computed("group"  , "$_id.group")
+                            , Projections.include("artifacts")
+                            , Projections.exclude("_id")
+                            )
+                          ) ::
+                          Aggregates.addFields(
+                            Field("scope_compile" , true)
+                          , Field("scope_provided", true)
+                          , Field("scope_test"    , true)
+                          , Field("scope_it"      , true)
+                          , Field("scope_build"   , true)
+                          ) ::
+                          Aggregates.out("DERIVED-artefact-lookup") :: // replace content of target collection
+                          Nil
+    ).map(_ => ())
 }

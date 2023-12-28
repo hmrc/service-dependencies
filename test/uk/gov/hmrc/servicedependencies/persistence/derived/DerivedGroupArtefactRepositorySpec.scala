@@ -35,8 +35,6 @@ class DerivedGroupArtefactRepositorySpec
      with MockitoSugar
      with DefaultPlayMongoRepositorySupport[GroupArtefacts] {
 
-  override lazy val repository = new DerivedGroupArtefactRepository(mongoComponent)
-
   lazy val deploymentRepository  = new DeploymentRepository(mongoComponent)
   lazy val slugInfoRepo          = new SlugInfoRepository(mongoComponent, deploymentRepository)
   lazy val dependencyGraphParser = new DependencyGraphParser()
@@ -47,10 +45,22 @@ class DerivedGroupArtefactRepositorySpec
       deploymentRepository
     )
 
+  override def checkIndexedQueries = false
+
+  override lazy val repository = new DerivedGroupArtefactRepository(mongoComponent, deploymentRepository)
+
   "DerivedGroupArtefactRepository.findGroupsArtefacts" should {
     "return a map of artefact group to list of found artefacts" in {
-      val slugWithDependencies = slugInfo.copy(dependencyDotCompile = scala.io.Source.fromResource("graphs/dependencies-compile.dot").mkString)
-      derivedServiceDependenciesRepository.populateDependencies(slugWithDependencies, meta = None).futureValue
+      deploymentRepository.markLatest(
+        slugInfo.name
+      , slugInfo.version
+      ).futureValue
+
+      derivedServiceDependenciesRepository.populateDependencies(
+        slugInfo.copy(dependencyDotCompile = scala.io.Source.fromResource("graphs/dependencies-compile.dot").mkString)
+      , meta = None
+      ).futureValue
+
       repository.populateAll().futureValue
 
       val result = repository.findGroupsArtefacts.futureValue
