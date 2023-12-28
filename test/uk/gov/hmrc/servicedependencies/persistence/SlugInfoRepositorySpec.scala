@@ -19,7 +19,7 @@ package uk.gov.hmrc.servicedependencies.persistence
 import org.mockito.MockitoSugar
 import uk.gov.hmrc.mongo.test.DefaultPlayMongoRepositorySupport
 import uk.gov.hmrc.servicedependencies.model.SlugInfo
-import uk.gov.hmrc.servicedependencies.persistence.TestSlugInfos._
+import uk.gov.hmrc.servicedependencies.persistence.TestSlugInfos
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import org.scalatest.matchers.should.Matchers
@@ -36,15 +36,15 @@ class SlugInfoRepositorySpec
 
   "SlugInfoRepository.add" should {
     "insert correctly" in {
-      repository.add(slugInfo).futureValue
-      repository.getAllEntries().futureValue shouldBe Seq(slugInfo)
+      repository.add(TestSlugInfos.slugInfo).futureValue
+      repository.getAllEntries().futureValue shouldBe Seq(TestSlugInfos.slugInfo)
     }
 
     "replace existing" in {
-      repository.add(slugInfo).futureValue
+      repository.add(TestSlugInfos.slugInfo).futureValue
       repository.getAllEntries().futureValue should have size 1
 
-      val duplicate = slugInfo.copy(name = "my-slug-2")
+      val duplicate = TestSlugInfos.slugInfo.copy(name = "my-slug-2")
       repository.add(duplicate).futureValue
       repository.getAllEntries().futureValue shouldBe Seq(duplicate)
     }
@@ -52,7 +52,7 @@ class SlugInfoRepositorySpec
 
   "SlugInfoRepository.clearAllData" should {
     "delete everything" in {
-      repository.add(slugInfo).futureValue
+      repository.add(TestSlugInfos.slugInfo).futureValue
       repository.getAllEntries().futureValue should have size 1
 
       repository.clearAllData().futureValue
@@ -62,9 +62,9 @@ class SlugInfoRepositorySpec
 
   "SlugInfoRepository.getUniqueSlugNames" should {
     "filter out duplicate names" in {
-      repository.add(slugInfo).futureValue
-      repository.add(otherSlug).futureValue
-      repository.add(otherSlug).futureValue
+      repository.add(TestSlugInfos.slugInfo).futureValue
+      repository.add(TestSlugInfos.otherSlug).futureValue
+      repository.add(TestSlugInfos.otherSlug).futureValue
       repository.getUniqueSlugNames.futureValue shouldBe Seq("my-slug", "other-slug")
     }
   }

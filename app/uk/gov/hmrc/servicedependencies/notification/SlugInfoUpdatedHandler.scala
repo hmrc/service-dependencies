@@ -80,16 +80,17 @@ class SlugInfoUpdatedHandler @Inject()(
                                        artefactProcessorConnector.getSlugInfo(available.name, available.version),
                                        s"SlugInfo for name: ${available.name}, version: ${available.version} was not found"
                                      )
-                        optMeta   <- // we don't go to metaArtefactRepository since it might not have been updated yet...
-                                     EitherT.liftF(
+                        meta   <- // we don't go to metaArtefactRepository since it might not have been updated yet...
+                                     EitherT.fromOptionF(
                                        // try a few times, the meta-artefact may not have been processed yet
                                        // or it may just not be available (e.g. java slugs)
                                        attempt(delay = metaArtefactRetryDelay, times = metaArtefactRetryTimes)(() =>
                                          artefactProcessorConnector.getMetaArtefact(slugInfo.name, slugInfo.version)
                                        )
+                                     , s"Meta Artefact for name: ${slugInfo.name}, version: ${slugInfo.version} was not found"
                                      )
                         _         <- EitherT(
-                                       slugInfoService.addSlugInfo(slugInfo, optMeta)
+                                       slugInfoService.addSlugInfo(slugInfo, meta)
                                          .map(Right.apply)
                                          .recover {
                                            case e =>

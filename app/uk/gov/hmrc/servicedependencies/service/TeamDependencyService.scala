@@ -29,12 +29,12 @@ import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
 class TeamDependencyService @Inject()(
-  teamsAndReposConnector       : TeamsAndRepositoriesConnector
-, slugInfoRepository           : SlugInfoRepository
-, serviceConfigsConnector      : ServiceConfigsConnector
-, slugDependenciesService      : SlugDependenciesService
-, latestVersionRepository      : LatestVersionRepository
-, metaArtefactRepository       : MetaArtefactRepository
+  teamsAndReposConnector : TeamsAndRepositoriesConnector
+, slugInfoRepository     : SlugInfoRepository
+, serviceConfigsConnector: ServiceConfigsConnector
+, curatedLibrariesService: CuratedLibrariesService
+, latestVersionRepository: LatestVersionRepository
+, metaArtefactRepository : MetaArtefactRepository
 )(implicit ec: ExecutionContext
 ) {
 
@@ -48,24 +48,34 @@ class TeamDependencyService @Inject()(
                             .map(_.map(dependenciesFromMetaArtefact(_, bobbyRules, latestVersions)))
                         }.map(_.flatten)
       services       <- team.services.toList.traverse { repoName =>
-                            metaArtefactRepository.find(repoName).flatMap {
-                            case Some(metaArtefact) => Future.successful(Some(dependenciesFromMetaArtefact(metaArtefact, bobbyRules, latestVersions)))
-                            case None               => slugDependenciesService.curatedLibrariesOfSlug(
-                                                         repoName,
-                                                         SlugInfoFlag.Latest,
-                                                         bobbyRules,
-                                                         latestVersions
-                                                       ).map(_.map(dependencies =>
-                                                           Dependencies(
-                                                             repositoryName         = repoName,
-                                                             libraryDependencies    = dependencies.filter(d => d.scope == Some(DependencyScope.Compile) || d.scope == Some(DependencyScope.Test)),
-                                                             sbtPluginsDependencies = dependencies.filter(_.scope == Some(DependencyScope.Build)),
-                                                             otherDependencies      = Seq.empty
-                                                           )
-                                                       ))
+                            metaArtefactRepository.find(repoName).map {
+                              case None               => Dependencies(repositoryName = repoName, libraryDependencies = Nil, sbtPluginsDependencies = Nil, otherDependencies = Nil)
+                              case Some(metaArtefact) => dependenciesFromMetaArtefact(metaArtefact, bobbyRules, latestVersions)
                           }
-                        }.map(_.flatten)
+                        }
     } yield libs ++ services
+
+  def teamServiceDependenciesMap(
+    teamName: String
+  , flag    : SlugInfoFlag
+  )(implicit hc: HeaderCarrier
+  ): Future[Map[String, Seq[Dependency]]] =
+    for {
+      bobbyRules     <- serviceConfigsConnector.getBobbyRules()
+      latestVersions <- latestVersionRepository.getAllEntries()
+      team           <- teamsAndReposConnector.getTeam(teamName)
+      res            <- team.services.toList.traverse { serviceName =>
+                          for {
+                            optMetaArtefact <- OptionT(slugInfoRepository.getSlugInfo(serviceName, flag))
+                                                 .flatMap(slugInfo => OptionT(metaArtefactRepository.find(serviceName, slugInfo.version)))
+                                                 .value
+                            optDeps         =  optMetaArtefact.map { metaArtefact =>
+                                                 val x = dependenciesFromMetaArtefact(metaArtefact, bobbyRules, latestVersions)
+                                                 x.sbtPluginsDependencies ++ x.libraryDependencies
+                                               }
+                          } yield optDeps.map(serviceName -> _)
+                        }
+    } yield res.collect { case Some(kv) => kv }.toMap
 
   private def dependenciesFromMetaArtefact(
     metaArtefact  : MetaArtefact,
@@ -73,7 +83,7 @@ class TeamDependencyService @Inject()(
     latestVersions: Seq[LatestVersion]
   ): Dependencies = {
     def toDependencies(name: String, scope: DependencyScope, dotFile: String) =
-      slugDependenciesService.curatedLibrariesFromGraph(
+      curatedLibrariesService.fromGraph(
         dotFile        = dotFile,
         rootName       = name,
         latestVersions = latestVersions,
@@ -91,28 +101,4 @@ class TeamDependencyService @Inject()(
       otherDependencies      = Seq.empty
     )
   }
-
-  def dependenciesOfSlugsForTeam(
-    teamName: String
-  , flag    : SlugInfoFlag
-  )(implicit hc: HeaderCarrier
-  ): Future[Map[String, Seq[Dependency]]] =
-    for {
-      team           <- teamsAndReposConnector.getTeam(teamName)
-      latestVersions <- latestVersionRepository.getAllEntries()
-      bobbyRules     <- serviceConfigsConnector.getBobbyRules()
-      res            <- team.services.toList.traverse { serviceName =>
-                          for {
-                            optMetaArtefact <- OptionT(slugInfoRepository.getSlugInfo(serviceName, flag))
-                                                 .flatMap(slugInfo => OptionT(metaArtefactRepository.find(serviceName, slugInfo.version)))
-                                                 .value
-                            optDeps         <- optMetaArtefact match {
-                                                 case Some(metaArtefact) =>
-                                                  val x = dependenciesFromMetaArtefact(metaArtefact, bobbyRules, latestVersions)
-                                                  Future.successful(Some(x.sbtPluginsDependencies ++ x.libraryDependencies))
-                                                 case None => slugDependenciesService.curatedLibrariesOfSlug(serviceName, flag, bobbyRules, latestVersions)
-                                               }
-                          } yield optDeps.map(serviceName -> _)
-                        }
-    } yield res.collect { case Some(kv) => kv }.toMap
 }

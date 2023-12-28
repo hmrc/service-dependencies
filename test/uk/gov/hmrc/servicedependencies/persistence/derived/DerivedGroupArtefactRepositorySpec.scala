@@ -20,9 +20,7 @@ import org.mockito.MockitoSugar
 import org.scalatest.OptionValues
 import uk.gov.hmrc.mongo.test.DefaultPlayMongoRepositorySupport
 import uk.gov.hmrc.servicedependencies.model.GroupArtefacts
-import uk.gov.hmrc.servicedependencies.persistence.TestSlugInfos.slugInfo
-import uk.gov.hmrc.servicedependencies.persistence.{DeploymentRepository, SlugInfoRepository}
-import uk.gov.hmrc.servicedependencies.service.DependencyGraphParser
+import uk.gov.hmrc.servicedependencies.persistence.{DeploymentRepository, SlugInfoRepository, TestSlugInfos}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import org.scalatest.matchers.should.Matchers
@@ -37,11 +35,9 @@ class DerivedGroupArtefactRepositorySpec
 
   lazy val deploymentRepository  = new DeploymentRepository(mongoComponent)
   lazy val slugInfoRepo          = new SlugInfoRepository(mongoComponent, deploymentRepository)
-  lazy val dependencyGraphParser = new DependencyGraphParser()
   lazy val derivedServiceDependenciesRepository =
     new DerivedServiceDependenciesRepository(
       mongoComponent,
-      dependencyGraphParser,
       deploymentRepository
     )
 
@@ -52,22 +48,25 @@ class DerivedGroupArtefactRepositorySpec
   "DerivedGroupArtefactRepository.findGroupsArtefacts" should {
     "return a map of artefact group to list of found artefacts" in {
       deploymentRepository.markLatest(
-        slugInfo.name
-      , slugInfo.version
+        TestSlugInfos.metaArtefact.name
+      , TestSlugInfos.metaArtefact.version
       ).futureValue
 
       derivedServiceDependenciesRepository.populateDependencies(
-        slugInfo.copy(dependencyDotCompile = scala.io.Source.fromResource("graphs/dependencies-compile.dot").mkString)
-      , meta = None
+        TestSlugInfos.metaArtefact.copy(
+          modules = TestSlugInfos.metaArtefact.modules.map(_.copy(dependencyDotCompile = Some(scala.io.Source.fromResource("graphs/dependencies-compile.dot").mkString)))
+        )
       ).futureValue
 
       repository.populateAll().futureValue
 
-      val result = repository.findGroupsArtefacts.futureValue
+      val result = repository.findGroupsArtefacts().futureValue
 
-      result should have size 2
+      result should have size 4
       result shouldEqual List(
         GroupArtefacts("com.typesafe.play", List("filters-helpers")),
+        GroupArtefacts("org.scala-lang",    List("scala-library")),
+        GroupArtefacts("org.scala-sbt",     List("sbt")),
         GroupArtefacts("org.typelevel",     List("cats-core", "cats-kernel"))
       )
     }

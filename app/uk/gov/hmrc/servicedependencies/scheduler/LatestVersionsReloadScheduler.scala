@@ -25,17 +25,17 @@ import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.mongo.TimestampSupport
 import uk.gov.hmrc.mongo.lock.{ScheduledLockService, MongoLockRepository}
 import uk.gov.hmrc.servicedependencies.config.SchedulerConfigs
-import uk.gov.hmrc.servicedependencies.service.DependencyDataUpdatingService
+import uk.gov.hmrc.servicedependencies.service.LatestVersionService
 import uk.gov.hmrc.servicedependencies.util.SchedulerUtils
 
 import scala.concurrent.ExecutionContext
 
 @Singleton
 class LatestVersionsReloadScheduler @Inject()(
-  schedulerConfigs             : SchedulerConfigs
-, dependencyDataUpdatingService: DependencyDataUpdatingService
-, mongoLockRepository          : MongoLockRepository
-, timestampSupport             : TimestampSupport
+  schedulerConfigs    : SchedulerConfigs
+, latestVersionService: LatestVersionService
+, mongoLockRepository : MongoLockRepository
+, timestampSupport    : TimestampSupport
 )(implicit
   actorSystem         : ActorSystem
 , applicationLifecycle: ApplicationLifecycle
@@ -57,7 +57,8 @@ class LatestVersionsReloadScheduler @Inject()(
   , schedulerConfig = schedulerConfigs.latestVersionsReload
   , lock            = lock
   ){
-    dependencyDataUpdatingService.reloadLatestVersions()
+    latestVersionService
+      .reloadLatestVersions()
       .map(_ => ())
   }
 }

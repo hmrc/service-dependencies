@@ -32,7 +32,7 @@ import uk.gov.hmrc.servicedependencies.util.Max
 import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
-class DependencyDataUpdatingService @Inject()(
+class LatestVersionService @Inject()(
   serviceDependenciesConfig     : ServiceDependenciesConfig
 , latestVersionRepository       : LatestVersionRepository
 , derivedGroupArtefactRepository: DerivedGroupArtefactRepository
@@ -42,7 +42,7 @@ class DependencyDataUpdatingService @Inject()(
 )(implicit ec: ExecutionContext
 ) extends Logging {
 
-  def now(): Instant = Instant.now()
+  protected def now(): Instant = Instant.now() // Overridden in unit tests
 
   lazy val curatedDependencyConfig =
     serviceDependenciesConfig.curatedDependencyConfig
@@ -82,7 +82,7 @@ class DependencyDataUpdatingService @Inject()(
     } yield ()
 
   private def hmrcDependencies(): Future[Seq[DependencyConfig]] =
-    derivedGroupArtefactRepository.findGroupsArtefacts
+    derivedGroupArtefactRepository.findGroupsArtefacts()
       .map(groupsArtefacts =>
         groupsArtefacts
           .filter(_.group.startsWith("uk.gov.hmrc"))

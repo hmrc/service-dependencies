@@ -29,7 +29,6 @@ import uk.gov.hmrc.servicedependencies.persistence.derived.DerivedServiceDepende
 
 import scala.concurrent.{ExecutionContext, Future}
 
-
 @Singleton
 class DependencyLookupService @Inject() (
   serviceConfigs       : ServiceConfigsConnector

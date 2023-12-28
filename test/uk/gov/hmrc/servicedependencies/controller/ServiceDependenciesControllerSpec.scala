@@ -88,28 +88,28 @@ class ServiceDependenciesControllerSpec
   }
 
   case class Boot(
-      mockSlugInfoService              : SlugInfoService
-    , mockSlugDependenciesService      : SlugDependenciesService
-    , mockServiceConfigsConnector      : ServiceConfigsConnector
-    , mockTeamDependencyService        : TeamDependencyService
-    , mockMetaArtefactRepository       : MetaArtefactRepository
-    , mockLatestVersionRepository      : LatestVersionRepository
-    , mockDerivedModuleRepository      : DerivedModuleRepository
-    , controller                       : ServiceDependenciesController
+      mockSlugInfoService        : SlugInfoService
+    , mockCuratedLibrariesService: CuratedLibrariesService
+    , mockServiceConfigsConnector: ServiceConfigsConnector
+    , mockTeamDependencyService  : TeamDependencyService
+    , mockMetaArtefactRepository : MetaArtefactRepository
+    , mockLatestVersionRepository: LatestVersionRepository
+    , mockDerivedModuleRepository: DerivedModuleRepository
+    , controller                 : ServiceDependenciesController
     )
 
   object Boot {
     def init: Boot = {
-      val mockSlugInfoService               = mock[SlugInfoService]
-      val mockSlugDependenciesService       = mock[SlugDependenciesService]
-      val mockServiceConfigsConnector       = mock[ServiceConfigsConnector]
-      val mockTeamDependencyService         = mock[TeamDependencyService]
-      val mockMetaArtefactRepository        = mock[MetaArtefactRepository]
-      val mockLatestVersionRepository       = mock[LatestVersionRepository]
-      val mockDerivedModuleRepository       = mock[DerivedModuleRepository]
+      val mockSlugInfoService         = mock[SlugInfoService]
+      val mockCuratedLibrariesService = mock[CuratedLibrariesService]
+      val mockServiceConfigsConnector = mock[ServiceConfigsConnector]
+      val mockTeamDependencyService   = mock[TeamDependencyService]
+      val mockMetaArtefactRepository  = mock[MetaArtefactRepository]
+      val mockLatestVersionRepository = mock[LatestVersionRepository]
+      val mockDerivedModuleRepository = mock[DerivedModuleRepository]
       val controller = new ServiceDependenciesController(
           mockSlugInfoService
-        , mockSlugDependenciesService
+        , mockCuratedLibrariesService
         , mockServiceConfigsConnector
         , mockTeamDependencyService
         , mockMetaArtefactRepository
@@ -119,7 +119,7 @@ class ServiceDependenciesControllerSpec
         )
       Boot(
           mockSlugInfoService
-        , mockSlugDependenciesService
+        , mockCuratedLibrariesService
         , mockServiceConfigsConnector
         , mockTeamDependencyService
         , mockMetaArtefactRepository

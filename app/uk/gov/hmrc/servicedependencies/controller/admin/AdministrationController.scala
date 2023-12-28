@@ -19,20 +19,20 @@ package uk.gov.hmrc.servicedependencies.controller.admin
 import javax.inject.{Inject, Singleton}
 import play.api.mvc.ControllerComponents
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
-import uk.gov.hmrc.servicedependencies.service.DependencyDataUpdatingService
+import uk.gov.hmrc.servicedependencies.service.LatestVersionService
 
 import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
 class AdministrationController @Inject()(
-    dependencyDataUpdatingService: DependencyDataUpdatingService
+    latestVersionService: LatestVersionService
   , cc                           : ControllerComponents
   )(implicit ec: ExecutionContext
   ) extends BackendController(cc) {
 
   def reloadLatestVersions =
     Action {
-      dependencyDataUpdatingService
+      latestVersionService
         .reloadLatestVersions()
         .recoverWith {
           case ex => Future.failed(new RuntimeException("reload of dependency versions failed", ex))

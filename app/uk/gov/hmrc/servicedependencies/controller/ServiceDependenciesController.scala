@@ -28,7 +28,7 @@ import uk.gov.hmrc.servicedependencies.controller.model.{Dependencies, Dependenc
 import uk.gov.hmrc.servicedependencies.model._
 import uk.gov.hmrc.servicedependencies.persistence.{LatestVersionRepository, MetaArtefactRepository}
 import uk.gov.hmrc.servicedependencies.persistence.derived.DerivedModuleRepository
-import uk.gov.hmrc.servicedependencies.service.{SlugDependenciesService, SlugInfoService, TeamDependencyService}
+import uk.gov.hmrc.servicedependencies.service.{CuratedLibrariesService, SlugInfoService, TeamDependencyService}
 
 import java.time.LocalDate
 import scala.concurrent.{ExecutionContext, Future}
@@ -36,7 +36,7 @@ import scala.concurrent.{ExecutionContext, Future}
 @Singleton
 class ServiceDependenciesController @Inject()(
   slugInfoService         : SlugInfoService
-, slugDependenciesService : SlugDependenciesService
+, curatedLibrariesService : CuratedLibrariesService
 , serviceConfigsConnector : ServiceConfigsConnector
 , teamDependencyService   : TeamDependencyService
 , metaArtefactRepository  : MetaArtefactRepository
@@ -83,7 +83,8 @@ class ServiceDependenciesController @Inject()(
   def getGroupArtefacts: Action[AnyContent] =
     Action.async {
       implicit val format = GroupArtefacts.apiFormat
-      slugInfoService.findGroupsArtefacts
+      slugInfoService
+        .findGroupsArtefacts()
         .map(res => Ok(Json.toJson(res)))
     }
 
@@ -94,22 +95,33 @@ class ServiceDependenciesController @Inject()(
                               version match {
                                 case Some(version) => slugInfoService.getSlugInfo(name, Version(version))
                                 case None          => slugInfoService.getSlugInfo(name, SlugInfoFlag.Latest)
-                              },
-                              NotFound("")
+                              }
+                            , NotFound("")
                             )
-         // prefer graph data from meta-artefact if available
-         optMetaArtefact <- EitherT.liftF[Future, Result, Option[MetaArtefact]](metaArtefactRepository.find(name, slugInfo.version))
-         optModule       =  optMetaArtefact.flatMap(x => x.modules.find(_.name == name).orElse(x.modules.headOption))
-         slugInfo2       =  optMetaArtefact.fold(slugInfo)(ma => slugInfo.copy(
-                              dependencyDotCompile  = optModule.flatMap(_.dependencyDotCompile).getOrElse(""),
-                              dependencyDotProvided = optModule.flatMap(_.dependencyDotProvided).getOrElse(""),
-                              dependencyDotTest     = optModule.flatMap(_.dependencyDotTest).getOrElse(""),
-                              dependencyDotIt       = optModule.flatMap(_.dependencyDotIt).getOrElse(""),
-                              dependencyDotBuild    = ma.dependencyDotBuild.getOrElse("")
-                            ))
+         optMetaArtefact <- EitherT.right[Result](metaArtefactRepository.find(name, slugInfo.version))
+         optModule       =  optMetaArtefact.flatMap(_.modules.headOption)
+         slugInfoExtra   =  SlugInfoExtra(
+           uri                   = slugInfo.uri
+         , created               = slugInfo.created
+         , name                  = slugInfo.name
+         , version               = slugInfo.version
+         , teams                 = slugInfo.teams
+         , runnerVersion         = slugInfo.runnerVersion
+         , classpath             = slugInfo.classpath
+         , java                  = slugInfo.java
+         , sbtVersion            = slugInfo.sbtVersion
+         , repoUrl               = slugInfo.repoUrl
+         , dependencies          = Nil
+         , dependencyDotCompile  = optModule.flatMap(_.dependencyDotCompile).getOrElse("")
+         , dependencyDotProvided = optModule.flatMap(_.dependencyDotProvided).getOrElse("")
+         , dependencyDotTest     = optModule.flatMap(_.dependencyDotTest).getOrElse("")
+         , dependencyDotIt       = optModule.flatMap(_.dependencyDotIt).getOrElse("")
+         , dependencyDotBuild    = optMetaArtefact.flatMap(_.dependencyDotBuild).getOrElse("")
+         , applicationConfig     = slugInfo.applicationConfig
+         , slugConfig            = slugInfo.slugConfig
+        )
        } yield {
-         implicit val f = ApiSlugInfoFormats.slugInfoFormat
-         Ok(Json.toJson(slugInfo2))
+         Ok(Json.toJson(slugInfoExtra)(SlugInfoExtra.write))
        }
       ).merge
     }
@@ -119,7 +131,7 @@ class ServiceDependenciesController @Inject()(
       (for {
          f    <- EitherT.fromOption[Future](SlugInfoFlag.parse(flag), BadRequest(s"invalid flag '$flag'"))
          deps <- EitherT.liftF[Future, Result, Map[String, Seq[Dependency]]](
-                   teamDependencyService.dependenciesOfSlugsForTeam(team, f)
+                   teamDependencyService.teamServiceDependenciesMap(team, f)
                  )
        } yield {
          implicit val dw = Dependency.writes
@@ -167,103 +179,21 @@ class ServiceDependenciesController @Inject()(
       for {
         latestVersions <- latestVersionRepository.getAllEntries()
         bobbyRules     <- serviceConfigsConnector.getBobbyRules()
-        repositories   <- versionOption match {
-                            case Some(version) => (if (version == "latest")
-                                                     metaArtefactRepository.find(repositoryName)
-                                                   else
-                                                     metaArtefactRepository.find(repositoryName, Version(version))
-                                                  ).flatMap {
-                                                    case Some(metaArtefact) => Future.successful(toRepository(metaArtefact, latestVersions, bobbyRules))
-                                                    case None               => repositoryFromCuratedSlugDependencies(repositoryName, version)
-                                                  }.map(Seq(_))
-                            case None          => metaArtefactRepository
-                                                    .findAllVersions(repositoryName)
-                                                    .map { _.map { toRepository(_, latestVersions, bobbyRules) }}
+        metaArtefacts  <- versionOption match {
+                            case Some(version) if version == "latest" => metaArtefactRepository.find(repositoryName).map(_.toSeq)
+                            case Some(version)                        => metaArtefactRepository.find(repositoryName, Version(version)).map(_.toSeq)
+                            case None                                 => metaArtefactRepository.findAllVersions(repositoryName)
                           }
+        repositories   =  metaArtefacts.map(toRepository(_, latestVersions, bobbyRules))
       } yield {
         implicit val rw: OWrites[Repository] = Repository.writes
         Ok(Json.toJson(repositories))
       }
     }
 
-  private def repositoryFromCuratedSlugDependencies(repositoryName: String, version: String): Future[Repository] =
-    for {
-      dependencyOption <- version match {
-                            case "latest" => slugDependenciesService.curatedLibrariesOfSlug(repositoryName, SlugInfoFlag.Latest)
-                            case version  => slugDependenciesService.curatedLibrariesOfSlug(repositoryName, Version(version))
-                          }
-      dependencies     =  dependencyOption.getOrElse(Nil)
-    } yield Repository(
-      name              = repositoryName,
-      version           = None,
-      dependenciesBuild = dependencies.filter(_.scope.contains(DependencyScope.Build)),
-      modules           = Seq(
-                            RepositoryModule(
-                              name                 = repositoryName,
-                              group                = "uk.gov.hmrc",
-                              dependenciesCompile  = dependencies.filter(_.scope.contains(DependencyScope.Compile)),
-                              dependenciesProvided = dependencies.filter(_.scope.contains(DependencyScope.Provided)),
-                              dependenciesTest     = dependencies.filter(_.scope.contains(DependencyScope.Test)),
-                              dependenciesIt       = dependencies.filter(_.scope.contains(DependencyScope.It)),
-                              crossScalaVersions   = None
-                            )
-      )
-    )
-
-  @deprecated("Use moduleDependencies", "21.02.2023")
-  def moduleDependenciesDeprecated(repositoryName: String, version: Option[String]): Action[AnyContent] =
-    Action.async {
-      (for {
-         meta           <- EitherT.fromOptionF(
-                             version match {
-                               case Some(version)          => metaArtefactRepository.find(repositoryName, Version(version))
-                               case None /* i.e. latest */ => metaArtefactRepository.find(repositoryName)
-                             },
-                             NotFound("")
-                           )
-         latestVersions <- EitherT.liftF[Future, Result, Seq[LatestVersion]](latestVersionRepository.getAllEntries)
-         bobbyRules     <- EitherT.liftF[Future, Result, BobbyRules](serviceConfigsConnector.getBobbyRules())
-       } yield {
-        val repository = toRepository(meta, latestVersions, bobbyRules)
-        implicit val rw = Repository.writes
-         Ok(Json.toJson(repository))
-       }
-      ).leftFlatMap(_ =>
-        // fallback to data from curatedLibrariesOfSlug
-        for {
-          dependencies <- version match {
-                            case None          => EitherT.fromOptionF(slugDependenciesService.curatedLibrariesOfSlug(repositoryName, SlugInfoFlag.Latest), NotFound(""))
-                            case Some(version) => EitherT.fromOptionF(slugDependenciesService.curatedLibrariesOfSlug(repositoryName, Version(version)), NotFound(""))
-                          }
-        } yield {
-          implicit val rw = Repository.writes
-          Ok(
-            Json.toJson(
-              Repository(
-                name              = repositoryName,
-                version           = None,
-                dependenciesBuild = dependencies.filter(_.scope == Some(DependencyScope.Build)),
-                modules           = Seq(
-                                      RepositoryModule(
-                                        name                 = repositoryName,
-                                        group                = "uk.gov.hmrc",
-                                        dependenciesCompile  = dependencies.filter(_.scope == Some(DependencyScope.Compile)),
-                                        dependenciesProvided = dependencies.filter(_.scope == Some(DependencyScope.Provided)),
-                                        dependenciesTest     = dependencies.filter(_.scope == Some(DependencyScope.Test)),
-                                        dependenciesIt       = dependencies.filter(_.scope == Some(DependencyScope.It)),
-                                        crossScalaVersions   = None
-                                      )
-                                    )
-              )
-            )
-          )
-        }
-      ).merge
-    }
-
   private def toRepository(meta: MetaArtefact, latestVersions: Seq[LatestVersion], bobbyRules: BobbyRules) = {
     def toDependencies(name: String, scope: DependencyScope, dotFile: String) =
-      slugDependenciesService.curatedLibrariesFromGraph(
+      curatedLibrariesService.fromGraph(
         dotFile        = dotFile,
         rootName       = name,
         latestVersions = latestVersions,
@@ -431,5 +361,68 @@ object RepositoryModule {
     ~ (__ \ "activeBobbyRules"    ).write[Seq[DependencyBobbyRule]]
     ~ (__ \ "pendingBobbyRules"   ).write[Seq[DependencyBobbyRule]]
     )(unlift(RepositoryModule.unapply))
+  }
+}
+
+import java.time.Instant
+
+case class SlugInfoExtra(
+  uri                  : String,
+  created              : Instant,
+  name                 : String,
+  version              : Version,
+  teams                : List[String],
+  runnerVersion        : String,
+  classpath            : String,
+  java                 : JavaInfo,
+  sbtVersion           : Option[String],
+  repoUrl              : Option[String],
+  dependencies         : List[SlugDependency],
+  dependencyDotCompile : String,
+  dependencyDotProvided: String,
+  dependencyDotTest    : String,
+  dependencyDotIt      : String,
+  dependencyDotBuild   : String,
+  applicationConfig    : String,
+  slugConfig           : String,
+)
+
+case class SlugDependency(
+  path       : String,
+  version    : Version,
+  group      : String,
+  artifact   : String,
+  meta       : String = ""
+)
+
+object SlugInfoExtra {
+  val write: OWrites[SlugInfoExtra] = {
+    implicit val sdw: OWrites[SlugDependency] =
+      ( (__ \ "path"    ).write[String]
+      ~ (__ \ "version" ).write[Version](Version.format)
+      ~ (__ \ "group"   ).write[String]
+      ~ (__ \ "artifact").write[String]
+      ~ (__ \ "meta"    ).write[String]
+      )(unlift(SlugDependency.unapply))
+
+    ( (__ \ "uri"                       ).write[String]
+    ~ (__ \ "created"                   ).write[Instant]
+    ~ (__ \ "name"                      ).write[String]
+    ~ (__ \ "version"                   ).write[Version](Version.format)
+    ~ (__ \ "teams"                     ).write[List[String]]
+    ~ (__ \ "runnerVersion"             ).write[String]
+    ~ (__ \ "classpath"                 ).write[String]
+    ~ (__ \ "java"                      ).write[JavaInfo](ApiSlugInfoFormats.javaInfoFormat)
+    ~ (__ \ "sbtVersion"                ).formatNullable[String]
+    ~ (__ \ "repoUrl"                   ).formatNullable[String]
+    ~ (__ \ "dependencies"              ).write[List[SlugDependency]]
+    ~ (__ \ "dependencyDot" \ "compile" ).write[String]
+    ~ (__ \ "dependencyDot" \ "provided").write[String]
+    ~ (__ \ "dependencyDot" \ "test"    ).write[String]
+    ~ (__ \ "dependencyDot" \ "it"      ).write[String]
+    ~ (__ \ "dependencyDot" \ "build"   ).write[String]
+    ~ (__ \ "applicationConfig"         ).write[String]
+    ~ (__ \ "slugConfig"                ).write[String]
+    )(unlift(SlugInfoExtra.unapply))
   }
 }

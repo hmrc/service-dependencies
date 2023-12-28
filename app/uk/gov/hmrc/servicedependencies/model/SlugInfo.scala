@@ -42,26 +42,6 @@ object SlugInfoFlag {
   }
 }
 
-case class SlugDependency(
-  path       : String,
-  version    : Version,
-  group      : String,
-  artifact   : String,
-  meta       : String = ""
-)
-
-object SlugDependency {
-  val format = {
-    implicit val vf  = Version.format
-    ( (__ \ "path"    ).format[String]
-    ~ (__ \ "version" ).format[Version]
-    ~ (__ \ "group"   ).format[String]
-    ~ (__ \ "artifact").format[String]
-    ~ (__ \ "meta"    ).format[String]
-    )(SlugDependency.apply, unlift(SlugDependency.unapply))
-  }
-}
-
 case class JavaInfo(
   version : String,
   vendor  : String,
@@ -79,21 +59,9 @@ case class SlugInfo(
   java                 : JavaInfo,
   sbtVersion           : Option[String],
   repoUrl              : Option[String],
-  dependencies         : List[SlugDependency],
-  dependencyDotCompile : String,
-  dependencyDotProvided: String,
-  dependencyDotTest    : String,
-  dependencyDotIt      : String,
-  dependencyDotBuild   : String,
   applicationConfig    : String,
   slugConfig           : String,
-) {
-  lazy val classpathOrderedDependencies: List[SlugDependency] =
-    classpath.split(":")
-      .map(_.replace("$lib_dir/", s"./$name-$version/lib/"))
-      .toList
-      .flatMap(path => dependencies.filter(_.path == path))
-}
+)
 
 case class DependencyConfig(
     group   : String
@@ -111,7 +79,6 @@ trait MongoSlugInfoFormats {
 
   val slugInfoFormat: OFormat[SlugInfo] = {
     implicit val vf  = Version.format
-    implicit val sdf = SlugDependency.format
     implicit val jif = javaInfoFormat
     ( (__ \ "uri"              ).format[String]
     ~ (__ \ "created"          ).format[Instant](MongoJavatimeFormats.instantFormat)
@@ -120,19 +87,13 @@ trait MongoSlugInfoFormats {
     ~ OFormat( Reads.pure(List.empty[String])
              , ignore[List[String]]
              )
-    ~ (__ \ "runnerVersion"             ).format[String]
-    ~ (__ \ "classpath"                 ).format[String]
-    ~ (__ \ "java"                      ).format[JavaInfo]
-    ~ (__ \ "sbtVersion"                ).formatNullable[String]
-    ~ (__ \ "repoUrl"                   ).formatNullable[String]
-    ~ (__ \ "dependencies"              ).format[List[SlugDependency]] // this has been replaced by dependencyDot, but is still needed for Java slugs
-    ~ (__ \ "dependencyDot" \ "compile").formatWithDefault[String]("")
-    ~ (__ \ "dependencyDot" \ "provided").formatWithDefault[String]("")
-    ~ (__ \ "dependencyDot" \ "test"    ).formatWithDefault[String]("")
-    ~ (__ \ "dependencyDot" \ "it"      ).formatWithDefault[String]("")
-    ~ (__ \ "dependencyDot" \ "build"   ).formatWithDefault[String]("")
-    ~ (__ \ "applicationConfig"         ).formatWithDefault[String]("")
-    ~ (__ \ "slugConfig"                ).formatWithDefault[String]("")
+    ~ (__ \ "runnerVersion"    ).format[String]
+    ~ (__ \ "classpath"        ).format[String]
+    ~ (__ \ "java"             ).format[JavaInfo]
+    ~ (__ \ "sbtVersion"       ).formatNullable[String]
+    ~ (__ \ "repoUrl"          ).formatNullable[String]
+    ~ (__ \ "applicationConfig").formatWithDefault[String]("")
+    ~ (__ \ "slugConfig"       ).formatWithDefault[String]("")
     )(SlugInfo.apply, unlift(SlugInfo.unapply))
   }
 
@@ -168,7 +129,6 @@ trait MongoSlugInfoFormats {
                 , "runnerVersion"
                 , "classpath"
                 , "java"
-                , "dependencies"
                 ]
     , properties:
       { uri              : { bsonType: "string" }
@@ -184,18 +144,6 @@ trait MongoSlugInfoFormats {
                              , vendor : { bsonType: "string" }
                              , kind   : { bsonType: "string" }
                              }
-                           }
-      , dependencies     : { bsonType: "array"
-                           , items   : { bsonType: "object"
-                                       , required: [ "path", "version", "group", "artifact" ]
-                                       , properties:
-                                         { path    : { bsonType: "string" }
-                                         , version : { bsonType: "string" }
-                                         , group   : { bsonType: "string" }
-                                         , artifact: { bsonType: "string" }
-                                         , meta    : { bsonType: "string" }
-                                         }
-                                       }
                            }
       , applicationConfig: { bsonType: "string" }
       , slugConfig       : { bsonType: "string" }
@@ -213,7 +161,6 @@ trait ApiSlugInfoFormats {
   val slugInfoFormat: OFormat[SlugInfo] = {
     implicit val vf  = Version.format
     implicit val jif = javaInfoFormat
-    implicit val sdf = SlugDependency.format
     ( (__ \ "uri"                       ).format[String]
     ~ (__ \ "created"                   ).format[Instant]
     ~ (__ \ "name"                      ).format[String]
@@ -224,12 +171,6 @@ trait ApiSlugInfoFormats {
     ~ (__ \ "java"                      ).format[JavaInfo]
     ~ (__ \ "sbtVersion"                ).formatNullable[String]
     ~ (__ \ "repoUrl"                   ).formatNullable[String]
-    ~ (__ \ "dependencies"              ).format[List[SlugDependency]]
-    ~ (__ \ "dependencyDot" \ "compile" ).format[String]
-    ~ (__ \ "dependencyDot" \ "provided").format[String]
-    ~ (__ \ "dependencyDot" \ "test"    ).format[String]
-    ~ (__ \ "dependencyDot" \ "it"      ).format[String]
-    ~ (__ \ "dependencyDot" \ "build"   ).format[String]
     ~ (__ \ "applicationConfig"         ).format[String]
     ~ (__ \ "slugConfig"                ).format[String]
     )(SlugInfo.apply, unlift(SlugInfo.unapply))

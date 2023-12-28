@@ -44,7 +44,7 @@ class DerivedGroupArtefactRepository @Inject()(
   // we replace all the data for each call to populateAll
   override lazy val requiresTtlIndex = false
 
-  def findGroupsArtefacts: Future[Seq[GroupArtefacts]] =
+  def findGroupsArtefacts(): Future[Seq[GroupArtefacts]] =
     collection
       .find()
       .sort(Sorts.ascending("group"))

@@ -33,61 +33,48 @@ object TestSlugInfos {
       java                  = JavaInfo("1.181.0", "OpenJDK", "JRE"),
       sbtVersion            = Some("1.4.9"),
       repoUrl               = Some("https://github.com/hmrc/test.git"),
-      dependencies          = List(
-                                SlugDependency(
-                                  path     = "lib1",
-                                  version  = Version("1.2.0"),
-                                  group    = "com.test.group",
-                                  artifact = "lib1"
-                                ),
-                                SlugDependency(
-                                  path     = "lib2",
-                                  version  = Version("0.66"),
-                                  group    = "com.test.group",
-                                  artifact = "lib2"
-                                )
-                              ),
-      dependencyDotCompile  = "",
-      dependencyDotProvided = "",
-      dependencyDotTest     = "",
-      dependencyDotIt       = "",
-      dependencyDotBuild    = "",
       applicationConfig     = "",
       slugConfig            = ""
     )
 
-  val oldSlugInfo = slugInfo.copy(
-    uri     = "https://store/slugs/my-slug/my-slug_0.26.0_0.5.2.tgz",
-    version = Version("0.26.0")
-  )
+  val metaArtefactModule =
+    MetaArtefactModule(
+      name                  = "sub-module",
+      group                 = "uk.gov.hmrc",
+      sbtVersion            = Some(Version("1.4.9")),
+      crossScalaVersions    = Some(List(Version("2.12.14"))),
+      publishSkip           = Some(false),
+      dependencyDotCompile  = None,
+      dependencyDotProvided = None,
+      dependencyDotTest     = None,
+      dependencyDotIt       = None
+    )
+
+  val metaArtefact =
+    MetaArtefact(
+      name               = slugInfo.name,
+      version            = slugInfo.version,
+      uri                = slugInfo.uri,
+      gitUrl             = slugInfo.repoUrl,
+      dependencyDotBuild = None,
+      modules            = Seq(metaArtefactModule),
+      created            = slugInfo.created
+    )
 
   val otherSlug =
     SlugInfo(
-      created               = Instant.parse("2019-06-28T11:51:23.000Z"),
-      uri                   = "https://store/slugs/other-slug/other-slug_0.55.0_0.5.2.tgz",
-      name                  = "other-slug",
-      version               = Version("0.55.0"),
-      teams                 = List.empty,
-      runnerVersion         = "0.5.2",
-      classpath             = "",
-      java                  = JavaInfo("1.191.0", "Oracle", "JDK"),
-      sbtVersion            = Some("1.4.9"),
-      repoUrl               = Some("https://github.com/hmrc/test.git"),
-      dependencies          = List(
-                                SlugDependency(
-                                  path     = "lib3",
-                                  version  = Version("1.66.1"),
-                                  group    = "io.stuff",
-                                  artifact = "lib3"
-                                )
-                              ),
-      dependencyDotCompile  = "",
-      dependencyDotProvided = "",
-      dependencyDotTest     = "",
-      dependencyDotIt       = "",
-      dependencyDotBuild    = "",
-      applicationConfig     = "",
-      slugConfig            = ""
+      created            = Instant.parse("2019-06-28T11:51:23.000Z"),
+      uri                = "https://store/slugs/other-slug/other-slug_0.55.0_0.5.2.tgz",
+      name               = "other-slug",
+      version            = Version("0.55.0"),
+      teams              = List.empty,
+      runnerVersion      = "0.5.2",
+      classpath          = "",
+      java               = JavaInfo("1.191.0", "Oracle", "JDK"),
+      sbtVersion         = Some("1.4.9"),
+      repoUrl            = Some("https://github.com/hmrc/test.git"),
+      applicationConfig  = "",
+      slugConfig         = ""
     )
 
   val nonJavaSlugInfo = slugInfo.copy(

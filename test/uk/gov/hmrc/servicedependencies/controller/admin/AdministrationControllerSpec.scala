@@ -23,7 +23,7 @@ import org.scalatest.wordspec.AnyWordSpec
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
 import uk.gov.hmrc.servicedependencies.model.LatestVersion
-import uk.gov.hmrc.servicedependencies.service.DependencyDataUpdatingService
+import uk.gov.hmrc.servicedependencies.service.LatestVersionService
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
@@ -39,32 +39,32 @@ class AdministrationControllerSpec
     "call the reloadLibraryDependencyDataForAllRepositories on the service" in {
       val boot = Boot.init
 
-      when(boot.mockDependencyDataUpdatingService.reloadLatestVersions())
+      when(boot.mockLatestVersionService.reloadLatestVersions())
         .thenReturn(Future.successful(List.empty[LatestVersion]))
 
       boot.controller.reloadLatestVersions().apply(FakeRequest())
 
-      verify(boot.mockDependencyDataUpdatingService)
+      verify(boot.mockLatestVersionService)
         .reloadLatestVersions()
     }
   }
 
   case class Boot(
-    mockDependencyDataUpdatingService: DependencyDataUpdatingService
-  , controller                       : AdministrationController
+    mockLatestVersionService: LatestVersionService
+  , controller              : AdministrationController
   )
 
   object Boot {
     def init: Boot = {
-      val mockDependencyDataUpdatingService = mock[DependencyDataUpdatingService]
+      val mockLatestVersionService = mock[LatestVersionService]
 
       val controller = new AdministrationController(
-          mockDependencyDataUpdatingService
+          mockLatestVersionService
         , stubControllerComponents()
         )
 
       Boot(
-          mockDependencyDataUpdatingService
+          mockLatestVersionService
         , controller
         )
     }

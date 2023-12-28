@@ -24,8 +24,8 @@ import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
 class DerivedViewsService @Inject()(
-  derivedGroupArtefactRepository: DerivedGroupArtefactRepository
-, derivedModuleRepository      : DerivedModuleRepository
+  derivedGroupArtefactRepository    : DerivedGroupArtefactRepository
+, derivedModuleRepository           : DerivedModuleRepository
 )(implicit
   ec: ExecutionContext
 ) extends Logging{
@@ -33,7 +33,6 @@ class DerivedViewsService @Inject()(
   def generateAllViews() : Future[Unit] =
     for {
       _ <- Future.unit
-
       _ =  logger.info(s"Running DerivedGroupArtefactRepository.populate")
       _ <- derivedGroupArtefactRepository
             .populateAll()

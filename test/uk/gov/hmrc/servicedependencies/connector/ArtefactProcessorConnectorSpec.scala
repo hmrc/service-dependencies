@@ -103,12 +103,6 @@ class ArtefactProcessorConnectorSpec
           java                  = JavaInfo("1.181.0", "Oracle", "JDK"),
           sbtVersion            = Some("1.4.9"),
           repoUrl               = Some("https://github.com/hmrc/test.git"),
-          dependencies          = List.empty,
-          dependencyDotCompile  = "some-dependencyDotCompile",
-          dependencyDotProvided = "some-dependencyDotProvided",
-          dependencyDotTest     = "some-dependencyDotTest",
-          dependencyDotIt       = "some-dependencyDotIt",
-          dependencyDotBuild    = "some-dependencyDotBuild",
           applicationConfig     = "some-application-config",
           slugConfig            = "some-slug-config",
           teams                 = List.empty

@@ -90,10 +90,10 @@ class IntegrationTestController @Inject()(
             Future.unit
 
         for {
-          _ <- slugInfoService.addSlugInfo(
-                 slugInfoWithFlag.slugInfo,
-                 metaArtefact = None // addMetaArtefacts should be called before addSluginfos
-               )
+          m <- metaArtefactRepository
+                .find(slugInfoWithFlag.slugInfo.name, slugInfoWithFlag.slugInfo.version)
+                .map(_.getOrElse(sys.error(s"Can't find meta artefact for service: ${slugInfoWithFlag.slugInfo.name} version: ${slugInfoWithFlag.slugInfo.version}"))) // addMetaArtefacts should be called before addSluginfos
+          _ <- slugInfoService.addSlugInfo(slugInfoWithFlag.slugInfo, metaArtefact = m)
           _ <- updateFlag(slugInfoWithFlag, SlugInfoFlag.Latest      , _.latest      )
           _ <- updateFlag(slugInfoWithFlag, SlugInfoFlag.Production  , _.production  )
           _ <- updateFlag(slugInfoWithFlag, SlugInfoFlag.QA          , _.qa          )

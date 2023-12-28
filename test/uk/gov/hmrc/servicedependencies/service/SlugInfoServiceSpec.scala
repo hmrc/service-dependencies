@@ -22,8 +22,7 @@ import org.scalatest.concurrent.{IntegrationPatience, ScalaFutures}
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 import uk.gov.hmrc.http.HeaderCarrier
-import uk.gov.hmrc.servicedependencies.connector.{GitHubProxyConnector, ReleasesApiConnector, TeamsAndRepositoriesConnector, TeamsForServices}
-import uk.gov.hmrc.servicedependencies.connector.model.RepositoryInfo
+import uk.gov.hmrc.servicedependencies.connector.{TeamsAndRepositoriesConnector, TeamsForServices}
 import uk.gov.hmrc.servicedependencies.model._
 import uk.gov.hmrc.servicedependencies.persistence.{DeploymentRepository, JdkVersionRepository, SbtVersionRepository, SlugInfoRepository, SlugVersionRepository}
 import uk.gov.hmrc.servicedependencies.persistence.derived.{DerivedGroupArtefactRepository, DerivedServiceDependenciesRepository}
@@ -40,45 +39,22 @@ class SlugInfoServiceSpec
 
   implicit val hc: HeaderCarrier = HeaderCarrier()
 
-  val group        = "group"
-  val artefact     = "artefact"
-  val scope        = DependencyScope.Compile
+  val group    = "group"
+  val artefact = "artefact"
+  val scope    = DependencyScope.Compile
 
-  val v100 =
-    ServiceDependency(
-        slugName     = "service1"
-      , slugVersion  = Version("v1")
-      , teams        = List.empty
-      , depGroup     = group
-      , depArtefact  = artefact
-      , depVersion   = Version("1.0.0")
-      , scalaVersion = None
-      , scopes       = Set(scope)
-      )
-
-  val v200 =
-    ServiceDependency(
-        slugName     = "service1"
-      , slugVersion  = Version("v1")
-      , teams        = List.empty
-      , depGroup     = group
-      , depArtefact  = artefact
-      , depVersion   = Version("2.0.0")
-      , scalaVersion = None
-      , scopes       = Set(scope)
-      )
-
-  val v205 =
-    ServiceDependency(
-        slugName     = "service1"
-      , slugVersion  = Version("v1")
-      , teams        = List.empty
-      , depGroup     = group
-      , depArtefact  = artefact
-      , depVersion   = Version("2.0.5")
-      , scalaVersion = None
-      , scopes       = Set(scope)
-      )
+  val v100 = ServiceDependency(
+    slugName     = "service1"
+  , slugVersion  = Version("v1")
+  , teams        = List.empty
+  , depGroup     = group
+  , depArtefact  = artefact
+  , depVersion   = Version("1.0.0")
+  , scalaVersion = None
+  , scopes       = Set(scope)
+  )
+  val v200 = v100.copy(depVersion = Version("2.0.0"))
+  val v205 = v100.copy(depVersion = Version("2.0.5"))
 
   "SlugInfoService.findServicesWithDependency" should {
     "filter results by version" in {
@@ -156,10 +132,10 @@ class SlugInfoServiceSpec
         .thenReturn(Future.unit)
       when(boot.mockedDeploymentRepository.markLatest(any, any))
         .thenReturn(Future.unit)
-      when(boot.mockedDerivedServiceDependenciesRepository.populateDependencies(any, any))
+      when(boot.mockedDerivedServiceDependenciesRepository.populateDependencies(any))
         .thenReturn(Future.unit)
 
-      boot.service.addSlugInfo(sampleSlugInfo, metaArtefact = None).futureValue
+      boot.service.addSlugInfo(sampleSlugInfo, sampleMetaArtefact).futureValue
 
       verify(boot.mockedDeploymentRepository, times(1)).markLatest(sampleSlugInfo.name, sampleSlugInfo.version)
       verifyNoMoreInteractions(boot.mockedSlugInfoRepository)
@@ -175,10 +151,10 @@ class SlugInfoServiceSpec
         .thenReturn(Future.unit)
       when(boot.mockedDeploymentRepository.markLatest(any, any))
         .thenReturn(Future.unit)
-      when(boot.mockedDerivedServiceDependenciesRepository.populateDependencies(any, any))
+      when(boot.mockedDerivedServiceDependenciesRepository.populateDependencies(any))
         .thenReturn(Future.unit)
 
-      boot.service.addSlugInfo(slugv2, metaArtefact = None).futureValue
+      boot.service.addSlugInfo(slugv2, sampleMetaArtefact).futureValue
       verify(boot.mockedDeploymentRepository, times(1)).markLatest(slugv2.name, Version("2.0.0"))
 
       verifyNoMoreInteractions(boot.mockedSlugInfoRepository)
@@ -192,10 +168,10 @@ class SlugInfoServiceSpec
         .thenReturn(Future.successful(Some(slugv2.version)))
       when(boot.mockedSlugInfoRepository.add(any))
         .thenReturn(Future.unit)
-      when(boot.mockedDerivedServiceDependenciesRepository.populateDependencies(any, any))
+      when(boot.mockedDerivedServiceDependenciesRepository.populateDependencies(any))
         .thenReturn(Future.unit)
 
-      boot.service.addSlugInfo(slugv1, metaArtefact = None).futureValue
+      boot.service.addSlugInfo(slugv1, sampleMetaArtefact).futureValue
 
       verify(boot.mockedSlugInfoRepository, times(1)).add(slugv1)
       verifyNoMoreInteractions(boot.mockedSlugInfoRepository)
@@ -209,85 +185,12 @@ class SlugInfoServiceSpec
         .thenReturn(Future.successful(Some(slugv2.version)))
       when(boot.mockedSlugInfoRepository.add(any))
         .thenReturn(Future.unit)
-      when(boot.mockedDerivedServiceDependenciesRepository.populateDependencies(any, any))
+      when(boot.mockedDerivedServiceDependenciesRepository.populateDependencies(any))
         .thenReturn(Future.unit)
 
-      boot.service.addSlugInfo(slugv1, metaArtefact = None).futureValue
+      boot.service.addSlugInfo(slugv1, sampleMetaArtefact).futureValue
 
       verifyNoMoreInteractions(boot.mockedSlugInfoRepository)
-    }
-  }
-
-  "SlugInfoService.updateMetadata" should {
-    "clear latest flag for decommisioned services" in {
-      val boot = Boot.init
-
-      val decomissionedServices = List("service1")
-
-      when(boot.mockedSlugInfoRepository.getUniqueSlugNames)
-        .thenReturn(Future.successful(Seq.empty))
-
-      when(boot.mockedReleasesApiConnector.getWhatIsRunningWhere)
-        .thenReturn(Future.successful(List.empty))
-
-      when(boot.mockedGitHubProxyConnector.decomissionedServices)
-        .thenReturn(Future.successful(decomissionedServices))
-
-      when(boot.mockedDeploymentRepository.getNames(SlugInfoFlag.Latest))
-        .thenReturn(Future.successful(Seq.empty))
-
-      when(boot.mockedTeamsAndRepositoriesConnector.getAllRepositories(eqTo(Some(false)))(any[HeaderCarrier]))
-        .thenReturn(Future.successful(Seq.empty))
-
-      when(boot.mockedDeploymentRepository.clearFlags(any[List[SlugInfoFlag]], any[List[String]]))
-        .thenReturn(Future.unit)
-
-      boot.service.updateMetadata().futureValue
-
-      verify(boot.mockedDeploymentRepository).clearFlags(SlugInfoFlag.values, decomissionedServices)
-    }
-
-    "clear latest flag for deleted/archived services" in {
-      val boot = Boot.init
-
-      def toRepositoryInfo(name: String) =
-        RepositoryInfo(
-            name          = name
-          , createdAt     = Instant.parse("2015-09-15T16:27:38.000Z")
-          , lastUpdatedAt = Instant.parse("2017-05-19T11:00:51.000Z")
-          , repoType      = "Service"
-          , language      = None
-          )
-
-
-      val knownSlugs          = List("service1", "service2", "service3")
-      val activeServices      = List("service1", "service3").map(toRepositoryInfo)
-      val servicesToBeCleared = List("service2")
-
-      when(boot.mockedSlugInfoRepository.getUniqueSlugNames)
-        .thenReturn(Future.successful(knownSlugs))
-
-      when(boot.mockedReleasesApiConnector.getWhatIsRunningWhere)
-        .thenReturn(Future.successful(List.empty))
-
-      when(boot.mockedGitHubProxyConnector.decomissionedServices)
-        .thenReturn(Future.successful(List.empty))
-
-      when(boot.mockedDeploymentRepository.getNames(SlugInfoFlag.Latest))
-        .thenReturn(Future.successful(knownSlugs))
-
-      when(boot.mockedTeamsAndRepositoriesConnector.getAllRepositories(eqTo(Some(false)))(any[HeaderCarrier]))
-        .thenReturn(Future.successful(activeServices))
-
-      when(boot.mockedDeploymentRepository.clearFlag(any[SlugInfoFlag], any[String]))
-        .thenReturn(Future.unit)
-
-      when(boot.mockedDeploymentRepository.clearFlags(any[List[SlugInfoFlag]], any[List[String]]))
-        .thenReturn(Future.unit)
-
-      boot.service.updateMetadata().futureValue
-
-      verify(boot.mockedDeploymentRepository).clearFlags(List(SlugInfoFlag.Latest), servicesToBeCleared)
     }
   }
 
@@ -298,8 +201,6 @@ class SlugInfoServiceSpec
   , mockedSbtVersionRepository                : SbtVersionRepository
   , mockedDeploymentRepository                : DeploymentRepository
   , mockedTeamsAndRepositoriesConnector       : TeamsAndRepositoriesConnector
-  , mockedReleasesApiConnector                : ReleasesApiConnector
-  , mockedGitHubProxyConnector                : GitHubProxyConnector
   , service                                   : SlugInfoService
   , mockedDerivedServiceDependenciesRepository: DerivedServiceDependenciesRepository
   , mockedDerivedGroupArtefactRepository      : DerivedGroupArtefactRepository
@@ -313,8 +214,6 @@ class SlugInfoServiceSpec
       val mockedSbtVersionRepository              = mock[SbtVersionRepository]
       val mockedDeploymentRepository              = mock[DeploymentRepository]
       val mockedTeamsAndRepositoriesConnector     = mock[TeamsAndRepositoriesConnector]
-      val mockedReleasesApiConnector              = mock[ReleasesApiConnector]
-      val mockedGitHubProxyConnector              = mock[GitHubProxyConnector]
       val mockedDerivedGroupArtefactRepository    = mock[DerivedGroupArtefactRepository]
       val mockedDerivedSlugDependenciesRepository = mock[DerivedServiceDependenciesRepository]
 
@@ -325,8 +224,6 @@ class SlugInfoServiceSpec
           , mockedSbtVersionRepository
           , mockedDeploymentRepository
           , mockedTeamsAndRepositoriesConnector
-          , mockedReleasesApiConnector
-          , mockedGitHubProxyConnector
           , mockedDerivedSlugDependenciesRepository
           , mockedDerivedGroupArtefactRepository
           )
@@ -337,8 +234,6 @@ class SlugInfoServiceSpec
         , mockedSbtVersionRepository
         , mockedDeploymentRepository
         , mockedTeamsAndRepositoriesConnector
-        , mockedReleasesApiConnector
-        , mockedGitHubProxyConnector
         , service
         , mockedDerivedSlugDependenciesRepository
         , mockedDerivedGroupArtefactRepository
@@ -359,16 +254,19 @@ class SlugInfoServiceSpec
       java                  = JavaInfo(version = "sample-java-version", vendor = "sample-java-vendor", kind = "sample-java-kind"),
       sbtVersion            = Some("1.4.9"),
       repoUrl               = Some("https://github.com/hmrc/test.git"),
-      dependencies          = Nil,
-      dependencyDotCompile  = "",
-      dependencyDotProvided = "",
-      dependencyDotTest     = "",
-      dependencyDotIt       = "",
-      dependencyDotBuild    = "",
       applicationConfig     = "sample-applcation-config",
       slugConfig            = "sample-slug-config"
     )
 
+    val sampleMetaArtefact = MetaArtefact(
+      name    = sampleSlugInfo.name,
+      version = sampleSlugInfo.version,
+      uri     = sampleSlugInfo.uri,
+      gitUrl  = sampleSlugInfo.repoUrl,
+      modules = Nil,
+      created = sampleSlugInfo.created
+    )
+
     val boot = Boot.init
   }
- }
+}
