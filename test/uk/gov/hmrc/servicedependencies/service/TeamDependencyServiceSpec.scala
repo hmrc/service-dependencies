@@ -86,7 +86,7 @@ class TeamDependencyServiceSpec
 
       val res = tds.findAllDepsForTeam("foo").futureValue
 
-      res.head.libraryDependencies should contain (Dependency("cats-core", "org.typelevel", Version("2.2.0"), None, List(), None, Some(DependencyScope.Compile)))
+      res.head.libraryDependencies should contain (Dependency("cats-core", "org.typelevel", Version("2.2.0"), None, List(), None, DependencyScope.Compile))
     }
   }
 }

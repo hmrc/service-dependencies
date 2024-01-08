@@ -228,7 +228,7 @@ class ServiceDependenciesController @Inject()(
           latestVersion       = latestVersions.find(d => d.name == artefact && d.group == group).map(_.version),
           bobbyRuleViolations = List.empty,
           importBy            = None,
-          scope               = Some(scope)
+          scope               = scope
         )
 
     val buildDependencies = meta.dependencyDotBuild.fold(Seq.empty[Dependency])(s => toDependencies(meta.name, DependencyScope.Build, s))
