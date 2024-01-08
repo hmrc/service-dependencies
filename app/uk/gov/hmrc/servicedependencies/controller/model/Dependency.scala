@@ -28,7 +28,7 @@ case class Dependency(
   , latestVersion      : Option[Version]
   , bobbyRuleViolations: List[DependencyBobbyRule]
   , importBy           : Option[ImportedBy]      = None
-  , scope              : Option[DependencyScope] = None
+  , scope              : DependencyScope
   )
 
 object Dependency {
@@ -40,7 +40,7 @@ object Dependency {
     ~ (__ \ "latestVersion"      ).writeNullable[Version](Version.legacyApiWrites)
     ~ (__ \ "bobbyRuleViolations").lazyWrite(Writes.seq[DependencyBobbyRule](DependencyBobbyRule.writes))
     ~ (__ \ "importBy"           ).writeNullable[ImportedBy](ImportedBy.writes)
-    ~ (__ \ "scope"              ).writeNullable[DependencyScope](DependencyScope.dependencyScopeFormat)
+    ~ (__ \ "scope"              ).write[DependencyScope](DependencyScope.dependencyScopeFormat)
     )(unlift(Dependency.unapply))
 }
 
