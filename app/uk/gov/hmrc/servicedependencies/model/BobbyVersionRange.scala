@@ -57,7 +57,7 @@ object BobbyVersionRange {
   private val qualifier  = """^\[[-\*]+(.*)\]""".r
 
   def parse(range: String): Option[BobbyVersionRange] = {
-    val trimmedRange = range.replaceAll(" ", "")
+    val trimmedRange = if (range.trim == "*") "[0.0.0,)" else range.replaceAll(" ", "")
 
     PartialFunction.condOpt(trimmedRange) {
       case fixed(v) =>
