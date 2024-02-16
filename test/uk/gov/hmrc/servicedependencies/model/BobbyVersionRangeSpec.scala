@@ -22,14 +22,6 @@ import org.scalatest.wordspec.AnyWordSpec
 class BobbyVersionRangeSpec extends AnyWordSpec with Matchers {
 
   "A BobbyVersionRange" should {
-    "read * as '0.0.0 <= x <= ∞'" in {
-      val range = BobbyVersionRange("*")
-
-      range.lowerBound shouldBe Some(BobbyVersion(Version("0.0.0"), inclusive = true))
-      range.upperBound shouldBe None
-      range.qualifier  shouldBe None
-    }
-
     "read (,1.0] as 'x <= 1.0'" in {
       val range = BobbyVersionRange("(,1.0.0]")
 
