@@ -23,10 +23,10 @@ import org.scalatest.concurrent.{IntegrationPatience, ScalaFutures}
 import play.api.libs.json.Json
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
-import uk.gov.hmrc.servicedependencies.connector.ServiceConfigsConnector
+import uk.gov.hmrc.servicedependencies.connector.{ServiceConfigsConnector, TeamsAndRepositoriesConnector}
 import uk.gov.hmrc.servicedependencies.model.{LatestVersion, Version}
 import uk.gov.hmrc.servicedependencies.persistence.{LatestVersionRepository, MetaArtefactRepository}
-import uk.gov.hmrc.servicedependencies.persistence.derived.DerivedModuleRepository
+import uk.gov.hmrc.servicedependencies.persistence.derived.{DerivedDependencyRepository, DerivedModuleRepository}
 import uk.gov.hmrc.servicedependencies.service._
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -100,33 +100,37 @@ class ServiceDependenciesControllerSpec
 
   object Boot {
     def init: Boot = {
-      val mockSlugInfoService         = mock[SlugInfoService]
-      val mockCuratedLibrariesService = mock[CuratedLibrariesService]
-      val mockServiceConfigsConnector = mock[ServiceConfigsConnector]
-      val mockTeamDependencyService   = mock[TeamDependencyService]
-      val mockMetaArtefactRepository  = mock[MetaArtefactRepository]
-      val mockLatestVersionRepository = mock[LatestVersionRepository]
-      val mockDerivedModuleRepository = mock[DerivedModuleRepository]
+      val mockSlugInfoService               = mock[SlugInfoService]
+      val mockCuratedLibrariesService       = mock[CuratedLibrariesService]
+      val mockServiceConfigsConnector       = mock[ServiceConfigsConnector]
+      val mockTeamDependencyService         = mock[TeamDependencyService]
+      val mockMetaArtefactRepository        = mock[MetaArtefactRepository]
+      val mockLatestVersionRepository       = mock[LatestVersionRepository]
+      val mockDerivedModuleRepository       = mock[DerivedModuleRepository]
+      val mockDerivedDependencyRepository   = mock[DerivedDependencyRepository]
+      val mockTeamsAndRepositoryConnector   = mock[TeamsAndRepositoriesConnector]
       val controller = new ServiceDependenciesController(
-          mockSlugInfoService
-        , mockCuratedLibrariesService
-        , mockServiceConfigsConnector
-        , mockTeamDependencyService
-        , mockMetaArtefactRepository
-        , mockLatestVersionRepository
-        , mockDerivedModuleRepository
-        , stubControllerComponents()
-        )
+        mockSlugInfoService,
+        mockCuratedLibrariesService,
+        mockServiceConfigsConnector,
+        mockTeamDependencyService,
+        mockMetaArtefactRepository,
+        mockLatestVersionRepository,
+        mockDerivedModuleRepository,
+        mockDerivedDependencyRepository,
+        mockTeamsAndRepositoryConnector,
+        stubControllerComponents()
+      )
       Boot(
-          mockSlugInfoService
-        , mockCuratedLibrariesService
-        , mockServiceConfigsConnector
-        , mockTeamDependencyService
-        , mockMetaArtefactRepository
-        , mockLatestVersionRepository
-        , mockDerivedModuleRepository
-        , controller
-        )
+        mockSlugInfoService,
+        mockCuratedLibrariesService,
+        mockServiceConfigsConnector,
+        mockTeamDependencyService,
+        mockMetaArtefactRepository,
+        mockLatestVersionRepository,
+        mockDerivedModuleRepository,
+        controller
+      )
     }
   }
 }

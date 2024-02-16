@@ -38,24 +38,28 @@ class DerivedDependencyRepositorySpec
     slugName = "name-1",
     group = "group-1",
     artefact = "artifact-1",
-    version = Version("1.0.0"),
+    artefactVersion = Version("1.0.0"),
     compileFlag = false,
     providedFlag = false,
     testFlag = false,
     itFlag = false,
-    buildFlag = false
+    buildFlag = false,
+    teams = List.empty,
+    slugVersion = Version("2.0.0")
   )
 
   private val metaArtefactDependency2 = MetaArtefactDependency(
     slugName = "name-2",
     group = "group-2",
     artefact = "artifact-2",
-    version = Version("1.0.0"),
+    artefactVersion = Version("1.0.0"),
     compileFlag = false,
     providedFlag = false,
     testFlag = false,
     itFlag = false,
-    buildFlag = false
+    buildFlag = false,
+    teams = List.empty,
+    slugVersion = Version("2.0.0")
   )
 
   "add" should {
@@ -75,15 +79,17 @@ class DerivedDependencyRepositorySpec
     "replace old documents" in {
 
       val metaArtefactDependencyUpdate = MetaArtefactDependency(
-        slugName      = "name-1",
-        group         = "group-1",
-        artefact      = "artifact-1",
-        version       = Version("2.0.0"),
-        compileFlag   = true,
-        providedFlag  = true,
-        testFlag      = true,
-        itFlag        = true,
-        buildFlag     = true
+        slugName        = "name-1",
+        group           = "group-1",
+        artefact        = "artifact-1",
+        artefactVersion = Version("2.0.0"),
+        compileFlag     = true,
+        providedFlag    = true,
+        testFlag        = true,
+        itFlag          = true,
+        buildFlag       = true,
+        slugVersion     = Version("3.0.0"),
+        teams           = List.empty
       )
 
       repository.addAndReplace(Seq(metaArtefactDependency1)).futureValue

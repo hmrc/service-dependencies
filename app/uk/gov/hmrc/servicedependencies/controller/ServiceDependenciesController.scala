@@ -61,32 +61,26 @@ class ServiceDependenciesController @Inject()(
   }
 
   def getServicesWithDependencyV2(
-    flag: String,
+    flag: SlugInfoFlag,
     group: Option[String],
     artefact: Option[String],
-    versionRange: Option[String],
-    scope: Option[List[String]]
-  ): Action[AnyContent] = Action.async { implicit request =>
-    (
+    versionRange: Option[BobbyVersionRange],
+    scope: Option[List[DependencyScope]]
+  ): Action[AnyContent] =
+    Action.async { implicit request =>
+
       for {
-        sc <- scope.fold(EitherT.pure[Future, Result](Option.empty[List[DependencyScope]]))(
-          _.traverse(s => EitherT.fromEither[Future](DependencyScope.parse(s)).leftMap(BadRequest(_)))
-            .map(Some.apply)
-        )
-        f                   <- EitherT.fromOption[Future](SlugInfoFlag.parse(flag), BadRequest(s"invalid flag '$flag'"))
-        vr                  =  versionRange.flatMap(x => BobbyVersionRange.parse(x))
-        teamsForServices    <- EitherT.liftF(teamsAndRepositoriesConnector.getTeamsForServices)
-        result              <- EitherT.right[Result](derivedDependencyRepository.find(group = group, artefact = artefact, scopes = sc))
-        servicesWithinRange =  vr.map(range => result.filter(s => range.includes(s.artefactVersion))).getOrElse(result)
-        setTeams            = servicesWithinRange.map { r =>
-          r.copy(teams = teamsForServices.getTeams(r.slugName).toList.sorted)
-        }
+        teamsForService <- teamsAndRepositoriesConnector.getTeamsForServices
+        dependencies    <- derivedDependencyRepository.find(group = group, artefact = artefact, scopes = scope)
       } yield {
+        val servicesWithinRange = versionRange.map(range => dependencies.filter(s => range.includes(s.artefactVersion))).getOrElse(dependencies)
+        val setTeams = servicesWithinRange.map { r =>
+          r.copy(teams = teamsForService.getTeams(r.slugName).toList.sorted)
+        }
         implicit val madWrites: OWrites[MetaArtefactDependency] = MetaArtefactDependency.apiWrites
         Ok(Json.toJson(setTeams))
       }
-      ).merge
-  }
+    }
 
 
   def getServicesWithDependency(

@@ -79,7 +79,8 @@ class MetaArtefactDependencySpec extends AnyWordSpec with Matchers {
         providedFlag = false,
         testFlag = true,
         itFlag = false,
-        buildFlag = false
+        buildFlag = false,
+        teams = List.empty
       )
 
       MetaArtefactDependency.fromMetaArtefact(newArtefact) mustBe Seq(expectedResult)
@@ -109,7 +110,8 @@ class MetaArtefactDependencySpec extends AnyWordSpec with Matchers {
         providedFlag = false,
         testFlag = false,
         itFlag = false,
-        buildFlag = false
+        buildFlag = false,
+        teams = List.empty
       )
 
       val expectedResult2 = MetaArtefactDependency(
@@ -122,7 +124,8 @@ class MetaArtefactDependencySpec extends AnyWordSpec with Matchers {
         providedFlag = false,
         testFlag = true,
         itFlag = false,
-        buildFlag = false
+        buildFlag = false,
+        teams = List.empty
       )
 
       MetaArtefactDependency.fromMetaArtefact(newArtefact) mustBe Seq(expectedResult1, expectedResult2)

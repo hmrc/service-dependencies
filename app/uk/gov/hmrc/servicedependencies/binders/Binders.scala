@@ -23,8 +23,7 @@ import java.time.LocalDate
 import scala.util.Try
 
 object Binders {
-  
-  implicit def bobbyRuleQueryStringBindable(implicit stringBinder: QueryStringBindable[String]): QueryStringBindable[BobbyRuleQuery] =
+      implicit def bobbyRuleQueryStringBindable(implicit stringBinder: QueryStringBindable[String]): QueryStringBindable[BobbyRuleQuery] =
     new QueryStringBindable[BobbyRuleQuery] {
 
       private def stringToBobby(key: String, rule: String): Either[String, BobbyRuleQuery] =
