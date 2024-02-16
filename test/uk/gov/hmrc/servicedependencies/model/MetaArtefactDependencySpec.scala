@@ -71,9 +71,10 @@ class MetaArtefactDependencySpec extends AnyWordSpec with Matchers {
 
       val expectedResult = MetaArtefactDependency(
         slugName = "test-artefact",
+        slugVersion = Version("1.0.0"),
         group = "artefact",
         artefact = "build",
-        version = Version("1.23.0"),
+        artefactVersion = Version("1.23.0"),
         compileFlag = true,
         providedFlag = false,
         testFlag = true,
@@ -100,9 +101,10 @@ class MetaArtefactDependencySpec extends AnyWordSpec with Matchers {
 
       val expectedResult1 = MetaArtefactDependency(
         slugName = "test-artefact",
+        slugVersion = Version("1.0.0"),
         group = "artefact",
         artefact = "build",
-        version = Version("1.23.0"),
+        artefactVersion = Version("1.23.0"),
         compileFlag = true,
         providedFlag = false,
         testFlag = false,
@@ -112,9 +114,10 @@ class MetaArtefactDependencySpec extends AnyWordSpec with Matchers {
 
       val expectedResult2 = MetaArtefactDependency(
         slugName = "test-artefact",
+        slugVersion = Version("1.0.0"),
         group = "artefact",
         artefact = "build",
-        version = Version("1.23.0"),
+        artefactVersion = Version("1.23.0"),
         compileFlag = false,
         providedFlag = false,
         testFlag = true,

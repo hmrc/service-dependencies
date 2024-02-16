@@ -20,11 +20,11 @@ import com.google.inject.Inject
 import org.mongodb.scala.bson.BsonDocument
 import org.mongodb.scala.bson.conversions.Bson
 import org.mongodb.scala.model.{Filters, IndexModel, IndexOptions, Indexes, ReplaceOneModel, ReplaceOptions}
-import org.mongodb.scala.model.Filters.equal
+import org.mongodb.scala.model.Filters.{equal, or}
 import play.api.Logging
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.play.json.PlayMongoRepository
-import uk.gov.hmrc.servicedependencies.model.MetaArtefactDependency
+import uk.gov.hmrc.servicedependencies.model.{DependencyScope, MetaArtefactDependency}
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -34,7 +34,7 @@ class DerivedDependencyRepository @Inject()(
                                     ) extends PlayMongoRepository[MetaArtefactDependency](
   collectionName = "DERIVED-dependencies"
   , mongoComponent = mongoComponent
-  , domainFormat   = MetaArtefactDependency.format
+  , domainFormat   = MetaArtefactDependency.mongoFormat
   , indexes        = Seq(
     IndexModel(Indexes.ascending("slugName"), IndexOptions().name("slugNameIdx"))
   )
@@ -65,13 +65,19 @@ class DerivedDependencyRepository @Inject()(
         .map(_ => ())
   }
 
-  def find(slugName: Option[String], group: Option[String], artifact: Option[String]): Future[Seq[MetaArtefactDependency]] = {
+  def find(
+            slugName: Option[String]                = None,
+            group:    Option[String]                = None,
+            artefact: Option[String]                = None,
+            scopes:   Option[List[DependencyScope]] = None
+          ): Future[Seq[MetaArtefactDependency]] = {
 
     val nameFilter: Option[Bson]      = slugName.map(slugName => equal("slugName", slugName))
     val groupFilter: Option[Bson]     = group.map(group => equal("group", group))
-    val artifactFilter: Option[Bson]  = artifact.map(artifact => equal("artifact", artifact))
+    val artifactFilter: Option[Bson]  = artefact.map(artifact => equal("artefact", artifact))
+    val scopeFilter: Bson             = scopes.fold[Bson](BsonDocument())(ss => or( ss.map(scope => equal(s"${scope.asString}Flag", value = true)): _*))
 
-    val filters = Seq(nameFilter).flatten
+    val filters = Seq(nameFilter, groupFilter, artifactFilter, Some(scopeFilter)).flatten
 
     collection
       .find(if (filters.isEmpty) BsonDocument() else Filters.and(filters: _*))

@@ -17,6 +17,7 @@ lazy val microservice = Project("service-dependencies", file("."))
   .settings(
     RoutesKeys.routesImport ++= Seq(
       "uk.gov.hmrc.servicedependencies.binders.Binders._",
+      "uk.gov.hmrc.servicedependencies.model._",
       "uk.gov.hmrc.servicedependencies.model.BobbyRuleQuery"
     )
   )

@@ -11,3 +11,5 @@ GET     /api/repository-name                               @uk.gov.hmrc.serviced
 GET     /api/repositories/:repository/module-dependencies  @uk.gov.hmrc.servicedependencies.controller.ServiceDependenciesController.moduleDependencies(repository: String, version: Option[String])
 GET     /api/latest-version                                @uk.gov.hmrc.servicedependencies.controller.ServiceDependenciesController.latestVersion(group: String, artefact: String)
 GET     /api/meta-artefact/:repository                     @uk.gov.hmrc.servicedependencies.controller.ServiceDependenciesController.metaArtefact(repository: String, version: Option[String])
+
+GET     /api/v2/serviceDeps                                @uk.gov.hmrc.servicedependencies.controller.ServiceDependenciesController.getServicesWithDependencyV2(flag: String ?= "latest", group: Option[String], artefact: Option[String], versionRange: Option[String], scope: Option[List[String]] ?= None)

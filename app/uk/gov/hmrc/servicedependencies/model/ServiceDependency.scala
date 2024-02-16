@@ -16,8 +16,8 @@
 
 package uk.gov.hmrc.servicedependencies.model
 
-import play.api.libs.json.{__, JsError, JsString, JsSuccess, Format, OFormat}
 import play.api.libs.functional.syntax._
+import play.api.libs.json._
 
 sealed trait DependencyScope { def asString: String }
 

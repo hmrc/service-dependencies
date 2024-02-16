@@ -16,32 +16,93 @@
 
 package uk.gov.hmrc.servicedependencies.model
 
-import play.api.libs.json.{Format, Json, OFormat}
+import play.api.libs.functional.syntax.toFunctionalBuilderOps
+import play.api.libs.json.Format.GenericFormat
+import play.api.libs.json._
 import uk.gov.hmrc.servicedependencies.service.DependencyService
 
 case class MetaArtefactDependency(
                        slugName: String,
+                       slugVersion: Version,
+                       teams: List[String],
                        group: String,
                        artefact: String,
-                       version: Version,
+                       artefactVersion: Version,
                        compileFlag: Boolean,
                        providedFlag: Boolean,
                        testFlag: Boolean,
                        itFlag: Boolean,
-                       buildFlag: Boolean,
+                       buildFlag: Boolean
                      )
 
 object MetaArtefactDependency {
 
   implicit val versionFormats: Format[Version] = Version.format
 
-  implicit val format: OFormat[MetaArtefactDependency] = Json.format[MetaArtefactDependency]
+  val mongoFormat: OFormat[MetaArtefactDependency] = {
+    ((__ \ "slugName").format[String]
+      ~ (__ \ "slugVersion").format[Version]
+      ~ (__ \ "group").format[String]
+      ~ (__ \ "artefact").format[String]
+      ~ (__ \ "artefactVersion").format[Version]
+      ~ (__ \ "compileFlag").format[Boolean]
+      ~ (__ \ "providedFlag").format[Boolean]
+      ~ (__ \ "testFlag").format[Boolean]
+      ~ (__ \ "itFlag").format[Boolean]
+      ~ (__ \ "buildFlag").format[Boolean]
+      )((sn, sv, g, a, av, cf, pf, tf, itf, bf) =>
+      MetaArtefactDependency(
+        sn, sv, List.empty, g, a, av, cf, pf, tf, itf, bf
+      ),
+      ( mad => (mad.slugName,
+        mad.slugVersion,
+        mad.group,
+        mad.artefact,
+        mad.artefactVersion,
+        mad.compileFlag,
+        mad.providedFlag,
+        mad.testFlag,
+        mad.itFlag,
+        mad.buildFlag
+      ))
+    )
+  }
 
+
+  val apiWrites: OWrites[MetaArtefactDependency] = {
+
+    implicit val depScope = DependencyScope.dependencyScopeFormat
+
+    (
+      (__ \ "slugName").write[String] and
+      (__ \ "slugVersion").write[String] and
+      (__ \ "teams").write[List[String]] and
+      (__ \ "group").write[String] and
+      (__ \ "artefact").write[String] and
+      (__ \ "artefactVersion").write[String] and
+      (__ \ "scopes").write[Set[DependencyScope]]
+      ) (mad => (
+      mad.slugName,
+      mad.slugVersion.toString,
+      mad.teams,
+      mad.group,
+      mad.artefact,
+      mad.artefactVersion.toString,
+        Set[DependencyScope](DependencyScope.Compile).filter(_ => mad.compileFlag) ++
+        Set[DependencyScope](DependencyScope.Provided).filter(_ => mad.providedFlag) ++
+        Set[DependencyScope](DependencyScope.Test).filter(_ => mad.testFlag) ++
+        Set[DependencyScope](DependencyScope.It).filter(_ => mad.itFlag) ++
+        Set[DependencyScope](DependencyScope.Build).filter(_ => mad.buildFlag)
+    ))
+  }
+"scopes"
   def fromMetaArtefact(metaArtefact: MetaArtefact): Seq[MetaArtefactDependency] = {
     DependencyService.parseArtefactDependencies(metaArtefact).map {
       case (node, scope) =>
         MetaArtefactDependency(
           metaArtefact.name,
+          metaArtefact.version,
+          List.empty,
           node.group,
           node.artefact,
           Version(node.version),
