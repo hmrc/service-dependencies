@@ -18,14 +18,14 @@ package uk.gov.hmrc.servicedependencies.connector.model
 
 
 import java.time.Instant
-
 import play.api.libs.json._
+import uk.gov.hmrc.servicedependencies.model.RepoType
 
 case class RepositoryInfo(
     name         : String
   , createdAt    : Instant
   , lastUpdatedAt: Instant
-  , repoType     : String = "Other"
+  , repoType     : RepoType
   , language     : Option[String] = None
   )
 

@@ -24,12 +24,14 @@ import org.mongodb.scala.model.Filters.{equal, or}
 import play.api.Logging
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.play.json.PlayMongoRepository
-import uk.gov.hmrc.servicedependencies.model.{DependencyScope, MetaArtefactDependency}
+import uk.gov.hmrc.servicedependencies.model.{ApiServiceDependencyFormats, DependencyScope, MetaArtefactDependency, SlugInfoFlag}
+import uk.gov.hmrc.servicedependencies.persistence.DeploymentRepository
 
 import scala.concurrent.{ExecutionContext, Future}
 
 class DerivedDependencyRepository @Inject()(
-                                      mongoComponent: MongoComponent
+                                      mongoComponent: MongoComponent,
+                                      deploymentRepository: DeploymentRepository
                                     )(implicit ec: ExecutionContext
                                     ) extends PlayMongoRepository[MetaArtefactDependency](
   collectionName = "DERIVED-dependencies"
@@ -83,5 +85,4 @@ class DerivedDependencyRepository @Inject()(
       .find(if (filters.isEmpty) BsonDocument() else Filters.and(filters: _*))
       .toFuture()
   }
-
 }

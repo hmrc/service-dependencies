@@ -19,12 +19,14 @@ package uk.gov.hmrc.servicedependencies.model
 import play.api.libs.functional.syntax.toFunctionalBuilderOps
 import play.api.libs.json.Format.GenericFormat
 import play.api.libs.json._
+import uk.gov.hmrc.servicedependencies.model.RepoType.Other
 import uk.gov.hmrc.servicedependencies.service.DependencyService
 
 case class MetaArtefactDependency(
                        slugName: String,
                        slugVersion: Version,
-                       teams: List[String],
+                       teams: List[String], // Override on write
+                       repoType: RepoType,  // Override on write
                        group: String,
                        artefact: String,
                        artefactVersion: Version,
@@ -52,7 +54,7 @@ object MetaArtefactDependency {
       ~ (__ \ "buildFlag").format[Boolean]
       )((sn, sv, g, a, av, cf, pf, tf, itf, bf) =>
       MetaArtefactDependency(
-        sn, sv, List.empty, g, a, av, cf, pf, tf, itf, bf
+        sn, sv, List.empty, Other, g, a, av, cf, pf, tf, itf, bf
       ),
       ( mad => (mad.slugName,
         mad.slugVersion,
@@ -71,12 +73,13 @@ object MetaArtefactDependency {
 
   val apiWrites: OWrites[MetaArtefactDependency] = {
 
-    implicit val depScope = DependencyScope.dependencyScopeFormat
+    implicit val depScope   = DependencyScope.dependencyScopeFormat
 
     (
       (__ \ "slugName").write[String] and
       (__ \ "slugVersion").write[String] and
       (__ \ "teams").write[List[String]] and
+      (__ \ "repoType").write[RepoType] and
       (__ \ "group").write[String] and
       (__ \ "artefact").write[String] and
       (__ \ "artefactVersion").write[String] and
@@ -85,6 +88,7 @@ object MetaArtefactDependency {
       mad.slugName,
       mad.slugVersion.toString,
       mad.teams,
+      mad.repoType,
       mad.group,
       mad.artefact,
       mad.artefactVersion.toString,
@@ -103,6 +107,7 @@ object MetaArtefactDependency {
           metaArtefact.name,
           metaArtefact.version,
           List.empty,
+          Other,
           node.group,
           node.artefact,
           Version(node.version),

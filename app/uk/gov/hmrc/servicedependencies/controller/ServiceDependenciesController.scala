@@ -27,8 +27,10 @@ import play.api.mvc._
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 import uk.gov.hmrc.servicedependencies.connector.{ServiceConfigsConnector, TeamsAndRepositoriesConnector}
 import uk.gov.hmrc.servicedependencies.controller.model.{Dependencies, Dependency, DependencyBobbyRule}
+import uk.gov.hmrc.servicedependencies.model.RepoType.{All, Other, Service}
+import uk.gov.hmrc.servicedependencies.model.SlugInfoFlag.Latest
 import uk.gov.hmrc.servicedependencies.model._
-import uk.gov.hmrc.servicedependencies.persistence.{LatestVersionRepository, MetaArtefactRepository}
+import uk.gov.hmrc.servicedependencies.persistence.{DeploymentRepository, LatestVersionRepository, MetaArtefactRepository}
 import uk.gov.hmrc.servicedependencies.persistence.derived.{DerivedDependencyRepository, DerivedModuleRepository, DerivedServiceDependenciesRepository}
 import uk.gov.hmrc.servicedependencies.service.{CuratedLibrariesService, SlugInfoService, TeamDependencyService}
 
@@ -45,6 +47,7 @@ class ServiceDependenciesController @Inject()(
 , latestVersionRepository       : LatestVersionRepository
 , derivedModuleRepository       : DerivedModuleRepository
 , derivedDependencyRepository   : DerivedDependencyRepository
+, deploymentRepository          : DeploymentRepository
 , teamsAndRepositoriesConnector : TeamsAndRepositoriesConnector
 , cc                            : ControllerComponents
 )(implicit
@@ -62,6 +65,7 @@ class ServiceDependenciesController @Inject()(
 
   def getServicesWithDependencyV2(
     flag: SlugInfoFlag,
+    repoType: Option[RepoType],
     group: Option[String],
     artefact: Option[String],
     versionRange: Option[BobbyVersionRange],
@@ -70,13 +74,38 @@ class ServiceDependenciesController @Inject()(
     Action.async { implicit request =>
 
       for {
-        teamsForService <- teamsAndRepositoriesConnector.getTeamsForServices
-        dependencies    <- derivedDependencyRepository.find(group = group, artefact = artefact, scopes = scope)
+        getTeams           <- teamsAndRepositoriesConnector.getTeamsForServices
+        getRepositories    <- teamsAndRepositoriesConnector.getAllRepositories(Some(false))
+        getDeploymentNames <- deploymentRepository.getNames(flag)
+        dependencies       <- derivedDependencyRepository.find(group = group, artefact = artefact, scopes = scope)
       } yield {
+
+        // Use slug info collection, swap based on service or other (rather than all flags)
+
         val servicesWithinRange = versionRange.map(range => dependencies.filter(s => range.includes(s.artefactVersion))).getOrElse(dependencies)
-        val setTeams = servicesWithinRange.map { r =>
-          r.copy(teams = teamsForService.getTeams(r.slugName).toList.sorted)
+
+        val setRepoTypes  = servicesWithinRange.map { r =>
+          r.copy(repoType = getRepositories.find(_.name == r.slugName).map(_.repoType).getOrElse(Other))
         }
+
+        val serviceWithRepoType = {
+          repoType match {
+            case Some(value) if value != All => setRepoTypes.filter(_.repoType == value)
+            case _                           => setRepoTypes
+          }
+        }
+
+        val otherRepos   = serviceWithRepoType.filterNot(_.repoType == Service)
+        val serviceRepos = serviceWithRepoType.filter(_.repoType == Service)
+
+        val filterByFlag = serviceRepos.filter(x => getDeploymentNames.contains(x.slugName))
+
+        val latestFilter = if (flag == Latest) filterByFlag ++ otherRepos else filterByFlag
+
+        val setTeams = latestFilter.map { r =>
+          r.copy(teams = getTeams.getTeams(r.slugName).toList.sorted)
+        }
+
         implicit val madWrites: OWrites[MetaArtefactDependency] = MetaArtefactDependency.apiWrites
         Ok(Json.toJson(setTeams))
       }

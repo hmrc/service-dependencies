@@ -17,7 +17,10 @@
 package uk.gov.hmrc.servicedependencies.service
 
 import com.google.inject.Inject
-import uk.gov.hmrc.servicedependencies.model.{DependencyScope, MetaArtefact, MetaArtefactDependency}
+import uk.gov.hmrc.http.HeaderCarrier
+import uk.gov.hmrc.servicedependencies.connector.TeamsAndRepositoriesConnector
+import uk.gov.hmrc.servicedependencies.model.RepoType.{All, Other}
+import uk.gov.hmrc.servicedependencies.model.{BobbyVersionRange, DependencyScope, MetaArtefact, MetaArtefactDependency, RepoType}
 import uk.gov.hmrc.servicedependencies.persistence.MetaArtefactRepository
 import uk.gov.hmrc.servicedependencies.persistence.derived.DerivedDependencyRepository
 import uk.gov.hmrc.servicedependencies.util.DependencyGraphParser
@@ -26,8 +29,9 @@ import scala.concurrent.{ExecutionContext, Future}
 
 class DependencyService @Inject()(
                                    metaArtefactRepository: MetaArtefactRepository,
-                                   derivedDependencyRepository: DerivedDependencyRepository
-                                 )(implicit ec: ExecutionContext) {
+                                   derivedDependencyRepository: DerivedDependencyRepository,
+                                   teamsAndRepositoriesConnector : TeamsAndRepositoriesConnector
+                                 )(implicit ec: ExecutionContext, hc: HeaderCarrier) {
 
   private def artefactVersionControl(metaArtefact: MetaArtefact): Future[Option[MetaArtefact]] = {
     metaArtefactRepository.find(metaArtefact.name).map {
@@ -38,7 +42,6 @@ class DependencyService @Inject()(
           None
         }
       case None => Some(metaArtefact)
-
     }
   }
 

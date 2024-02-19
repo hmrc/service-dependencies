@@ -12,4 +12,4 @@ GET     /api/repositories/:repository/module-dependencies  @uk.gov.hmrc.serviced
 GET     /api/latest-version                                @uk.gov.hmrc.servicedependencies.controller.ServiceDependenciesController.latestVersion(group: String, artefact: String)
 GET     /api/meta-artefact/:repository                     @uk.gov.hmrc.servicedependencies.controller.ServiceDependenciesController.metaArtefact(repository: String, version: Option[String])
 
-GET     /api/v2/serviceDeps                                @uk.gov.hmrc.servicedependencies.controller.ServiceDependenciesController.getServicesWithDependencyV2(flag: SlugInfoFlag ?= SlugInfoFlag.Latest, group: Option[String], artefact: Option[String], versionRange: Option[BobbyVersionRange], scope: Option[List[DependencyScope]] ?= None)
+GET     /api/v2/serviceDeps                                @uk.gov.hmrc.servicedependencies.controller.ServiceDependenciesController.getServicesWithDependencyV2(flag: SlugInfoFlag ?= SlugInfoFlag.Latest, repoType: Option[RepoType], group: Option[String], artefact: Option[String], versionRange: Option[BobbyVersionRange], scope: Option[List[DependencyScope]] ?= None)
