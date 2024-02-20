@@ -75,9 +75,8 @@ class ServiceDependenciesController @Inject()(
     } yield {
 
       val dependencies: Seq[MetaArtefactDependency] = repoType match {
-        case Some(Service) => getServices
         case Some(Other)   => getOther
-        case _             => getServices ++ getOther
+        case _             => getServices
       }
 
       val dependenciesByRange = versionRange.map(range => dependencies.filter(s => range.includes(s.artefactVersion))).getOrElse(dependencies)

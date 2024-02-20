@@ -22,8 +22,6 @@ import play.api.mvc.QueryStringBindable
 sealed trait RepoType { def asString: String }
 
 object RepoType {
-
-  case object All       extends RepoType { override val asString = "All"   }
   case object Service   extends RepoType { override val asString = "Service"   }
   case object Library   extends RepoType { override val asString = "Library"   }
   case object Prototype extends RepoType { override val asString = "Prototype" }
@@ -31,7 +29,7 @@ object RepoType {
   case object Other     extends RepoType { override val asString = "Other"     }
 
   val values: List[RepoType] =
-    List(All, Service, Library, Prototype, Test, Other)
+    List(Service, Library, Prototype, Test, Other)
 
   def parse(s: String): Either[String, RepoType] =
     values
