@@ -65,7 +65,6 @@ class MetaArtefactUpdateHandler @Inject()(
                                   s"MetaArtefact for name: ${available.name}, version: ${available.version} was not found"
                                 )
                         _    <- recoverFutureInEitherT(
-                                  // Add teams-and-repo call here to decide service type
                                   dependencyService.setArtefactDependencies(meta)
                                 , errorMessage = s"Could not store meta artefact dependencies for message with ID '${message.messageId()}' (${meta.name} ${meta.version})"
                                 )
