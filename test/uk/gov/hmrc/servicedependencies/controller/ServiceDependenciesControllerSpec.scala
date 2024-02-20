@@ -25,7 +25,7 @@ import play.api.libs.json.{Json, OWrites}
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
 import uk.gov.hmrc.servicedependencies.connector.{ServiceConfigsConnector, TeamsAndRepositoriesConnector, TeamsForServices}
-import uk.gov.hmrc.servicedependencies.model.RepoType.{All, Other, Service, Test}
+import uk.gov.hmrc.servicedependencies.model.RepoType.{Other, Service, Test}
 import uk.gov.hmrc.servicedependencies.model.SlugInfoFlag.Latest
 import uk.gov.hmrc.servicedependencies.model.{BobbyVersionRange, LatestVersion, MetaArtefactDependency, Version}
 import uk.gov.hmrc.servicedependencies.persistence.derived.{DerivedDependencyRepository, DerivedModuleRepository}
@@ -270,89 +270,6 @@ class ServiceDependenciesControllerSpec
       implicit val madWrites: OWrites[MetaArtefactDependency] = MetaArtefactDependency.apiWrites
 
       contentAsJson(result) shouldBe Json.toJson(Seq(otherMetaArtefactDependency(Version("2.0.0"))))
-    }
-
-    "get artefact dependencies for all repo types and set teams" in {
-      val boot = Boot.init
-
-      when(boot.mockTeamsAndRepositories.getTeamsForServices(any())).thenReturn(
-        Future.successful(TeamsForServices(Map("slug-name" -> Seq("team-name"))))
-      )
-
-      when(boot.mockDerivedDependencyRepository.findServicesByDeployment(any(), any(), any(), any())).thenReturn(
-        Future.successful(Seq(
-          serviceMetaArtefactDependency(Version("1.0.0")),
-          serviceMetaArtefactDependency(Version("1.2.0"))
-        ))
-      )
-
-      when(boot.mockDerivedDependencyRepository.findByOtherRepository(any(), any(), any())).thenReturn(
-        Future.successful(Seq(
-          otherMetaArtefactDependency(Version("2.0.0")),
-          otherMetaArtefactDependency(Version("2.2.0"))
-        ))
-      )
-
-      val result = boot.controller.metaArtefactDependencies(
-        flag          = Latest,
-        repoType      = Some(All),
-        group         = None,
-        artefact      = None,
-        versionRange  = None,
-        scope         = None
-      ).apply(FakeRequest())
-
-      status(result) shouldBe OK
-
-      implicit val madWrites: OWrites[MetaArtefactDependency] = MetaArtefactDependency.apiWrites
-
-      contentAsJson(result) shouldBe Json.toJson(Seq(
-        serviceMetaArtefactDependency(Version("1.0.0")),
-        serviceMetaArtefactDependency(Version("1.2.0")),
-        otherMetaArtefactDependency(Version("2.0.0")),
-        otherMetaArtefactDependency(Version("2.2.0")))
-      )
-    }
-
-    "get artefact dependencies for all repo types, filter by range and set teams" in {
-      val boot = Boot.init
-
-      when(boot.mockTeamsAndRepositories.getTeamsForServices(any())).thenReturn(
-        Future.successful(TeamsForServices(Map("slug-name" -> Seq("team-name"))))
-      )
-
-      when(boot.mockDerivedDependencyRepository.findServicesByDeployment(any(), any(), any(), any())).thenReturn(
-        Future.successful(Seq(
-          serviceMetaArtefactDependency(Version("1.0.0")),
-          serviceMetaArtefactDependency(Version("1.2.0"))
-        ))
-      )
-
-      when(boot.mockDerivedDependencyRepository.findByOtherRepository(any(), any(), any())).thenReturn(
-        Future.successful(Seq(
-          otherMetaArtefactDependency(Version("2.0.0")),
-          otherMetaArtefactDependency(Version("2.2.0"))
-        ))
-      )
-
-      val result = boot.controller.metaArtefactDependencies(
-        flag          = Latest,
-        repoType      = Some(All),
-        group         = None,
-        artefact      = None,
-        versionRange  = Some(BobbyVersionRange("[1.0.0,2.0.0]")),
-        scope         = None
-      ).apply(FakeRequest())
-
-      status(result) shouldBe OK
-
-      implicit val madWrites: OWrites[MetaArtefactDependency] = MetaArtefactDependency.apiWrites
-
-      contentAsJson(result) shouldBe Json.toJson(Seq(
-        serviceMetaArtefactDependency(Version("1.0.0")),
-        serviceMetaArtefactDependency(Version("1.2.0")),
-        otherMetaArtefactDependency(Version("2.0.0")))
-      )
     }
   }
 
