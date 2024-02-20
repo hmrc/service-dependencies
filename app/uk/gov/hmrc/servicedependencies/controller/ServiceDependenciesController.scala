@@ -21,17 +21,15 @@ import cats.implicits._
 import com.google.inject.{Inject, Singleton}
 import play.api.libs.functional.syntax._
 import play.api.libs.json.Format.GenericFormat
-import play.api.libs.json.Json
 import play.api.libs.json._
 import play.api.mvc._
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 import uk.gov.hmrc.servicedependencies.connector.{ServiceConfigsConnector, TeamsAndRepositoriesConnector}
 import uk.gov.hmrc.servicedependencies.controller.model.{Dependencies, Dependency, DependencyBobbyRule}
-import uk.gov.hmrc.servicedependencies.model.RepoType.{All, Other, Service}
-import uk.gov.hmrc.servicedependencies.model.SlugInfoFlag.Latest
+import uk.gov.hmrc.servicedependencies.model.RepoType.{Other, Service}
 import uk.gov.hmrc.servicedependencies.model._
-import uk.gov.hmrc.servicedependencies.persistence.{DeploymentRepository, LatestVersionRepository, MetaArtefactRepository}
-import uk.gov.hmrc.servicedependencies.persistence.derived.{DerivedDependencyRepository, DerivedModuleRepository, DerivedServiceDependenciesRepository}
+import uk.gov.hmrc.servicedependencies.persistence.derived.{DerivedDependencyRepository, DerivedModuleRepository}
+import uk.gov.hmrc.servicedependencies.persistence.{LatestVersionRepository, MetaArtefactRepository}
 import uk.gov.hmrc.servicedependencies.service.{CuratedLibrariesService, SlugInfoService, TeamDependencyService}
 
 import java.time.LocalDate
@@ -47,7 +45,6 @@ class ServiceDependenciesController @Inject()(
 , latestVersionRepository       : LatestVersionRepository
 , derivedModuleRepository       : DerivedModuleRepository
 , derivedDependencyRepository   : DerivedDependencyRepository
-, deploymentRepository          : DeploymentRepository
 , teamsAndRepositoriesConnector : TeamsAndRepositoriesConnector
 , cc                            : ControllerComponents
 )(implicit
@@ -63,54 +60,36 @@ class ServiceDependenciesController @Inject()(
       } yield Ok(Json.toJson(depsWithRules))
   }
 
-  def getServicesWithDependencyV2(
-    flag: SlugInfoFlag,
-    repoType: Option[RepoType],
-    group: Option[String],
-    artefact: Option[String],
-    versionRange: Option[BobbyVersionRange],
-    scope: Option[List[DependencyScope]]
-  ): Action[AnyContent] =
-    Action.async { implicit request =>
+  def metaArtefactDependencies(
+                                   flag: SlugInfoFlag,
+                                   repoType: Option[RepoType],
+                                   group: Option[String],
+                                   artefact: Option[String],
+                                   versionRange: Option[BobbyVersionRange],
+                                   scope: Option[List[DependencyScope]]
+                                 ): Action[AnyContent] = Action.async { implicit request =>
+    for {
+      getTeams    <- teamsAndRepositoriesConnector.getTeamsForServices
+      getServices <- derivedDependencyRepository.findServicesByDeployment(flag, group, artefact, scope)
+      getOther    <- derivedDependencyRepository.findByOtherRepository(group, artefact, scope)
+    } yield {
 
-      for {
-        getTeams           <- teamsAndRepositoriesConnector.getTeamsForServices
-        getRepositories    <- teamsAndRepositoriesConnector.getAllRepositories(Some(false))
-        getDeploymentNames <- deploymentRepository.getNames(flag)
-        dependencies       <- derivedDependencyRepository.find(group = group, artefact = artefact, scopes = scope)
-      } yield {
-
-        // Use slug info collection, swap based on service or other (rather than all flags)
-
-        val servicesWithinRange = versionRange.map(range => dependencies.filter(s => range.includes(s.artefactVersion))).getOrElse(dependencies)
-
-        val setRepoTypes  = servicesWithinRange.map { r =>
-          r.copy(repoType = getRepositories.find(_.name == r.slugName).map(_.repoType).getOrElse(Other))
-        }
-
-        val serviceWithRepoType = {
-          repoType match {
-            case Some(value) if value != All => setRepoTypes.filter(_.repoType == value)
-            case _                           => setRepoTypes
-          }
-        }
-
-        val otherRepos   = serviceWithRepoType.filterNot(_.repoType == Service)
-        val serviceRepos = serviceWithRepoType.filter(_.repoType == Service)
-
-        val filterByFlag = serviceRepos.filter(x => getDeploymentNames.contains(x.slugName))
-
-        val latestFilter = if (flag == Latest) filterByFlag ++ otherRepos else filterByFlag
-
-        val setTeams = latestFilter.map { r =>
-          r.copy(teams = getTeams.getTeams(r.slugName).toList.sorted)
-        }
-
-        implicit val madWrites: OWrites[MetaArtefactDependency] = MetaArtefactDependency.apiWrites
-        Ok(Json.toJson(setTeams))
+      val dependencies: Seq[MetaArtefactDependency] = repoType match {
+        case Some(Service) => getServices
+        case Some(Other)   => getOther
+        case _             => getServices ++ getOther
       }
-    }
 
+      val dependenciesByRange = versionRange.map(range => dependencies.filter(s => range.includes(s.artefactVersion))).getOrElse(dependencies)
+
+      val dependenciesWithTeams = dependenciesByRange.map { r =>
+        r.copy(teams = getTeams.getTeams(r.slugName).toList.sorted)
+      }
+
+      implicit val madWrites: OWrites[MetaArtefactDependency] = MetaArtefactDependency.apiWrites
+      Ok(Json.toJson(dependenciesWithTeams))
+    }
+  }
 
   def getServicesWithDependency(
     flag        : String,
@@ -176,10 +155,9 @@ class ServiceDependenciesController @Inject()(
          , applicationConfig     = slugInfo.applicationConfig
          , slugConfig            = slugInfo.slugConfig
         )
-       } yield {
-         Ok(Json.toJson(slugInfoExtra)(SlugInfoExtra.write))
-       }
-      ).merge
+      } yield {
+        Ok(Json.toJson(slugInfoExtra)(SlugInfoExtra.write))
+      }).merge
     }
 
   def dependenciesOfSlugForTeam(team: String, flag: String): Action[AnyContent] =
@@ -259,7 +237,7 @@ class ServiceDependenciesController @Inject()(
       )
 
     val sbtVersion =
-    // sbt-versions will be the same for all modules,
+      // sbt-versions will be the same for all modules,
       meta.modules.flatMap(_.sbtVersion.toSeq).headOption
 
     def when[T](b: Boolean)(seq: => Seq[T]): Seq[T] =

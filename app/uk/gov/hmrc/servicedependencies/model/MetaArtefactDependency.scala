@@ -26,7 +26,7 @@ case class MetaArtefactDependency(
                        slugName: String,
                        slugVersion: Version,
                        teams: List[String], // Override on write
-                       repoType: RepoType,  // Override on write
+                       repoType: RepoType,
                        group: String,
                        artefact: String,
                        artefactVersion: Version,
@@ -44,6 +44,7 @@ object MetaArtefactDependency {
   val mongoFormat: OFormat[MetaArtefactDependency] = {
     ((__ \ "slugName").format[String]
       ~ (__ \ "slugVersion").format[Version]
+      ~ (__ \ "repoType").format[RepoType]
       ~ (__ \ "group").format[String]
       ~ (__ \ "artefact").format[String]
       ~ (__ \ "artefactVersion").format[Version]
@@ -52,12 +53,13 @@ object MetaArtefactDependency {
       ~ (__ \ "testFlag").format[Boolean]
       ~ (__ \ "itFlag").format[Boolean]
       ~ (__ \ "buildFlag").format[Boolean]
-      )((sn, sv, g, a, av, cf, pf, tf, itf, bf) =>
+      )((sn, sv, rt, g, a, av, cf, pf, tf, itf, bf) =>
       MetaArtefactDependency(
-        sn, sv, List.empty, Other, g, a, av, cf, pf, tf, itf, bf
+        sn, sv, List.empty, rt, g, a, av, cf, pf, tf, itf, bf
       ),
       ( mad => (mad.slugName,
         mad.slugVersion,
+        mad.repoType,
         mad.group,
         mad.artefact,
         mad.artefactVersion,
@@ -100,14 +102,14 @@ object MetaArtefactDependency {
     ))
   }
 "scopes"
-  def fromMetaArtefact(metaArtefact: MetaArtefact): Seq[MetaArtefactDependency] = {
+  def fromMetaArtefact(metaArtefact: MetaArtefact, repoType: RepoType): Seq[MetaArtefactDependency] = {
     DependencyService.parseArtefactDependencies(metaArtefact).map {
       case (node, scope) =>
         MetaArtefactDependency(
           metaArtefact.name,
           metaArtefact.version,
           List.empty,
-          Other,
+          repoType,
           node.group,
           node.artefact,
           Version(node.version),

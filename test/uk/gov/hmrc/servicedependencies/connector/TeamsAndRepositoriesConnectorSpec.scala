@@ -17,7 +17,6 @@
 package uk.gov.hmrc.servicedependencies.connector
 
 import java.time.Instant
-
 import com.github.tomakehurst.wiremock.client.WireMock._
 import org.scalatest.OptionValues
 import org.scalatest.concurrent.{IntegrationPatience, ScalaFutures}
@@ -29,6 +28,7 @@ import play.api.inject.guice.GuiceApplicationBuilder
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.http.test.WireMockSupport
 import uk.gov.hmrc.servicedependencies.connector.model.RepositoryInfo
+import uk.gov.hmrc.servicedependencies.model.RepoType.Prototype
 
 class TeamsAndRepositoriesConnectorSpec
   extends AnyWordSpec
@@ -98,14 +98,14 @@ class TeamsAndRepositoriesConnectorSpec
             name          = "test-repo"
           , createdAt     = Instant.parse("2015-09-15T16:27:38.000Z")
           , lastUpdatedAt = Instant.parse("2017-05-19T11:00:51.000Z")
-          , repoType      = "Prototype"
+          , repoType      = Prototype
           , language      = None
           )
         , RepositoryInfo(
             name          = "another-repo"
           , createdAt     = Instant.parse("2016-05-12T10:18:53.000Z")
           , lastUpdatedAt = Instant.parse("2016-05-12T15:43:32.000Z")
-          , repoType      = "Prototype"
+          , repoType      = Prototype
           , language      = None
           )
         )

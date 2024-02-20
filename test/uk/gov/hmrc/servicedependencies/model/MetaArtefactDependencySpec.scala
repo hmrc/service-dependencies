@@ -19,6 +19,7 @@ package uk.gov.hmrc.servicedependencies.model
 import org.scalatest.matchers.must.Matchers.convertToAnyMustWrapper
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
+import uk.gov.hmrc.servicedependencies.model.RepoType.Service
 
 import java.time.Instant
 
@@ -80,10 +81,11 @@ class MetaArtefactDependencySpec extends AnyWordSpec with Matchers {
         testFlag = true,
         itFlag = false,
         buildFlag = false,
-        teams = List.empty
+        teams = List.empty,
+        repoType = Service
       )
 
-      MetaArtefactDependency.fromMetaArtefact(newArtefact) mustBe Seq(expectedResult)
+      MetaArtefactDependency.fromMetaArtefact(newArtefact, Service) mustBe Seq(expectedResult)
     }
 
     "parse MetaArtefact to MetaArtefactDependency when given multiple dependencies" in {
@@ -111,7 +113,8 @@ class MetaArtefactDependencySpec extends AnyWordSpec with Matchers {
         testFlag = false,
         itFlag = false,
         buildFlag = false,
-        teams = List.empty
+        teams = List.empty,
+        repoType = Service
       )
 
       val expectedResult2 = MetaArtefactDependency(
@@ -125,10 +128,11 @@ class MetaArtefactDependencySpec extends AnyWordSpec with Matchers {
         testFlag = true,
         itFlag = false,
         buildFlag = false,
-        teams = List.empty
+        teams = List.empty,
+        repoType = Service
       )
 
-      MetaArtefactDependency.fromMetaArtefact(newArtefact) mustBe Seq(expectedResult1, expectedResult2)
+      MetaArtefactDependency.fromMetaArtefact(newArtefact, Service) mustBe Seq(expectedResult1, expectedResult2)
     }
 
   }

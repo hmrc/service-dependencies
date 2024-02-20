@@ -23,7 +23,11 @@ import org.scalatest.concurrent.{IntegrationPatience, ScalaFutures}
 import org.scalatest.matchers.must.Matchers.convertToAnyMustWrapper
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
+import uk.gov.hmrc.http.HeaderCarrier
+import uk.gov.hmrc.servicedependencies.connector.TeamsAndRepositoriesConnector
+import uk.gov.hmrc.servicedependencies.connector.model.Repository
 import uk.gov.hmrc.servicedependencies.model.DependencyScope.{Build, Compile, It, Provided, Test}
+import uk.gov.hmrc.servicedependencies.model.RepoType.{Library, Other, Service}
 import uk.gov.hmrc.servicedependencies.model.{MetaArtefact, MetaArtefactDependency, MetaArtefactModule, Version}
 import uk.gov.hmrc.servicedependencies.persistence.MetaArtefactRepository
 import uk.gov.hmrc.servicedependencies.persistence.derived.DerivedDependencyRepository
@@ -41,10 +45,13 @@ class DependencyServiceSpec
     with IntegrationPatience
     with BeforeAndAfterEach {
 
+  private implicit val hc: HeaderCarrier = HeaderCarrier()
+
   private val mockArtifactRepository: MetaArtefactRepository = mock[MetaArtefactRepository]
   private val mockDependencyRepository: DerivedDependencyRepository = mock[DerivedDependencyRepository]
+  private val mockTeamsAndRepositoriesConnector: TeamsAndRepositoriesConnector = mock[TeamsAndRepositoriesConnector]
 
-  private val service = new DependencyService(mockArtifactRepository, mockDependencyRepository)
+  private val service = new DependencyService(mockArtifactRepository, mockDependencyRepository, mockTeamsAndRepositoriesConnector)
 
   override protected def beforeEach(): Unit = {
     super.beforeEach()
@@ -57,6 +64,13 @@ class DependencyServiceSpec
   val testDependency     = "digraph \"dependency-graph\" {\n    graph[rankdir=\"LR\"]\n    edge [\n        arrowtail=\"none\"\n    ]\n        \"artefact:build_3.00:1.23.0\" -> \"artefact:build_3.00:1.23.0\" \n}"
   val itDependency       = "digraph \"dependency-graph\" {\n    graph[rankdir=\"LR\"]\n    edge [\n        arrowtail=\"none\"\n    ]\n        \"artefact:build_4.00:1.23.0\" -> \"artefact:build_4.00:1.23.0\" \n}"
   val buildDependency    = "digraph \"dependency-graph\" {\n    graph[rankdir=\"LR\"]\n    edge [\n        arrowtail=\"none\"\n    ]\n        \"artefact:build_5.00:1.23.0\" -> \"artefact:build_5.00:1.23.0\" \n}"
+
+  private val repository = Repository(
+    "library-repo",
+    Instant.now(),
+    Seq.empty,
+    Library
+  )
 
   private val metaArtefactModule =
     MetaArtefactModule(
@@ -73,7 +87,7 @@ class DependencyServiceSpec
 
   private val metaArtefact =
     MetaArtefact(
-      name = "library",
+      name = "library-repo",
       version = Version("1.0.0"),
       uri = "https://artefacts/metadata/library/library-v1.0.0.meta.tgz",
       gitUrl = Some("https://github.com/hmrc/library.git"),
@@ -149,6 +163,7 @@ class DependencyServiceSpec
 
       when(mockArtifactRepository.find(any())).thenReturn(Future.successful(Some(metaArtefact)))
       when(mockDependencyRepository.addAndReplace(any())).thenReturn(Future.successful(()))
+      when(mockTeamsAndRepositoriesConnector.getRepository(any())(any())).thenReturn(Future.successful(Some(repository)))
 
       val newVersionArtefact: MetaArtefact = metaArtefact.copy(
         version = Version("1.1.0")
@@ -157,18 +172,35 @@ class DependencyServiceSpec
       service.setArtefactDependencies(newVersionArtefact).futureValue mustBe ()
 
       verify(mockDependencyRepository, times(1))
-        .addAndReplace(MetaArtefactDependency.fromMetaArtefact(newVersionArtefact))
+        .addAndReplace(MetaArtefactDependency.fromMetaArtefact(newVersionArtefact, Library))
+    }
+
+    "replace meta artefact when given a new version and set repo type to Other if it cannot be found" in {
+
+      when(mockArtifactRepository.find(any())).thenReturn(Future.successful(Some(metaArtefact)))
+      when(mockDependencyRepository.addAndReplace(any())).thenReturn(Future.successful(()))
+      when(mockTeamsAndRepositoriesConnector.getRepository(any())(any())).thenReturn(Future.successful(None))
+
+      val newVersionArtefact: MetaArtefact = metaArtefact.copy(
+        version = Version("1.1.0")
+      )
+
+      service.setArtefactDependencies(newVersionArtefact).futureValue mustBe()
+
+      verify(mockDependencyRepository, times(1))
+        .addAndReplace(MetaArtefactDependency.fromMetaArtefact(newVersionArtefact, Other))
     }
 
     "add new meta artefact" in {
 
       when(mockArtifactRepository.find(any())).thenReturn(Future.successful(None))
+      when(mockTeamsAndRepositoriesConnector.getRepository(any())(any())).thenReturn(Future.successful(Some(repository)))
       when(mockDependencyRepository.addAndReplace(any())).thenReturn(Future.successful(()))
 
       service.setArtefactDependencies(metaArtefact).futureValue mustBe()
 
       verify(mockDependencyRepository, times(1))
-        .addAndReplace(MetaArtefactDependency.fromMetaArtefact(metaArtefact))
+        .addAndReplace(MetaArtefactDependency.fromMetaArtefact(metaArtefact, Library))
     }
 
     "not add meta artefact when given a old version" in {

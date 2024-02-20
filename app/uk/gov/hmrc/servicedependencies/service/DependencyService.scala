@@ -44,11 +44,14 @@ class DependencyService @Inject()(
       case None => Some(metaArtefact)
     }
   }
-
   def setArtefactDependencies(metaArtefact: MetaArtefact): Future[Unit] = {
     artefactVersionControl(metaArtefact).flatMap {
-      case Some(value) => derivedDependencyRepository.addAndReplace(MetaArtefactDependency.fromMetaArtefact(value))
-      case None        => Future.successful(())
+      case Some(value) =>
+        teamsAndRepositoriesConnector.getRepository(value.name).flatMap {
+          repo =>
+            derivedDependencyRepository.addAndReplace(MetaArtefactDependency.fromMetaArtefact(value, repo.map(_.repoType).getOrElse(Other)))
+        }
+      case None => Future.successful(())
     }
   }
 }
