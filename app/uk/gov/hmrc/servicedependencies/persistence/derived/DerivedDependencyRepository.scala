@@ -18,19 +18,19 @@ package uk.gov.hmrc.servicedependencies.persistence.derived
 
 import com.google.inject.Inject
 import org.mongodb.scala.bson.BsonDocument
-import org.mongodb.scala.bson.conversions.Bson
-import org.mongodb.scala.model.{Filters, IndexModel, IndexOptions, Indexes, ReplaceOneModel, ReplaceOptions}
 import org.mongodb.scala.model.Filters.{equal, nin, or}
-import org.mongodb.scala.model.Indexes.compoundIndex
+import org.mongodb.scala.model._
 import play.api.Logging
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.play.json.PlayMongoRepository
 import uk.gov.hmrc.servicedependencies.model.RepoType.Service
-import uk.gov.hmrc.servicedependencies.model.{ApiServiceDependencyFormats, DependencyScope, MetaArtefactDependency, RepoType, SlugInfoFlag}
+import uk.gov.hmrc.servicedependencies.model.{DependencyScope, MetaArtefactDependency, RepoType, SlugInfoFlag}
 import uk.gov.hmrc.servicedependencies.persistence.DeploymentRepository
 
+import javax.inject.Singleton
 import scala.concurrent.{ExecutionContext, Future}
 
+@Singleton
 class DerivedDependencyRepository @Inject()(
                                       mongoComponent: MongoComponent,
                                       deploymentRepository: DeploymentRepository
@@ -40,23 +40,23 @@ class DerivedDependencyRepository @Inject()(
   , mongoComponent = mongoComponent
   , domainFormat   = MetaArtefactDependency.mongoFormat
   , indexes        = Seq(
-    IndexModel(Indexes.ascending("slugName"), IndexOptions().name("slugNameIdx")),
+    IndexModel(Indexes.ascending("repoName"), IndexOptions().name("repoNameIdx")),
     IndexModel(Indexes.ascending("group"),    IndexOptions().name("groupIdx")),
     IndexModel(Indexes.ascending("artefact"), IndexOptions().name("artefactIdx")),
     IndexModel(Indexes.ascending("repoType"), IndexOptions().name("repoIdx")),
-  ) ++ DependencyScope.values.map(s => IndexModel(Indexes.ascending(s.asString + "Flag"), IndexOptions().name(s.asString + "FlagIdx")))
+  ) ++ DependencyScope.values.map(s => IndexModel(Indexes.ascending(s"scope_${s.asString}"), IndexOptions().name(s"scope_${s.asString}Idx")))
 ) with Logging {
 
   // automatically refreshed when given new meta data artefacts from update scheduler
   override lazy val requiresTtlIndex = false
 
-  def addAndReplace(dependencies: Seq[MetaArtefactDependency]): Future[Unit] = {
+  def put(dependencies: Seq[MetaArtefactDependency]): Future[Unit] = {
     collection
         .bulkWrite(
           dependencies.map(d =>
             ReplaceOneModel(
               filter = Filters.and(
-                equal("slugName",     d.slugName),
+                equal("repoName",     d.repoName),
                 equal("group",        d.group),
                 equal("artefact",     d.artefact)
               ),
@@ -69,20 +69,20 @@ class DerivedDependencyRepository @Inject()(
   }
 
   def find(
-            slugName: Option[String]              = None,
-            repoType: Option[RepoType]            = None,
-            group: Option[String]                 = None,
-            artefact: Option[String]              = None,
-            scopes: Option[List[DependencyScope]] = None
-          ): Future[Seq[MetaArtefactDependency]] = {
+    repoName: Option[String]              = None,
+    repoType: Option[RepoType]            = None,
+    group: Option[String]                 = None,
+    artefact: Option[String]              = None,
+    scopes: Option[List[DependencyScope]] = None
+  ): Future[Seq[MetaArtefactDependency]] = {
 
-    val nameFilter: Option[Bson]      = slugName.map(slugName => equal("slugName", slugName))
-    val groupFilter: Option[Bson]     = group.map(group => equal("group", group))
-    val artifactFilter: Option[Bson]  = artefact.map(artifact => equal("artefact", artifact))
-    val scopeFilter: Bson             = scopes.fold[Bson](BsonDocument())(ss => or(ss.map(scope => equal(s"${scope.asString}Flag", value = true)): _*))
-    val repoFilter: Option[Bson]      = repoType.map(repoType => equal("repoType", repoType.toString))
-
-    val filters = Seq(nameFilter, groupFilter, artifactFilter, repoFilter, Some(scopeFilter)).flatten
+    val filters = Seq(
+      repoName.map(slugName => equal("repoName", slugName)),
+      group.map(group => equal("group", group)),
+      artefact.map(artifact => equal("artefact", artifact)),
+      repoType.map(repoType => equal("repoType", repoType.toString)),
+      scopes.map(ss => or(ss.map(scope => equal(s"scope_${scope.asString}", value = true)): _*))
+    ).flatten
 
     collection
       .find(if (filters.isEmpty) BsonDocument() else Filters.and(filters: _*))
@@ -90,17 +90,17 @@ class DerivedDependencyRepository @Inject()(
   }
 
   def findByOtherRepository(
-                             group: Option[String]                 = None,
-                             artefact: Option[String]              = None,
-                             scopes: Option[List[DependencyScope]] = None
-                           ): Future[Seq[MetaArtefactDependency]] = {
+    group: Option[String]                 = None,
+    artefact: Option[String]              = None,
+    scopes: Option[List[DependencyScope]] = None
+  ): Future[Seq[MetaArtefactDependency]] = {
 
-    val groupFilter: Option[Bson]     = group.map(group => equal("group", group))
-    val artifactFilter: Option[Bson]  = artefact.map(artifact => equal("artefact", artifact))
-    val scopeFilter: Bson             = scopes.fold[Bson](BsonDocument())(ss => or(ss.map(scope => equal(s"${scope.asString}Flag", value = true)): _*))
-    val repoFilter: Bson              = nin("repoType", Service.asString)
-
-    val filters = Seq(groupFilter, artifactFilter, Some(repoFilter), Some(scopeFilter)).flatten
+    val filters = Seq(
+      group.map(group => equal("group", group)),
+      artefact.map(artifact => equal("artefact", artifact)),
+      Some(nin("repoType", Service.asString)),
+      scopes.map(ss => or(ss.map(scope => equal(s"scope_${scope.asString}", value = true)): _*))
+    ).flatten
 
     collection
       .find(if (filters.isEmpty) BsonDocument() else Filters.and(filters: _*))
@@ -108,23 +108,22 @@ class DerivedDependencyRepository @Inject()(
   }
 
   def findServicesByDeployment(
-                                flag: SlugInfoFlag,
-                                group: Option[String]                 = None,
-                                artefact: Option[String]              = None,
-                                scopes: Option[List[DependencyScope]] = None
-                              ): Future[Seq[MetaArtefactDependency]]  = {
-
-    val groupFilter: Option[Bson]     = group.map(group => equal("group", group))
-    val artifactFilter: Option[Bson]  = artefact.map(artifact => equal("artefact", artifact))
-    val scopeFilter: Bson             = scopes.fold[Bson](BsonDocument())(ss => or(ss.map(scope => equal(s"${scope.asString}Flag", value = true)): _*))
-
-    val filters = Seq(groupFilter, artifactFilter, Some(scopeFilter)).flatten
+    flag: SlugInfoFlag,
+    group: Option[String]                 = None,
+    artefact: Option[String]              = None,
+    scopes: Option[List[DependencyScope]] = None
+  ): Future[Seq[MetaArtefactDependency]]  = {
+    val filters = Seq(
+      group.map(group => equal("group", group)),
+      artefact.map(artifact => equal("artefact", artifact)),
+      scopes.map(ss => or(ss.map(scope => equal(s"scope_${scope.asString}", value = true)): _*))
+    ).flatten
 
     deploymentRepository.lookupAgainstDeployments(
       collectionName = collectionName,
       domainFormat = MetaArtefactDependency.mongoFormat,
-      slugNameField = "slugName",
-      slugVersionField = "slugVersion"
+      slugNameField = "repoName",
+      slugVersionField = "repoVersion"
     )(
       deploymentsFilter = equal(flag.asString, true),
       domainFilter = if (filters.isEmpty) BsonDocument() else Filters.and(filters: _*)

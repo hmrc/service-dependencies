@@ -48,8 +48,8 @@ class ServiceDependenciesControllerSpec
 
   private def serviceMetaArtefactDependency(artefactVersion: Version): MetaArtefactDependency =
     MetaArtefactDependency(
-      slugName        = "slug-name",
-      slugVersion     = Version("1.0.0"),
+      repoName        = "repo-name",
+      repoVersion     = Version("1.0.0"),
       teams           = List("team-name"),
       repoType        = Service,
       group           = "group",
@@ -64,8 +64,8 @@ class ServiceDependenciesControllerSpec
 
   private def otherMetaArtefactDependency(artefactVersion: Version = Version("1.0.0")): MetaArtefactDependency =
     MetaArtefactDependency(
-      slugName        = "slug-name",
-      slugVersion     = Version("1.0.0"),
+      repoName        = "repo-name",
+      repoVersion     = Version("1.0.0"),
       teams           = List("team-name"),
       repoType        = Test,
       group           = "group",
@@ -128,7 +128,7 @@ class ServiceDependenciesControllerSpec
       val boot = Boot.init
 
       when(boot.mockTeamsAndRepositories.getTeamsForServices(any())).thenReturn(
-        Future.successful(TeamsForServices(Map("slug-name" -> Seq("team-name"))))
+        Future.successful(TeamsForServices(Map("repo-name" -> Seq("team-name"))))
       )
 
       when(boot.mockDerivedDependencyRepository.findServicesByDeployment(any(), any(), any(), any())).thenReturn(
@@ -165,7 +165,7 @@ class ServiceDependenciesControllerSpec
       val boot = Boot.init
 
       when(boot.mockTeamsAndRepositories.getTeamsForServices(any())).thenReturn(
-        Future.successful(TeamsForServices(Map("slug-name" -> Seq("team-name"))))
+        Future.successful(TeamsForServices(Map("repo-name" -> Seq("team-name"))))
       )
 
       when(boot.mockDerivedDependencyRepository.findServicesByDeployment(any(), any(), any(), any())).thenReturn(
@@ -199,7 +199,7 @@ class ServiceDependenciesControllerSpec
       val boot = Boot.init
 
       when(boot.mockTeamsAndRepositories.getTeamsForServices(any())).thenReturn(
-        Future.successful(TeamsForServices(Map("slug-name" -> Seq("team-name"))))
+        Future.successful(TeamsForServices(Map("repo-name" -> Seq("team-name"))))
       )
 
       when(boot.mockDerivedDependencyRepository.findServicesByDeployment(any(), any(), any(), any())).thenReturn(
@@ -239,7 +239,7 @@ class ServiceDependenciesControllerSpec
       val boot = Boot.init
 
       when(boot.mockTeamsAndRepositories.getTeamsForServices(any())).thenReturn(
-        Future.successful(TeamsForServices(Map("slug-name" -> Seq("team-name"))))
+        Future.successful(TeamsForServices(Map("repo-name" -> Seq("team-name"))))
       )
 
       when(boot.mockDerivedDependencyRepository.findServicesByDeployment(any(), any(), any(), any())).thenReturn(

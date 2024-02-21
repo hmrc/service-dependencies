@@ -159,10 +159,18 @@ class DependencyServiceSpec
 
   "setArtefactDependencies" should {
 
+//    private def isLatest(metaArtefact: MetaArtefact): Future[Boolean] = {
+//      metaArtefactRepository.find(metaArtefact.name).map {
+//        _.map {
+//          storedMeta => metaArtefact.version > storedMeta.version
+//        }.isDefined
+//      }
+//    }
+
     "replace meta artefact when given a new version" in {
 
       when(mockArtifactRepository.find(any())).thenReturn(Future.successful(Some(metaArtefact)))
-      when(mockDependencyRepository.addAndReplace(any())).thenReturn(Future.successful(()))
+      when(mockDependencyRepository.put(any())).thenReturn(Future.successful(()))
       when(mockTeamsAndRepositoriesConnector.getRepository(any())(any())).thenReturn(Future.successful(Some(repository)))
 
       val newVersionArtefact: MetaArtefact = metaArtefact.copy(
@@ -172,13 +180,13 @@ class DependencyServiceSpec
       service.setArtefactDependencies(newVersionArtefact).futureValue mustBe ()
 
       verify(mockDependencyRepository, times(1))
-        .addAndReplace(MetaArtefactDependency.fromMetaArtefact(newVersionArtefact, Library))
+        .put(MetaArtefactDependency.fromMetaArtefact(newVersionArtefact, Library))
     }
 
     "replace meta artefact when given a new version and set repo type to Other if it cannot be found" in {
 
       when(mockArtifactRepository.find(any())).thenReturn(Future.successful(Some(metaArtefact)))
-      when(mockDependencyRepository.addAndReplace(any())).thenReturn(Future.successful(()))
+      when(mockDependencyRepository.put(any())).thenReturn(Future.successful(()))
       when(mockTeamsAndRepositoriesConnector.getRepository(any())(any())).thenReturn(Future.successful(None))
 
       val newVersionArtefact: MetaArtefact = metaArtefact.copy(
@@ -188,19 +196,7 @@ class DependencyServiceSpec
       service.setArtefactDependencies(newVersionArtefact).futureValue mustBe()
 
       verify(mockDependencyRepository, times(1))
-        .addAndReplace(MetaArtefactDependency.fromMetaArtefact(newVersionArtefact, Other))
-    }
-
-    "add new meta artefact" in {
-
-      when(mockArtifactRepository.find(any())).thenReturn(Future.successful(None))
-      when(mockTeamsAndRepositoriesConnector.getRepository(any())(any())).thenReturn(Future.successful(Some(repository)))
-      when(mockDependencyRepository.addAndReplace(any())).thenReturn(Future.successful(()))
-
-      service.setArtefactDependencies(metaArtefact).futureValue mustBe()
-
-      verify(mockDependencyRepository, times(1))
-        .addAndReplace(MetaArtefactDependency.fromMetaArtefact(metaArtefact, Library))
+        .put(MetaArtefactDependency.fromMetaArtefact(newVersionArtefact, Other))
     }
 
     "not add meta artefact when given a old version" in {

@@ -71,8 +71,8 @@ class MetaArtefactDependencySpec extends AnyWordSpec with Matchers {
       )
 
       val expectedResult = MetaArtefactDependency(
-        slugName = "test-artefact",
-        slugVersion = Version("1.0.0"),
+        repoName = "test-artefact",
+        repoVersion = Version("1.0.0"),
         group = "artefact",
         artefact = "build",
         artefactVersion = Version("1.23.0"),
@@ -103,8 +103,8 @@ class MetaArtefactDependencySpec extends AnyWordSpec with Matchers {
       )
 
       val expectedResult1 = MetaArtefactDependency(
-        slugName = "test-artefact",
-        slugVersion = Version("1.0.0"),
+        repoName = "test-artefact",
+        repoVersion = Version("1.0.0"),
         group = "artefact",
         artefact = "build",
         artefactVersion = Version("1.23.0"),
@@ -118,8 +118,8 @@ class MetaArtefactDependencySpec extends AnyWordSpec with Matchers {
       )
 
       val expectedResult2 = MetaArtefactDependency(
-        slugName = "test-artefact",
-        slugVersion = Version("1.0.0"),
+        repoName = "test-artefact",
+        repoVersion = Version("1.0.0"),
         group = "artefact",
         artefact = "build",
         artefactVersion = Version("1.23.0"),

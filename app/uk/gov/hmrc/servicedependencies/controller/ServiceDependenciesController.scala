@@ -26,7 +26,7 @@ import play.api.mvc._
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 import uk.gov.hmrc.servicedependencies.connector.{ServiceConfigsConnector, TeamsAndRepositoriesConnector}
 import uk.gov.hmrc.servicedependencies.controller.model.{Dependencies, Dependency, DependencyBobbyRule}
-import uk.gov.hmrc.servicedependencies.model.RepoType.{Other, Service}
+import uk.gov.hmrc.servicedependencies.model.RepoType.Service
 import uk.gov.hmrc.servicedependencies.model._
 import uk.gov.hmrc.servicedependencies.persistence.derived.{DerivedDependencyRepository, DerivedModuleRepository}
 import uk.gov.hmrc.servicedependencies.persistence.{LatestVersionRepository, MetaArtefactRepository}
@@ -69,22 +69,14 @@ class ServiceDependenciesController @Inject()(
                                    scope: Option[List[DependencyScope]]
                                  ): Action[AnyContent] = Action.async { implicit request =>
     for {
-      getTeams    <- teamsAndRepositoriesConnector.getTeamsForServices
-      getServices <- derivedDependencyRepository.findServicesByDeployment(flag, group, artefact, scope)
-      getOther    <- derivedDependencyRepository.findByOtherRepository(group, artefact, scope)
+      allTeams     <- teamsAndRepositoriesConnector.getTeamsForServices
+      dependencies <- repoType match {
+        case Some(Service) => derivedDependencyRepository.findServicesByDeployment(flag, group, artefact, scope)
+        case _             => derivedDependencyRepository.findByOtherRepository(group, artefact, scope)
+      }
+      dependenciesByRange   = versionRange.map(range => dependencies.filter(s => range.includes(s.artefactVersion))).getOrElse(dependencies)
+      dependenciesWithTeams = dependenciesByRange.map(repo => repo.copy(teams = allTeams.getTeams(repo.repoName).toList.sorted))
     } yield {
-
-      val dependencies: Seq[MetaArtefactDependency] = repoType match {
-        case Some(Other)   => getOther
-        case _             => getServices
-      }
-
-      val dependenciesByRange = versionRange.map(range => dependencies.filter(s => range.includes(s.artefactVersion))).getOrElse(dependencies)
-
-      val dependenciesWithTeams = dependenciesByRange.map { r =>
-        r.copy(teams = getTeams.getTeams(r.slugName).toList.sorted)
-      }
-
       implicit val madWrites: OWrites[MetaArtefactDependency] = MetaArtefactDependency.apiWrites
       Ok(Json.toJson(dependenciesWithTeams))
     }

@@ -20,7 +20,7 @@ import com.google.inject.Inject
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.servicedependencies.connector.TeamsAndRepositoriesConnector
 import uk.gov.hmrc.servicedependencies.model.RepoType.Other
-import uk.gov.hmrc.servicedependencies.model.{DependencyScope, MetaArtefact, MetaArtefactDependency}
+import uk.gov.hmrc.servicedependencies.model.{DependencyScope, MetaArtefact, MetaArtefactDependency, MetaArtefactModule}
 import uk.gov.hmrc.servicedependencies.persistence.MetaArtefactRepository
 import uk.gov.hmrc.servicedependencies.persistence.derived.DerivedDependencyRepository
 import uk.gov.hmrc.servicedependencies.util.DependencyGraphParser
@@ -32,26 +32,19 @@ class DependencyService @Inject()(
                                    derivedDependencyRepository: DerivedDependencyRepository,
                                    teamsAndRepositoriesConnector : TeamsAndRepositoriesConnector
                                  )(implicit ec: ExecutionContext, hc: HeaderCarrier) {
-
-  private def artefactVersionControl(metaArtefact: MetaArtefact): Future[Option[MetaArtefact]] = {
+  private def isLatest(metaArtefact: MetaArtefact): Future[Boolean] = {
     metaArtefactRepository.find(metaArtefact.name).map {
-      case Some(value) =>
-        if (metaArtefact.version.compare(value.version) > 0) {
-          Some(metaArtefact)
-        } else {
-          None
-        }
-      case None => Some(metaArtefact)
+      case Some(storedMeta) => metaArtefact.version > storedMeta.version
+      case None             => false
     }
   }
+
   def setArtefactDependencies(metaArtefact: MetaArtefact): Future[Unit] = {
-    artefactVersionControl(metaArtefact).flatMap {
-      case Some(value) =>
-        teamsAndRepositoriesConnector.getRepository(value.name).flatMap {
-          repo =>
-            derivedDependencyRepository.addAndReplace(MetaArtefactDependency.fromMetaArtefact(value, repo.map(_.repoType).getOrElse(Other)))
-        }
-      case None => Future.successful(())
+    isLatest(metaArtefact).flatMap {
+      case true => teamsAndRepositoriesConnector.getRepository(metaArtefact.name).flatMap {
+        repo => derivedDependencyRepository.put(MetaArtefactDependency.fromMetaArtefact(metaArtefact, repo.map(_.repoType).getOrElse(Other)))
+      }
+      case false => Future.successful(())
     }
   }
 }

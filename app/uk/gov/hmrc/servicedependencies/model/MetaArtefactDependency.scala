@@ -19,46 +19,45 @@ package uk.gov.hmrc.servicedependencies.model
 import play.api.libs.functional.syntax.toFunctionalBuilderOps
 import play.api.libs.json.Format.GenericFormat
 import play.api.libs.json._
-import uk.gov.hmrc.servicedependencies.model.RepoType.Other
 import uk.gov.hmrc.servicedependencies.service.DependencyService
 
 case class MetaArtefactDependency(
-                       slugName: String,
-                       slugVersion: Version,
-                       teams: List[String], // Override on write
-                       repoType: RepoType,
-                       group: String,
-                       artefact: String,
-                       artefactVersion: Version,
-                       compileFlag: Boolean,
-                       providedFlag: Boolean,
-                       testFlag: Boolean,
-                       itFlag: Boolean,
-                       buildFlag: Boolean
-                     )
+  repoName: String,
+  repoVersion: Version,
+  teams: List[String], // Override on write
+  repoType: RepoType,
+  group: String,
+  artefact: String,
+  artefactVersion: Version,
+  compileFlag: Boolean,
+  providedFlag: Boolean,
+  testFlag: Boolean,
+  itFlag: Boolean,
+  buildFlag: Boolean
+)
 
 object MetaArtefactDependency {
 
   implicit val versionFormats: Format[Version] = Version.format
 
   val mongoFormat: OFormat[MetaArtefactDependency] = {
-    ((__ \ "slugName").format[String]
-      ~ (__ \ "slugVersion").format[Version]
+    ((__ \ "repoName").format[String]
+      ~ (__ \ "repoVersion").format[Version]
       ~ (__ \ "repoType").format[RepoType]
       ~ (__ \ "group").format[String]
       ~ (__ \ "artefact").format[String]
       ~ (__ \ "artefactVersion").format[Version]
-      ~ (__ \ "compileFlag").format[Boolean]
-      ~ (__ \ "providedFlag").format[Boolean]
-      ~ (__ \ "testFlag").format[Boolean]
-      ~ (__ \ "itFlag").format[Boolean]
-      ~ (__ \ "buildFlag").format[Boolean]
+      ~ (__ \ "scope_compile").format[Boolean]
+      ~ (__ \ "scope_provided").format[Boolean]
+      ~ (__ \ "scope_test").format[Boolean]
+      ~ (__ \ "scope_it").format[Boolean]
+      ~ (__ \ "scope_build").format[Boolean]
       )((sn, sv, rt, g, a, av, cf, pf, tf, itf, bf) =>
       MetaArtefactDependency(
         sn, sv, List.empty, rt, g, a, av, cf, pf, tf, itf, bf
       ),
-      ( mad => (mad.slugName,
-        mad.slugVersion,
+      ( mad => (mad.repoName,
+        mad.repoVersion,
         mad.repoType,
         mad.group,
         mad.artefact,
@@ -78,17 +77,17 @@ object MetaArtefactDependency {
     implicit val depScope   = DependencyScope.dependencyScopeFormat
 
     (
-      (__ \ "slugName").write[String] and
-      (__ \ "slugVersion").write[String] and
-      (__ \ "teams").write[List[String]] and
-      (__ \ "repoType").write[RepoType] and
-      (__ \ "group").write[String] and
-      (__ \ "artefact").write[String] and
-      (__ \ "artefactVersion").write[String] and
+      (__ \ "repoName").write[String] ~
+      (__ \ "repoVersion").write[String] ~
+      (__ \ "teams").write[List[String]] ~
+      (__ \ "repoType").write[RepoType] ~
+      (__ \ "group").write[String] ~
+      (__ \ "artefact").write[String] ~
+      (__ \ "artefactVersion").write[String] ~
       (__ \ "scopes").write[Set[DependencyScope]]
       ) (mad => (
-      mad.slugName,
-      mad.slugVersion.toString,
+      mad.repoName,
+      mad.repoVersion.toString,
       mad.teams,
       mad.repoType,
       mad.group,
@@ -101,7 +100,7 @@ object MetaArtefactDependency {
         Set[DependencyScope](DependencyScope.Build).filter(_ => mad.buildFlag)
     ))
   }
-"scopes"
+
   def fromMetaArtefact(metaArtefact: MetaArtefact, repoType: RepoType): Seq[MetaArtefactDependency] = {
     DependencyService.parseArtefactDependencies(metaArtefact).map {
       case (node, scope) =>

@@ -17,30 +17,11 @@
 package uk.gov.hmrc.servicedependencies.binders
 
 import play.api.mvc.QueryStringBindable
-import uk.gov.hmrc.servicedependencies.model.BobbyRuleQuery
 
 import java.time.LocalDate
 import scala.util.Try
 
 object Binders {
-      implicit def bobbyRuleQueryStringBindable(implicit stringBinder: QueryStringBindable[String]): QueryStringBindable[BobbyRuleQuery] =
-    new QueryStringBindable[BobbyRuleQuery] {
-
-      private def stringToBobby(key: String, rule: String): Either[String, BobbyRuleQuery] =
-        rule.split(":") match {
-          case Array(organisation, name, range) => Right(BobbyRuleQuery(organisation, name, range))
-          case _                                => Left(s"Invalid $key")
-        }
-
-      override def bind(key: String, params: Map[String, Seq[String]]): Option[Either[String, BobbyRuleQuery]] =
-        stringBinder.bind(key, params)
-          .map(_.flatMap(stringToBobby(key, _)))
-
-      override def unbind(key: String, value: BobbyRuleQuery): String =
-        stringBinder.unbind(key, value.organisation + ":" + value.name + ":" + value.range)
-
-    }
-
   implicit def localDateBindable(implicit strBinder: QueryStringBindable[String]): QueryStringBindable[LocalDate] =
     new QueryStringBindable[LocalDate] {
       override def bind(key: String, params: Map[String, Seq[String]]): Option[Either[String, LocalDate]] =
