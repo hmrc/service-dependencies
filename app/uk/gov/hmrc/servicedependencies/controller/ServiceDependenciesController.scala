@@ -26,9 +26,8 @@ import play.api.mvc._
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 import uk.gov.hmrc.servicedependencies.connector.{ServiceConfigsConnector, TeamsAndRepositoriesConnector}
 import uk.gov.hmrc.servicedependencies.controller.model.{Dependencies, Dependency, DependencyBobbyRule}
-import uk.gov.hmrc.servicedependencies.model.RepoType.Service
 import uk.gov.hmrc.servicedependencies.model._
-import uk.gov.hmrc.servicedependencies.persistence.derived.{DerivedDependencyRepository, DerivedModuleRepository}
+import uk.gov.hmrc.servicedependencies.persistence.derived.{DerivedDependencyRepository, DerivedModuleRepository, DerivedServiceDependenciesRepository}
 import uk.gov.hmrc.servicedependencies.persistence.{LatestVersionRepository, MetaArtefactRepository}
 import uk.gov.hmrc.servicedependencies.service.{CuratedLibrariesService, SlugInfoService, TeamDependencyService}
 
@@ -37,16 +36,17 @@ import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
 class ServiceDependenciesController @Inject()(
-  slugInfoService               : SlugInfoService
-, curatedLibrariesService       : CuratedLibrariesService
-, serviceConfigsConnector       : ServiceConfigsConnector
-, teamDependencyService         : TeamDependencyService
-, metaArtefactRepository        : MetaArtefactRepository
-, latestVersionRepository       : LatestVersionRepository
-, derivedModuleRepository       : DerivedModuleRepository
-, derivedDependencyRepository   : DerivedDependencyRepository
-, teamsAndRepositoriesConnector : TeamsAndRepositoriesConnector
-, cc                            : ControllerComponents
+  slugInfoService                     : SlugInfoService
+, curatedLibrariesService             : CuratedLibrariesService
+, serviceConfigsConnector             : ServiceConfigsConnector
+, teamDependencyService               : TeamDependencyService
+, metaArtefactRepository              : MetaArtefactRepository
+, latestVersionRepository             : LatestVersionRepository
+, derivedModuleRepository             : DerivedModuleRepository
+, derivedDependencyRepository         : DerivedDependencyRepository
+, derivedServiceDependencyRepository  : DerivedServiceDependenciesRepository
+, teamsAndRepositoriesConnector       : TeamsAndRepositoriesConnector
+, cc                                  : ControllerComponents
 )(implicit
   ec                     : ExecutionContext
 ) extends BackendController(cc) {
@@ -62,17 +62,17 @@ class ServiceDependenciesController @Inject()(
 
   def metaArtefactDependencies(
                                    flag: SlugInfoFlag,
-                                   repoType: Option[RepoType],
-                                   group: Option[String],
-                                   artefact: Option[String],
+                                   group: String,
+                                   artefact: String,
+                                   repoType: Option[List[RepoType]],
                                    versionRange: Option[BobbyVersionRange],
                                    scope: Option[List[DependencyScope]]
                                  ): Action[AnyContent] = Action.async { implicit request =>
     for {
       allTeams     <- teamsAndRepositoriesConnector.getTeamsForServices
-      dependencies <- repoType match {
-        case Some(Service) => derivedDependencyRepository.findServicesByDeployment(flag, group, artefact, scope)
-        case _             => derivedDependencyRepository.findByOtherRepository(group, artefact, scope)
+      dependencies <- flag match {
+        case SlugInfoFlag.Latest => derivedDependencyRepository.find(group, artefact, repoType, scope)
+        case _                   => derivedServiceDependencyRepository.findServicesWithDependency(flag, group, artefact, scope).map(_.map(MetaArtefactDependency.fromServiceDependency))
       }
       dependenciesByRange   = versionRange.map(range => dependencies.filter(s => range.includes(s.artefactVersion))).getOrElse(dependencies)
       dependenciesWithTeams = dependenciesByRange.map(repo => repo.copy(teams = allTeams.getTeams(repo.repoName).toList.sorted))

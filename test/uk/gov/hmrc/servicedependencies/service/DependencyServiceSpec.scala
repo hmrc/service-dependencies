@@ -27,7 +27,7 @@ import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.servicedependencies.connector.TeamsAndRepositoriesConnector
 import uk.gov.hmrc.servicedependencies.connector.model.Repository
 import uk.gov.hmrc.servicedependencies.model.DependencyScope.{Build, Compile, It, Provided, Test}
-import uk.gov.hmrc.servicedependencies.model.RepoType.{Library, Other, Service}
+import uk.gov.hmrc.servicedependencies.model.RepoType.{Library, Other}
 import uk.gov.hmrc.servicedependencies.model.{MetaArtefact, MetaArtefactDependency, MetaArtefactModule, Version}
 import uk.gov.hmrc.servicedependencies.persistence.MetaArtefactRepository
 import uk.gov.hmrc.servicedependencies.persistence.derived.DerivedDependencyRepository
@@ -72,18 +72,41 @@ class DependencyServiceSpec
     Library
   )
 
-  private val metaArtefactModule =
-    MetaArtefactModule(
-      name = "sub-module",
-      group = "uk.gov.hmrc",
-      sbtVersion = Some(Version("1.4.9")),
-      crossScalaVersions = Some(List(Version("2.12.14"))),
-      publishSkip = Some(false),
-      dependencyDotCompile = Some(compileDependency),
-      dependencyDotProvided = Some(providedDependency),
-      dependencyDotTest = Some(testDependency),
-      dependencyDotIt = Some(itDependency)
-    )
+  val module1: MetaArtefactModule = MetaArtefactModule(
+    name = "sub-module-1",
+    group = "uk.gov.hmrc",
+    sbtVersion = Some(Version("1.4.9")),
+    crossScalaVersions = Some(List(Version("2.12.14"))),
+    publishSkip = Some(false),
+    dependencyDotCompile = Some(compileDependency),
+    dependencyDotProvided = Some(providedDependency),
+    dependencyDotTest = None,
+    dependencyDotIt = None
+  )
+
+  val module2: MetaArtefactModule = MetaArtefactModule(
+    name = "sub-module-2",
+    group = "uk.gov.hmrc",
+    sbtVersion = Some(Version("1.4.9")),
+    crossScalaVersions = Some(List(Version("2.12.14"))),
+    publishSkip = Some(false),
+    dependencyDotCompile = None,
+    dependencyDotProvided = None,
+    dependencyDotTest = Some(testDependency),
+    dependencyDotIt = None
+  )
+
+  val module3: MetaArtefactModule = MetaArtefactModule(
+    name = "sub-module-3",
+    group = "uk.gov.hmrc",
+    sbtVersion = Some(Version("1.4.9")),
+    crossScalaVersions = Some(List(Version("2.12.14"))),
+    publishSkip = Some(false),
+    dependencyDotCompile = None,
+    dependencyDotProvided = None,
+    dependencyDotTest = None,
+    dependencyDotIt = Some(itDependency)
+  )
 
   private val metaArtefact =
     MetaArtefact(
@@ -95,9 +118,7 @@ class DependencyServiceSpec
       buildInfo = Map(
         "GIT_URL" -> "https://github.com/hmrc/library.git"
       ),
-      modules = Seq(
-        metaArtefactModule
-      ),
+      modules = Seq(module1, module2, module3),
       created = Instant.parse("2007-12-03T10:15:30.00Z")
     )
 
@@ -120,16 +141,15 @@ class DependencyServiceSpec
 
       val crossScopeDependency  = "digraph \"dependency-graph\" {\n    graph[rankdir=\"LR\"]\n    edge [\n        arrowtail=\"none\"\n    ]\n        \"artefact:build_1.00:1.23.0\" -> \"artefact:build_1.00:1.23.0\" \n}"
 
-      val newModule = metaArtefactModule.copy(
-        dependencyDotCompile = Some(crossScopeDependency),
-        dependencyDotProvided = Some(crossScopeDependency),
-        dependencyDotTest = Some(crossScopeDependency),
-        dependencyDotIt = Some(crossScopeDependency)
+      val updatedModules = Seq(
+        module1.copy(dependencyDotCompile = Some(crossScopeDependency), dependencyDotProvided = Some(crossScopeDependency)),
+        module2.copy(dependencyDotTest = Some(crossScopeDependency)),
+        module3.copy(dependencyDotIt = Some(crossScopeDependency))
       )
 
       val newArtefact = metaArtefact.copy(
         dependencyDotBuild = Some(crossScopeDependency),
-        modules = Seq(newModule)
+        modules = updatedModules
       )
 
       val expectedResult = Map(
@@ -141,16 +161,15 @@ class DependencyServiceSpec
 
     "parse meta artefact dependencies to empty Map if non are found" in {
 
-      val newModule = metaArtefactModule.copy(
-        dependencyDotCompile = None,
-        dependencyDotProvided = None,
-        dependencyDotTest = None,
-        dependencyDotIt = None
+      val updatedModules = Seq(
+        module1.copy(dependencyDotCompile = None, dependencyDotProvided = None),
+        module2.copy(dependencyDotTest = None),
+        module3.copy(dependencyDotIt = None)
       )
 
       val newArtefact = metaArtefact.copy(
         dependencyDotBuild = None,
-        modules = Seq(newModule)
+        modules = updatedModules
       )
 
       DependencyService.parseArtefactDependencies(newArtefact) shouldBe Map.empty
@@ -158,14 +177,6 @@ class DependencyServiceSpec
   }
 
   "setArtefactDependencies" should {
-
-//    private def isLatest(metaArtefact: MetaArtefact): Future[Boolean] = {
-//      metaArtefactRepository.find(metaArtefact.name).map {
-//        _.map {
-//          storedMeta => metaArtefact.version > storedMeta.version
-//        }.isDefined
-//      }
-//    }
 
     "replace meta artefact when given a new version" in {
 

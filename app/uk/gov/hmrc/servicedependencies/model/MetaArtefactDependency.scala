@@ -19,6 +19,7 @@ package uk.gov.hmrc.servicedependencies.model
 import play.api.libs.functional.syntax.toFunctionalBuilderOps
 import play.api.libs.json.Format.GenericFormat
 import play.api.libs.json._
+import uk.gov.hmrc.servicedependencies.model.RepoType.Service
 import uk.gov.hmrc.servicedependencies.service.DependencyService
 
 case class MetaArtefactDependency(
@@ -119,6 +120,26 @@ object MetaArtefactDependency {
           buildFlag     = scope.contains(DependencyScope.Build)
         )
     }.toSeq
+  }
+
+  def fromServiceDependency(serviceDependency: ServiceDependency): MetaArtefactDependency = {
+    serviceDependency match {
+      case ServiceDependency(slugName, slugVersion, teams, depGroup, depArtefact, depVersion, _, scope) =>
+        MetaArtefactDependency(
+          repoName        = slugName,
+          repoVersion     = slugVersion,
+          teams           = teams,
+          repoType        = Service,
+          group           = depGroup,
+          artefact        = depArtefact,
+          artefactVersion = depVersion,
+          compileFlag     = scope.contains(DependencyScope.Compile),
+          providedFlag    = scope.contains(DependencyScope.Provided),
+          testFlag        = scope.contains(DependencyScope.Test),
+          itFlag          = scope.contains(DependencyScope.It),
+          buildFlag       = scope.contains(DependencyScope.Build)
+        )
+    }
   }
 }
 

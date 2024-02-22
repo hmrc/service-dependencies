@@ -18,22 +18,20 @@ package uk.gov.hmrc.servicedependencies.persistence.derived
 
 import com.google.inject.Inject
 import org.mongodb.scala.bson.BsonDocument
-import org.mongodb.scala.model.Filters.{equal, nin, or}
+import org.mongodb.scala.bson.conversions.Bson
+import org.mongodb.scala.model.Filters.{equal, or}
 import org.mongodb.scala.model._
 import play.api.Logging
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.play.json.PlayMongoRepository
-import uk.gov.hmrc.servicedependencies.model.RepoType.Service
-import uk.gov.hmrc.servicedependencies.model.{DependencyScope, MetaArtefactDependency, RepoType, SlugInfoFlag}
-import uk.gov.hmrc.servicedependencies.persistence.DeploymentRepository
+import uk.gov.hmrc.servicedependencies.model.{DependencyScope, MetaArtefactDependency, RepoType}
 
 import javax.inject.Singleton
 import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
 class DerivedDependencyRepository @Inject()(
-                                      mongoComponent: MongoComponent,
-                                      deploymentRepository: DeploymentRepository
+                                      mongoComponent: MongoComponent
                                     )(implicit ec: ExecutionContext
                                     ) extends PlayMongoRepository[MetaArtefactDependency](
   collectionName = "DERIVED-dependencies"
@@ -69,64 +67,19 @@ class DerivedDependencyRepository @Inject()(
   }
 
   def find(
-    repoName: Option[String]              = None,
-    repoType: Option[RepoType]            = None,
-    group: Option[String]                 = None,
-    artefact: Option[String]              = None,
+    group: String,
+    artefact: String,
+    repoType: Option[List[RepoType]]      = None,
     scopes: Option[List[DependencyScope]] = None
   ): Future[Seq[MetaArtefactDependency]] = {
-
-    val filters = Seq(
-      repoName.map(slugName => equal("repoName", slugName)),
-      group.map(group => equal("group", group)),
-      artefact.map(artifact => equal("artefact", artifact)),
-      repoType.map(repoType => equal("repoType", repoType.toString)),
-      scopes.map(ss => or(ss.map(scope => equal(s"scope_${scope.asString}", value = true)): _*))
-    ).flatten
-
     collection
-      .find(if (filters.isEmpty) BsonDocument() else Filters.and(filters: _*))
-      .toFuture()
-  }
-
-  def findByOtherRepository(
-    group: Option[String]                 = None,
-    artefact: Option[String]              = None,
-    scopes: Option[List[DependencyScope]] = None
-  ): Future[Seq[MetaArtefactDependency]] = {
-
-    val filters = Seq(
-      group.map(group => equal("group", group)),
-      artefact.map(artifact => equal("artefact", artifact)),
-      Some(nin("repoType", Service.asString)),
-      scopes.map(ss => or(ss.map(scope => equal(s"scope_${scope.asString}", value = true)): _*))
-    ).flatten
-
-    collection
-      .find(if (filters.isEmpty) BsonDocument() else Filters.and(filters: _*))
-      .toFuture()
-  }
-
-  def findServicesByDeployment(
-    flag: SlugInfoFlag,
-    group: Option[String]                 = None,
-    artefact: Option[String]              = None,
-    scopes: Option[List[DependencyScope]] = None
-  ): Future[Seq[MetaArtefactDependency]]  = {
-    val filters = Seq(
-      group.map(group => equal("group", group)),
-      artefact.map(artifact => equal("artefact", artifact)),
-      scopes.map(ss => or(ss.map(scope => equal(s"scope_${scope.asString}", value = true)): _*))
-    ).flatten
-
-    deploymentRepository.lookupAgainstDeployments(
-      collectionName = collectionName,
-      domainFormat = MetaArtefactDependency.mongoFormat,
-      slugNameField = "repoName",
-      slugVersionField = "repoVersion"
-    )(
-      deploymentsFilter = equal(flag.asString, true),
-      domainFilter = if (filters.isEmpty) BsonDocument() else Filters.and(filters: _*)
-    )
+      .find(
+        Filters.and(
+          equal("group", group),
+          equal("artefact", artefact),
+          repoType.fold[Bson](BsonDocument())(rt => or(rt.map(repoType => equal(s"repoType", repoType.asString)): _*)),
+          scopes.fold[Bson](BsonDocument())(ss => or(ss.map(scope => equal(s"scope_${scope.asString}", value = true)): _*))
+        )
+      ).toFuture()
   }
 }
