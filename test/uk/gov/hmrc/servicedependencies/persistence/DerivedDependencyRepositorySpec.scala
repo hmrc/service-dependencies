@@ -89,7 +89,7 @@ class DerivedDependencyRepositorySpec
   "put" should {
     "insert new documents" in {
       repository.put(Seq(metaArtefactDependency1, metaArtefactDependency2, metaArtefactDependency3)).futureValue
-      repository.find("group-1", "artifact-1", None, None).futureValue mustBe Seq(metaArtefactDependency1, metaArtefactDependency2)
+      repository.find("group-1", "artifact-1", None, None).futureValue.sortBy(_.repoName) mustBe Seq(metaArtefactDependency1, metaArtefactDependency2)
       repository.find("group-3", "artifact-3", None, None).futureValue mustBe Seq(metaArtefactDependency3)
     }
 
@@ -123,7 +123,7 @@ class DerivedDependencyRepositorySpec
       repository.put(Seq(metaArtefactDependency1, metaArtefactDependency2)).futureValue
       repository.find(repoType = Some(List(Service)), group = "group-1", artefact = "artifact-1").futureValue mustBe Seq(metaArtefactDependency1)
       repository.find(repoType = Some(List(Other)), group = "group-1", artefact = "artifact-1").futureValue mustBe Seq(metaArtefactDependency2)
-      repository.find(repoType = Some(List(Service, Other)), group = "group-1", artefact = "artifact-1").futureValue mustBe Seq(metaArtefactDependency1, metaArtefactDependency2)
+      repository.find(repoType = Some(List(Service, Other)), group = "group-1", artefact = "artifact-1").futureValue.sortBy(_.repoName) mustBe Seq(metaArtefactDependency1, metaArtefactDependency2)
     }
 
     "find document by scope" in {
