@@ -82,4 +82,11 @@ class DerivedDependencyRepository @Inject()(
         )
       ).toFuture()
   }
+
+
+  def clearAllData(): Future[Unit] =
+    collection.deleteMany(BsonDocument())
+      .toFuture()
+      .map(_ => ())
+
 }

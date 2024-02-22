@@ -17,28 +17,30 @@
 package uk.gov.hmrc.servicedependencies.testonly
 
 import cats.implicits._
+
 import javax.inject.Inject
 import org.mongodb.scala.bson.BsonDocument
 import play.api.libs.json._
-import play.api.mvc.ControllerComponents
+import play.api.mvc.{Action, ControllerComponents}
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 import uk.gov.hmrc.servicedependencies.model._
 import uk.gov.hmrc.servicedependencies.persistence._
 import uk.gov.hmrc.servicedependencies.service.{DerivedViewsService, SlugInfoService}
-import uk.gov.hmrc.servicedependencies.persistence.derived.DerivedServiceDependenciesRepository
+import uk.gov.hmrc.servicedependencies.persistence.derived.{DerivedDependencyRepository, DerivedServiceDependenciesRepository}
 
 import scala.concurrent.{ExecutionContext, Future}
 
 class IntegrationTestController @Inject()(
-    latestVersionRepository         : LatestVersionRepository
-  , slugInfoRepo                    : SlugInfoRepository
-  , slugInfoService                 : SlugInfoService
-  , bobbyRulesSummaryRepo           : BobbyRulesSummaryRepository
-  , derivedViewsService             : DerivedViewsService
-  , deploymentsRepo                 : DeploymentRepository
+    latestVersionRepository             : LatestVersionRepository
+  , slugInfoRepo                        : SlugInfoRepository
+  , slugInfoService                     : SlugInfoService
+  , bobbyRulesSummaryRepo               : BobbyRulesSummaryRepository
+  , derivedViewsService                 : DerivedViewsService
+  , deploymentsRepo                     : DeploymentRepository
   , derivedServiceDependenciesRepository: DerivedServiceDependenciesRepository
-  , metaArtefactRepository          : MetaArtefactRepository
-  , cc                              : ControllerComponents
+  , derivedDependencyRepository         : DerivedDependencyRepository
+  , metaArtefactRepository              : MetaArtefactRepository
+  , cc                                  : ControllerComponents
   )(implicit ec: ExecutionContext
   ) extends BackendController(cc) {
 
@@ -73,7 +75,22 @@ class IntegrationTestController @Inject()(
     }
   }
 
- def deleteMetaArtefacts =
+  def addMetaArtefactDependencies(): Action[List[MetaArtefactDependency]] = {
+    implicit val mad = MetaArtefactDependency.mongoFormat
+    Action.async(validateJson[List[MetaArtefactDependency]]) { implicit request =>
+      derivedDependencyRepository.put(request.body).map {
+        _ => NoContent
+      }
+    }
+  }
+
+  def deleteMetaArtefactDependencies =
+    Action.async {
+      derivedDependencyRepository.clearAllData()
+        .map(_ => NoContent)
+    }
+
+  def deleteMetaArtefacts =
     Action.async {
       metaArtefactRepository.clearAllData()
         .map(_ => NoContent)
