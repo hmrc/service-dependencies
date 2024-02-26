@@ -16,10 +16,12 @@
 
 package uk.gov.hmrc.servicedependencies.model
 
-import java.time.Instant
+import cats.data.EitherT
 
+import java.time.Instant
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
+import play.api.mvc.QueryStringBindable
 import uk.gov.hmrc.mongo.play.json.formats.MongoJavatimeFormats
 
 sealed trait SlugInfoFlag { def asString: String }
@@ -40,6 +42,22 @@ object SlugInfoFlag {
     else
       values.find(_.asString.equalsIgnoreCase(s))
   }
+
+  implicit def slugInfoFlagBindable(implicit stringBinder: QueryStringBindable[String]): QueryStringBindable[SlugInfoFlag] =
+    new QueryStringBindable[SlugInfoFlag] {
+      override def bind(key: String, params: Map[String, Seq[String]]): Option[Either[String, SlugInfoFlag]] = {
+        (
+          for {
+            x <- EitherT.apply(stringBinder.bind(key, params))
+            y <- EitherT.fromOption[Option](SlugInfoFlag.parse(x), "Invalid slug version format")
+          } yield y
+          ).value
+      }
+
+      override def unbind(key: String, value: SlugInfoFlag): String = {
+        stringBinder.unbind(key, value.toString)
+      }
+    }
 }
 
 case class JavaInfo(

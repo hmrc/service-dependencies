@@ -20,14 +20,15 @@ import cats.data.EitherT
 import cats.implicits._
 import com.google.inject.{Inject, Singleton}
 import play.api.libs.functional.syntax._
-import play.api.libs.json.{Json, OWrites, __}
+import play.api.libs.json.Format.GenericFormat
+import play.api.libs.json._
 import play.api.mvc._
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
-import uk.gov.hmrc.servicedependencies.connector.ServiceConfigsConnector
+import uk.gov.hmrc.servicedependencies.connector.{ServiceConfigsConnector, TeamsAndRepositoriesConnector}
 import uk.gov.hmrc.servicedependencies.controller.model.{Dependencies, Dependency, DependencyBobbyRule}
 import uk.gov.hmrc.servicedependencies.model._
+import uk.gov.hmrc.servicedependencies.persistence.derived.{DerivedDependencyRepository, DerivedModuleRepository, DerivedServiceDependenciesRepository}
 import uk.gov.hmrc.servicedependencies.persistence.{LatestVersionRepository, MetaArtefactRepository}
-import uk.gov.hmrc.servicedependencies.persistence.derived.DerivedModuleRepository
 import uk.gov.hmrc.servicedependencies.service.{CuratedLibrariesService, SlugInfoService, TeamDependencyService}
 
 import java.time.LocalDate
@@ -35,14 +36,17 @@ import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
 class ServiceDependenciesController @Inject()(
-  slugInfoService         : SlugInfoService
-, curatedLibrariesService : CuratedLibrariesService
-, serviceConfigsConnector : ServiceConfigsConnector
-, teamDependencyService   : TeamDependencyService
-, metaArtefactRepository  : MetaArtefactRepository
-, latestVersionRepository : LatestVersionRepository
-, derivedModuleRepository : DerivedModuleRepository
-, cc                      : ControllerComponents
+  slugInfoService                     : SlugInfoService
+, curatedLibrariesService             : CuratedLibrariesService
+, serviceConfigsConnector             : ServiceConfigsConnector
+, teamDependencyService               : TeamDependencyService
+, metaArtefactRepository              : MetaArtefactRepository
+, latestVersionRepository             : LatestVersionRepository
+, derivedModuleRepository             : DerivedModuleRepository
+, derivedDependencyRepository         : DerivedDependencyRepository
+, derivedServiceDependencyRepository  : DerivedServiceDependenciesRepository
+, teamsAndRepositoriesConnector       : TeamsAndRepositoriesConnector
+, cc                                  : ControllerComponents
 )(implicit
   ec                     : ExecutionContext
 ) extends BackendController(cc) {
@@ -54,6 +58,28 @@ class ServiceDependenciesController @Inject()(
       for {
         depsWithRules <- teamDependencyService.findAllDepsForTeam(teamName)
       } yield Ok(Json.toJson(depsWithRules))
+  }
+
+  def metaArtefactDependencies(
+                                   flag: SlugInfoFlag,
+                                   group: String,
+                                   artefact: String,
+                                   repoType: Option[List[RepoType]],
+                                   versionRange: Option[BobbyVersionRange],
+                                   scope: Option[List[DependencyScope]]
+                                 ): Action[AnyContent] = Action.async { implicit request =>
+    for {
+      allTeams     <- teamsAndRepositoriesConnector.getTeamsForServices
+      dependencies <- flag match {
+        case SlugInfoFlag.Latest => derivedDependencyRepository.find(group, artefact, repoType, scope)
+        case _                   => derivedServiceDependencyRepository.findServicesWithDependency(flag, group, artefact, scope).map(_.map(MetaArtefactDependency.fromServiceDependency))
+      }
+      dependenciesByRange   = versionRange.map(range => dependencies.filter(s => range.includes(s.artefactVersion))).getOrElse(dependencies)
+      dependenciesWithTeams = dependenciesByRange.map(repo => repo.copy(teams = allTeams.getTeams(repo.repoName).toList.sorted))
+    } yield {
+      implicit val madWrites: OWrites[MetaArtefactDependency] = MetaArtefactDependency.apiWrites
+      Ok(Json.toJson(dependenciesWithTeams))
+    }
   }
 
   def getServicesWithDependency(
@@ -120,10 +146,9 @@ class ServiceDependenciesController @Inject()(
          , applicationConfig     = slugInfo.applicationConfig
          , slugConfig            = slugInfo.slugConfig
         )
-       } yield {
-         Ok(Json.toJson(slugInfoExtra)(SlugInfoExtra.write))
-       }
-      ).merge
+      } yield {
+        Ok(Json.toJson(slugInfoExtra)(SlugInfoExtra.write))
+      }).merge
     }
 
   def dependenciesOfSlugForTeam(team: String, flag: String): Action[AnyContent] =
@@ -203,7 +228,7 @@ class ServiceDependenciesController @Inject()(
       )
 
     val sbtVersion =
-    // sbt-versions will be the same for all modules,
+      // sbt-versions will be the same for all modules,
       meta.modules.flatMap(_.sbtVersion.toSeq).headOption
 
     def when[T](b: Boolean)(seq: => Seq[T]): Seq[T] =

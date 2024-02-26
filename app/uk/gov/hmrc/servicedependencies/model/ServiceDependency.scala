@@ -16,8 +16,10 @@
 
 package uk.gov.hmrc.servicedependencies.model
 
-import play.api.libs.json.{__, JsError, JsString, JsSuccess, Format, OFormat}
+import cats.data.EitherT
 import play.api.libs.functional.syntax._
+import play.api.libs.json._
+import play.api.mvc.QueryStringBindable
 
 sealed trait DependencyScope { def asString: String }
 
@@ -40,6 +42,24 @@ object DependencyScope {
        _.validate[String].flatMap(DependencyScope.parse(_).fold(err => JsError(__, err), ds => JsSuccess(ds)))
     ,  f => JsString(f.asString)
   )
+
+
+  implicit def bobbyVersionRangeStringBindable(implicit stringBinder: QueryStringBindable[String]): QueryStringBindable[DependencyScope] =
+    new QueryStringBindable[DependencyScope] {
+      override def bind(key: String, params: Map[String, Seq[String]]): Option[Either[String, DependencyScope]] = {
+
+        (
+          for {
+            x <- EitherT.apply(stringBinder.bind(key, params))
+            y <- EitherT.fromEither[Option](DependencyScope.parse(x))
+          } yield y
+          ).value
+      }
+
+      override def unbind(key: String, value: DependencyScope): String = {
+        stringBinder.unbind(key, value.toString)
+      }
+    }
 
 }
 

@@ -17,10 +17,10 @@
 package uk.gov.hmrc.servicedependencies.connector.model
 
 import java.time.Instant
-
 import play.api.libs.json._
+import uk.gov.hmrc.servicedependencies.model.RepoType
 
-case class Repository(name: String, lastActive: Instant, teamNames: Seq[String])
+case class Repository(name: String, lastActive: Instant, teamNames: Seq[String], repoType: RepoType)
 
 object Repository extends EnvReads with EnvWrites {
 

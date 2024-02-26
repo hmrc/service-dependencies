@@ -26,8 +26,8 @@ import uk.gov.hmrc.servicedependencies.connector.ArtefactProcessorConnector
 import uk.gov.hmrc.servicedependencies.service.SlugInfoService
 
 import javax.inject.{Inject, Singleton}
-import scala.concurrent.{ExecutionContext, Future, Promise}
 import scala.concurrent.duration.FiniteDuration
+import scala.concurrent.{ExecutionContext, Future, Promise}
 
 @Singleton
 class SlugInfoUpdatedHandler @Inject()(
@@ -63,7 +63,6 @@ class SlugInfoUpdatedHandler @Inject()(
         .value
     else
       Future.successful(None)
-
   override protected def processMessage(message: Message): Future[MessageAction] = {
     logger.debug(s"Starting processing SlugInfo message with ID '${message.messageId()}'")
     (for {

@@ -16,7 +16,9 @@
 
 package uk.gov.hmrc.servicedependencies.model
 
+import cats.data.EitherT
 import play.api.libs.json._
+import play.api.mvc.QueryStringBindable
 
 // TODO rename as VersionRange?
 /** Iso to Either[Qualifier, (Option[LowerBound], Option[UpperBound])]*/
@@ -116,4 +118,21 @@ object BobbyVersionRange {
     override def writes(bvr: BobbyVersionRange) =
       JsString(bvr.range)
   }
+
+  implicit def bobbyVersionRangeStringBindable(implicit stringBinder: QueryStringBindable[String]): QueryStringBindable[BobbyVersionRange] =
+    new QueryStringBindable[BobbyVersionRange] {
+      override def bind(key: String, params: Map[String, Seq[String]]): Option[Either[String, BobbyVersionRange]] = {
+
+        (
+          for {
+            x <- EitherT.apply(stringBinder.bind(key, params))
+            y <- EitherT.fromOption[Option](BobbyVersionRange.parse(x), "Invalid bobby version format")
+          } yield y
+          ).value
+      }
+
+      override def unbind(key: String, value: BobbyVersionRange): String = {
+        stringBinder.unbind(key, value.toString)
+      }
+    }
 }

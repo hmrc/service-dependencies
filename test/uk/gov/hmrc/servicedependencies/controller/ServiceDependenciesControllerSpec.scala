@@ -16,17 +16,22 @@
 
 package uk.gov.hmrc.servicedependencies.controller
 
+import org.mockito.ArgumentMatchers.any
 import org.mockito.MockitoSugar
-import org.scalatest.wordspec.AnyWordSpec
-import org.scalatest.matchers.should.Matchers
+import org.scalatest.OptionValues
 import org.scalatest.concurrent.{IntegrationPatience, ScalaFutures}
-import play.api.libs.json.Json
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpec
+import play.api.libs.json.{Json, OWrites}
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
-import uk.gov.hmrc.servicedependencies.connector.ServiceConfigsConnector
-import uk.gov.hmrc.servicedependencies.model.{LatestVersion, Version}
+import uk.gov.hmrc.servicedependencies.connector.{ServiceConfigsConnector, TeamsAndRepositoriesConnector, TeamsForServices}
+import uk.gov.hmrc.servicedependencies.model.DependencyScope.Compile
+import uk.gov.hmrc.servicedependencies.model.RepoType.Service
+import uk.gov.hmrc.servicedependencies.model.SlugInfoFlag.{Development, Latest}
+import uk.gov.hmrc.servicedependencies.model._
+import uk.gov.hmrc.servicedependencies.persistence.derived.{DerivedDependencyRepository, DerivedModuleRepository, DerivedServiceDependenciesRepository}
 import uk.gov.hmrc.servicedependencies.persistence.{LatestVersionRepository, MetaArtefactRepository}
-import uk.gov.hmrc.servicedependencies.persistence.derived.DerivedModuleRepository
 import uk.gov.hmrc.servicedependencies.service._
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -37,11 +42,40 @@ class ServiceDependenciesControllerSpec
      with Matchers
      with MockitoSugar
      with ScalaFutures
-     with IntegrationPatience {
+     with IntegrationPatience
+     with OptionValues {
 
   val group    = "uk.gov.hmrc.mongo"
   val artefact = "hmrc-mongo-lib1"
   val version  = Version("1.0.0")
+
+  private def metaArtefactDependency(artefactVersion: Version): MetaArtefactDependency =
+    MetaArtefactDependency(
+      repoName        = "repo-name",
+      repoVersion     = Version("1.0.0"),
+      teams           = List("team-name"),
+      repoType        = Service,
+      group           = "group",
+      artefact        = "artefact",
+      artefactVersion = artefactVersion,
+      compileFlag     = true,
+      providedFlag    = false,
+      testFlag        = false,
+      itFlag          = false,
+      buildFlag       = false
+  )
+
+  private def serviceDependency(artefactVersion: Version): ServiceDependency =
+    ServiceDependency(
+      slugName      = "repo-name",
+      slugVersion   = Version("1.0.0"),
+      teams         = List("team-name"),
+      depGroup      = "group",
+      depArtefact   = "artefact",
+      depVersion    = artefactVersion,
+      scalaVersion  = None,
+      scopes        = Set(Compile)
+    )
 
   "repositoryName" should {
     "get repositoryName for a SlugInfoFlag" in {
@@ -87,46 +121,200 @@ class ServiceDependenciesControllerSpec
     }
   }
 
+  "metaArtefactDependencies" should {
+
+    "get slug info for services when flag is not Latest and set teams" in {
+      val boot = Boot.init
+
+      when(boot.mockTeamsAndRepositories.getTeamsForServices(any())).thenReturn(
+        Future.successful(TeamsForServices(Map("repo-name" -> Seq("team-name"))))
+      )
+
+      when(boot.mockDerivedServiceDependenciesRepository.findServicesWithDependency(any(), any(), any(), any())).thenReturn(
+        Future.successful(Seq(
+          serviceDependency(Version("1.0.0")),
+          serviceDependency(Version("2.0.0")),
+        ))
+      )
+
+      val result = boot.controller.metaArtefactDependencies(
+        flag          = Development,
+        group         = "group",
+        artefact      = "artefact",
+        repoType      = None,
+        versionRange  = None,
+        scope         = None
+      ).apply(FakeRequest())
+
+      status(result) shouldBe OK
+
+      implicit val madWrites: OWrites[MetaArtefactDependency] = MetaArtefactDependency.apiWrites
+
+      contentAsJson(result) shouldBe Json.toJson(Seq(
+        metaArtefactDependency(Version("1.0.0")),
+        metaArtefactDependency(Version("2.0.0"))
+      ))
+
+      verifyZeroInteractions(boot.mockDerivedDependencyRepository)
+    }
+
+    "get slug info for services when flag is not Latest, filter by range and set teams" in {
+      val boot = Boot.init
+
+      when(boot.mockTeamsAndRepositories.getTeamsForServices(any())).thenReturn(
+        Future.successful(TeamsForServices(Map("repo-name" -> Seq("team-name"))))
+      )
+
+      when(boot.mockDerivedServiceDependenciesRepository.findServicesWithDependency(any(), any(), any(), any())).thenReturn(
+        Future.successful(Seq(
+          serviceDependency(Version("1.0.0")),
+          serviceDependency(Version("2.0.0")),
+        ))
+      )
+
+      val result = boot.controller.metaArtefactDependencies(
+        flag          = Development,
+        group         = "group",
+        artefact      = "artefact",
+        repoType      = None,
+        versionRange  = Some(BobbyVersionRange("[1.0.0,1.1.0]")),
+        scope         = None
+      ).apply(FakeRequest())
+
+      status(result) shouldBe OK
+
+      implicit val madWrites: OWrites[MetaArtefactDependency] = MetaArtefactDependency.apiWrites
+
+      contentAsJson(result) shouldBe Json.toJson(Seq(
+        metaArtefactDependency(Version("1.0.0"))
+      ))
+
+      verifyZeroInteractions(boot.mockDerivedDependencyRepository)
+    }
+
+    "get artefact dependencies when flag is Latest and set teams" in {
+      val boot = Boot.init
+
+      when(boot.mockTeamsAndRepositories.getTeamsForServices(any())).thenReturn(
+        Future.successful(TeamsForServices(Map("repo-name" -> Seq("team-name"))))
+      )
+
+      when(boot.mockDerivedDependencyRepository.find(any(), any(), any(), any())).thenReturn(
+        Future.successful(Seq(
+          metaArtefactDependency(Version("1.0.0")),
+          metaArtefactDependency(Version("2.0.0"))
+        ))
+      )
+
+      val result = boot.controller.metaArtefactDependencies(
+        repoType     = None,
+        group        = "group",
+        artefact     = "artefact",
+        flag         = Latest,
+        versionRange = None,
+        scope        = None
+      ).apply(FakeRequest())
+
+      status(result) shouldBe OK
+
+      implicit val madWrites: OWrites[MetaArtefactDependency] = MetaArtefactDependency.apiWrites
+
+      contentAsJson(result) shouldBe Json.toJson(Seq(
+        metaArtefactDependency(Version("1.0.0")),
+        metaArtefactDependency(Version("2.0.0")))
+      )
+
+      verifyZeroInteractions(boot.mockDerivedServiceDependenciesRepository)
+    }
+
+    "get artefact dependencies when flag is Latest, filter by range and set teams" in {
+      val boot = Boot.init
+
+      when(boot.mockTeamsAndRepositories.getTeamsForServices(any())).thenReturn(
+        Future.successful(TeamsForServices(Map("repo-name" -> Seq("team-name"))))
+      )
+
+      when(boot.mockDerivedDependencyRepository.find(any(), any(), any(), any())).thenReturn(
+        Future.successful(Seq(
+          metaArtefactDependency(Version("1.0.0")),
+          metaArtefactDependency(Version("2.0.0"))
+        ))
+      )
+
+      val result = boot.controller.metaArtefactDependencies(
+        repoType = None,
+        group = "group",
+        artefact = "artefact",
+        flag = Latest,
+        versionRange  = Some(BobbyVersionRange("[1.0.0,1.1.0]")),
+        scope = None
+      ).apply(FakeRequest())
+
+      status(result) shouldBe OK
+
+      implicit val madWrites: OWrites[MetaArtefactDependency] = MetaArtefactDependency.apiWrites
+
+      contentAsJson(result) shouldBe Json.toJson(Seq(
+        metaArtefactDependency(Version("1.0.0"))
+        )
+      )
+
+      verifyZeroInteractions(boot.mockDerivedServiceDependenciesRepository)
+    }
+  }
+
   case class Boot(
-      mockSlugInfoService        : SlugInfoService
-    , mockCuratedLibrariesService: CuratedLibrariesService
-    , mockServiceConfigsConnector: ServiceConfigsConnector
-    , mockTeamDependencyService  : TeamDependencyService
-    , mockMetaArtefactRepository : MetaArtefactRepository
-    , mockLatestVersionRepository: LatestVersionRepository
-    , mockDerivedModuleRepository: DerivedModuleRepository
-    , controller                 : ServiceDependenciesController
+      mockSlugInfoService                     : SlugInfoService
+    , mockCuratedLibrariesService             : CuratedLibrariesService
+    , mockServiceConfigsConnector             : ServiceConfigsConnector
+    , mockTeamDependencyService               : TeamDependencyService
+    , mockMetaArtefactRepository              : MetaArtefactRepository
+    , mockTeamsAndRepositories                : TeamsAndRepositoriesConnector
+    , mockLatestVersionRepository             : LatestVersionRepository
+    , mockDerivedDependencyRepository         : DerivedDependencyRepository
+    , mockDerivedServiceDependenciesRepository: DerivedServiceDependenciesRepository
+    , mockDerivedModuleRepository             : DerivedModuleRepository
+    , controller                              : ServiceDependenciesController
     )
 
   object Boot {
     def init: Boot = {
-      val mockSlugInfoService         = mock[SlugInfoService]
-      val mockCuratedLibrariesService = mock[CuratedLibrariesService]
-      val mockServiceConfigsConnector = mock[ServiceConfigsConnector]
-      val mockTeamDependencyService   = mock[TeamDependencyService]
-      val mockMetaArtefactRepository  = mock[MetaArtefactRepository]
-      val mockLatestVersionRepository = mock[LatestVersionRepository]
-      val mockDerivedModuleRepository = mock[DerivedModuleRepository]
+      val mockSlugInfoService                       = mock[SlugInfoService]
+      val mockCuratedLibrariesService               = mock[CuratedLibrariesService]
+      val mockServiceConfigsConnector               = mock[ServiceConfigsConnector]
+      val mockTeamDependencyService                 = mock[TeamDependencyService]
+      val mockMetaArtefactRepository                = mock[MetaArtefactRepository]
+      val mockLatestVersionRepository               = mock[LatestVersionRepository]
+      val mockDerivedModuleRepository               = mock[DerivedModuleRepository]
+      val mockDerivedDependencyRepository           = mock[DerivedDependencyRepository]
+      val mockDerivedServiceDependenciesRepository  = mock[DerivedServiceDependenciesRepository]
+      val mockTeamsAndRepositoryConnector           = mock[TeamsAndRepositoriesConnector]
       val controller = new ServiceDependenciesController(
-          mockSlugInfoService
-        , mockCuratedLibrariesService
-        , mockServiceConfigsConnector
-        , mockTeamDependencyService
-        , mockMetaArtefactRepository
-        , mockLatestVersionRepository
-        , mockDerivedModuleRepository
-        , stubControllerComponents()
-        )
+        mockSlugInfoService,
+        mockCuratedLibrariesService,
+        mockServiceConfigsConnector,
+        mockTeamDependencyService,
+        mockMetaArtefactRepository,
+        mockLatestVersionRepository,
+        mockDerivedModuleRepository,
+        mockDerivedDependencyRepository,
+        mockDerivedServiceDependenciesRepository,
+        mockTeamsAndRepositoryConnector,
+        stubControllerComponents()
+      )
       Boot(
-          mockSlugInfoService
-        , mockCuratedLibrariesService
-        , mockServiceConfigsConnector
-        , mockTeamDependencyService
-        , mockMetaArtefactRepository
-        , mockLatestVersionRepository
-        , mockDerivedModuleRepository
-        , controller
-        )
+        mockSlugInfoService,
+        mockCuratedLibrariesService,
+        mockServiceConfigsConnector,
+        mockTeamDependencyService,
+        mockMetaArtefactRepository,
+        mockTeamsAndRepositoryConnector,
+        mockLatestVersionRepository,
+        mockDerivedDependencyRepository,
+        mockDerivedServiceDependenciesRepository,
+        mockDerivedModuleRepository,
+        controller
+      )
     }
   }
 }

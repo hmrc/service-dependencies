@@ -23,18 +23,22 @@ import play.api.libs.json.Json
 import software.amazon.awssdk.services.sqs.model.Message
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.servicedependencies.connector.ArtefactProcessorConnector
+import uk.gov.hmrc.servicedependencies.model.MetaArtefactDependency
 import uk.gov.hmrc.servicedependencies.persistence.MetaArtefactRepository
-import uk.gov.hmrc.servicedependencies.persistence.derived.DerivedModuleRepository
+import uk.gov.hmrc.servicedependencies.persistence.derived.{DerivedDependencyRepository, DerivedModuleRepository}
+import uk.gov.hmrc.servicedependencies.service.DependencyService
 
 import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
 class MetaArtefactUpdateHandler @Inject()(
-  configuration             : Configuration,
-  artefactProcessorConnector: ArtefactProcessorConnector,
-  metaArtefactRepository    : MetaArtefactRepository,
-  derivedModuleRepository   : DerivedModuleRepository
+                                           configuration               : Configuration,
+                                           artefactProcessorConnector  : ArtefactProcessorConnector,
+                                           metaArtefactRepository      : MetaArtefactRepository,
+                                           derivedDependencyRepository : DerivedDependencyRepository,
+                                           derivedModuleRepository     : DerivedModuleRepository,
+                                           dependencyService           : DependencyService
 )(implicit
   actorSystem               : ActorSystem,
   ec                        : ExecutionContext
@@ -44,7 +48,6 @@ class MetaArtefactUpdateHandler @Inject()(
 )(actorSystem, ec) {
 
   private implicit val hc: HeaderCarrier = HeaderCarrier()
-
   override protected def processMessage(message: Message): Future[MessageAction] = {
     logger.debug(s"Starting processing MetaArtefact message with ID '${message.messageId()}'")
     (for {
@@ -60,6 +63,10 @@ class MetaArtefactUpdateHandler @Inject()(
                         meta <- EitherT.fromOptionF(
                                   artefactProcessorConnector.getMetaArtefact(available.name, available.version),
                                   s"MetaArtefact for name: ${available.name}, version: ${available.version} was not found"
+                                )
+                        _    <- recoverFutureInEitherT(
+                                  dependencyService.setArtefactDependencies(meta)
+                                , errorMessage = s"Could not store meta artefact dependencies for message with ID '${message.messageId()}' (${meta.name} ${meta.version})"
                                 )
                         _    <- recoverFutureInEitherT(
                                   metaArtefactRepository.add(meta)

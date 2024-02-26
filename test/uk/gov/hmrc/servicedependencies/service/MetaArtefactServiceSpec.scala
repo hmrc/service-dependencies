@@ -24,6 +24,7 @@ import org.scalatest.wordspec.AnyWordSpec
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.servicedependencies.connector.{GitHubProxyConnector, ReleasesApiConnector, TeamsAndRepositoriesConnector}
 import uk.gov.hmrc.servicedependencies.connector.model.RepositoryInfo
+import uk.gov.hmrc.servicedependencies.model.RepoType.Service
 import uk.gov.hmrc.servicedependencies.model._
 import uk.gov.hmrc.servicedependencies.persistence.{DeploymentRepository, SlugInfoRepository, SlugVersionRepository}
 
@@ -87,7 +88,7 @@ class MetaArtefactServiceSpec
             name          = name
           , createdAt     = Instant.parse("2015-09-15T16:27:38.000Z")
           , lastUpdatedAt = Instant.parse("2017-05-19T11:00:51.000Z")
-          , repoType      = "Service"
+          , repoType      = Service
           , language      = None
           )
 

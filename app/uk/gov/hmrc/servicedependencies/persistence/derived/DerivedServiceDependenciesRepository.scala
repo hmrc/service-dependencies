@@ -16,20 +16,21 @@
 
 package uk.gov.hmrc.servicedependencies.persistence.derived
 
-import javax.inject.{Inject, Singleton}
 import org.mongodb.scala.MongoCollection
 import org.mongodb.scala.bson.BsonDocument
 import org.mongodb.scala.bson.conversions.Bson
-import org.mongodb.scala.model.{IndexModel, IndexOptions, ReplaceOneModel, ReplaceOptions}
 import org.mongodb.scala.model.Filters._
 import org.mongodb.scala.model.Indexes.{ascending, compoundIndex}
+import org.mongodb.scala.model.{IndexModel, IndexOptions, ReplaceOneModel, ReplaceOptions}
 import play.api.Logger
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.play.json.{CollectionFactory, PlayMongoRepository}
-import uk.gov.hmrc.servicedependencies.model.{ApiServiceDependencyFormats, DependencyScope, MetaArtefact, ServiceDependency, ServiceDependencyWrite, SlugInfoFlag, Version}
+import uk.gov.hmrc.servicedependencies.model._
 import uk.gov.hmrc.servicedependencies.persistence.DeploymentRepository
+import uk.gov.hmrc.servicedependencies.service.DependencyService
 import uk.gov.hmrc.servicedependencies.util.DependencyGraphParser
 
+import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
 
 /** A flattened version of slugInfo.dependencies for efficient usage.
@@ -38,7 +39,7 @@ import scala.concurrent.{ExecutionContext, Future}
 @Singleton
 class DerivedServiceDependenciesRepository @Inject()(
   mongoComponent       : MongoComponent,
-  deploymentRepository : DeploymentRepository,
+  deploymentRepository : DeploymentRepository
 )(implicit
   ec: ExecutionContext
 ) extends PlayMongoRepository[ServiceDependency](
@@ -143,26 +144,6 @@ class DerivedServiceDependenciesRepository @Inject()(
   def populateDependencies(meta: MetaArtefact): Future[Unit] = {
     logger.info(s"Processing ${meta.name} ${meta.version}")
 
-    val optMetaModule = meta.modules.find(_.name == meta.name).orElse(meta.modules.headOption)
-
-    val graphBuild    = meta.dependencyDotBuild.getOrElse("")
-    val graphCompile  = optMetaModule.flatMap(_.dependencyDotCompile ).getOrElse("")
-    val graphProvided = optMetaModule.flatMap(_.dependencyDotProvided).getOrElse("")
-    val graphTest     = optMetaModule.flatMap(_.dependencyDotTest    ).getOrElse("")
-    val graphIt       = optMetaModule.flatMap(_.dependencyDotIt      ).getOrElse("")
-
-    val build    = DependencyGraphParser.parse(graphBuild   ).dependencies.map((_, DependencyScope.Build   ))
-    val compile  = DependencyGraphParser.parse(graphCompile ).dependencies.map((_, DependencyScope.Compile ))
-    val provided = DependencyGraphParser.parse(graphProvided).dependencies.map((_, DependencyScope.Provided))
-    val test     = DependencyGraphParser.parse(graphTest    ).dependencies.map((_, DependencyScope.Test    ))
-    val it       = DependencyGraphParser.parse(graphIt      ).dependencies.map((_, DependencyScope.It      ))
-
-    val dependencies: Map[DependencyGraphParser.Node, Set[DependencyScope]] =
-      (build ++ compile ++ provided ++ test ++ it)
-        .foldLeft(Map.empty[DependencyGraphParser.Node, Set[DependencyScope]]){ case (acc, (n, flag)) =>
-          acc + (n -> (acc.getOrElse(n, Set.empty) + flag))
-        }
-
     def toServiceDependencyWrite(group: String, artefact: String, version: Version, scalaVersion: Option[String], scopes: Set[DependencyScope]) =
       ServiceDependencyWrite(
         slugName     = meta.name,
@@ -184,6 +165,8 @@ class DerivedServiceDependenciesRepository @Inject()(
     val sbtVersion =
       meta.modules.flatMap(_.sbtVersion).headOption
 
+    val dependencies: Map[DependencyGraphParser.Node, Set[DependencyScope]] = DependencyService.parseArtefactDependencies(meta)
+
     def dependencyIfMissing(
       group       : String,
       artefact    : String,
@@ -194,10 +177,10 @@ class DerivedServiceDependenciesRepository @Inject()(
       for {
         v                <- version
         applicableScopes = scopes.collect {
-                              case scope if dependencies.find(dep => dep._2.contains(scope) &&
-                                                                    dep._1.group    == group &&
-                                                                    dep._1.artefact == artefact
-                                                            ).isEmpty => scope
+                              case scope if !dependencies.exists(dep =>
+                                dep._2.contains(scope) &&
+                                dep._1.group == group &&
+                                dep._1.artefact == artefact) => scope
                             }
         if applicableScopes.nonEmpty
       } yield
