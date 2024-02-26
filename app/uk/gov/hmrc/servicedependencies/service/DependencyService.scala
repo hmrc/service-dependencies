@@ -20,7 +20,7 @@ import com.google.inject.Inject
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.servicedependencies.connector.TeamsAndRepositoriesConnector
 import uk.gov.hmrc.servicedependencies.model.RepoType.Other
-import uk.gov.hmrc.servicedependencies.model.{DependencyScope, MetaArtefact, MetaArtefactDependency, MetaArtefactModule}
+import uk.gov.hmrc.servicedependencies.model.{DependencyScope, MetaArtefact, MetaArtefactDependency}
 import uk.gov.hmrc.servicedependencies.persistence.MetaArtefactRepository
 import uk.gov.hmrc.servicedependencies.persistence.derived.DerivedDependencyRepository
 import uk.gov.hmrc.servicedependencies.util.DependencyGraphParser
@@ -28,10 +28,10 @@ import uk.gov.hmrc.servicedependencies.util.DependencyGraphParser
 import scala.concurrent.{ExecutionContext, Future}
 
 class DependencyService @Inject()(
-                                   metaArtefactRepository: MetaArtefactRepository,
-                                   derivedDependencyRepository: DerivedDependencyRepository,
-                                   teamsAndRepositoriesConnector : TeamsAndRepositoriesConnector
-                                 )(implicit ec: ExecutionContext, hc: HeaderCarrier) {
+  metaArtefactRepository: MetaArtefactRepository,
+  derivedDependencyRepository: DerivedDependencyRepository,
+  teamsAndRepositoriesConnector : TeamsAndRepositoriesConnector
+)(implicit ec: ExecutionContext) {
   private def isLatest(metaArtefact: MetaArtefact): Future[Boolean] = {
     metaArtefactRepository.find(metaArtefact.name).map {
       case Some(storedMeta) => metaArtefact.version > storedMeta.version
@@ -39,7 +39,7 @@ class DependencyService @Inject()(
     }
   }
 
-  def setArtefactDependencies(metaArtefact: MetaArtefact): Future[Unit] = {
+  def setArtefactDependencies(metaArtefact: MetaArtefact)(implicit hc: HeaderCarrier): Future[Unit] = {
     isLatest(metaArtefact).flatMap {
       case true => teamsAndRepositoriesConnector.getRepository(metaArtefact.name).flatMap {
         repo => derivedDependencyRepository.put(MetaArtefactDependency.fromMetaArtefact(metaArtefact, repo.map(_.repoType).getOrElse(Other)))
