@@ -181,7 +181,7 @@ class DependencyServiceSpec
     "replace meta artefact when given the same version" in {
 
       when(mockArtifactRepository.find(any())).thenReturn(Future.successful(Some(metaArtefact)))
-      when(mockDependencyRepository.put(any())).thenReturn(Future.successful(()))
+      when(mockDependencyRepository.put(any())).thenReturn(Future.unit)
       when(mockTeamsAndRepositoriesConnector.getRepository(any())(any())).thenReturn(Future.successful(Some(repository)))
 
       val newVersionArtefact: MetaArtefact = metaArtefact.copy(
@@ -197,7 +197,7 @@ class DependencyServiceSpec
     "replace meta artefact when given a new version" in {
 
       when(mockArtifactRepository.find(any())).thenReturn(Future.successful(Some(metaArtefact)))
-      when(mockDependencyRepository.put(any())).thenReturn(Future.successful(()))
+      when(mockDependencyRepository.put(any())).thenReturn(Future.unit)
       when(mockTeamsAndRepositoriesConnector.getRepository(any())(any())).thenReturn(Future.successful(Some(repository)))
 
       val newVersionArtefact: MetaArtefact = metaArtefact.copy(
@@ -213,7 +213,7 @@ class DependencyServiceSpec
     "replace meta artefact when given a new version and set repo type to Other if it cannot be found" in {
 
       when(mockArtifactRepository.find(any())).thenReturn(Future.successful(Some(metaArtefact)))
-      when(mockDependencyRepository.put(any())).thenReturn(Future.successful(()))
+      when(mockDependencyRepository.put(any())).thenReturn(Future.unit)
       when(mockTeamsAndRepositoriesConnector.getRepository(any())(any())).thenReturn(Future.successful(None))
 
       val newVersionArtefact: MetaArtefact = metaArtefact.copy(
