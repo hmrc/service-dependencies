@@ -44,7 +44,7 @@ class DependencyService @Inject()(
       case true => teamsAndRepositoriesConnector.getRepository(metaArtefact.name).flatMap {
         repo => derivedDependencyRepository.put(MetaArtefactDependency.fromMetaArtefact(metaArtefact, repo.map(_.repoType).getOrElse(Other)))
       }
-      case false => Future.successful(())
+      case false => Future.unit
     }
   }
 }
