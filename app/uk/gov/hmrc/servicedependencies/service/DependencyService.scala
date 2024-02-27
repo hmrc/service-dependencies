@@ -34,7 +34,7 @@ class DependencyService @Inject()(
 )(implicit ec: ExecutionContext) {
   private def isLatest(metaArtefact: MetaArtefact): Future[Boolean] = {
     metaArtefactRepository.find(metaArtefact.name).map {
-      case Some(storedMeta) => metaArtefact.version > storedMeta.version
+      case Some(storedMeta) => metaArtefact.version >= storedMeta.version
       case None             => false
     }
   }
@@ -44,7 +44,7 @@ class DependencyService @Inject()(
       case true => teamsAndRepositoriesConnector.getRepository(metaArtefact.name).flatMap {
         repo => derivedDependencyRepository.put(MetaArtefactDependency.fromMetaArtefact(metaArtefact, repo.map(_.repoType).getOrElse(Other)))
       }
-      case false => Future.successful(())
+      case false => Future.unit
     }
   }
 }
