@@ -34,7 +34,7 @@ class DependencyService @Inject()(
 )(implicit ec: ExecutionContext) {
   private def isLatest(metaArtefact: MetaArtefact): Future[Boolean] = {
     metaArtefactRepository.find(metaArtefact.name).map {
-      case Some(storedMeta) => metaArtefact.version > storedMeta.version
+      case Some(storedMeta) => metaArtefact.version >= storedMeta.version
       case None             => false
     }
   }

@@ -178,6 +178,22 @@ class DependencyServiceSpec
 
   "setArtefactDependencies" should {
 
+    "replace meta artefact when given the same version" in {
+
+      when(mockArtifactRepository.find(any())).thenReturn(Future.successful(Some(metaArtefact)))
+      when(mockDependencyRepository.put(any())).thenReturn(Future.successful(()))
+      when(mockTeamsAndRepositoriesConnector.getRepository(any())(any())).thenReturn(Future.successful(Some(repository)))
+
+      val newVersionArtefact: MetaArtefact = metaArtefact.copy(
+        version = Version("1.0.0")
+      )
+
+      service.setArtefactDependencies(newVersionArtefact).futureValue mustBe()
+
+      verify(mockDependencyRepository, times(1))
+        .put(MetaArtefactDependency.fromMetaArtefact(newVersionArtefact, Library))
+    }
+
     "replace meta artefact when given a new version" in {
 
       when(mockArtifactRepository.find(any())).thenReturn(Future.successful(Some(metaArtefact)))
