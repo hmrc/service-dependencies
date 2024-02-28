@@ -16,18 +16,21 @@
 
 package uk.gov.hmrc.servicedependencies.persistence.derived
 
-import com.google.inject.Inject
 import org.mongodb.scala.bson.BsonDocument
 import org.mongodb.scala.bson.conversions.Bson
-import org.mongodb.scala.model.Filters.{equal, or}
+import org.mongodb.scala.model.Aggregates.`match`
+import org.mongodb.scala.model.Filters.{and, equal, nin, or}
 import org.mongodb.scala.model._
 import play.api.Logging
+import play.api.libs.json.Format
 import uk.gov.hmrc.mongo.MongoComponent
-import uk.gov.hmrc.mongo.play.json.PlayMongoRepository
+import uk.gov.hmrc.mongo.play.json.{CollectionFactory, PlayMongoRepository}
 import uk.gov.hmrc.servicedependencies.model.{DependencyScope, MetaArtefactDependency, RepoType}
+import uk.gov.hmrc.servicedependencies.persistence.SlugDenylist
 
-import javax.inject.Singleton
+import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
+import scala.reflect.ClassTag
 
 @Singleton
 class DerivedDependencyRepository @Inject()(
@@ -82,6 +85,18 @@ class DerivedDependencyRepository @Inject()(
         )
       ).toFuture()
   }
+
+  def aggregate[A: ClassTag](domainFormat: Format[A])(aggregateBson: List[Bson]): Future[Seq[A]] =
+    CollectionFactory.collection(mongoComponent.database, "DERIVED-dependencies", domainFormat)
+      .aggregate(
+        List(
+          `match`(
+            and(
+              nin("name", SlugDenylist.denylistedSlugs)
+            )
+          )
+        ) ++ aggregateBson
+      ).toFuture()
 
 
   def clearAllData(): Future[Unit] =
