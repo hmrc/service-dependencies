@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.servicedependencies.persistence
+package uk.gov.hmrc.servicedependencies.persistence.derived
 
 import org.mockito.MockitoSugar
 import org.scalatest.matchers.must.Matchers.convertToAnyMustWrapper
@@ -24,7 +24,6 @@ import uk.gov.hmrc.mongo.test.DefaultPlayMongoRepositorySupport
 import uk.gov.hmrc.servicedependencies.model.DependencyScope.{Compile, Provided}
 import uk.gov.hmrc.servicedependencies.model.RepoType.{Other, Service, Test}
 import uk.gov.hmrc.servicedependencies.model.{MetaArtefactDependency, Version}
-import uk.gov.hmrc.servicedependencies.persistence.derived.DerivedDependencyRepository
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
