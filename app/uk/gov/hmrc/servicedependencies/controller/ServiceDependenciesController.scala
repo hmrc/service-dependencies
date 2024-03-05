@@ -74,7 +74,7 @@ class ServiceDependenciesController @Inject()(
         case SlugInfoFlag.Latest => derivedDependencyRepository.find(group, artefact, repoType, scope)
         case _                   => derivedServiceDependencyRepository.findServicesWithDependency(flag, group, artefact, scope).map(_.map(MetaArtefactDependency.fromServiceDependency))
       }
-      dependenciesByRange   = versionRange.map(range => dependencies.filter(s => range.includes(s.artefactVersion))).getOrElse(dependencies)
+      dependenciesByRange   = versionRange.map(range => dependencies.filter(s => range.includes(s.depVersion))).getOrElse(dependencies)
       dependenciesWithTeams = dependenciesByRange.map(repo => repo.copy(teams = allTeams.getTeams(repo.repoName).toList.sorted))
     } yield {
       implicit val madWrites: OWrites[MetaArtefactDependency] = MetaArtefactDependency.apiWrites
