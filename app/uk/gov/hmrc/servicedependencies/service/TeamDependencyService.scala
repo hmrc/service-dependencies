@@ -22,7 +22,7 @@ import javax.inject.{Inject, Singleton}
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.servicedependencies.connector.{ServiceConfigsConnector, TeamsAndRepositoriesConnector}
 import uk.gov.hmrc.servicedependencies.controller.model.{Dependencies, Dependency}
-import uk.gov.hmrc.servicedependencies.model.{BobbyRules, DependencyScope, MetaArtefact, LatestVersion, SlugInfoFlag}
+import uk.gov.hmrc.servicedependencies.model.{BobbyRules, DependencyScope, LatestVersion, MetaArtefact, SlugInfoFlag}
 import uk.gov.hmrc.servicedependencies.persistence.{LatestVersionRepository, MetaArtefactRepository, SlugInfoRepository}
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -43,7 +43,7 @@ class TeamDependencyService @Inject()(
       bobbyRules     <- serviceConfigsConnector.getBobbyRules()
       latestVersions <- latestVersionRepository.getAllEntries()
       team           <- teamsAndReposConnector.getTeam(teamName)
-      libs           <- team.libraries.toList.traverse { repoName =>
+      libsAndTests   <- (team.libraries ++ team.tests).toList.traverse { repoName =>
                           metaArtefactRepository.find(repoName)
                             .map(_.map(dependenciesFromMetaArtefact(_, bobbyRules, latestVersions)))
                         }.map(_.flatten)
@@ -53,7 +53,7 @@ class TeamDependencyService @Inject()(
                               case Some(metaArtefact) => dependenciesFromMetaArtefact(metaArtefact, bobbyRules, latestVersions)
                           }
                         }
-    } yield libs ++ services
+    } yield libsAndTests ++ services
 
   def teamServiceDependenciesMap(
     teamName: String

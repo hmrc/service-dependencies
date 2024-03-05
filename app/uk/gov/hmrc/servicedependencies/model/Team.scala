@@ -28,10 +28,11 @@ case class Team(
 
   private def findRepo(name: String): Seq[String] = repos.getOrElse(name, Seq.empty)
 
-  def services   : Seq[String] = findRepo("Service")
   def libraries  : Seq[String] = findRepo("Library")
   def others     : Seq[String] = findRepo("Other")
   def prototypes : Seq[String] = findRepo("Prototype")
+  def services   : Seq[String] = findRepo("Service")
+  def tests      : Seq[String] = findRepo("Test")
 }
 
 object Team {
