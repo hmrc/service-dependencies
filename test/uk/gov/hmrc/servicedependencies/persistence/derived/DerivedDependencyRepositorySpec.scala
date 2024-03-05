@@ -37,9 +37,9 @@ class DerivedDependencyRepositorySpec
 
   private val metaArtefactDependency1 = MetaArtefactDependency(
     repoName        = "name-1",
-    group           = "group-1",
-    artefact        = "artifact-1",
-    artefactVersion = Version("1.0.0"),
+    depGroup        = "group-1",
+    depArtefact     = "artifact-1",
+    depVersion      = Version("1.0.0"),
     compileFlag     = true,
     providedFlag    = false,
     testFlag        = false,
@@ -52,9 +52,9 @@ class DerivedDependencyRepositorySpec
 
   private val metaArtefactDependency2 = MetaArtefactDependency(
     repoName        = "name-2",
-    group           = "group-1",
-    artefact        = "artifact-1",
-    artefactVersion = Version("1.0.0"),
+    depGroup        = "group-1",
+    depArtefact     = "artifact-1",
+    depVersion      = Version("1.0.0"),
     compileFlag     = false,
     providedFlag    = true,
     testFlag        = false,
@@ -67,9 +67,9 @@ class DerivedDependencyRepositorySpec
 
   private val metaArtefactDependency3 = MetaArtefactDependency(
     repoName        = "name-3",
-    group           = "group-3",
-    artefact        = "artifact-3",
-    artefactVersion = Version("1.0.0"),
+    depGroup        = "group-3",
+    depArtefact     = "artifact-3",
+    depVersion      = Version("1.0.0"),
     compileFlag     = false,
     providedFlag    = false,
     testFlag        = true,
@@ -96,9 +96,9 @@ class DerivedDependencyRepositorySpec
 
       val metaArtefactDependencyUpdate = MetaArtefactDependency(
         repoName        = "name-1",
-        group           = "group-1",
-        artefact        = "artifact-1",
-        artefactVersion = Version("2.0.0"),
+        depGroup        = "group-1",
+        depArtefact     = "artifact-1",
+        depVersion      = Version("2.0.0"),
         compileFlag     = true,
         providedFlag    = true,
         testFlag        = true,

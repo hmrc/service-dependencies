@@ -54,8 +54,8 @@ class DerivedDependencyRepository @Inject()(
             ReplaceOneModel(
               filter = Filters.and(
                 equal("repoName",     d.repoName),
-                equal("group",        d.group),
-                equal("artefact",     d.artefact)
+                equal("group",        d.depGroup),
+                equal("artefact",     d.depArtefact)
               ),
               replacement = d,
               replaceOptions = ReplaceOptions().upsert(true)

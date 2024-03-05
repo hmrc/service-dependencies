@@ -27,9 +27,9 @@ case class MetaArtefactDependency(
   repoVersion: Version,
   teams: List[String], // Override on write
   repoType: RepoType,
-  group: String,
-  artefact: String,
-  artefactVersion: Version,
+  depGroup: String,
+  depArtefact: String,
+  depVersion: Version,
   compileFlag: Boolean,
   providedFlag: Boolean,
   testFlag: Boolean,
@@ -47,7 +47,7 @@ object MetaArtefactDependency {
       ~ (__ \ "repoType").format[RepoType]
       ~ (__ \ "group").format[String]
       ~ (__ \ "artefact").format[String]
-      ~ (__ \ "artefactVersion").format[Version]
+      ~ (__ \ "version").format[Version]
       ~ (__ \ "scope_compile").format[Boolean]
       ~ (__ \ "scope_provided").format[Boolean]
       ~ (__ \ "scope_test").format[Boolean]
@@ -60,9 +60,9 @@ object MetaArtefactDependency {
       ( mad => (mad.repoName,
         mad.repoVersion,
         mad.repoType,
-        mad.group,
-        mad.artefact,
-        mad.artefactVersion,
+        mad.depGroup,
+        mad.depArtefact,
+        mad.depVersion,
         mad.compileFlag,
         mad.providedFlag,
         mad.testFlag,
@@ -75,25 +75,25 @@ object MetaArtefactDependency {
 
   val apiWrites: OWrites[MetaArtefactDependency] = {
 
-    implicit val depScope   = DependencyScope.dependencyScopeFormat
+    implicit val scopeFormat   = DependencyScope.dependencyScopeFormat
 
     (
       (__ \ "repoName").write[String] ~
       (__ \ "repoVersion").write[String] ~
       (__ \ "teams").write[List[String]] ~
       (__ \ "repoType").write[RepoType] ~
-      (__ \ "group").write[String] ~
-      (__ \ "artefact").write[String] ~
-      (__ \ "artefactVersion").write[String] ~
+      (__ \ "depGroup").write[String] ~
+      (__ \ "depArtefact").write[String] ~
+      (__ \ "depVersion").write[String] ~
       (__ \ "scopes").write[Set[DependencyScope]]
       ) (mad => (
       mad.repoName,
       mad.repoVersion.toString,
       mad.teams,
       mad.repoType,
-      mad.group,
-      mad.artefact,
-      mad.artefactVersion.toString,
+      mad.depGroup,
+      mad.depArtefact,
+      mad.depVersion.toString,
         Set[DependencyScope](DependencyScope.Compile).filter(_ => mad.compileFlag) ++
         Set[DependencyScope](DependencyScope.Provided).filter(_ => mad.providedFlag) ++
         Set[DependencyScope](DependencyScope.Test).filter(_ => mad.testFlag) ++
@@ -130,9 +130,9 @@ object MetaArtefactDependency {
           repoVersion     = slugVersion,
           teams           = teams,
           repoType        = Service,
-          group           = depGroup,
-          artefact        = depArtefact,
-          artefactVersion = depVersion,
+          depGroup        = depGroup,
+          depArtefact     = depArtefact,
+          depVersion      = depVersion,
           compileFlag     = scope.contains(DependencyScope.Compile),
           providedFlag    = scope.contains(DependencyScope.Provided),
           testFlag        = scope.contains(DependencyScope.Test),
