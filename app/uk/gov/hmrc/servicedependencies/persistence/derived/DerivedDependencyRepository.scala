@@ -16,7 +16,6 @@
 
 package uk.gov.hmrc.servicedependencies.persistence.derived
 
-import com.google.inject.Inject
 import org.mongodb.scala.bson.BsonDocument
 import org.mongodb.scala.bson.conversions.Bson
 import org.mongodb.scala.model.Filters.{equal, or}
@@ -26,7 +25,7 @@ import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.play.json.PlayMongoRepository
 import uk.gov.hmrc.servicedependencies.model.{DependencyScope, MetaArtefactDependency, RepoType}
 
-import javax.inject.Singleton
+import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
@@ -82,7 +81,6 @@ class DerivedDependencyRepository @Inject()(
         )
       ).toFuture()
   }
-
 
   def clearAllData(): Future[Unit] =
     collection.deleteMany(BsonDocument())
