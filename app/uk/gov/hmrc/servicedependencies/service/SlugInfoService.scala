@@ -39,7 +39,7 @@ class SlugInfoService @Inject()(
 )(implicit ec: ExecutionContext
 ) extends Logging {
 
-  def addSlugInfo(slug: SlugInfo, metaArtefact: MetaArtefact): Future[Unit] =
+  def addSlugInfo(slug: SlugInfo): Future[Unit] =
     for {
       // Determine which slug is latest from the existing collection
       _        <- slugInfoRepository.add(slug)
@@ -51,7 +51,6 @@ class SlugInfoService @Inject()(
                                                isLatest
                     }
       _        <- if (isLatest) deploymentRepository.markLatest(slug.name, slug.version) else Future.unit
-      _        <- derivedServiceDependencyRepository.populateDependencies(metaArtefact)
     } yield ()
 
   def deleteSlugInfo(name: String, version: Version): Future[Unit] =

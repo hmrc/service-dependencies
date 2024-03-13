@@ -110,7 +110,8 @@ class IntegrationTestController @Inject()(
           m <- metaArtefactRepository
                 .find(slugInfoWithFlag.slugInfo.name, slugInfoWithFlag.slugInfo.version)
                 .map(_.getOrElse(sys.error(s"Can't find meta artefact for service: ${slugInfoWithFlag.slugInfo.name} version: ${slugInfoWithFlag.slugInfo.version}"))) // addMetaArtefacts should be called before addSluginfos
-          _ <- slugInfoService.addSlugInfo(slugInfoWithFlag.slugInfo, metaArtefact = m)
+          _ <- slugInfoService.addSlugInfo(slugInfoWithFlag.slugInfo)
+          _ <- derivedServiceDependenciesRepository.populateDependencies(m)
           _ <- updateFlag(slugInfoWithFlag, SlugInfoFlag.Latest      , _.latest      )
           _ <- updateFlag(slugInfoWithFlag, SlugInfoFlag.Production  , _.production  )
           _ <- updateFlag(slugInfoWithFlag, SlugInfoFlag.QA          , _.qa          )
