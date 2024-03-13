@@ -132,10 +132,8 @@ class SlugInfoServiceSpec
         .thenReturn(Future.unit)
       when(boot.mockedDeploymentRepository.markLatest(any, any))
         .thenReturn(Future.unit)
-      when(boot.mockedDerivedServiceDependenciesRepository.populateDependencies(any))
-        .thenReturn(Future.unit)
 
-      boot.service.addSlugInfo(sampleSlugInfo, sampleMetaArtefact).futureValue
+      boot.service.addSlugInfo(sampleSlugInfo).futureValue
 
       verify(boot.mockedDeploymentRepository, times(1)).markLatest(sampleSlugInfo.name, sampleSlugInfo.version)
       verifyNoMoreInteractions(boot.mockedSlugInfoRepository)
@@ -151,10 +149,8 @@ class SlugInfoServiceSpec
         .thenReturn(Future.unit)
       when(boot.mockedDeploymentRepository.markLatest(any, any))
         .thenReturn(Future.unit)
-      when(boot.mockedDerivedServiceDependenciesRepository.populateDependencies(any))
-        .thenReturn(Future.unit)
 
-      boot.service.addSlugInfo(slugv2, sampleMetaArtefact).futureValue
+      boot.service.addSlugInfo(slugv2).futureValue
       verify(boot.mockedDeploymentRepository, times(1)).markLatest(slugv2.name, Version("2.0.0"))
 
       verifyNoMoreInteractions(boot.mockedSlugInfoRepository)
@@ -168,10 +164,8 @@ class SlugInfoServiceSpec
         .thenReturn(Future.successful(Some(slugv2.version)))
       when(boot.mockedSlugInfoRepository.add(any))
         .thenReturn(Future.unit)
-      when(boot.mockedDerivedServiceDependenciesRepository.populateDependencies(any))
-        .thenReturn(Future.unit)
 
-      boot.service.addSlugInfo(slugv1, sampleMetaArtefact).futureValue
+      boot.service.addSlugInfo(slugv1).futureValue
 
       verify(boot.mockedSlugInfoRepository, times(1)).add(slugv1)
       verifyNoMoreInteractions(boot.mockedSlugInfoRepository)
@@ -185,10 +179,8 @@ class SlugInfoServiceSpec
         .thenReturn(Future.successful(Some(slugv2.version)))
       when(boot.mockedSlugInfoRepository.add(any))
         .thenReturn(Future.unit)
-      when(boot.mockedDerivedServiceDependenciesRepository.populateDependencies(any))
-        .thenReturn(Future.unit)
 
-      boot.service.addSlugInfo(slugv1, sampleMetaArtefact).futureValue
+      boot.service.addSlugInfo(slugv1).futureValue
 
       verifyNoMoreInteractions(boot.mockedSlugInfoRepository)
     }
@@ -256,15 +248,6 @@ class SlugInfoServiceSpec
       repoUrl               = Some("https://github.com/hmrc/test.git"),
       applicationConfig     = "sample-applcation-config",
       slugConfig            = "sample-slug-config"
-    )
-
-    val sampleMetaArtefact = MetaArtefact(
-      name    = sampleSlugInfo.name,
-      version = sampleSlugInfo.version,
-      uri     = sampleSlugInfo.uri,
-      gitUrl  = sampleSlugInfo.repoUrl,
-      modules = Nil,
-      created = sampleSlugInfo.created
     )
 
     val boot = Boot.init

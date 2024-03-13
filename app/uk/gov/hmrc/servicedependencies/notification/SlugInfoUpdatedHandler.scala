@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.servicedependencies.notification
 
-import cats.data.{EitherT, OptionT}
+import cats.data.EitherT
 import org.apache.pekko.actor.ActorSystem
 import play.api.Configuration
 import play.api.libs.json.Json
@@ -26,8 +26,7 @@ import uk.gov.hmrc.servicedependencies.connector.ArtefactProcessorConnector
 import uk.gov.hmrc.servicedependencies.service.SlugInfoService
 
 import javax.inject.{Inject, Singleton}
-import scala.concurrent.duration.FiniteDuration
-import scala.concurrent.{ExecutionContext, Future, Promise}
+import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
 class SlugInfoUpdatedHandler @Inject()(
@@ -44,25 +43,6 @@ class SlugInfoUpdatedHandler @Inject()(
 
   private implicit val hc: HeaderCarrier = HeaderCarrier()
 
-  lazy val metaArtefactRetryDelay: FiniteDuration =
-    configuration.get[FiniteDuration]("aws.sqs.slug.retryDelay")
-
-  lazy val metaArtefactRetryTimes: Int =
-    configuration.get[Int]("aws.sqs.slug.retryTimes")
-
-  private def after[A](delay: FiniteDuration)(task: => Future[A]): Future[A] = {
-    val promise = Promise[A]()
-    actorSystem.scheduler.scheduleOnce(delay)(task.foreach(promise.success))
-    promise.future
-  }
-
-  private def attempt[A](delay: FiniteDuration, times: Int)(f: () => Future[Option[A]]): Future[Option[A]] =
-    if (times > 0)
-      OptionT(f())
-        .orElse(OptionT(after(delay)(attempt(delay, times - 1)(f))))
-        .value
-    else
-      Future.successful(None)
   override protected def processMessage(message: Message): Future[MessageAction] = {
     logger.debug(s"Starting processing SlugInfo message with ID '${message.messageId()}'")
     (for {
@@ -79,17 +59,8 @@ class SlugInfoUpdatedHandler @Inject()(
                                        artefactProcessorConnector.getSlugInfo(available.name, available.version),
                                        s"SlugInfo for name: ${available.name}, version: ${available.version} was not found"
                                      )
-                        meta   <- // we don't go to metaArtefactRepository since it might not have been updated yet...
-                                     EitherT.fromOptionF(
-                                       // try a few times, the meta-artefact may not have been processed yet
-                                       // or it may just not be available (e.g. java slugs)
-                                       attempt(delay = metaArtefactRetryDelay, times = metaArtefactRetryTimes)(() =>
-                                         artefactProcessorConnector.getMetaArtefact(slugInfo.name, slugInfo.version)
-                                       )
-                                     , s"Meta Artefact for name: ${slugInfo.name}, version: ${slugInfo.version} was not found"
-                                     )
                         _         <- EitherT(
-                                       slugInfoService.addSlugInfo(slugInfo, meta)
+                                       slugInfoService.addSlugInfo(slugInfo)
                                          .map(Right.apply)
                                          .recover {
                                            case e =>

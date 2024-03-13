@@ -23,9 +23,8 @@ import play.api.libs.json.Json
 import software.amazon.awssdk.services.sqs.model.Message
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.servicedependencies.connector.ArtefactProcessorConnector
-import uk.gov.hmrc.servicedependencies.model.MetaArtefactDependency
 import uk.gov.hmrc.servicedependencies.persistence.MetaArtefactRepository
-import uk.gov.hmrc.servicedependencies.persistence.derived.{DerivedDependencyRepository, DerivedModuleRepository}
+import uk.gov.hmrc.servicedependencies.persistence.derived.DerivedModuleRepository
 import uk.gov.hmrc.servicedependencies.service.DependencyService
 
 import javax.inject.{Inject, Singleton}
@@ -33,12 +32,11 @@ import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
 class MetaArtefactUpdateHandler @Inject()(
-                                           configuration               : Configuration,
-                                           artefactProcessorConnector  : ArtefactProcessorConnector,
-                                           metaArtefactRepository      : MetaArtefactRepository,
-                                           derivedDependencyRepository : DerivedDependencyRepository,
-                                           derivedModuleRepository     : DerivedModuleRepository,
-                                           dependencyService           : DependencyService
+  configuration               : Configuration,
+  artefactProcessorConnector  : ArtefactProcessorConnector,
+  metaArtefactRepository      : MetaArtefactRepository,
+  derivedModuleRepository     : DerivedModuleRepository,
+  dependencyService           : DependencyService
 )(implicit
   actorSystem               : ActorSystem,
   ec                        : ExecutionContext

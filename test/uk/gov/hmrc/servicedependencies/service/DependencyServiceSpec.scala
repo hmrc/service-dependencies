@@ -23,14 +23,14 @@ import org.scalatest.concurrent.{IntegrationPatience, ScalaFutures}
 import org.scalatest.matchers.must.Matchers.convertToAnyMustWrapper
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
+
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.servicedependencies.connector.TeamsAndRepositoriesConnector
 import uk.gov.hmrc.servicedependencies.connector.model.Repository
 import uk.gov.hmrc.servicedependencies.model.DependencyScope.{Build, Compile, It, Provided, Test}
-import uk.gov.hmrc.servicedependencies.model.RepoType.{Library, Other}
-import uk.gov.hmrc.servicedependencies.model.{MetaArtefact, MetaArtefactDependency, MetaArtefactModule, Version}
+import uk.gov.hmrc.servicedependencies.model.{MetaArtefact, MetaArtefactDependency, MetaArtefactModule, RepoType, Version}
 import uk.gov.hmrc.servicedependencies.persistence.MetaArtefactRepository
-import uk.gov.hmrc.servicedependencies.persistence.derived.DerivedDependencyRepository
+import uk.gov.hmrc.servicedependencies.persistence.derived.{DerivedDependencyRepository, DerivedServiceDependenciesRepository}
 import uk.gov.hmrc.servicedependencies.util.DependencyGraphParser.Node
 
 import java.time.Instant
@@ -47,16 +47,18 @@ class DependencyServiceSpec
 
   private implicit val hc: HeaderCarrier = HeaderCarrier()
 
-  private val mockArtifactRepository: MetaArtefactRepository = mock[MetaArtefactRepository]
-  private val mockDependencyRepository: DerivedDependencyRepository = mock[DerivedDependencyRepository]
-  private val mockTeamsAndRepositoriesConnector: TeamsAndRepositoriesConnector = mock[TeamsAndRepositoriesConnector]
+  private val mockArtifactRepository: MetaArtefactRepository                        = mock[MetaArtefactRepository]
+  private val mockDependencyRepository: DerivedDependencyRepository                 = mock[DerivedDependencyRepository]
+  private val mockServiceDependencyRepository: DerivedServiceDependenciesRepository = mock[DerivedServiceDependenciesRepository]
+  private val mockTeamsAndRepositoriesConnector: TeamsAndRepositoriesConnector      = mock[TeamsAndRepositoriesConnector]
 
-  private val service = new DependencyService(mockArtifactRepository, mockDependencyRepository, mockTeamsAndRepositoriesConnector)
+  private val service = new DependencyService(mockArtifactRepository, mockDependencyRepository, mockServiceDependencyRepository, mockTeamsAndRepositoriesConnector)
 
   override protected def beforeEach(): Unit = {
     super.beforeEach()
     reset(mockArtifactRepository)
     reset(mockDependencyRepository)
+    reset(mockServiceDependencyRepository)
   }
 
   val compileDependency  = "digraph \"dependency-graph\" {\n    graph[rankdir=\"LR\"]\n    edge [\n        arrowtail=\"none\"\n    ]\n        \"artefact:build_1.00:1.23.0\" -> \"artefact:build_1.00:1.23.0\" \n}"
@@ -65,11 +67,16 @@ class DependencyServiceSpec
   val itDependency       = "digraph \"dependency-graph\" {\n    graph[rankdir=\"LR\"]\n    edge [\n        arrowtail=\"none\"\n    ]\n        \"artefact:build_4.00:1.23.0\" -> \"artefact:build_4.00:1.23.0\" \n}"
   val buildDependency    = "digraph \"dependency-graph\" {\n    graph[rankdir=\"LR\"]\n    edge [\n        arrowtail=\"none\"\n    ]\n        \"artefact:build_5.00:1.23.0\" -> \"artefact:build_5.00:1.23.0\" \n}"
 
-  private val repository = Repository(
-    "library-repo",
+  private val serviceRepo = Repository(
+    "service-repo",
     Instant.now(),
     Seq.empty,
-    Library
+    RepoType.Service
+  )
+
+  private val libraryRepo = serviceRepo.copy(
+    name     = "library-repo",
+    repoType = RepoType.Library
   )
 
   val module1: MetaArtefactModule = MetaArtefactModule(
@@ -108,19 +115,22 @@ class DependencyServiceSpec
     dependencyDotIt = Some(itDependency)
   )
 
-  private val metaArtefact =
+  private val serviceMetaArtefact =
     MetaArtefact(
-      name = "library-repo",
+      name = "service-repo",
       version = Version("1.0.0"),
-      uri = "https://artefacts/metadata/library/library-v1.0.0.meta.tgz",
-      gitUrl = Some("https://github.com/hmrc/library.git"),
+      uri = "https://artefacts/metadata/some/repo-v1.0.0.meta.tgz",
+      gitUrl = Some("https://github.com/hmrc/repo.git"),
       dependencyDotBuild = Some(buildDependency),
-      buildInfo = Map(
-        "GIT_URL" -> "https://github.com/hmrc/library.git"
-      ),
-      modules = Seq(module1, module2, module3),
+      buildInfo = Map.empty,
+      modules = Seq(module1),
       created = Instant.parse("2007-12-03T10:15:30.00Z")
     )
+
+  private val libraryMetaArtefact = serviceMetaArtefact.copy(
+    name    = "library-repo",
+    modules = Seq(module1, module2, module3),
+  )
 
   "parseArtefactDependencies" should {
 
@@ -134,7 +144,7 @@ class DependencyServiceSpec
         Node("artefact:build_5.00:1.23.0") -> Set(Build),
       )
 
-      DependencyService.parseArtefactDependencies(metaArtefact) shouldBe expectedResult
+      DependencyService.parseArtefactDependencies(libraryMetaArtefact) shouldBe expectedResult
     }
 
     "parse meta artefact dependencies to map of node and scopes, when dependencies are same across scopes" in {
@@ -147,7 +157,7 @@ class DependencyServiceSpec
         module3.copy(dependencyDotIt = Some(crossScopeDependency))
       )
 
-      val newArtefact = metaArtefact.copy(
+      val newArtefact = libraryMetaArtefact.copy(
         dependencyDotBuild = Some(crossScopeDependency),
         modules = updatedModules
       )
@@ -167,7 +177,7 @@ class DependencyServiceSpec
         module3.copy(dependencyDotIt = None)
       )
 
-      val newArtefact = metaArtefact.copy(
+      val newArtefact = libraryMetaArtefact.copy(
         dependencyDotBuild = None,
         modules = updatedModules
       )
@@ -178,59 +188,75 @@ class DependencyServiceSpec
 
   "setArtefactDependencies" should {
 
-    "replace meta artefact when given the same version" in {
-
-      when(mockArtifactRepository.find(any())).thenReturn(Future.successful(Some(metaArtefact)))
+    "add service" in {
+      when(mockArtifactRepository.find(any())).thenReturn(Future.successful(None))
       when(mockDependencyRepository.put(any())).thenReturn(Future.unit)
-      when(mockTeamsAndRepositoriesConnector.getRepository(any())(any())).thenReturn(Future.successful(Some(repository)))
+      when(mockServiceDependencyRepository.populateDependencies(any())).thenReturn(Future.unit)
+      when(mockTeamsAndRepositoriesConnector.getRepository(any())(any())).thenReturn(Future.successful(Some(serviceRepo)))
 
-      val newVersionArtefact: MetaArtefact = metaArtefact.copy(
-        version = Version("1.0.0")
-      )
-
-      service.setArtefactDependencies(newVersionArtefact).futureValue mustBe()
-
-      verify(mockDependencyRepository, times(1))
-        .put(MetaArtefactDependency.fromMetaArtefact(newVersionArtefact, Library))
-    }
-
-    "replace meta artefact when given a new version" in {
-
-      when(mockArtifactRepository.find(any())).thenReturn(Future.successful(Some(metaArtefact)))
-      when(mockDependencyRepository.put(any())).thenReturn(Future.unit)
-      when(mockTeamsAndRepositoriesConnector.getRepository(any())(any())).thenReturn(Future.successful(Some(repository)))
-
-      val newVersionArtefact: MetaArtefact = metaArtefact.copy(
+      val newVersionArtefact: MetaArtefact = serviceMetaArtefact.copy(
         version = Version("1.1.0")
       )
 
       service.setArtefactDependencies(newVersionArtefact).futureValue mustBe ()
 
       verify(mockDependencyRepository, times(1))
-        .put(MetaArtefactDependency.fromMetaArtefact(newVersionArtefact, Library))
+        .put(MetaArtefactDependency.fromMetaArtefact(newVersionArtefact, RepoType.Service))
+
+      verify(mockServiceDependencyRepository, times(1))
+        .populateDependencies(newVersionArtefact)
+    }
+
+
+    "replace meta artefact when given the same version" in {
+      when(mockArtifactRepository.find(any())).thenReturn(Future.successful(Some(libraryMetaArtefact)))
+      when(mockDependencyRepository.put(any())).thenReturn(Future.unit)
+      when(mockTeamsAndRepositoriesConnector.getRepository(any())(any())).thenReturn(Future.successful(Some(libraryRepo)))
+
+      val newVersionArtefact: MetaArtefact = libraryMetaArtefact.copy(
+        version = Version("1.0.0")
+      )
+
+      service.setArtefactDependencies(newVersionArtefact).futureValue mustBe()
+
+      verify(mockDependencyRepository, times(1))
+        .put(MetaArtefactDependency.fromMetaArtefact(newVersionArtefact, RepoType.Library))
+    }
+
+    "replace meta artefact when given a new version" in {
+      when(mockArtifactRepository.find(any())).thenReturn(Future.successful(Some(libraryMetaArtefact)))
+      when(mockDependencyRepository.put(any())).thenReturn(Future.unit)
+      when(mockTeamsAndRepositoriesConnector.getRepository(any())(any())).thenReturn(Future.successful(Some(libraryRepo)))
+
+      val newVersionArtefact: MetaArtefact = libraryMetaArtefact.copy(
+        version = Version("1.1.0")
+      )
+
+      service.setArtefactDependencies(newVersionArtefact).futureValue mustBe ()
+
+      verify(mockDependencyRepository, times(1))
+        .put(MetaArtefactDependency.fromMetaArtefact(newVersionArtefact, RepoType.Library))
     }
 
     "replace meta artefact when given a new version and set repo type to Other if it cannot be found" in {
-
-      when(mockArtifactRepository.find(any())).thenReturn(Future.successful(Some(metaArtefact)))
+      when(mockArtifactRepository.find(any())).thenReturn(Future.successful(Some(libraryMetaArtefact)))
       when(mockDependencyRepository.put(any())).thenReturn(Future.unit)
       when(mockTeamsAndRepositoriesConnector.getRepository(any())(any())).thenReturn(Future.successful(None))
 
-      val newVersionArtefact: MetaArtefact = metaArtefact.copy(
+      val newVersionArtefact: MetaArtefact = libraryMetaArtefact.copy(
         version = Version("1.1.0")
       )
 
       service.setArtefactDependencies(newVersionArtefact).futureValue mustBe()
 
       verify(mockDependencyRepository, times(1))
-        .put(MetaArtefactDependency.fromMetaArtefact(newVersionArtefact, Other))
+        .put(MetaArtefactDependency.fromMetaArtefact(newVersionArtefact, RepoType.Other))
     }
 
     "not add meta artefact when given a old version" in {
+      when(mockArtifactRepository.find(any())).thenReturn(Future.successful(Some(libraryMetaArtefact)))
 
-      when(mockArtifactRepository.find(any())).thenReturn(Future.successful(Some(metaArtefact)))
-
-      val oldVersionArtefact: MetaArtefact = metaArtefact.copy(
+      val oldVersionArtefact: MetaArtefact = libraryMetaArtefact.copy(
         version = Version("0.9.0")
       )
 

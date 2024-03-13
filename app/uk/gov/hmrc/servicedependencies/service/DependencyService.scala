@@ -19,34 +19,36 @@ package uk.gov.hmrc.servicedependencies.service
 import com.google.inject.Inject
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.servicedependencies.connector.TeamsAndRepositoriesConnector
-import uk.gov.hmrc.servicedependencies.model.RepoType.Other
+import uk.gov.hmrc.servicedependencies.model.RepoType
 import uk.gov.hmrc.servicedependencies.model.{DependencyScope, MetaArtefact, MetaArtefactDependency}
 import uk.gov.hmrc.servicedependencies.persistence.MetaArtefactRepository
-import uk.gov.hmrc.servicedependencies.persistence.derived.DerivedDependencyRepository
+import uk.gov.hmrc.servicedependencies.persistence.derived.{DerivedDependencyRepository, DerivedServiceDependenciesRepository}
 import uk.gov.hmrc.servicedependencies.util.DependencyGraphParser
 
 import scala.concurrent.{ExecutionContext, Future}
 
 class DependencyService @Inject()(
-  metaArtefactRepository: MetaArtefactRepository,
-  derivedDependencyRepository: DerivedDependencyRepository,
-  teamsAndRepositoriesConnector : TeamsAndRepositoriesConnector
+  metaArtefactRepository              : MetaArtefactRepository,
+  derivedDependencyRepository         : DerivedDependencyRepository,
+  derivedServiceDependenciesRepository: DerivedServiceDependenciesRepository,
+  teamsAndRepositoriesConnector: TeamsAndRepositoriesConnector
 )(implicit ec: ExecutionContext) {
-  private def isLatest(metaArtefact: MetaArtefact): Future[Boolean] = {
-    metaArtefactRepository.find(metaArtefact.name).map {
-      case Some(storedMeta) => metaArtefact.version >= storedMeta.version
-      case None             => false
-    }
-  }
 
-  def setArtefactDependencies(metaArtefact: MetaArtefact)(implicit hc: HeaderCarrier): Future[Unit] = {
-    isLatest(metaArtefact).flatMap {
-      case true => teamsAndRepositoriesConnector.getRepository(metaArtefact.name).flatMap {
-        repo => derivedDependencyRepository.put(MetaArtefactDependency.fromMetaArtefact(metaArtefact, repo.map(_.repoType).getOrElse(Other)))
-      }
-      case false => Future.unit
-    }
-  }
+  def setArtefactDependencies(metaArtefact: MetaArtefact)(implicit hc: HeaderCarrier): Future[Unit] =
+    for {
+      oRepo    <- teamsAndRepositoriesConnector.getRepository(metaArtefact.name)
+      repoType =  oRepo.fold(RepoType.Other: RepoType)(_.repoType)
+      isLatest <- metaArtefactRepository
+                    .find(metaArtefact.name)
+                    .map {
+                      case Some(storedMeta) => metaArtefact.version >= storedMeta.version
+                      case None             => true
+                    }
+      _        <- if (isLatest) derivedDependencyRepository.put(MetaArtefactDependency.fromMetaArtefact(metaArtefact, repoType))
+                  else          Future.unit
+      _        <- if (repoType == RepoType.Service) derivedServiceDependenciesRepository.populateDependencies(metaArtefact)
+                  else                              Future.unit
+    } yield ()
 }
 
 object DependencyService {
