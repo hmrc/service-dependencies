@@ -142,13 +142,6 @@ class IntegrationTestController @Inject()(
     }
   }
 
-  def updateBobbyRulesSummary() = {
-    Action.async {
-      dependencyLookupService.updateBobbyRulesSummary()
-        .map(_ => NoContent)
-    }
-  }
-
   def deleteBobbyRulesSummaries =
     Action.async {
       bobbyRulesSummaryRepo.clearAllData()
