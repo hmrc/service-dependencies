@@ -16,18 +16,16 @@
 
 package uk.gov.hmrc.servicedependencies.service
 
-import java.time.LocalDate
-import java.time.temporal.ChronoUnit
 import cats.implicits._
-
-import javax.inject.{Inject, Singleton}
 import play.api.Logging
 import uk.gov.hmrc.servicedependencies.connector.ServiceConfigsConnector
 import uk.gov.hmrc.servicedependencies.model._
-import uk.gov.hmrc.servicedependencies.persistence.{BobbyRulesSummaryRepository, SlugInfoRepository}
+import uk.gov.hmrc.servicedependencies.persistence.BobbyRulesSummaryRepository
 import uk.gov.hmrc.servicedependencies.persistence.derived.{DerivedDependencyRepository, DerivedServiceDependenciesRepository}
 
-import scala.collection.MapView
+import java.time.LocalDate
+import java.time.temporal.ChronoUnit
+import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
@@ -49,15 +47,12 @@ class DependencyLookupService @Inject() (
     def calculateCounts(rules: Seq[BobbyRule])(env: SlugInfoFlag): Future[Seq[((BobbyRule, SlugInfoFlag), Int)]] = {
       logger.debug(s"calculateCounts($env)")
       for {
-        lookup <- {
-
-          val dependencies = env match {
-            case SlugInfoFlag.Latest => derivedDependencyRepository.findDependencies(Some(DependencyScope.values))
-            case _                   => derivedServiceDependenciesRepository.findDependencies(env, Some(List(DependencyScope.Compile))).map(_.map(MetaArtefactDependency.fromServiceDependency))
-          }
-
-          dependencies
-            .map(_
+        metaArtefactDependency <- env match {
+          case SlugInfoFlag.Latest => derivedDependencyRepository.findDependencies(Some(DependencyScope.values))
+          case _                   => derivedServiceDependenciesRepository.findDependencies(env, Some(List(DependencyScope.Compile))).map(_.map(MetaArtefactDependency.fromServiceDependency))
+        }
+        lookup = {
+          metaArtefactDependency
               .groupBy(d => s"${d.depGroup}:${d.depArtefact}")
               .view
               .mapValues(
@@ -67,7 +62,6 @@ class DependencyLookupService @Inject() (
                   .toMap
               )
               .toMap
-            )
         }
         violations = rules.map(rule => ((rule, env), findSlugsUsing(lookup, rule.organisation, rule.name, rule.range).length))
       } yield violations
