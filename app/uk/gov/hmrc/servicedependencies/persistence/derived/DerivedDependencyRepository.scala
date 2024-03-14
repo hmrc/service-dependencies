@@ -47,8 +47,11 @@ class DerivedDependencyRepository @Inject()(
   // automatically refreshed when given new meta data artefacts from update scheduler
   override lazy val requiresTtlIndex = false
 
-  def put(dependencies: Seq[MetaArtefactDependency]): Future[Unit] = {
-    collection
+  def put(dependencies: Seq[MetaArtefactDependency]): Future[Unit] =
+    if (dependencies.isEmpty)
+      Future.unit
+    else
+      collection
         .bulkWrite(
           dependencies.map(d =>
             ReplaceOneModel(
@@ -63,14 +66,13 @@ class DerivedDependencyRepository @Inject()(
           )
         ).toFuture()
         .map(_ => ())
-  }
 
   def find(
     group: String,
     artefact: String,
     repoType: Option[List[RepoType]]      = None,
     scopes: Option[List[DependencyScope]] = None
-  ): Future[Seq[MetaArtefactDependency]] = {
+  ): Future[Seq[MetaArtefactDependency]] =
     collection
       .find(
         Filters.and(
@@ -80,16 +82,14 @@ class DerivedDependencyRepository @Inject()(
           scopes.fold[Bson](BsonDocument())(ss => or(ss.map(scope => equal(s"scope_${scope.asString}", value = true)): _*))
         )
       ).toFuture()
-  }
 
-  def findDependencies(scopes: Option[List[DependencyScope]]): Future[Seq[MetaArtefactDependency]] = {
+  def findDependencies(scopes: Option[List[DependencyScope]]): Future[Seq[MetaArtefactDependency]] =
     collection
       .find(
         Filters.and(
           scopes.fold[Bson](BsonDocument())(ss => or(ss.map(scope => equal(s"scope_${scope.asString}", value = true)): _*))
         )
       ).toFuture()
-  }
 
   def clearAllData(): Future[Unit] =
     collection.deleteMany(BsonDocument())

@@ -36,7 +36,7 @@ object RepoType {
       .find(_.asString.equalsIgnoreCase(s))
       .toRight(s"Invalid repoType - should be one of: ${values.map(_.asString).mkString(", ")}")
 
-  implicit val format = new Format[RepoType] {
+  implicit val format: Format[RepoType] = new Format[RepoType] {
     override def reads(json: JsValue): JsResult[RepoType] =
       json match {
         case JsString(s) => parse(s).fold(msg => JsError(msg), x => JsSuccess(x))
