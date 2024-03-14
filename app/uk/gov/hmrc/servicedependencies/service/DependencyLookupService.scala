@@ -18,23 +18,24 @@ package uk.gov.hmrc.servicedependencies.service
 
 import java.time.LocalDate
 import java.time.temporal.ChronoUnit
-
 import cats.implicits._
+
 import javax.inject.{Inject, Singleton}
 import play.api.Logging
 import uk.gov.hmrc.servicedependencies.connector.ServiceConfigsConnector
 import uk.gov.hmrc.servicedependencies.model._
 import uk.gov.hmrc.servicedependencies.persistence.{BobbyRulesSummaryRepository, SlugInfoRepository}
-import uk.gov.hmrc.servicedependencies.persistence.derived.DerivedServiceDependenciesRepository
+import uk.gov.hmrc.servicedependencies.persistence.derived.{DerivedDependencyRepository, DerivedServiceDependenciesRepository}
 
+import scala.collection.MapView
 import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
 class DependencyLookupService @Inject() (
   serviceConfigs       : ServiceConfigsConnector
-, slugRepo             : SlugInfoRepository
 , bobbyRulesSummaryRepo: BobbyRulesSummaryRepository
 , derivedServiceDependenciesRepository: DerivedServiceDependenciesRepository
+, derivedDependencyRepository: DerivedDependencyRepository
 )(implicit ec: ExecutionContext
 ) extends Logging {
 
@@ -48,18 +49,26 @@ class DependencyLookupService @Inject() (
     def calculateCounts(rules: Seq[BobbyRule])(env: SlugInfoFlag): Future[Seq[((BobbyRule, SlugInfoFlag), Int)]] = {
       logger.debug(s"calculateCounts($env)")
       for {
-        lookup <- derivedServiceDependenciesRepository.findDependencies(env, Some(DependencyScope.Compile)) // we could look for violations in all scopes (but number will not align to results when drilling down in catalogue)
-          .map(_
-            .groupBy(d => s"${d.depGroup}:${d.depArtefact}")
-            .view
-            .mapValues(
-              _.groupBy(_.depVersion)
-                .view
-                .mapValues(_.map(d => s"${d.slugName}:${d.slugVersion}").toSet)
-                .toMap
+        lookup <- {
+
+          val dependencies = env match {
+            case SlugInfoFlag.Latest => derivedDependencyRepository.findDependencies(Some(DependencyScope.values))
+            case _                   => derivedServiceDependenciesRepository.findDependencies(env, Some(List(DependencyScope.Compile))).map(_.map(MetaArtefactDependency.fromServiceDependency))
+          }
+
+          dependencies
+            .map(_
+              .groupBy(d => s"${d.depGroup}:${d.depArtefact}")
+              .view
+              .mapValues(
+                _.groupBy(_.depVersion)
+                  .view
+                  .mapValues(_.map(d => s"${d.repoName}:${d.repoVersion}").toSet)
+                  .toMap
+              )
+              .toMap
             )
-            .toMap
-          )
+        }
         violations = rules.map(rule => ((rule, env), findSlugsUsing(lookup, rule.organisation, rule.name, rule.range).length))
       } yield violations
     }

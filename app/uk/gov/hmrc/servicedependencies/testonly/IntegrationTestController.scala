@@ -25,7 +25,7 @@ import play.api.mvc.{Action, ControllerComponents}
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 import uk.gov.hmrc.servicedependencies.model._
 import uk.gov.hmrc.servicedependencies.persistence._
-import uk.gov.hmrc.servicedependencies.service.{DerivedViewsService, SlugInfoService}
+import uk.gov.hmrc.servicedependencies.service.{DependencyLookupService, DerivedViewsService, SlugInfoService}
 import uk.gov.hmrc.servicedependencies.persistence.derived.{DerivedDependencyRepository, DerivedServiceDependenciesRepository}
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -40,6 +40,7 @@ class IntegrationTestController @Inject()(
   , derivedServiceDependenciesRepository: DerivedServiceDependenciesRepository
   , derivedDependencyRepository         : DerivedDependencyRepository
   , metaArtefactRepository              : MetaArtefactRepository
+  , dependencyLookupService             : DependencyLookupService
   , cc                                  : ControllerComponents
   )(implicit ec: ExecutionContext
   ) extends BackendController(cc) {
@@ -137,6 +138,13 @@ class IntegrationTestController @Inject()(
     implicit val brsf = BobbyRulesSummary.apiFormat
     Action.async(validateJson[List[BobbyRulesSummary]]) { implicit request =>
       request.body.traverse(bobbyRulesSummaryRepo.add)
+        .map(_ => NoContent)
+    }
+  }
+
+  def updateBobbyRulesSummary() = {
+    Action.async {
+      dependencyLookupService.updateBobbyRulesSummary()
         .map(_ => NoContent)
     }
   }

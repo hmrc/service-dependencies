@@ -82,6 +82,15 @@ class DerivedDependencyRepository @Inject()(
       ).toFuture()
   }
 
+  def findDependencies(scopes: Option[List[DependencyScope]]): Future[Seq[MetaArtefactDependency]] = {
+    collection
+      .find(
+        Filters.and(
+          scopes.fold[Bson](BsonDocument())(ss => or(ss.map(scope => equal(s"scope_${scope.asString}", value = true)): _*))
+        )
+      ).toFuture()
+  }
+
   def clearAllData(): Future[Unit] =
     collection.deleteMany(BsonDocument())
       .toFuture()

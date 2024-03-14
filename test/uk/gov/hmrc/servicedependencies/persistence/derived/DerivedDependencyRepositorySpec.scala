@@ -132,4 +132,14 @@ class DerivedDependencyRepositorySpec
       repository.find(scopes = Some(List(Compile, Provided)), group = "group-1", artefact = "artifact-1").futureValue.sortBy(_.repoName) mustBe Seq(metaArtefactDependency1, metaArtefactDependency2)
     }
   }
+
+  "findDependencies" should {
+
+    "find document by scope" in {
+      repository.put(Seq(metaArtefactDependency1, metaArtefactDependency2)).futureValue
+      repository.findDependencies(scopes = Some(List(Compile))).futureValue mustBe Seq(metaArtefactDependency1)
+      repository.findDependencies(scopes = Some(List(Provided))).futureValue mustBe Seq(metaArtefactDependency2)
+      repository.findDependencies(scopes = Some(List(Compile, Provided))).futureValue.sortBy(_.repoName) mustBe Seq(metaArtefactDependency1, metaArtefactDependency2)
+    }
+  }
 }

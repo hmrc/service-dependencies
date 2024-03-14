@@ -16,19 +16,17 @@
 
 package uk.gov.hmrc.servicedependencies.controller
 
-import javax.inject.Inject
-import play.api.Configuration
 import play.api.libs.json.Json
 import play.api.mvc._
-import uk.gov.hmrc.servicedependencies.model.{BobbyRuleQuery, BobbyRulesSummary, HistoricBobbyRulesSummary}
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
+import uk.gov.hmrc.servicedependencies.model.{BobbyRuleQuery, BobbyRulesSummary, HistoricBobbyRulesSummary}
 import uk.gov.hmrc.servicedependencies.service.DependencyLookupService
 
 import java.time.LocalDate
+import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 
 class BobbyRuleViolationController @Inject() (
-  configuration   : Configuration,
   dependencyLookup: DependencyLookupService,
   cc              : ControllerComponents
   )(implicit ec: ExecutionContext) extends BackendController(cc) {
