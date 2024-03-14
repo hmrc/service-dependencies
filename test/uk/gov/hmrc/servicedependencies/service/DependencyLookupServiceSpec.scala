@@ -115,9 +115,9 @@ class DependencyLookupServiceSpec
 
       when(configService.getBobbyRules())
         .thenReturn(Future(BobbyRules(Map(("uk.gov.hmrc", "libs") -> List(bobbyRule)))))
-      when(derivedServiceDependenciesRepository.findDependencies(any[SlugInfoFlag], any[Option[List[DependencyScope]]]))
+      when(derivedServiceDependenciesRepository.find(flag = any[SlugInfoFlag], artefact = any[Option[String]], group = any[Option[String]], scopes = any[Option[List[DependencyScope]]]))
         .thenReturn(Future.successful(Seq.empty))
-      when(derivedDependenciesRepository.findDependencies(Some(DependencyScope.values)))
+      when(derivedDependenciesRepository.find(artefact = None, group = None, scopes = Some(DependencyScope.values)))
         .thenReturn(Future.successful(Seq(
           serviceDeb1Meta
           , serviceDeb1Meta.copy(repoVersion = Version("1.1.0"))
@@ -144,11 +144,11 @@ class DependencyLookupServiceSpec
 
       when(configService.getBobbyRules())
         .thenReturn(Future(BobbyRules(Map(("uk.gov.hmrc", "libs") -> List(bobbyRule)))))
-      when(derivedServiceDependenciesRepository.findDependencies(any[SlugInfoFlag], any[Option[List[DependencyScope]]]))
+      when(derivedServiceDependenciesRepository.find(flag = any[SlugInfoFlag], artefact = any[Option[String]], group = any[Option[String]], scopes = any[Option[List[DependencyScope]]]))
         .thenReturn(Future.successful(Seq.empty))
-      when(derivedDependenciesRepository.findDependencies(any[Option[List[DependencyScope]]]))
+      when(derivedDependenciesRepository.find(artefact = any[Option[String]], group = any[Option[String]], repoType = any[Option[List[RepoType]]], scopes = any[Option[List[DependencyScope]]]))
         .thenReturn(Future.successful(Seq.empty))
-      when(derivedServiceDependenciesRepository.findDependencies(SlugInfoFlag.Production, Some(List(DependencyScope.Compile))))
+      when(derivedServiceDependenciesRepository.find(SlugInfoFlag.Production, scopes = Some(List(DependencyScope.Compile))))
         .thenReturn(Future.successful(Seq(
           serviceDep1
         , serviceDep1.copy(slugVersion = Version("1.1.0"))
@@ -204,7 +204,6 @@ class DependencyLookupServiceSpec
     }
   }
 }
-
 
 object DependencyLookupServiceTestData {
   val serviceDep1 = ServiceDependency(

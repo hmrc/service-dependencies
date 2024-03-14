@@ -87,7 +87,9 @@ class IntegrationTestController @Inject()(
 
   def deleteMetaArtefactDependencies =
     Action.async {
-      derivedDependencyRepository.clearAllData()
+      derivedDependencyRepository
+        .collection
+        .deleteMany(BsonDocument()).toFuture()
         .map(_ => NoContent)
     }
 

@@ -198,7 +198,7 @@ class DependencyServiceSpec
         version = Version("1.1.0")
       )
 
-      service.setArtefactDependencies(newVersionArtefact).futureValue mustBe ()
+      service.addDependencies(newVersionArtefact).futureValue mustBe ()
 
       verify(mockDependencyRepository, times(1))
         .put(MetaArtefactDependency.fromMetaArtefact(newVersionArtefact, RepoType.Service))
@@ -217,7 +217,7 @@ class DependencyServiceSpec
         version = Version("1.0.0")
       )
 
-      service.setArtefactDependencies(newVersionArtefact).futureValue mustBe()
+      service.addDependencies(newVersionArtefact).futureValue mustBe()
 
       verify(mockDependencyRepository, times(1))
         .put(MetaArtefactDependency.fromMetaArtefact(newVersionArtefact, RepoType.Library))
@@ -232,7 +232,7 @@ class DependencyServiceSpec
         version = Version("1.1.0")
       )
 
-      service.setArtefactDependencies(newVersionArtefact).futureValue mustBe ()
+      service.addDependencies(newVersionArtefact).futureValue mustBe ()
 
       verify(mockDependencyRepository, times(1))
         .put(MetaArtefactDependency.fromMetaArtefact(newVersionArtefact, RepoType.Library))
@@ -247,7 +247,7 @@ class DependencyServiceSpec
         version = Version("1.1.0")
       )
 
-      service.setArtefactDependencies(newVersionArtefact).futureValue mustBe()
+      service.addDependencies(newVersionArtefact).futureValue mustBe()
 
       verify(mockDependencyRepository, times(1))
         .put(MetaArtefactDependency.fromMetaArtefact(newVersionArtefact, RepoType.Other))
@@ -260,7 +260,7 @@ class DependencyServiceSpec
         version = Version("0.9.0")
       )
 
-      service.setArtefactDependencies(oldVersionArtefact).futureValue mustBe()
+      service.addDependencies(oldVersionArtefact).futureValue mustBe()
 
       verifyNoMoreInteractions(mockDependencyRepository)
     }

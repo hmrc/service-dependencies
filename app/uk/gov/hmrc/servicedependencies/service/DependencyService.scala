@@ -20,7 +20,7 @@ import com.google.inject.Inject
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.servicedependencies.connector.TeamsAndRepositoriesConnector
 import uk.gov.hmrc.servicedependencies.model.RepoType
-import uk.gov.hmrc.servicedependencies.model.{DependencyScope, MetaArtefact, MetaArtefactDependency}
+import uk.gov.hmrc.servicedependencies.model.{DependencyScope, MetaArtefact, MetaArtefactDependency, Version}
 import uk.gov.hmrc.servicedependencies.persistence.MetaArtefactRepository
 import uk.gov.hmrc.servicedependencies.persistence.derived.{DerivedDependencyRepository, DerivedServiceDependenciesRepository}
 import uk.gov.hmrc.servicedependencies.util.DependencyGraphParser
@@ -34,7 +34,7 @@ class DependencyService @Inject()(
   teamsAndRepositoriesConnector: TeamsAndRepositoriesConnector
 )(implicit ec: ExecutionContext) {
 
-  def setArtefactDependencies(metaArtefact: MetaArtefact)(implicit hc: HeaderCarrier): Future[Unit] =
+  def addDependencies(metaArtefact: MetaArtefact)(implicit hc: HeaderCarrier): Future[Unit] =
     for {
       oRepo    <- teamsAndRepositoriesConnector.getRepository(metaArtefact.name)
       repoType =  oRepo.fold(RepoType.Other: RepoType)(_.repoType)
@@ -48,6 +48,12 @@ class DependencyService @Inject()(
                   else          Future.unit
       _        <- if (repoType == RepoType.Service) derivedServiceDependenciesRepository.populateDependencies(metaArtefact)
                   else                              Future.unit
+    } yield ()
+
+  def deleteDependencies(name: String, version: Version): Future[Unit] =
+    for {
+      _ <- derivedDependencyRepository.delete(name, version)
+      _ <- derivedServiceDependenciesRepository.delete(name, version)
     } yield ()
 }
 

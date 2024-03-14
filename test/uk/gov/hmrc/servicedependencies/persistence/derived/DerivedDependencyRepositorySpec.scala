@@ -88,12 +88,11 @@ class DerivedDependencyRepositorySpec
   "put" should {
     "insert new documents" in {
       repository.put(Seq(metaArtefactDependency1, metaArtefactDependency2, metaArtefactDependency3)).futureValue
-      repository.find("group-1", "artifact-1", None, None).futureValue.sortBy(_.repoName) mustBe Seq(metaArtefactDependency1, metaArtefactDependency2)
-      repository.find("group-3", "artifact-3", None, None).futureValue mustBe Seq(metaArtefactDependency3)
+      repository.find(Some("group-1"), Some("artifact-1"), None, None).futureValue.sortBy(_.repoName) mustBe Seq(metaArtefactDependency1, metaArtefactDependency2)
+      repository.find(Some("group-3"), Some("artifact-3"), None, None).futureValue mustBe Seq(metaArtefactDependency3)
     }
 
     "replace old documents" in {
-
       val metaArtefactDependencyUpdate = MetaArtefactDependency(
         repoName        = "name-1",
         depGroup        = "group-1",
@@ -110,36 +109,33 @@ class DerivedDependencyRepositorySpec
       )
 
       repository.put(Seq(metaArtefactDependency1)).futureValue
-      repository.find("group-1","artifact-1", None).futureValue mustBe Seq(metaArtefactDependency1)
+      repository.find(Some("group-1"),Some("artifact-1"), None).futureValue mustBe Seq(metaArtefactDependency1)
+
       repository.put(Seq(metaArtefactDependencyUpdate)).futureValue
-      repository.find("group-1","artifact-1", None).futureValue mustBe Seq(metaArtefactDependencyUpdate)
+      repository.find(Some("group-1"),Some("artifact-1"), None).futureValue mustBe Seq(metaArtefactDependencyUpdate)
     }
   }
 
   "find" should {
-
-    "find document by repo type" in {
+    "find document by group, artefact & repo type" in {
       repository.put(Seq(metaArtefactDependency1, metaArtefactDependency2)).futureValue
-      repository.find(repoType = Some(List(Service)), group = "group-1", artefact = "artifact-1").futureValue mustBe Seq(metaArtefactDependency1)
-      repository.find(repoType = Some(List(Other)), group = "group-1", artefact = "artifact-1").futureValue mustBe Seq(metaArtefactDependency2)
-      repository.find(repoType = Some(List(Service, Other)), group = "group-1", artefact = "artifact-1").futureValue.sortBy(_.repoName) mustBe Seq(metaArtefactDependency1, metaArtefactDependency2)
+      repository.find(repoType = Some(List(Service))       , group = Some("group-1"), artefact = Some("artifact-1")).futureValue                    mustBe Seq(metaArtefactDependency1)
+      repository.find(repoType = Some(List(Other))         , group = Some("group-1"), artefact = Some("artifact-1")).futureValue                    mustBe Seq(metaArtefactDependency2)
+      repository.find(repoType = Some(List(Service, Other)), group = Some("group-1"), artefact = Some("artifact-1")).futureValue.sortBy(_.repoName) mustBe Seq(metaArtefactDependency1, metaArtefactDependency2)
     }
 
-    "find document by scope" in {
+    "find document by group, artefact & scope" in {
       repository.put(Seq(metaArtefactDependency1, metaArtefactDependency2)).futureValue
-      repository.find(scopes = Some(List(Compile)), group = "group-1", artefact = "artifact-1").futureValue mustBe Seq(metaArtefactDependency1)
-      repository.find(scopes = Some(List(Provided)), group = "group-1", artefact = "artifact-1").futureValue mustBe Seq(metaArtefactDependency2)
-      repository.find(scopes = Some(List(Compile, Provided)), group = "group-1", artefact = "artifact-1").futureValue.sortBy(_.repoName) mustBe Seq(metaArtefactDependency1, metaArtefactDependency2)
+      repository.find(scopes = Some(List(Compile))          , group = Some("group-1"), artefact = Some("artifact-1")).futureValue                    mustBe Seq(metaArtefactDependency1)
+      repository.find(scopes = Some(List(Provided))         , group = Some("group-1"), artefact = Some("artifact-1")).futureValue                    mustBe Seq(metaArtefactDependency2)
+      repository.find(scopes = Some(List(Compile, Provided)), group = Some("group-1"), artefact = Some("artifact-1")).futureValue.sortBy(_.repoName) mustBe Seq(metaArtefactDependency1, metaArtefactDependency2)
     }
-  }
 
-  "findDependencies" should {
-
-    "find document by scope" in {
+    "find document just by scope" in {
       repository.put(Seq(metaArtefactDependency1, metaArtefactDependency2)).futureValue
-      repository.findDependencies(scopes = Some(List(Compile))).futureValue mustBe Seq(metaArtefactDependency1)
-      repository.findDependencies(scopes = Some(List(Provided))).futureValue mustBe Seq(metaArtefactDependency2)
-      repository.findDependencies(scopes = Some(List(Compile, Provided))).futureValue.sortBy(_.repoName) mustBe Seq(metaArtefactDependency1, metaArtefactDependency2)
+      repository.find(scopes = Some(List(Compile))          ).futureValue                    mustBe Seq(metaArtefactDependency1)
+      repository.find(scopes = Some(List(Provided))         ).futureValue                    mustBe Seq(metaArtefactDependency2)
+      repository.find(scopes = Some(List(Compile, Provided))).futureValue.sortBy(_.repoName) mustBe Seq(metaArtefactDependency1, metaArtefactDependency2)
     }
   }
 }

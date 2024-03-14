@@ -30,10 +30,10 @@ import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
 class DependencyLookupService @Inject() (
-  serviceConfigs       : ServiceConfigsConnector
-, bobbyRulesSummaryRepo: BobbyRulesSummaryRepository
+  serviceConfigs                      : ServiceConfigsConnector
+, bobbyRulesSummaryRepo               : BobbyRulesSummaryRepository
 , derivedServiceDependenciesRepository: DerivedServiceDependenciesRepository
-, derivedDependencyRepository: DerivedDependencyRepository
+, derivedDependencyRepository         : DerivedDependencyRepository
 )(implicit ec: ExecutionContext
 ) extends Logging {
 
@@ -44,38 +44,35 @@ class DependencyLookupService @Inject() (
       .map(_.getOrElse(BobbyRulesSummary(LocalDate.now(), Map.empty)))
 
   def updateBobbyRulesSummary(): Future[Unit] = {
-    def calculateCounts(rules: Seq[BobbyRule])(env: SlugInfoFlag): Future[Seq[((BobbyRule, SlugInfoFlag), Int)]] = {
-      logger.debug(s"calculateCounts($env)")
+    def calculateCounts(rules: Seq[BobbyRule])(env: SlugInfoFlag): Future[Seq[((BobbyRule, SlugInfoFlag), Int)]] =
       for {
-        metaArtefactDependency <- env match {
-          case SlugInfoFlag.Latest => derivedDependencyRepository.findDependencies(Some(DependencyScope.values))
-          case _                   => derivedServiceDependenciesRepository.findDependencies(env, Some(List(DependencyScope.Compile))).map(_.map(MetaArtefactDependency.fromServiceDependency))
-        }
-        lookup = {
-          metaArtefactDependency
-              .groupBy(d => s"${d.depGroup}:${d.depArtefact}")
-              .view
-              .mapValues(
-                _.groupBy(_.depVersion)
-                  .view
-                  .mapValues(_.map(d => s"${d.repoName}:${d.repoVersion}").toSet)
-                  .toMap
-              )
-              .toMap
-        }
-        violations = rules.map(rule => ((rule, env), findSlugsUsing(lookup, rule.organisation, rule.name, rule.range).length))
+        dependencies <- env match {
+                          case SlugInfoFlag.Latest => derivedDependencyRepository
+                                                        .find(scopes = Some(DependencyScope.values))
+                          case _                   => derivedServiceDependenciesRepository
+                                                        .find(env, scopes = Some(List(DependencyScope.Compile)))
+                                                        .map(_.map(MetaArtefactDependency.fromServiceDependency))
+                        }
+        lookup       =  dependencies
+                          .groupBy(d => s"${d.depGroup}:${d.depArtefact}")
+                          .view
+                          .mapValues(
+                            _.groupBy(_.depVersion)
+                              .view
+                              .mapValues(_.map(d => s"${d.repoName}:${d.repoVersion}").toSet)
+                              .toMap
+                          )
+                          .toMap
+        violations    = rules.map(rule => ((rule, env), findSlugsUsing(lookup, rule.organisation, rule.name, rule.range).length))
       } yield violations
-    }
 
     for {
       rules   <- serviceConfigs.getBobbyRules().map(_.asMap.values.flatten.toSeq)
       _       =  logger.debug(s"Found ${rules.size} rules")
-      counts  <- // traverse (in parallel) uses more memory and adds contention on data source - fold through it instead
-                 SlugInfoFlag.values.foldLeftM(Seq[((BobbyRule, SlugInfoFlag), Int)]())((acc, env) =>
-                   calculateCounts(rules)(env).map(acc ++ _)
-                 )
-      summary =  counts.toMap
-      _       <- bobbyRulesSummaryRepo.add(BobbyRulesSummary(LocalDate.now(), summary))
+      counts  <- SlugInfoFlag
+                   .values  // traverse (in parallel) uses more memory and adds contention on data source - fold through it instead
+                   .foldLeftM(Seq[((BobbyRule, SlugInfoFlag), Int)]())((acc, env) => calculateCounts(rules)(env).map(acc ++ _))
+      _       <- bobbyRulesSummaryRepo.add(BobbyRulesSummary(LocalDate.now(), counts.toMap))
     } yield ()
   }
 

@@ -130,7 +130,7 @@ class ServiceDependenciesControllerSpec
         Future.successful(TeamsForServices(Map("repo-name" -> Seq("team-name"))))
       )
 
-      when(boot.mockDerivedServiceDependenciesRepository.findServicesWithDependency(any(), any(), any(), any())).thenReturn(
+      when(boot.mockDerivedServiceDependenciesRepository.find(any(), any(), any(), any())).thenReturn(
         Future.successful(Seq(
           serviceDependency(Version("1.0.0")),
           serviceDependency(Version("2.0.0")),
@@ -165,7 +165,7 @@ class ServiceDependenciesControllerSpec
         Future.successful(TeamsForServices(Map("repo-name" -> Seq("team-name"))))
       )
 
-      when(boot.mockDerivedServiceDependenciesRepository.findServicesWithDependency(any(), any(), any(), any())).thenReturn(
+      when(boot.mockDerivedServiceDependenciesRepository.find(any(), any(), any(), any())).thenReturn(
         Future.successful(Seq(
           serviceDependency(Version("1.0.0")),
           serviceDependency(Version("2.0.0")),

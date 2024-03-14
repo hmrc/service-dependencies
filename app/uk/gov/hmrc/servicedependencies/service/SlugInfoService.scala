@@ -56,7 +56,6 @@ class SlugInfoService @Inject()(
   def deleteSlugInfo(name: String, version: Version): Future[Unit] =
     for {
       _ <- deploymentRepository.delete(name, version)
-      _ <- derivedServiceDependencyRepository.delete(name, version)
       _ <- slugInfoRepository.delete(name, version)
     } yield ()
 
@@ -74,7 +73,7 @@ class SlugInfoService @Inject()(
     , scopes      : Option[List[DependencyScope]]
     )(implicit hc: HeaderCarrier): Future[Seq[ServiceDependency]] =
       for {
-        services            <- derivedServiceDependencyRepository.findServicesWithDependency(flag, group, artefact, scopes)
+        services            <- derivedServiceDependencyRepository.find(flag, group = Some(group), artefact = Some(artefact), scopes = scopes)
         servicesWithinRange =  services.filter(s => versionRange.includes(s.depVersion))
         teamsForServices    <- teamsAndRepositoriesConnector.getTeamsForServices
       } yield servicesWithinRange.map { r =>

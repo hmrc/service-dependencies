@@ -17,11 +17,8 @@
 package uk.gov.hmrc.servicedependencies.persistence.derived
 
 import org.mongodb.scala.MongoCollection
-import org.mongodb.scala.bson.BsonDocument
 import org.mongodb.scala.bson.conversions.Bson
-import org.mongodb.scala.model.Filters._
-import org.mongodb.scala.model.Indexes.{ascending, compoundIndex}
-import org.mongodb.scala.model.{IndexModel, IndexOptions, ReplaceOneModel, ReplaceOptions}
+import org.mongodb.scala.model.{IndexModel, IndexOptions, Indexes, Filters, ReplaceOneModel, ReplaceOptions}
 import play.api.Logger
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.play.json.{CollectionFactory, PlayMongoRepository}
@@ -33,9 +30,6 @@ import uk.gov.hmrc.servicedependencies.util.DependencyGraphParser
 import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
 
-/** A flattened version of slugInfo.dependencies for efficient usage.
-  * One document per dependency in the slug
-  */
 @Singleton
 class DerivedServiceDependenciesRepository @Inject()(
   mongoComponent       : MongoComponent,
@@ -47,35 +41,35 @@ class DerivedServiceDependenciesRepository @Inject()(
 , mongoComponent = mongoComponent
 , domainFormat   = ApiServiceDependencyFormats.derivedMongoFormat
 , indexes        = Seq(
-                      IndexModel(
-                        compoundIndex(
-                          ascending("slugName"),
-                          ascending("slugVersion")
-                        ),
-                        IndexOptions().name("slugName_slugVersion_idx").background(true)
-                      ),
-                      IndexModel(
-                        compoundIndex(
-                          ascending("group"),
-                          ascending("artefact")
-                        ),
-                        IndexOptions().name("group_artefact_idx").background(true)
-                      ),
-                      IndexModel(
-                        compoundIndex(DependencyScope.values.map(s => ascending("scope_" + s.asString)) :_*),
-                        IndexOptions().name("dependencyScope_idx").background(true)
-                      ),
-                      IndexModel(
-                        compoundIndex(
-                          ascending("slugName"),
-                          ascending("slugVersion"),
-                          ascending("group"),
-                          ascending("artefact"),
-                          ascending("version")
-                        ),
-                        IndexOptions().name("uniqueIdx").unique(true).background(true)
-                      )
-                    )
+                     IndexModel(
+                       Indexes.compoundIndex(
+                         Indexes.ascending("slugName"),
+                         Indexes.ascending("slugVersion")
+                       ),
+                       IndexOptions().name("slugName_slugVersion_idx").background(true)
+                     ),
+                     IndexModel(
+                       Indexes.compoundIndex(
+                         Indexes.ascending("group"),
+                         Indexes.ascending("artefact")
+                       ),
+                       IndexOptions().name("group_artefact_idx").background(true)
+                     ),
+                     IndexModel(
+                       Indexes.compoundIndex(DependencyScope.values.map(s => Indexes.ascending("scope_" + s.asString)) :_*),
+                       IndexOptions().name("dependencyScope_idx").background(true)
+                     ),
+                     IndexModel(
+                       Indexes.compoundIndex(
+                         Indexes.ascending("slugName"),
+                         Indexes.ascending("slugVersion"),
+                         Indexes.ascending("group"),
+                         Indexes.ascending("artefact"),
+                         Indexes.ascending("version")
+                       ),
+                       IndexOptions().name("uniqueIdx").unique(true).background(true)
+                     )
+                   )
 , optSchema      = None
 , replaceIndexes = true
 ){
@@ -84,28 +78,20 @@ class DerivedServiceDependenciesRepository @Inject()(
   // we remove slugs when, artefactProcess detects, they've been deleted from artifactory
   override lazy val requiresTtlIndex = false
 
-  def findServicesWithDependency(
+  def find(
     flag    : SlugInfoFlag,
-    group   : String,
-    artefact: String,
-    scopes  : Option[List[DependencyScope]]
+    group   : Option[String]                = None,
+    artefact: Option[String]                = None,
+    scopes  : Option[List[DependencyScope]] = None
   ): Future[Seq[ServiceDependency]] =
     findServiceDependenciesFromDeployments(
-      deploymentsFilter = equal(flag.asString, true),
-      dependencyFilter  = and(
-                            equal("group", group),
-                            equal("artefact", artefact),
-                            scopes.fold[Bson](BsonDocument())(ss => or( ss.map(scope => equal(s"scope_${scope.asString}", value = true)): _*))
-                          )
-    )
-
-  def findDependencies(
-    flag: SlugInfoFlag,
-    scopes: Option[List[DependencyScope]]
-  ): Future[Seq[ServiceDependency]] =
-    findServiceDependenciesFromDeployments(
-      deploymentsFilter = equal(flag.asString, true),
-      dependencyFilter = scopes.fold[Bson](BsonDocument())(ss => or(ss.map(scope => equal(s"scope_${scope.asString}", value = true)): _*))
+      deploymentsFilter = Filters.equal(flag.asString, true),
+      dependencyFilter  = Seq(
+                            group   .map(x  => Filters.equal("group", x)),
+                            artefact.map(x  => Filters.equal("artefact", x)),
+                            scopes  .map(xs => Filters.or(xs.map(x => Filters.equal(s"scope_${x.asString}", value = true)): _*))
+                          ).flatten
+                           .foldLeft(Filters.empty())(Filters.and(_, _))
     )
 
   private def findServiceDependenciesFromDeployments(
@@ -129,17 +115,6 @@ class DerivedServiceDependenciesRepository @Inject()(
       collectionName,
       ServiceDependencyWrite.format
     )
-
-  def delete(slugName: String, slugVersion: Version): Future[Unit] =
-    collection
-      .deleteOne(
-          and(
-            equal("slugName"   , slugName),
-            equal("slugVersion", slugVersion.toString)
-          )
-        )
-      .toFuture()
-      .map(_ => ())
 
   def populateDependencies(meta: MetaArtefact): Future[Unit] = {
     logger.info(s"Processing ${meta.name} ${meta.version}")
@@ -228,13 +203,13 @@ class DerivedServiceDependenciesRepository @Inject()(
         .bulkWrite(
           writes.map(d =>
             ReplaceOneModel(
-              filter         = and(
-                                  equal("slugName"   , d.slugName),
-                                  equal("slugVersion", d.slugVersion.original),
-                                  equal("group"      , d.depGroup),
-                                  equal("artefact"   , d.depArtefact),
-                                  equal("version"    , d.depVersion.original),
-                                ),
+              filter         = Filters.and(
+                                 Filters.equal("slugName"   , d.slugName),
+                                 Filters.equal("slugVersion", d.slugVersion.original),
+                                 Filters.equal("group"      , d.depGroup),
+                                 Filters.equal("artefact"   , d.depArtefact),
+                                 Filters.equal("version"    , d.depVersion.original),
+                               ),
               replacement    = d,
               replaceOptions = ReplaceOptions().upsert(true)
             )
@@ -243,4 +218,15 @@ class DerivedServiceDependenciesRepository @Inject()(
         .map(_ => ())
     }
   }
+
+  def delete(slugName: String, slugVersion: Version): Future[Unit] =
+    collection
+      .deleteMany(
+          Filters.and(
+            Filters.equal("slugName"   , slugName),
+            Filters.equal("slugVersion", slugVersion.toString)
+          )
+        )
+      .toFuture()
+      .map(_ => ())
 }

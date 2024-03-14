@@ -16,14 +16,11 @@
 
 package uk.gov.hmrc.servicedependencies.persistence.derived
 
-import org.mongodb.scala.bson.BsonDocument
-import org.mongodb.scala.bson.conversions.Bson
-import org.mongodb.scala.model.Filters.{equal, or}
-import org.mongodb.scala.model._
+import org.mongodb.scala.model.{Filters, Indexes, IndexOptions, IndexModel, ReplaceOneModel, ReplaceOptions}
 import play.api.Logging
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.play.json.PlayMongoRepository
-import uk.gov.hmrc.servicedependencies.model.{DependencyScope, MetaArtefactDependency, RepoType}
+import uk.gov.hmrc.servicedependencies.model.{DependencyScope, MetaArtefactDependency, RepoType, Version}
 
 import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
@@ -37,15 +34,32 @@ class DerivedDependencyRepository @Inject()(
   , mongoComponent = mongoComponent
   , domainFormat   = MetaArtefactDependency.mongoFormat
   , indexes        = Seq(
-    IndexModel(Indexes.ascending("repoName"), IndexOptions().name("repoNameIdx")),
-    IndexModel(Indexes.ascending("group"),    IndexOptions().name("groupIdx")),
-    IndexModel(Indexes.ascending("artefact"), IndexOptions().name("artefactIdx")),
-    IndexModel(Indexes.ascending("repoType"), IndexOptions().name("repoIdx")),
-  ) ++ DependencyScope.values.map(s => IndexModel(Indexes.ascending(s"scope_${s.asString}"), IndexOptions().name(s"scope_${s.asString}Idx")))
+                       IndexModel(Indexes.ascending("repoName"), IndexOptions().name("repoNameIdx")),
+                       IndexModel(Indexes.ascending("group"),    IndexOptions().name("groupIdx")),
+                       IndexModel(Indexes.ascending("artefact"), IndexOptions().name("artefactIdx")),
+                       IndexModel(Indexes.ascending("repoType"), IndexOptions().name("repoIdx")),
+                     ) ++ DependencyScope.values.map(s => IndexModel(Indexes.ascending(s"scope_${s.asString}"), IndexOptions().name(s"scope_${s.asString}Idx")))
 ) with Logging {
 
   // automatically refreshed when given new meta data artefacts from update scheduler
   override lazy val requiresTtlIndex = false
+
+  def find(
+    group   : Option[String]                = None,
+    artefact: Option[String]                = None,
+    repoType: Option[List[RepoType]]        = None,
+    scopes  : Option[List[DependencyScope]] = None
+  ): Future[Seq[MetaArtefactDependency]] =
+    collection
+      .find(
+        Seq(
+          group   .map(x  => Filters.equal("group", x)),
+          artefact.map(x  => Filters.equal("artefact", x)),
+          repoType.map(xs => Filters.or(xs.map(x => Filters.equal(s"repoType", x.asString)): _*)),
+          scopes  .map(xs => Filters.or(xs.map(x => Filters.equal(s"scope_${x.asString}", value = true)): _*))
+        ).flatten
+         .foldLeft(Filters.empty())(Filters.and(_, _))
+      ).toFuture()
 
   def put(dependencies: Seq[MetaArtefactDependency]): Future[Unit] =
     if (dependencies.isEmpty)
@@ -56,44 +70,24 @@ class DerivedDependencyRepository @Inject()(
           dependencies.map(d =>
             ReplaceOneModel(
               filter = Filters.and(
-                equal("repoName",     d.repoName),
-                equal("group",        d.depGroup),
-                equal("artefact",     d.depArtefact)
+                Filters.equal("repoName", d.repoName),
+                Filters.equal("group",    d.depGroup),
+                Filters.equal("artefact", d.depArtefact)
               ),
-              replacement = d,
+              replacement    = d,
               replaceOptions = ReplaceOptions().upsert(true)
             )
           )
         ).toFuture()
         .map(_ => ())
 
-  def find(
-    group: String,
-    artefact: String,
-    repoType: Option[List[RepoType]]      = None,
-    scopes: Option[List[DependencyScope]] = None
-  ): Future[Seq[MetaArtefactDependency]] =
+  def delete(name: String, version: Version): Future[Unit] =
     collection
-      .find(
+      .deleteMany(
         Filters.and(
-          equal("group", group),
-          equal("artefact", artefact),
-          repoType.fold[Bson](BsonDocument())(rt => or(rt.map(repoType => equal(s"repoType", repoType.asString)): _*)),
-          scopes.fold[Bson](BsonDocument())(ss => or(ss.map(scope => equal(s"scope_${scope.asString}", value = true)): _*))
+          Filters.equal("repoName"   , name),
+          Filters.equal("repoVersion", version.toString)
         )
       ).toFuture()
-
-  def findDependencies(scopes: Option[List[DependencyScope]]): Future[Seq[MetaArtefactDependency]] =
-    collection
-      .find(
-        Filters.and(
-          scopes.fold[Bson](BsonDocument())(ss => or(ss.map(scope => equal(s"scope_${scope.asString}", value = true)): _*))
-        )
-      ).toFuture()
-
-  def clearAllData(): Future[Unit] =
-    collection.deleteMany(BsonDocument())
-      .toFuture()
       .map(_ => ())
-
 }

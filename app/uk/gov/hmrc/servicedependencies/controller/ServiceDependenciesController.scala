@@ -61,25 +61,27 @@ class ServiceDependenciesController @Inject()(
   }
 
   def metaArtefactDependencies(
-                                   flag: SlugInfoFlag,
-                                   group: String,
-                                   artefact: String,
-                                   repoType: Option[List[RepoType]],
-                                   versionRange: Option[BobbyVersionRange],
-                                   scope: Option[List[DependencyScope]]
-                                 ): Action[AnyContent] = Action.async { implicit request =>
+    flag        : SlugInfoFlag,
+    group       : String,
+    artefact    : String,
+    repoType    : Option[List[RepoType]],
+    versionRange: Option[BobbyVersionRange],
+    scope       : Option[List[DependencyScope]]
+  ): Action[AnyContent] = Action.async { implicit request =>
+    implicit val madWrites: OWrites[MetaArtefactDependency] = MetaArtefactDependency.apiWrites
     for {
       allTeams     <- teamsAndRepositoriesConnector.getTeamsForServices
       dependencies <- flag match {
-        case SlugInfoFlag.Latest => derivedDependencyRepository.find(group, artefact, repoType, scope)
-        case _                   => derivedServiceDependencyRepository.findServicesWithDependency(flag, group, artefact, scope).map(_.map(MetaArtefactDependency.fromServiceDependency))
-      }
-      dependenciesByRange   = versionRange.map(range => dependencies.filter(s => range.includes(s.depVersion))).getOrElse(dependencies)
-      dependenciesWithTeams = dependenciesByRange.map(repo => repo.copy(teams = allTeams.getTeams(repo.repoName).toList.sorted))
-    } yield {
-      implicit val madWrites: OWrites[MetaArtefactDependency] = MetaArtefactDependency.apiWrites
-      Ok(Json.toJson(dependenciesWithTeams))
-    }
+                        case SlugInfoFlag.Latest => derivedDependencyRepository
+                                                      .find(group = Some(group), artefact = Some(artefact), repoType = repoType, scopes = scope)
+                        case _                   => derivedServiceDependencyRepository
+                                                      .find(flag = flag, group = Some(group), artefact = Some(artefact), scopes = scope)
+                                                      .map(_.map(MetaArtefactDependency.fromServiceDependency))
+                      }
+      result       =  versionRange
+                        .map(range => dependencies.filter(s => range.includes(s.depVersion))).getOrElse(dependencies)
+                        .map(repo => repo.copy(teams = allTeams.getTeams(repo.repoName).toList.sorted))
+    } yield Ok(Json.toJson(result))
   }
 
   def getServicesWithDependency(
