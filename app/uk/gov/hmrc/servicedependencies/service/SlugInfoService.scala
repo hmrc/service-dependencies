@@ -71,13 +71,13 @@ class SlugInfoService @Inject()(
     , artefact    : String
     , versionRange: BobbyVersionRange
     , scopes      : Option[List[DependencyScope]]
-    )(implicit hc: HeaderCarrier): Future[Seq[ServiceDependency]] =
+    )(implicit hc: HeaderCarrier): Future[Seq[MetaArtefactDependency]] =
       for {
         services            <- derivedServiceDependencyRepository.find(flag, group = Some(group), artefact = Some(artefact), scopes = scopes)
         servicesWithinRange =  services.filter(s => versionRange.includes(s.depVersion))
         teamsForServices    <- teamsAndRepositoriesConnector.getTeamsForServices
       } yield servicesWithinRange.map { r =>
-        r.copy(teams = teamsForServices.getTeams(r.slugName).toList.sorted)
+        r.copy(teams = teamsForServices.getTeams(r.repoName).toList.sorted)
       }
 
   def findGroupsArtefacts(): Future[Seq[GroupArtefacts]] =

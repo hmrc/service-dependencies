@@ -16,16 +16,12 @@
 
 package uk.gov.hmrc.servicedependencies.persistence.derived
 
-import org.mongodb.scala.MongoCollection
 import org.mongodb.scala.bson.conversions.Bson
 import org.mongodb.scala.model.{IndexModel, IndexOptions, Indexes, Filters, ReplaceOneModel, ReplaceOptions}
-import play.api.Logger
 import uk.gov.hmrc.mongo.MongoComponent
-import uk.gov.hmrc.mongo.play.json.{CollectionFactory, PlayMongoRepository}
+import uk.gov.hmrc.mongo.play.json.PlayMongoRepository
 import uk.gov.hmrc.servicedependencies.model._
 import uk.gov.hmrc.servicedependencies.persistence.DeploymentRepository
-import uk.gov.hmrc.servicedependencies.service.DependencyService
-import uk.gov.hmrc.servicedependencies.util.DependencyGraphParser
 
 import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
@@ -36,10 +32,10 @@ class DerivedServiceDependenciesRepository @Inject()(
   deploymentRepository : DeploymentRepository
 )(implicit
   ec: ExecutionContext
-) extends PlayMongoRepository[ServiceDependency](
+) extends PlayMongoRepository[MetaArtefactDependency](
   collectionName = "DERIVED-slug-dependencies"
 , mongoComponent = mongoComponent
-, domainFormat   = ApiServiceDependencyFormats.derivedMongoFormat
+, domainFormat   = MetaArtefactDependency.mongoFormat
 , indexes        = Seq(
                      IndexModel(
                        Indexes.compoundIndex(
@@ -73,8 +69,6 @@ class DerivedServiceDependenciesRepository @Inject()(
 , optSchema      = None
 , replaceIndexes = true
 ){
-  private val logger = Logger(getClass)
-
   // we remove slugs when, artefactProcess detects, they've been deleted from artifactory
   override lazy val requiresTtlIndex = false
 
@@ -83,7 +77,7 @@ class DerivedServiceDependenciesRepository @Inject()(
     group   : Option[String]                = None,
     artefact: Option[String]                = None,
     scopes  : Option[List[DependencyScope]] = None
-  ): Future[Seq[ServiceDependency]] =
+  ): Future[Seq[MetaArtefactDependency]] =
     findServiceDependenciesFromDeployments(
       deploymentsFilter = Filters.equal(flag.asString, true),
       dependencyFilter  = Seq(
@@ -97,10 +91,10 @@ class DerivedServiceDependenciesRepository @Inject()(
   private def findServiceDependenciesFromDeployments(
     deploymentsFilter: Bson,
     dependencyFilter : Bson
-  ): Future[Seq[ServiceDependency]] =
+  ): Future[Seq[MetaArtefactDependency]] =
     deploymentRepository.lookupAgainstDeployments(
       collectionName   = collectionName,
-      domainFormat     = ApiServiceDependencyFormats.derivedMongoFormat,
+      domainFormat     = MetaArtefactDependency.mongoFormat,
       slugNameField    = "slugName",
       slugVersionField = "slugVersion"
     )(
@@ -108,107 +102,20 @@ class DerivedServiceDependenciesRepository @Inject()(
       domainFilter      = dependencyFilter
     )
 
-  // use a different collection to register a different format
-  private def targetCollection: MongoCollection[ServiceDependencyWrite] =
-    CollectionFactory.collection(
-      mongoComponent.database,
-      collectionName,
-      ServiceDependencyWrite.format
-    )
-
-  def populateDependencies(meta: MetaArtefact): Future[Unit] = {
-    logger.info(s"Processing ${meta.name} ${meta.version}")
-
-    def toServiceDependencyWrite(group: String, artefact: String, version: Version, scalaVersion: Option[String], scopes: Set[DependencyScope]) =
-      ServiceDependencyWrite(
-        slugName     = meta.name,
-        slugVersion  = meta.version,
-        depGroup     = group,
-        depArtefact  = artefact,
-        depVersion   = version,
-        scalaVersion = scalaVersion,
-        compileFlag  = scopes.contains(DependencyScope.Compile),
-        providedFlag = scopes.contains(DependencyScope.Provided),
-        testFlag     = scopes.contains(DependencyScope.Test),
-        itFlag       = scopes.contains(DependencyScope.It),
-        buildFlag    = scopes.contains(DependencyScope.Build)
-      )
-
-    val scalaVersion =
-      meta.modules.flatMap(_.crossScalaVersions.toSeq.flatten).headOption
-
-    val sbtVersion =
-      meta.modules.flatMap(_.sbtVersion).headOption
-
-    val dependencies: Map[DependencyGraphParser.Node, Set[DependencyScope]] = DependencyService.parseArtefactDependencies(meta)
-
-    def dependencyIfMissing(
-      group       : String,
-      artefact    : String,
-      version     : Option[Version],
-      scalaVersion: Option[String],
-      scopes      : Set[DependencyScope]
-    ): Option[ServiceDependencyWrite] =
-      for {
-        v                <- version
-        applicableScopes = scopes.collect {
-                              case scope if !dependencies.exists(dep =>
-                                dep._2.contains(scope) &&
-                                dep._1.group == group &&
-                                dep._1.artefact == artefact) => scope
-                            }
-        if applicableScopes.nonEmpty
-      } yield
-        toServiceDependencyWrite(
-          group        = group,
-          artefact     = artefact,
-          version      = v,
-          scalaVersion = scalaVersion,
-          scopes       = applicableScopes
-        )
-
-    val writes =
-      dependencies
-        .filterNot { case (node, _) => node.group == "default"     && node.artefact == "project"     }
-        .filterNot { case (node, _) => node.group == "uk.gov.hmrc" && node.artefact == meta.name }
-        .map { case (node, scopes) =>
-          toServiceDependencyWrite(
-            group        = node.group,
-            artefact     = node.artefact,
-            version      = Version(node.version),
-            scalaVersion = node.scalaVersion,
-            scopes       = scopes
-          )
-        } ++
-        scalaVersion.flatMap(_ => dependencyIfMissing(
-          group        = "org.scala-lang",
-          artefact     = "scala-library",
-          version      = scalaVersion,
-          scalaVersion = None,
-          scopes       = Set(DependencyScope.Compile, DependencyScope.Test)
-        )).toList ++
-        sbtVersion.flatMap(_ => dependencyIfMissing(
-          group        = "org.scala-sbt",
-          artefact     = "sbt",
-          version      = sbtVersion,
-          scalaVersion = None,
-          scopes       = Set(DependencyScope.Build)
-        )).toList
-
-    if (writes.isEmpty)
+  def put(dependencies: Seq[MetaArtefactDependency]): Future[Unit] =
+    if (dependencies.isEmpty)
       Future.unit
     else {
-      logger.info(s"Inserting ${writes.size} dependencies for ${meta.name} ${meta.version}")
-      targetCollection
+      collection
         .bulkWrite(
-          writes.map(d =>
+          dependencies.map(d =>
             ReplaceOneModel(
               filter         = Filters.and(
-                                 Filters.equal("slugName"   , d.slugName),
-                                 Filters.equal("slugVersion", d.slugVersion.original),
+                                 Filters.equal("repoName"   , d.repoName),
+                                 Filters.equal("repoVersion", d.repoVersion.original),
                                  Filters.equal("group"      , d.depGroup),
                                  Filters.equal("artefact"   , d.depArtefact),
-                                 Filters.equal("version"    , d.depVersion.original),
+                                //  Filters.equal("version"    , d.depVersion.original),
                                ),
               replacement    = d,
               replaceOptions = ReplaceOptions().upsert(true)
@@ -217,14 +124,13 @@ class DerivedServiceDependenciesRepository @Inject()(
         ).toFuture()
         .map(_ => ())
     }
-  }
 
-  def delete(slugName: String, slugVersion: Version): Future[Unit] =
+  def delete(name: String, version: Version): Future[Unit] =
     collection
       .deleteMany(
           Filters.and(
-            Filters.equal("slugName"   , slugName),
-            Filters.equal("slugVersion", slugVersion.toString)
+            Filters.equal("repoName"   , name),
+            Filters.equal("repoVersion", version.toString)
           )
         )
       .toFuture()

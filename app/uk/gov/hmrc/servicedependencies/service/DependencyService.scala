@@ -44,10 +44,13 @@ class DependencyService @Inject()(
                       case Some(storedMeta) => metaArtefact.version >= storedMeta.version
                       case None             => true
                     }
-      _        <- if (isLatest) derivedDependencyRepository.put(MetaArtefactDependency.fromMetaArtefact(metaArtefact, repoType))
-                  else          Future.unit
-      _        <- if (repoType == RepoType.Service) derivedServiceDependenciesRepository.populateDependencies(metaArtefact)
-                  else                              Future.unit
+      deps     =  DependencyService
+                    .parseMetaArtefact(metaArtefact)
+                    .map { case (node, scopes) => MetaArtefactDependency.apply(metaArtefact, repoType, node, scopes) }
+                    .toSeq
+      _        <- if      (isLatest)                     derivedDependencyRepository.put(deps)
+                  else if (repoType == RepoType.Service) derivedServiceDependenciesRepository.put(deps)
+                  else                                   Future.unit
     } yield ()
 
   def deleteDependencies(name: String, version: Version): Future[Unit] =
@@ -59,29 +62,46 @@ class DependencyService @Inject()(
 
 object DependencyService {
 
-  def parseArtefactDependencies(meta: MetaArtefact): Map[DependencyGraphParser.Node, Set[DependencyScope]] = {
+  private def parseStr(opt: Option[String], scope: DependencyScope): Seq[(DependencyGraphParser.Node, DependencyScope)] =
+    DependencyGraphParser.parse(opt.getOrElse("")).dependencies.map((_, scope))
 
-    val graphBuild = meta.dependencyDotBuild.getOrElse("")
-    val build = DependencyGraphParser.parse(graphBuild).dependencies.map((_, DependencyScope.Build))
+  // private def addNodeOpt(m: Map[DependencyGraphParser.Node, Set[DependencyScope]], node: Option[DependencyGraphParser.Node], scopes: Set[DependencyScope]) =
+  //   node match {
+  //     case Some(n) => m.updatedWith(n)(_.fold(Some(scopes))(s => Some(s ++ scopes)))
+  //     case None    => m
+  //   }
 
-    (
-      meta.modules.foldLeft(Seq.empty[(DependencyGraphParser.Node, DependencyScope)]) {
-      (acc, module) =>
-
-        val graphCompile  = module.dependencyDotCompile.getOrElse("")
-        val graphProvided = module.dependencyDotProvided.getOrElse("")
-        val graphTest     = module.dependencyDotTest.getOrElse("")
-        val graphIt       = module.dependencyDotIt.getOrElse("")
-
-        val compile   = DependencyGraphParser.parse(graphCompile).dependencies.map((_, DependencyScope.Compile))
-        val provided  = DependencyGraphParser.parse(graphProvided).dependencies.map((_, DependencyScope.Provided))
-        val test      = DependencyGraphParser.parse(graphTest).dependencies.map((_, DependencyScope.Test))
-        val it        = DependencyGraphParser.parse(graphIt).dependencies.map((_, DependencyScope.It))
-
-        acc ++ (compile ++ provided ++ test ++ it)
-      } ++ build
-    ).foldLeft(Map.empty[DependencyGraphParser.Node, Set[DependencyScope]]) { case (acc, (n, flag)) =>
-      acc + (n -> (acc.getOrElse(n, Set.empty) + flag))
+  def parseMetaArtefact(meta: MetaArtefact): Map[DependencyGraphParser.Node, Set[DependencyScope]] = {
+    val build   = parseStr(meta.dependencyDotBuild, DependencyScope.Build)
+    val modules = meta.modules.foldLeft(Seq.empty[(DependencyGraphParser.Node, DependencyScope)]) { (acc, module) =>
+      acc                                                              ++
+      parseStr(module.dependencyDotCompile , DependencyScope.Compile ) ++
+      parseStr(module.dependencyDotProvided, DependencyScope.Provided) ++
+      parseStr(module.dependencyDotTest    , DependencyScope.Test    ) ++
+      parseStr(module.dependencyDotIt      , DependencyScope.It      )
     }
+
+    val scala = meta
+                  .modules
+                  .flatMap(_.crossScalaVersions.toSeq.flatten)
+                  .headOption
+                  .map(v => DependencyGraphParser.Node.apply(s"org.scala-lang:scala-library:${v.original}"))
+                  .fold(Map.empty[DependencyGraphParser.Node, Set[DependencyScope]])(n => Map(n ->  Set(DependencyScope.Compile, DependencyScope.Test)))
+    val sbt   = meta
+                  .modules
+                  .flatMap(_.sbtVersion)
+                  .headOption
+                  .map(v => DependencyGraphParser.Node.apply(s"org.scala-sbt:sbt:${v.original}"))
+                  .fold(Map.empty[DependencyGraphParser.Node, Set[DependencyScope]])(n => Map(n ->  Set(DependencyScope.Build)))
+    val deps  = (build ++ modules)
+                  .foldLeft(Map.empty[DependencyGraphParser.Node, Set[DependencyScope]]) { case (acc, (n, flag)) => acc + (n -> (acc.getOrElse(n, Set.empty) + flag)) }
+                  .filterNot { case (node, _) => node.group == "default"     && node.artefact == "project" }
+                  .filterNot { case (node, _) => node.group == "uk.gov.hmrc" && node.artefact == meta.name }
+
+    // val deps1 = addNodeOpt(deps , scalaNode, Set(DependencyScope.Compile, DependencyScope.Test))
+    // val deps2 = addNodeOpt(deps1, sbtNode  , Set(DependencyScope.Build))
+
+    // deps2
+    scala ++ sbt ++ deps
   }
 }

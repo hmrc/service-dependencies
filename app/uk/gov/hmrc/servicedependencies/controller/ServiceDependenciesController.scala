@@ -76,7 +76,7 @@ class ServiceDependenciesController @Inject()(
                                                       .find(group = Some(group), artefact = Some(artefact), repoType = repoType, scopes = scope)
                         case _                   => derivedServiceDependencyRepository
                                                       .find(flag = flag, group = Some(group), artefact = Some(artefact), scopes = scope)
-                                                      .map(_.map(MetaArtefactDependency.fromServiceDependency))
+                                                      // .map(_.map(MetaArtefactDependency.fromServiceDependency))
                       }
       result       =  versionRange
                         .map(range => dependencies.filter(s => range.includes(s.depVersion))).getOrElse(dependencies)
@@ -92,7 +92,7 @@ class ServiceDependenciesController @Inject()(
     scope       : Option[List[String]]
   ): Action[AnyContent] =
     Action.async { implicit request =>
-      implicit val format = ApiServiceDependencyFormats.serviceDependencyFormat
+      implicit val format = MetaArtefactDependency.apiWrites
       (for {
          f   <- EitherT.fromOption[Future](SlugInfoFlag.parse(flag), BadRequest(s"invalid flag '$flag'"))
          sc  <- scope.fold(EitherT.pure[Future, Result](Option.empty[List[DependencyScope]]))(

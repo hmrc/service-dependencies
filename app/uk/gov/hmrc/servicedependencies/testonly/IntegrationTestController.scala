@@ -25,7 +25,7 @@ import play.api.mvc.{Action, ControllerComponents}
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 import uk.gov.hmrc.servicedependencies.model._
 import uk.gov.hmrc.servicedependencies.persistence._
-import uk.gov.hmrc.servicedependencies.service.{DependencyLookupService, DerivedViewsService, SlugInfoService}
+import uk.gov.hmrc.servicedependencies.service.{DependencyLookupService, DependencyService, DerivedViewsService, SlugInfoService}
 import uk.gov.hmrc.servicedependencies.persistence.derived.{DerivedDependencyRepository, DerivedServiceDependenciesRepository}
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -110,11 +110,11 @@ class IntegrationTestController @Inject()(
             Future.unit
 
         for {
-          m <- metaArtefactRepository
-                .find(slugInfoWithFlag.slugInfo.name, slugInfoWithFlag.slugInfo.version)
-                .map(_.getOrElse(sys.error(s"Can't find meta artefact for service: ${slugInfoWithFlag.slugInfo.name} version: ${slugInfoWithFlag.slugInfo.version}"))) // addMetaArtefacts should be called before addSluginfos
+          // m <- metaArtefactRepository
+          //       .find(slugInfoWithFlag.slugInfo.name, slugInfoWithFlag.slugInfo.version)
+          //       .map(_.getOrElse(sys.error(s"Can't find meta artefact for service: ${slugInfoWithFlag.slugInfo.name} version: ${slugInfoWithFlag.slugInfo.version}"))) // addMetaArtefacts should be called before addSluginfos
           _ <- slugInfoService.addSlugInfo(slugInfoWithFlag.slugInfo)
-          _ <- derivedServiceDependenciesRepository.populateDependencies(m)
+          // _ <- derivedServiceDependenciesRepository.put(DependencyService.parseMetaArtefact(m))
           _ <- updateFlag(slugInfoWithFlag, SlugInfoFlag.Latest      , _.latest      )
           _ <- updateFlag(slugInfoWithFlag, SlugInfoFlag.Production  , _.production  )
           _ <- updateFlag(slugInfoWithFlag, SlugInfoFlag.QA          , _.qa          )

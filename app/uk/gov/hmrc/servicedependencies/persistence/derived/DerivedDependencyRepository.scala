@@ -27,9 +27,9 @@ import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
 class DerivedDependencyRepository @Inject()(
-                                      mongoComponent: MongoComponent
-                                    )(implicit ec: ExecutionContext
-                                    ) extends PlayMongoRepository[MetaArtefactDependency](
+  mongoComponent: MongoComponent
+)(implicit ec: ExecutionContext
+) extends PlayMongoRepository[MetaArtefactDependency](
     collectionName = "DERIVED-dependencies"
   , mongoComponent = mongoComponent
   , domainFormat   = MetaArtefactDependency.mongoFormat

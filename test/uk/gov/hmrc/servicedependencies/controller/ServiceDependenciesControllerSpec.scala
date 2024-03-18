@@ -65,18 +65,6 @@ class ServiceDependenciesControllerSpec
       buildFlag       = false
   )
 
-  private def serviceDependency(artefactVersion: Version): ServiceDependency =
-    ServiceDependency(
-      slugName      = "repo-name",
-      slugVersion   = Version("1.0.0"),
-      teams         = List("team-name"),
-      depGroup      = "group",
-      depArtefact   = "artefact",
-      depVersion    = artefactVersion,
-      scalaVersion  = None,
-      scopes        = Set(Compile)
-    )
-
   "repositoryName" should {
     "get repositoryName for a SlugInfoFlag" in {
       val boot = Boot.init
@@ -132,8 +120,8 @@ class ServiceDependenciesControllerSpec
 
       when(boot.mockDerivedServiceDependenciesRepository.find(any(), any(), any(), any())).thenReturn(
         Future.successful(Seq(
-          serviceDependency(Version("1.0.0")),
-          serviceDependency(Version("2.0.0")),
+          metaArtefactDependency(Version("1.0.0")),
+          metaArtefactDependency(Version("2.0.0")),
         ))
       )
 
@@ -167,8 +155,8 @@ class ServiceDependenciesControllerSpec
 
       when(boot.mockDerivedServiceDependenciesRepository.find(any(), any(), any(), any())).thenReturn(
         Future.successful(Seq(
-          serviceDependency(Version("1.0.0")),
-          serviceDependency(Version("2.0.0")),
+          metaArtefactDependency(Version("1.0.0")),
+          metaArtefactDependency(Version("2.0.0")),
         ))
       )
 

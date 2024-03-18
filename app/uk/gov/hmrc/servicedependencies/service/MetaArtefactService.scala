@@ -79,7 +79,7 @@ class MetaArtefactService @Inject()(
                                   deploymentRepository.clearFlags(List(SlugInfoFlag.Latest), inactiveServices.toList)
                                 } else Future.unit
       missingLatestFlag      =  serviceNames.intersect(activeRepos).diff(decomissionedServices).diff(latestServices)
-      _                      <-  if (missingLatestFlag.nonEmpty) {
+      _                      <- if (missingLatestFlag.nonEmpty) {
                                   logger.warn(s"The following services are missing Latest flag - and will be added: ${missingLatestFlag.mkString(",")}")
                                   missingLatestFlag.foldLeftM(()) { (_, serviceName) =>
                                     for {

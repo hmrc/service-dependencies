@@ -51,7 +51,7 @@ class DependencyLookupService @Inject() (
                                                         .find(scopes = Some(DependencyScope.values))
                           case _                   => derivedServiceDependenciesRepository
                                                         .find(env, scopes = Some(List(DependencyScope.Compile)))
-                                                        .map(_.map(MetaArtefactDependency.fromServiceDependency))
+                                                        // .map(_.map(MetaArtefactDependency.fromServiceDependency))
                         }
         lookup       =  dependencies
                           .groupBy(d => s"${d.depGroup}:${d.depArtefact}")

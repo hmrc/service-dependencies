@@ -110,20 +110,17 @@ class DependencyLookupServiceSpec
 
     "return the number of repositories violating a bobby rule for latest" in {
 
-      val serviceDeb1Meta = MetaArtefactDependency.fromServiceDependency(serviceDep1)
-      val serviceDeb2Meta = MetaArtefactDependency.fromServiceDependency(serviceDep2)
-
       when(configService.getBobbyRules())
         .thenReturn(Future(BobbyRules(Map(("uk.gov.hmrc", "libs") -> List(bobbyRule)))))
-      when(derivedServiceDependenciesRepository.find(flag = any[SlugInfoFlag], artefact = any[Option[String]], group = any[Option[String]], scopes = any[Option[List[DependencyScope]]]))
+      when(derivedServiceDependenciesRepository.find(flag = any[SlugInfoFlag], group = any[Option[String]], artefact = any[Option[String]], scopes = any[Option[List[DependencyScope]]]))
         .thenReturn(Future.successful(Seq.empty))
       when(derivedDependenciesRepository.find(artefact = None, group = None, scopes = Some(DependencyScope.values)))
         .thenReturn(Future.successful(Seq(
-          serviceDeb1Meta
-          , serviceDeb1Meta.copy(repoVersion = Version("1.1.0"))
-          , serviceDeb1Meta.copy(repoVersion = Version("1.2.0"), depVersion = Version("5.12.0"))
-          , serviceDeb2Meta
-        )))
+          dep1
+        , dep1.copy(repoVersion = Version("1.1.0"))
+        , dep1.copy(repoVersion = Version("1.2.0"), depVersion = Version("5.12.0"))
+        , dep2
+      )))
 
       val lookupService = new DependencyLookupService(configService, bobbyRulesSummaryRepo, derivedServiceDependenciesRepository, derivedDependenciesRepository)
 
@@ -144,16 +141,16 @@ class DependencyLookupServiceSpec
 
       when(configService.getBobbyRules())
         .thenReturn(Future(BobbyRules(Map(("uk.gov.hmrc", "libs") -> List(bobbyRule)))))
-      when(derivedServiceDependenciesRepository.find(flag = any[SlugInfoFlag], artefact = any[Option[String]], group = any[Option[String]], scopes = any[Option[List[DependencyScope]]]))
+      when(derivedServiceDependenciesRepository.find(flag = any[SlugInfoFlag], group = any[Option[String]], artefact = any[Option[String]], scopes = any[Option[List[DependencyScope]]]))
         .thenReturn(Future.successful(Seq.empty))
-      when(derivedDependenciesRepository.find(artefact = any[Option[String]], group = any[Option[String]], repoType = any[Option[List[RepoType]]], scopes = any[Option[List[DependencyScope]]]))
+      when(derivedDependenciesRepository.find(group = any[Option[String]], artefact = any[Option[String]], repoType = any[Option[List[RepoType]]], scopes = any[Option[List[DependencyScope]]]))
         .thenReturn(Future.successful(Seq.empty))
-      when(derivedServiceDependenciesRepository.find(SlugInfoFlag.Production, scopes = Some(List(DependencyScope.Compile))))
+      when(derivedServiceDependenciesRepository.find(SlugInfoFlag.Production, group = None, artefact = None, scopes = Some(List(DependencyScope.Compile))))
         .thenReturn(Future.successful(Seq(
-          serviceDep1
-        , serviceDep1.copy(slugVersion = Version("1.1.0"))
-        , serviceDep1.copy(slugVersion = Version("1.2.0"), depVersion = Version("5.12.0"))
-        , serviceDep2
+          dep1
+        , dep1.copy(repoVersion = Version("1.1.0"))
+        , dep1.copy(repoVersion = Version("1.2.0"), depVersion = Version("5.12.0"))
+        , dep2
         )))
 
       val lookupService = new DependencyLookupService(configService, bobbyRulesSummaryRepo, derivedServiceDependenciesRepository, derivedDependenciesRepository)
@@ -206,28 +203,37 @@ class DependencyLookupServiceSpec
 }
 
 object DependencyLookupServiceTestData {
-  val serviceDep1 = ServiceDependency(
-    slugName     = "test-1"
-  , slugVersion  = Version("1.0.0")
+  val dep1 = MetaArtefactDependency(
+    repoName     = "test-1"
+  , repoVersion  = Version("1.0.0")
+  , repoType     = RepoType.Service
   , teams        = List.empty
   , depGroup     = "org.libs"
   , depArtefact  = "mylib"
   , depVersion   = Version("5.11.0")
-  , scalaVersion = None
-  , scopes       = Set(DependencyScope.Compile)
+  // , scalaVersion = None
+  , compileFlag   = false
+  , providedFlag  = true
+  , testFlag      = true
+  , itFlag        = true
+  , buildFlag     = true
   )
 
-  val serviceDep2 = ServiceDependency(
-    slugName = "test-2"
-  , slugVersion = Version("1.0.0")
-  , teams = List.empty
-  , depGroup = "org.libs"
-  , depArtefact = "mylib"
-  , depVersion = Version("5.12.0")
-  , scalaVersion = None
-  , scopes = Set(DependencyScope.Test, DependencyScope.Provided, DependencyScope.It, DependencyScope.Build)
+  val dep2 = MetaArtefactDependency(
+    repoName     = "test-2"
+  , repoVersion  = Version("1.0.0")
+  , repoType     = RepoType.Service
+  , teams        = List.empty
+  , depGroup     = "org.libs"
+  , depArtefact  = "mylib"
+  , depVersion   = Version("5.12.0")
+  // , scalaVersion = None
+  , compileFlag   = false
+  , providedFlag  = true
+  , testFlag      = true
+  , itFlag        = true
+  , buildFlag     = true
   )
-
 
   val bobbyRule = BobbyRule(
     organisation = "org.libs",
