@@ -16,18 +16,18 @@
 
 package uk.gov.hmrc.servicedependencies.model
 
-import play.api.libs.json.{__, OFormat}
+import play.api.libs.json.{__, Format}
 import play.api.libs.functional.syntax._
 
 case class SBTVersion(
-  serviceName : String,
-  version     : String
+  repoName : String,
+  version  : String
 )
 
 trait SBTVersionFormats {
 
-  val sbtVersionFormat: OFormat[SBTVersion] =
-    ( (__ \ "serviceName").format[String]
+  val sbtVersionFormat: Format[SBTVersion] =
+    ( (__ \ "serviceName").format[String] // TODO change this to repoName
     ~ (__ \ "version"    ).format[String]
     )(SBTVersion.apply, unlift(SBTVersion.unapply))
 }

@@ -51,9 +51,9 @@ class SbtVersionRepositorySpec
 
       val result = repository.findSBTUsage(Latest).futureValue
 
-      result.length           shouldBe 1
-      result.head.serviceName shouldBe TestSlugInfos.slugInfo.name
-      result.head.version     shouldBe TestSlugInfos.slugInfo.sbtVersion.get
+      result.length        shouldBe 1
+      result.head.repoName shouldBe TestSlugInfos.slugInfo.name
+      result.head.version  shouldBe TestSlugInfos.slugInfo.sbtVersion.get
     }
 
     "ignore slugs with no sbtVersion" in {
@@ -64,10 +64,9 @@ class SbtVersionRepositorySpec
 
       val result = repository.findSBTUsage(Latest).futureValue
 
-      result.length           shouldBe 1
-      result.head.serviceName shouldBe "my-slug"
-      result.head.version     shouldBe "1.4.9"
+      result.length        shouldBe 1
+      result.head.repoName shouldBe "my-slug"
+      result.head.version  shouldBe "1.4.9"
     }
   }
-
 }

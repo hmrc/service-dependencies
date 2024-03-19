@@ -51,11 +51,11 @@ class JdkVersionRepositorySpec
 
       val result = repository.findJDKUsage(Latest).futureValue
 
-      result.length       shouldBe 1
-      result.head.name    shouldBe TestSlugInfos.slugInfo.name
-      result.head.version shouldBe TestSlugInfos.slugInfo.java.version
-      result.head.vendor  shouldBe TestSlugInfos.slugInfo.java.vendor
-      result.head.kind    shouldBe TestSlugInfos.slugInfo.java.kind
+      result.length        shouldBe 1
+      result.head.repoName shouldBe TestSlugInfos.slugInfo.name
+      result.head.version  shouldBe TestSlugInfos.slugInfo.java.version
+      result.head.vendor   shouldBe TestSlugInfos.slugInfo.java.vendor
+      result.head.kind     shouldBe TestSlugInfos.slugInfo.java.kind
     }
 
     "ignore non-java slugs" in {
@@ -67,8 +67,7 @@ class JdkVersionRepositorySpec
       val result = repository.findJDKUsage(Latest).futureValue
 
       result.length shouldBe 1
-      result.head.name shouldBe "my-slug"
+      result.head.repoName shouldBe "my-slug"
     }
   }
-
 }

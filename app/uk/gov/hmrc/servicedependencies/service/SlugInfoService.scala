@@ -85,20 +85,22 @@ class SlugInfoService @Inject()(
     derivedGroupArtefactRepository.findGroupsArtefacts()
 
   def findJDKVersions(teamName: Option[String], flag: SlugInfoFlag)(implicit hc: HeaderCarrier): Future[Seq[JDKVersion]] =
-    teamName match {
-      case Some(n) => for {
-                        team <- teamsAndRepositoriesConnector.getTeam(n)
-                        xs   <- jdkVersionRepository.findJDKUsage(flag)
-                      } yield xs.filter(x => team.services.contains(x.name))
-      case None    => jdkVersionRepository.findJDKUsage(flag)
-    }
+    for {
+      allJdkUsages <- jdkVersionRepository.findJDKUsage(flag)
+      jdkUsages    <- teamName match {
+                        case Some(teamName) => teamsAndRepositoriesConnector.getTeam(teamName)
+                                                 .map(team => allJdkUsages.filter(jdkUsage => team.services.contains(jdkUsage.repoName)))
+                        case None           => Future.successful(allJdkUsages)
+                      }
+    } yield jdkUsages
 
   def findSBTVersions(teamName: Option[String], flag: SlugInfoFlag)(implicit hc: HeaderCarrier): Future[Seq[SBTVersion]] =
-    teamName match {
-      case Some(n) => for {
-                        team <- teamsAndRepositoriesConnector.getTeam(n)
-                        xs   <- sbtVersionRepository.findSBTUsage(flag)
-                      } yield xs.filter(x => team.services.contains(x.serviceName))
-      case None    => sbtVersionRepository.findSBTUsage(flag)
-    }
+    for {
+      allSbtUsages <- sbtVersionRepository.findSBTUsage(flag) // for Latest, we could get the data from MetaArtefact to support non-services
+      sbtUsages    <- teamName match {
+                        case Some(teamName) => teamsAndRepositoriesConnector.getTeam(teamName)
+                                                 .map(team => allSbtUsages.filter(sbtUsage => team.allRepos.contains(sbtUsage.repoName)))
+                        case None           => Future.successful(allSbtUsages)
+                      }
+    } yield sbtUsages
 }

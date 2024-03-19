@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.servicedependencies.persistence
 
-import org.mongodb.scala.bson.{BsonDocument}
+import org.bson.Document
 import org.mongodb.scala.model.{Filters, IndexModel, IndexOptions, Indexes, Projections, ReplaceOptions}
 import play.api.Logging
 import uk.gov.hmrc.mongo.MongoComponent
@@ -67,8 +67,8 @@ class MetaArtefactRepository @Inject()(
 
   def find(repositoryName: String): Future[Option[MetaArtefact]] =
     for {
-      version <- mongoComponent.database.getCollection("metaArtefacts")
-                   .find(Filters.equal("name", repositoryName))
+      version <- collection
+                   .find[Document](Filters.equal("name", repositoryName))
                    .projection(Projections.include("version"))
                    .map(bson => Version(bson.getString("version")))
                    .filter(_.isReleaseCandidate == false)
@@ -92,7 +92,7 @@ class MetaArtefactRepository @Inject()(
     ).toFuture()
 
   def clearAllData(): Future[Unit] =
-    collection.deleteMany(BsonDocument())
+    collection.deleteMany(Filters.empty())
       .toFuture()
       .map(_ => ())
 }
