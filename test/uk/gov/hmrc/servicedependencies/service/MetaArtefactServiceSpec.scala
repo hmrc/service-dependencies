@@ -26,12 +26,12 @@ import uk.gov.hmrc.servicedependencies.connector.{GitHubProxyConnector, Releases
 import uk.gov.hmrc.servicedependencies.connector.model.RepositoryInfo
 import uk.gov.hmrc.servicedependencies.model.RepoType.Service
 import uk.gov.hmrc.servicedependencies.model._
-import uk.gov.hmrc.servicedependencies.persistence.{DeploymentRepository, SlugInfoRepository, SlugVersionRepository}
-
+import uk.gov.hmrc.servicedependencies.persistence.{DeploymentRepository, MetaArtefactRepository, SlugInfoRepository, SlugVersionRepository}
+import uk.gov.hmrc.servicedependencies.persistence.derived._
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
-class MetaArtefactServiceSpec
+class DerivedViewsServiceSpec
   extends AnyWordSpec
      with Matchers
      with MockitoSugar
@@ -40,24 +40,35 @@ class MetaArtefactServiceSpec
 
   implicit val hc: HeaderCarrier = HeaderCarrier()
 
-  private val mockedSlugInfoRepository            = mock[SlugInfoRepository]
-  private val mockedSlugVersionRepository         = mock[SlugVersionRepository]
-  private val mockedDeploymentRepository          = mock[DeploymentRepository]
-  private val mockedTeamsAndRepositoriesConnector = mock[TeamsAndRepositoriesConnector]
-  private val mockedReleasesApiConnector          = mock[ReleasesApiConnector]
-  private val mockedGitHubProxyConnector          = mock[GitHubProxyConnector]
-  private val underTest = new MetaArtefactService(
-    mockedSlugInfoRepository
-  , mockedSlugVersionRepository
-  , mockedDeploymentRepository
-  , mockedTeamsAndRepositoriesConnector
-  , mockedReleasesApiConnector
-  , mockedGitHubProxyConnector
+  private val mockedTeamsAndRepositoriesConnector         = mock[TeamsAndRepositoriesConnector       ]
+  private val mockedGitHubProxyConnector                  = mock[GitHubProxyConnector                ]
+  private val mockedReleasesApiConnector                  = mock[ReleasesApiConnector                ]
+  private val mockedMetaArtefactRepository                = mock[MetaArtefactRepository              ]
+  private val mockedSlugInfoRepository                    = mock[SlugInfoRepository                  ]
+  private val mockedSlugVersionRepository                 = mock[SlugVersionRepository               ]
+  private val mockedDeploymentRepository                  = mock[DeploymentRepository                ]
+  private val mockedDerivedGroupArtefactRepository        = mock[DerivedGroupArtefactRepository      ]
+  private val mockedDerivedModuleRepository               = mock[DerivedModuleRepository             ]
+  private val mockedDerivedDependencyRepository           = mock[DerivedDependencyRepository         ]
+  private val mockedDerivedServiceDependenciesRepository  = mock[DerivedServiceDependenciesRepository]
+
+  private val underTest = new DerivedViewsService(
+    teamsAndRepositoriesConnector        = mockedTeamsAndRepositoriesConnector
+  , gitHubProxyConnector                 = mockedGitHubProxyConnector
+  , releasesApiConnector                 = mockedReleasesApiConnector
+  , metaArtefactRepository               = mockedMetaArtefactRepository
+  , slugInfoRepository                   = mockedSlugInfoRepository
+  , slugVersionRepository                = mockedSlugVersionRepository
+  , deploymentRepository                 = mockedDeploymentRepository
+  , derivedGroupArtefactRepository       = mockedDerivedGroupArtefactRepository
+  , derivedModuleRepository              = mockedDerivedModuleRepository
+  , derivedDependencyRepository          = mockedDerivedDependencyRepository
+  , derivedServiceDependenciesRepository = mockedDerivedServiceDependenciesRepository
   )
 
   "MetaArtefactService.updateMetadata" should {
-    "clear latest flag for decommisioned services" in {
-      val decomissionedServices = List("service1")
+    "clear latest flag for decommissioned services" in {
+      val decommissionedServices = List("service1")
 
       when(mockedSlugInfoRepository.getUniqueSlugNames)
         .thenReturn(Future.successful(Seq.empty))
@@ -65,8 +76,8 @@ class MetaArtefactServiceSpec
       when(mockedReleasesApiConnector.getWhatIsRunningWhere)
         .thenReturn(Future.successful(List.empty))
 
-      when(mockedGitHubProxyConnector.decomissionedServices)
-        .thenReturn(Future.successful(decomissionedServices))
+      when(mockedGitHubProxyConnector.decommissionedServices)
+        .thenReturn(Future.successful(decommissionedServices))
 
       when(mockedDeploymentRepository.getNames(SlugInfoFlag.Latest))
         .thenReturn(Future.successful(Seq.empty))
@@ -77,9 +88,9 @@ class MetaArtefactServiceSpec
       when(mockedDeploymentRepository.clearFlags(any[List[SlugInfoFlag]], any[List[String]]))
         .thenReturn(Future.unit)
 
-      underTest.updateMetadata().futureValue
+      underTest.updateDeploymentData().futureValue
 
-      verify(mockedDeploymentRepository).clearFlags(SlugInfoFlag.values, decomissionedServices)
+      verify(mockedDeploymentRepository).clearFlags(SlugInfoFlag.values, decommissionedServices)
     }
 
     "clear latest flag for deleted/archived services" in {
@@ -102,7 +113,7 @@ class MetaArtefactServiceSpec
       when(mockedReleasesApiConnector.getWhatIsRunningWhere)
         .thenReturn(Future.successful(List.empty))
 
-      when(mockedGitHubProxyConnector.decomissionedServices)
+      when(mockedGitHubProxyConnector.decommissionedServices)
         .thenReturn(Future.successful(List.empty))
 
       when(mockedDeploymentRepository.getNames(SlugInfoFlag.Latest))
@@ -117,7 +128,7 @@ class MetaArtefactServiceSpec
       when(mockedDeploymentRepository.clearFlags(any[List[SlugInfoFlag]], any[List[String]]))
         .thenReturn(Future.unit)
 
-      underTest.updateMetadata().futureValue
+      underTest.updateDeploymentData().futureValue
 
       verify(mockedDeploymentRepository).clearFlags(List(SlugInfoFlag.Latest), servicesToBeCleared)
     }

@@ -112,7 +112,7 @@ class DependencyLookupServiceSpec
 
       when(configService.getBobbyRules())
         .thenReturn(Future(BobbyRules(Map(("uk.gov.hmrc", "libs") -> List(bobbyRule)))))
-      when(derivedServiceDependenciesRepository.find(flag = any[SlugInfoFlag], group = any[Option[String]], artefact = any[Option[String]], scopes = any[Option[List[DependencyScope]]]))
+      when(derivedServiceDependenciesRepository.find(flag = any[SlugInfoFlag], group = any[Option[String]], artefact = any[Option[String]], scopes = any[Option[List[DependencyScope]]], slugName = any[Option[String]], slugVersion = any[Option[Version]]))
         .thenReturn(Future.successful(Seq.empty))
       when(derivedDependenciesRepository.find(artefact = None, group = None, scopes = Some(DependencyScope.values)))
         .thenReturn(Future.successful(Seq(
@@ -141,9 +141,9 @@ class DependencyLookupServiceSpec
 
       when(configService.getBobbyRules())
         .thenReturn(Future(BobbyRules(Map(("uk.gov.hmrc", "libs") -> List(bobbyRule)))))
-      when(derivedServiceDependenciesRepository.find(flag = any[SlugInfoFlag], group = any[Option[String]], artefact = any[Option[String]], scopes = any[Option[List[DependencyScope]]]))
+     when(derivedServiceDependenciesRepository.find(flag = any[SlugInfoFlag], group = any[Option[String]], artefact = any[Option[String]], scopes = any[Option[List[DependencyScope]]], slugName = any[Option[String]], slugVersion = any[Option[Version]]))
         .thenReturn(Future.successful(Seq.empty))
-      when(derivedDependenciesRepository.find(group = any[Option[String]], artefact = any[Option[String]], repoType = any[Option[List[RepoType]]], scopes = any[Option[List[DependencyScope]]]))
+      when(derivedDependenciesRepository.find(group = any[Option[String]], artefact = any[Option[String]], repoType = any[Option[List[RepoType]]], scopes = any[Option[List[DependencyScope]]], repoName = any[Option[String]], repoVersion = any[Option[Version]]))
         .thenReturn(Future.successful(Seq.empty))
       when(derivedServiceDependenciesRepository.find(SlugInfoFlag.Production, group = None, artefact = None, scopes = Some(List(DependencyScope.Compile))))
         .thenReturn(Future.successful(Seq(

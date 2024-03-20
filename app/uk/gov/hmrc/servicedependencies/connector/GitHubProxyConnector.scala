@@ -36,7 +36,7 @@ class GitHubProxyConnector @Inject()(
 )(implicit
   ec: ExecutionContext
 ) {
-  def decomissionedServices(implicit hc: HeaderCarrier): Future[List[String]] = {
+  def decommissionedServices(implicit hc: HeaderCarrier): Future[List[String]] = {
     val url = url"${serviceDependenciesConfig.gitHubProxyBaseURL}/platops-github-proxy/github-raw/decommissioning/main/decommissioned-microservices.yaml"
     httpClientV2
       .get(url)

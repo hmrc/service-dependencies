@@ -33,16 +33,16 @@ class DerivedServiceDependenciesRepository @Inject()(
 )(implicit
   ec: ExecutionContext
 ) extends PlayMongoRepository[MetaArtefactDependency](
-  collectionName = "DERIVED-slug-dependencies"
+  collectionName = "DERIVED-deployed-dependencies"
 , mongoComponent = mongoComponent
-, domainFormat   = MetaArtefactDependency.mongoFormat
+, domainFormat   = MetaArtefactDependency.mongoFormat // TODO work out what to do for slugName ... currently its repoName
 , indexes        = Seq(
                      IndexModel(
                        Indexes.compoundIndex(
-                         Indexes.ascending("slugName"),
-                         Indexes.ascending("slugVersion")
+                         Indexes.ascending("repoName"),
+                         Indexes.ascending("repoVersion")
                        ),
-                       IndexOptions().name("slugName_slugVersion_idx").background(true)
+                       IndexOptions().name("name_version_idx").background(true)
                      ),
                      IndexModel(
                        Indexes.compoundIndex(
@@ -57,8 +57,8 @@ class DerivedServiceDependenciesRepository @Inject()(
                      ),
                      IndexModel(
                        Indexes.compoundIndex(
-                         Indexes.ascending("slugName"),
-                         Indexes.ascending("slugVersion"),
+                         Indexes.ascending("repoName"),
+                         Indexes.ascending("repoVersion"),
                          Indexes.ascending("group"),
                          Indexes.ascending("artefact"),
                          Indexes.ascending("version")
@@ -76,14 +76,18 @@ class DerivedServiceDependenciesRepository @Inject()(
     flag    : SlugInfoFlag,
     group   : Option[String]                = None,
     artefact: Option[String]                = None,
-    scopes  : Option[List[DependencyScope]] = None
+    scopes  : Option[List[DependencyScope]] = None,
+    slugName: Option[String]                = None,
+    slugVersion: Option[Version]            = None
   ): Future[Seq[MetaArtefactDependency]] =
     findServiceDependenciesFromDeployments(
       deploymentsFilter = Filters.equal(flag.asString, true),
       dependencyFilter  = Seq(
-                            group   .map(x  => Filters.equal("group", x)),
-                            artefact.map(x  => Filters.equal("artefact", x)),
-                            scopes  .map(xs => Filters.or(xs.map(x => Filters.equal(s"scope_${x.asString}", value = true)): _*))
+                            group      .map(x  => Filters.equal("group", x)),
+                            artefact   .map(x  => Filters.equal("artefact", x)),
+                            scopes     .map(xs => Filters.or(xs.map(x => Filters.equal(s"scope_${x.asString}", value = true)): _*)),
+                            slugName   .map(x  => Filters.equal("repoName", x)),
+                            slugVersion.map(x  => Filters.equal("repoVersion", x.original)),
                           ).flatten
                            .foldLeft(Filters.empty())(Filters.and(_, _))
     )
@@ -95,8 +99,8 @@ class DerivedServiceDependenciesRepository @Inject()(
     deploymentRepository.lookupAgainstDeployments(
       collectionName   = collectionName,
       domainFormat     = MetaArtefactDependency.mongoFormat,
-      slugNameField    = "slugName",
-      slugVersionField = "slugVersion"
+      slugNameField    = "repoName",
+      slugVersionField = "repoVersion"
     )(
       deploymentsFilter = deploymentsFilter,
       domainFilter      = dependencyFilter
@@ -115,7 +119,7 @@ class DerivedServiceDependenciesRepository @Inject()(
                                  Filters.equal("repoVersion", d.repoVersion.original),
                                  Filters.equal("group"      , d.depGroup),
                                  Filters.equal("artefact"   , d.depArtefact),
-                                //  Filters.equal("version"    , d.depVersion.original),
+                                //  Filters.equal("version"    , d.depVersion.original), // TODO remove??
                                ),
               replacement    = d,
               replaceOptions = ReplaceOptions().upsert(true)
@@ -125,12 +129,13 @@ class DerivedServiceDependenciesRepository @Inject()(
         .map(_ => ())
     }
 
-  def delete(name: String, version: Version): Future[Unit] =
+  def delete(name: String, version: Option[Version] = None, ignoreVersions: Seq[Version] = Nil): Future[Unit] =
     collection
       .deleteMany(
           Filters.and(
-            Filters.equal("repoName"   , name),
-            Filters.equal("repoVersion", version.toString)
+            Filters.equal("repoName", name),
+            version.fold(Filters.empty())(v => Filters.equal("repoVersion", v.original)),
+            Filters.not(Filters.in("repoVersion", ignoreVersions.map(_.original)))
           )
         )
       .toFuture()

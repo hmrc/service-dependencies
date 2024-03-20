@@ -110,6 +110,7 @@ class IntegrationTestController @Inject()(
             Future.unit
 
         for {
+          // TODO make integration tests work - decouple and add on meta artefact calls??
           // m <- metaArtefactRepository
           //       .find(slugInfoWithFlag.slugInfo.name, slugInfoWithFlag.slugInfo.version)
           //       .map(_.getOrElse(sys.error(s"Can't find meta artefact for service: ${slugInfoWithFlag.slugInfo.name} version: ${slugInfoWithFlag.slugInfo.version}"))) // addMetaArtefacts should be called before addSluginfos
@@ -122,7 +123,7 @@ class IntegrationTestController @Inject()(
           _ <- updateFlag(slugInfoWithFlag, SlugInfoFlag.Development , _.development )
           _ <- updateFlag(slugInfoWithFlag, SlugInfoFlag.ExternalTest, _.externalTest)
           _ <- updateFlag(slugInfoWithFlag, SlugInfoFlag.Integration , _.integration )
-          _ <- derivedViewsService.generateAllViews()
+          _ <- derivedViewsService.updateDerivedViews() // TODO
         } yield ()
       }.map(_ => NoContent)
     }

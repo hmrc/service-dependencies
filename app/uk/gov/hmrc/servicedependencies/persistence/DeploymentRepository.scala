@@ -88,6 +88,11 @@ class DeploymentRepository @Inject()(
       .map(_ => ())
   }
 
+  def find(): Future[Seq[Deployment]] =
+    collection
+      .find() // TODO can every flag be false?
+      .toFuture()
+
   def getNames(flag: SlugInfoFlag): Future[Seq[String]] =
     collection
       .find(equal(flag.asString, true))
@@ -191,7 +196,20 @@ case class Deployment(
   development  : Boolean,
   externalTest : Boolean,
   integration  : Boolean
-)
+) {
+  lazy val flags: List[SlugInfoFlag] =
+    SlugInfoFlag
+      .values
+      .filter {
+        case SlugInfoFlag.Latest       => latest
+        case SlugInfoFlag.Production   => production
+        case SlugInfoFlag.QA           => qa
+        case SlugInfoFlag.Staging      => staging
+        case SlugInfoFlag.Development  => development
+        case SlugInfoFlag.ExternalTest => externalTest
+        case SlugInfoFlag.Integration  => integration
+      }
+}
 
 object Deployment {
   val mongoFormat: Format[Deployment] = {

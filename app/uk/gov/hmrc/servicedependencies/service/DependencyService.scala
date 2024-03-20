@@ -27,49 +27,43 @@ import uk.gov.hmrc.servicedependencies.util.DependencyGraphParser
 
 import scala.concurrent.{ExecutionContext, Future}
 
-class DependencyService @Inject()(
-  metaArtefactRepository              : MetaArtefactRepository,
-  derivedDependencyRepository         : DerivedDependencyRepository,
-  derivedServiceDependenciesRepository: DerivedServiceDependenciesRepository,
-  teamsAndRepositoriesConnector: TeamsAndRepositoriesConnector
-)(implicit ec: ExecutionContext) {
+// class DependencyService @Inject()(
+//   metaArtefactRepository              : MetaArtefactRepository,
+//   derivedDependencyRepository         : DerivedDependencyRepository,
+//   derivedServiceDependenciesRepository: DerivedServiceDependenciesRepository,
+//   teamsAndRepositoriesConnector: TeamsAndRepositoriesConnector
+// )(implicit ec: ExecutionContext) {
 
-  def addDependencies(metaArtefact: MetaArtefact)(implicit hc: HeaderCarrier): Future[Unit] =
-    for {
-      oRepo    <- teamsAndRepositoriesConnector.getRepository(metaArtefact.name)
-      repoType =  oRepo.fold(RepoType.Other: RepoType)(_.repoType)
-      isLatest <- metaArtefactRepository
-                    .find(metaArtefact.name)
-                    .map {
-                      case Some(storedMeta) => metaArtefact.version >= storedMeta.version
-                      case None             => true
-                    }
-      deps     =  DependencyService
-                    .parseMetaArtefact(metaArtefact)
-                    .map { case (node, scopes) => MetaArtefactDependency.apply(metaArtefact, repoType, node, scopes) }
-                    .toSeq
-      _        <- if      (isLatest)                     derivedDependencyRepository.put(deps)
-                  else if (repoType == RepoType.Service) derivedServiceDependenciesRepository.put(deps)
-                  else                                   Future.unit
-    } yield ()
+//   def addDependencies(metaArtefact: MetaArtefact)(implicit hc: HeaderCarrier): Future[Unit] =
+//     for {
+//       oRepo    <- teamsAndRepositoriesConnector.getRepository(metaArtefact.name)
+//       repoType =  oRepo.fold(RepoType.Other: RepoType)(_.repoType)
+//       isLatest <- metaArtefactRepository
+//                     .find(metaArtefact.name)
+//                     .map {
+//                       case Some(storedMeta) => metaArtefact.version >= storedMeta.version
+//                       case None             => true
+//                     }
+//       deps     =  DependencyService
+//                     .parseMetaArtefact(metaArtefact)
+//                     .map { case (node, scopes) => MetaArtefactDependency.apply(metaArtefact, repoType, node, scopes) } // TODO move into parseMetaArtefact ??
+//                     .toSeq
+//       _        <- if      (isLatest)                     derivedDependencyRepository.put(deps)
+//                   else if (repoType == RepoType.Service) derivedServiceDependenciesRepository.put(deps)
+//                   else                                   Future.unit
+//     } yield ()
 
-  def deleteDependencies(name: String, version: Version): Future[Unit] =
-    for {
-      _ <- derivedDependencyRepository.delete(name, version)
-      _ <- derivedServiceDependenciesRepository.delete(name, version)
-    } yield ()
-}
+//   def deleteDependencies(name: String, version: Option[Version] = None): Future[Unit] =
+//     for {
+//       _ <- derivedDependencyRepository.delete(name, version)
+//       _ <- derivedServiceDependenciesRepository.delete(name, version)
+//     } yield ()
+// }
 
 object DependencyService {
 
   private def parseStr(opt: Option[String], scope: DependencyScope): Seq[(DependencyGraphParser.Node, DependencyScope)] =
     DependencyGraphParser.parse(opt.getOrElse("")).dependencies.map((_, scope))
-
-  // private def addNodeOpt(m: Map[DependencyGraphParser.Node, Set[DependencyScope]], node: Option[DependencyGraphParser.Node], scopes: Set[DependencyScope]) =
-  //   node match {
-  //     case Some(n) => m.updatedWith(n)(_.fold(Some(scopes))(s => Some(s ++ scopes)))
-  //     case None    => m
-  //   }
 
   def parseMetaArtefact(meta: MetaArtefact): Map[DependencyGraphParser.Node, Set[DependencyScope]] = {
     val build   = parseStr(meta.dependencyDotBuild, DependencyScope.Build)
@@ -98,10 +92,6 @@ object DependencyService {
                   .filterNot { case (node, _) => node.group == "default"     && node.artefact == "project" }
                   .filterNot { case (node, _) => node.group == "uk.gov.hmrc" && node.artefact == meta.name }
 
-    // val deps1 = addNodeOpt(deps , scalaNode, Set(DependencyScope.Compile, DependencyScope.Test))
-    // val deps2 = addNodeOpt(deps1, sbtNode  , Set(DependencyScope.Build))
-
-    // deps2
     scala ++ sbt ++ deps
   }
 }

@@ -68,7 +68,7 @@ class SlugInfoRepository @Inject()(
       .toFuture()
       .map(_ => ())
 
-  def getUniqueSlugNames: Future[Seq[String]] =
+  def getUniqueSlugNames(): Future[Seq[String]] =
     collection.distinct[String]("name")
       .toFuture()
 

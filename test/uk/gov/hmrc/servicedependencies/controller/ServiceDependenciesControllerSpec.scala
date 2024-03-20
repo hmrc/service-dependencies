@@ -26,7 +26,6 @@ import play.api.libs.json.{Json, OWrites}
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
 import uk.gov.hmrc.servicedependencies.connector.{ServiceConfigsConnector, TeamsAndRepositoriesConnector, TeamsForServices}
-import uk.gov.hmrc.servicedependencies.model.DependencyScope.Compile
 import uk.gov.hmrc.servicedependencies.model.RepoType.Service
 import uk.gov.hmrc.servicedependencies.model.SlugInfoFlag.{Development, Latest}
 import uk.gov.hmrc.servicedependencies.model._
@@ -118,7 +117,7 @@ class ServiceDependenciesControllerSpec
         Future.successful(TeamsForServices(Map("repo-name" -> Seq("team-name"))))
       )
 
-      when(boot.mockDerivedServiceDependenciesRepository.find(any(), any(), any(), any())).thenReturn(
+      when(boot.mockDerivedServiceDependenciesRepository.find(any(), any(), any(), any(), any(), any())).thenReturn(
         Future.successful(Seq(
           metaArtefactDependency(Version("1.0.0")),
           metaArtefactDependency(Version("2.0.0")),
@@ -153,7 +152,7 @@ class ServiceDependenciesControllerSpec
         Future.successful(TeamsForServices(Map("repo-name" -> Seq("team-name"))))
       )
 
-      when(boot.mockDerivedServiceDependenciesRepository.find(any(), any(), any(), any())).thenReturn(
+      when(boot.mockDerivedServiceDependenciesRepository.find(any(), any(), any(), any(), any(), any())).thenReturn(
         Future.successful(Seq(
           metaArtefactDependency(Version("1.0.0")),
           metaArtefactDependency(Version("2.0.0")),
@@ -187,7 +186,7 @@ class ServiceDependenciesControllerSpec
         Future.successful(TeamsForServices(Map("repo-name" -> Seq("team-name"))))
       )
 
-      when(boot.mockDerivedDependencyRepository.find(any(), any(), any(), any())).thenReturn(
+      when(boot.mockDerivedDependencyRepository.find(any(), any(), any(), any(), any(), any())).thenReturn(
         Future.successful(Seq(
           metaArtefactDependency(Version("1.0.0")),
           metaArtefactDependency(Version("2.0.0"))
@@ -222,7 +221,7 @@ class ServiceDependenciesControllerSpec
         Future.successful(TeamsForServices(Map("repo-name" -> Seq("team-name"))))
       )
 
-      when(boot.mockDerivedDependencyRepository.find(any(), any(), any(), any())).thenReturn(
+      when(boot.mockDerivedDependencyRepository.find(any(), any(), any(), any(), any(), any())).thenReturn(
         Future.successful(Seq(
           metaArtefactDependency(Version("1.0.0")),
           metaArtefactDependency(Version("2.0.0"))

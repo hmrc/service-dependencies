@@ -16,8 +16,8 @@
 
 package uk.gov.hmrc.servicedependencies.persistence
 
-import org.mongodb.scala.bson.{BsonDocument}
-import org.mongodb.scala.model.{Filters, IndexModel, IndexOptions, Indexes, Projections, ReplaceOptions}
+import org.mongodb.scala.bson.BsonDocument
+import org.mongodb.scala.model.{Aggregates, Filters, IndexModel, IndexOptions, Indexes, Projections, ReplaceOptions}
 import play.api.Logging
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.play.json.PlayMongoRepository
@@ -90,6 +90,51 @@ class MetaArtefactRepository @Inject()(
     collection.find(
       filter = Filters.equal("name", repositoryName)
     ).toFuture()
+
+  import cats.implicits._
+  def getLatest(): Future[Seq[MetaArtefact]] = {
+    import scala.jdk.CollectionConverters._
+    collection
+      .aggregate[BsonDocument](
+        List(
+          Aggregates.project(   // projection removes graphs to avoid memory issues
+            Projections.fields(
+              Projections.excludeId(),
+              Projections.include("name"),
+              Projections.include("version"),
+            )
+          ),
+          BsonDocument("$group" ->
+            BsonDocument(
+              "_id"  -> BsonDocument("name" -> "$name"),
+              "meta" -> BsonDocument("$addToSet" ->
+                          BsonDocument(
+                            "name"    -> "$name",
+                            "version" -> "$version"
+                          )
+                      )
+            )
+          )
+        )
+      ).toFuture()
+      .map(
+        _.flatMap(
+          _.getArray("meta")
+          .getValues()
+          .asScala
+          .foldLeft(Option.empty[(String, Version)]){ (optMax, bson) =>
+              val v = Version(bson.asDocument.get("version").asString.getValue)
+              val n = bson.asDocument.get("name").asString.getValue
+              if (optMax.map(_._2).exists(_ > v))
+                optMax
+              else
+                Some(n -> v)
+          }
+          .toSeq
+        )
+      )
+      .flatMap(_.foldLeftM(List.empty[MetaArtefact]) { case (acc, (name, version)) => find(name, version).map(_.fold(acc)(x => acc :+ x)) })
+  }
 
   def clearAllData(): Future[Unit] =
     collection.deleteMany(BsonDocument())

@@ -76,7 +76,6 @@ class ServiceDependenciesController @Inject()(
                                                       .find(group = Some(group), artefact = Some(artefact), repoType = repoType, scopes = scope)
                         case _                   => derivedServiceDependencyRepository
                                                       .find(flag = flag, group = Some(group), artefact = Some(artefact), scopes = scope)
-                                                      // .map(_.map(MetaArtefactDependency.fromServiceDependency))
                       }
       result       =  versionRange
                         .map(range => dependencies.filter(s => range.includes(s.depVersion))).getOrElse(dependencies)

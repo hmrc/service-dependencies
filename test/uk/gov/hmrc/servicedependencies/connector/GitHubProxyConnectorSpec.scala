@@ -58,7 +58,7 @@ class GitHubProxyConnectorSpec
           .willReturn(aResponse().withBody(body))
       )
 
-      boot.gitHubProxyConnector.decomissionedServices(HeaderCarrier()).futureValue shouldBe
+      boot.gitHubProxyConnector.decommissionedServices(HeaderCarrier()).futureValue shouldBe
         List(
           "cds-stub"
         , "journey-backend-transport"

@@ -85,7 +85,7 @@ class DerivedGroupArtefactRepository @Inject()(
 
   private def derivedDeployedDependencies(): Future[Seq[GroupArtefacts]] =
     deploymentRepository.lookupAgainstDeployments(
-      collectionName   = "DERIVED-slug-dependencies"
+      collectionName   = "DERIVED-deployed-dependencies"
     , domainFormat     = MongoSlugInfoFormats.groupArtefactsFormat
     , slugNameField    = "repoName"
     , slugVersionField = "repoVersion"
@@ -97,7 +97,7 @@ class DerivedGroupArtefactRepository @Inject()(
 
   private def derivedLatestDependencies(): Future[Seq[GroupArtefacts]] = {
     CollectionFactory
-      .collection(mongoComponent.database, "DERIVED-dependencies", domainFormat)
+      .collection(mongoComponent.database, "DERIVED-latest-dependencies", domainFormat)
       .aggregate(`match`(Filters.nin("name", SlugDenylist.denylistedSlugs)) :: groupArtefactsTransformationPipeline)
       .toFuture()
   }

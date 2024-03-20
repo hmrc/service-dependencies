@@ -22,9 +22,10 @@ import play.api.Configuration
 import play.api.libs.json.Json
 import software.amazon.awssdk.services.sqs.model.Message
 import uk.gov.hmrc.http.HeaderCarrier
-import uk.gov.hmrc.servicedependencies.connector.ArtefactProcessorConnector
+import uk.gov.hmrc.servicedependencies.connector.{ArtefactProcessorConnector, TeamsAndRepositoriesConnector}
+import uk.gov.hmrc.servicedependencies.model.{RepoType, MetaArtefactDependency}
 import uk.gov.hmrc.servicedependencies.persistence.MetaArtefactRepository
-import uk.gov.hmrc.servicedependencies.persistence.derived.DerivedModuleRepository
+import uk.gov.hmrc.servicedependencies.persistence.derived.{DerivedDependencyRepository, DerivedModuleRepository}
 import uk.gov.hmrc.servicedependencies.service.DependencyService
 
 import javax.inject.{Inject, Singleton}
@@ -32,11 +33,13 @@ import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
 class MetaArtefactUpdateHandler @Inject()(
-  configuration               : Configuration,
-  artefactProcessorConnector  : ArtefactProcessorConnector,
-  metaArtefactRepository      : MetaArtefactRepository,
-  derivedModuleRepository     : DerivedModuleRepository,
-  dependencyService           : DependencyService
+  configuration                : Configuration,
+  artefactProcessorConnector   : ArtefactProcessorConnector,
+  teamsAndRepositoriesConnector: TeamsAndRepositoriesConnector,
+  metaArtefactRepository       : MetaArtefactRepository,
+  derivedModuleRepository      : DerivedModuleRepository,
+  derivedDependencyRepository  : DerivedDependencyRepository
+  // dependencyService           : DependencyService
 )(implicit
   actorSystem               : ActorSystem,
   ec                        : ExecutionContext
@@ -67,7 +70,22 @@ class MetaArtefactUpdateHandler @Inject()(
                                 , errorMessage = s"Could not store MetaArtefact for message with ID '${message.messageId()}' (${meta.name} ${meta.version})"
                                 )
                         _    <- recoverFutureInEitherT(
-                                  dependencyService.addDependencies(meta)
+                                  for {
+                                    oRepo    <- teamsAndRepositoriesConnector.getRepository(meta.name)
+                                    repoType =  oRepo.fold(RepoType.Other: RepoType)(_.repoType)
+                                    isLatest <- metaArtefactRepository
+                                                  .find(meta.name)
+                                                  .map {
+                                                    case Some(storedMeta) => meta.version >= storedMeta.version
+                                                    case None             => true
+                                                  }
+                                    deps     =  DependencyService
+                                                  .parseMetaArtefact(meta)
+                                                  .map { case (node, scopes) => MetaArtefactDependency.apply(meta, repoType, node, scopes) } // TODO move into parseMetaArtefact ??
+                                                  .toSeq
+                                    _        <- if (isLatest) derivedDependencyRepository.put(deps)
+                                                else          Future.unit
+                                  } yield ()
                                 , errorMessage = s"Could not store MetaArtefact Derived Dependencies for message with ID '${message.messageId()}' (${meta.name} ${meta.version})"
                                 )
                         _    <- recoverFutureInEitherT(
@@ -86,7 +104,7 @@ class MetaArtefactUpdateHandler @Inject()(
                              , errorMessage = s"Could not delete MetaArtefact for message with ID '${message.messageId()}' (${deleted.name} ${deleted.version})"
                              )
                         _ <- recoverFutureInEitherT(
-                               dependencyService.deleteDependencies(deleted.name, deleted.version)
+                               derivedDependencyRepository.delete(deleted.name, Some(deleted.version))
                              , errorMessage = s"Could not delete MetaArtefact Derived Dependencies for message with ID '${message.messageId()}' ${deleted.name} ${deleted.version}"
                              )
                         _ <- recoverFutureInEitherT(

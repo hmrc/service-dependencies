@@ -30,7 +30,7 @@ class DerivedDependencyRepository @Inject()(
   mongoComponent: MongoComponent
 )(implicit ec: ExecutionContext
 ) extends PlayMongoRepository[MetaArtefactDependency](
-    collectionName = "DERIVED-dependencies"
+    collectionName = "DERIVED-latest-dependencies"
   , mongoComponent = mongoComponent
   , domainFormat   = MetaArtefactDependency.mongoFormat
   , indexes        = Seq(
@@ -45,18 +45,22 @@ class DerivedDependencyRepository @Inject()(
   override lazy val requiresTtlIndex = false
 
   def find(
-    group   : Option[String]                = None,
-    artefact: Option[String]                = None,
-    repoType: Option[List[RepoType]]        = None,
-    scopes  : Option[List[DependencyScope]] = None
+    group      : Option[String]                = None,
+    artefact   : Option[String]                = None,
+    repoType   : Option[List[RepoType]]        = None,
+    scopes     : Option[List[DependencyScope]] = None,
+    repoName   : Option[String]                = None,
+    repoVersion: Option[Version]               = None
   ): Future[Seq[MetaArtefactDependency]] =
     collection
       .find(
         Seq(
-          group   .map(x  => Filters.equal("group", x)),
-          artefact.map(x  => Filters.equal("artefact", x)),
-          repoType.map(xs => Filters.or(xs.map(x => Filters.equal(s"repoType", x.asString)): _*)),
-          scopes  .map(xs => Filters.or(xs.map(x => Filters.equal(s"scope_${x.asString}", value = true)): _*))
+          group      .map(x  => Filters.equal("group", x)),
+          artefact   .map(x  => Filters.equal("artefact", x)),
+          repoType   .map(xs => Filters.or(xs.map(x => Filters.equal(s"repoType", x.asString)): _*)),
+          scopes     .map(xs => Filters.or(xs.map(x => Filters.equal(s"scope_${x.asString}", value = true)): _*)),
+          repoName   .map(x  => Filters.equal("repoName", x)),
+          repoVersion.map(x  => Filters.equal("repoVersion", x.original)),
         ).flatten
          .foldLeft(Filters.empty())(Filters.and(_, _))
       ).toFuture()
@@ -81,12 +85,12 @@ class DerivedDependencyRepository @Inject()(
         ).toFuture()
         .map(_ => ())
 
-  def delete(name: String, version: Version): Future[Unit] =
+  def delete(name: String, version: Option[Version] = None): Future[Unit] =
     collection
       .deleteMany(
         Filters.and(
           Filters.equal("repoName"   , name),
-          Filters.equal("repoVersion", version.toString)
+          version.fold(Filters.empty())(v => Filters.equal("repoVersion", v.original))
         )
       ).toFuture()
       .map(_ => ())
