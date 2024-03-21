@@ -71,7 +71,7 @@ class IntegrationTestController @Inject()(
   def addMetaArtefacts = {
     implicit val maf = MetaArtefact.apiFormat
     Action.async(validateJson[List[MetaArtefact]]) { implicit request =>
-      request.body.traverse(metaArtefactRepository.add)
+      request.body.traverse(metaArtefactRepository.put)
         .map(_ => NoContent)
     }
   }

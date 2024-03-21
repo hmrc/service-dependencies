@@ -50,7 +50,7 @@ class MetaArtefactRepositorySpec
   val metaArtefact =
     MetaArtefact(
       name               = "library",
-      version            = Version("1.0.0"),
+      version            = Version("0.1.0"),
       uri                = "https://artefacts/metadata/library/library-v1.0.0.meta.tgz",
       gitUrl             = Some("https://github.com/hmrc/library.git"),
       dependencyDotBuild = Some("ddb-graph"),
@@ -64,29 +64,31 @@ class MetaArtefactRepositorySpec
       created            = Instant.parse("2007-12-03T10:15:30.00Z")
     )
 
-  val updatedMetaArtefact = metaArtefact.copy(modules = Seq(metaArtefactModule.copy(name = "sub-module3")))
+  val updatedMetaArtefact = metaArtefact.copy(version = Version("0.2.0"), modules = Seq(metaArtefactModule.copy(name = "sub-module3")))
 
   "add" should {
     "add correctly" in {
       (for {
          before <- repository.find(metaArtefact.name)
          _      =  before shouldBe None
-         _      <- repository.add(metaArtefact)
+         _      <- repository.put(metaArtefact)
          after  <- repository.find(metaArtefact.name)
-         _      =  after shouldBe Some(metaArtefact)
+         all    <- repository.findAllVersions(metaArtefact.name)
+         _      =  after shouldBe Some(metaArtefact.copy(latest = true))
        } yield ()
       ).futureValue
     }
+
     "upsert correctly" in {
       (for {
          before  <- repository.find(metaArtefact.name)
          _       =  before shouldBe None
-         _       <- repository.add(metaArtefact)
+         _       <- repository.put(metaArtefact)
          after   <- repository.find(metaArtefact.name)
-         _       =  after shouldBe Some(metaArtefact)
-         _       <- repository.add(updatedMetaArtefact)
+         _       =  after shouldBe Some(metaArtefact.copy(latest = true))
+         _       <- repository.put(updatedMetaArtefact)
          updated <- repository.find(metaArtefact.name)
-         _       =  updated shouldBe Some(updatedMetaArtefact)
+         _       =  updated shouldBe Some(updatedMetaArtefact.copy(latest = true))
        } yield ()
      ).futureValue
     }
@@ -95,10 +97,10 @@ class MetaArtefactRepositorySpec
   "find" should {
     "return the latest" in {
       (for {
-         _      <- repository.add(metaArtefact.copy(version = Version("2.0.0")))
-         _      <- repository.add(metaArtefact)
+         _      <- repository.put(metaArtefact.copy(version = Version("2.0.0")))
+         _      <- repository.put(metaArtefact)
          found  <- repository.find(metaArtefact.name)
-         _      =  found shouldBe Some(metaArtefact.copy(version = Version("2.0.0")))
+         _      =  found shouldBe Some(metaArtefact.copy(version = Version("2.0.0"), latest = true))
        } yield ()
       ).futureValue
     }
@@ -107,10 +109,10 @@ class MetaArtefactRepositorySpec
   "findAllVersions" should {
     "return all versions" in {
       (for {
-        _     <- repository.add(metaArtefact.copy(version = Version("2.0.0")))
-        _     <- repository.add(metaArtefact)
+        _     <- repository.put(metaArtefact.copy(version = Version("2.0.0")))
+        _     <- repository.put(metaArtefact)
         found <- repository.findAllVersions(metaArtefact.name)
-        _     =  found should contain theSameElementsAs Seq(metaArtefact, metaArtefact.copy(version = Version("2.0.0")))
+        _     =  found should contain theSameElementsAs Seq(metaArtefact, metaArtefact.copy(version = Version("2.0.0"), latest = true))
       } yield ()
       ).futureValue
     }

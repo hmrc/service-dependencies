@@ -22,6 +22,7 @@ import play.api.libs.json._
 
 import uk.gov.hmrc.servicedependencies.util.DependencyGraphParser
 
+// TODO rename + add opt slug name?
 case class MetaArtefactDependency(
   repoName    : String,
   repoVersion : Version,

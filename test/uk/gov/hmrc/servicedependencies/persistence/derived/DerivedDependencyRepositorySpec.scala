@@ -91,29 +91,6 @@ class DerivedDependencyRepositorySpec
       repository.find(Some("group-1"), Some("artifact-1"), None, None).futureValue.sortBy(_.repoName) mustBe Seq(metaArtefactDependency1, metaArtefactDependency2)
       repository.find(Some("group-3"), Some("artifact-3"), None, None).futureValue mustBe Seq(metaArtefactDependency3)
     }
-
-    "replace old documents" in {
-      val metaArtefactDependencyUpdate = MetaArtefactDependency(
-        repoName        = "name-1",
-        depGroup        = "group-1",
-        depArtefact     = "artifact-1",
-        depVersion      = Version("2.0.0"),
-        compileFlag     = true,
-        providedFlag    = true,
-        testFlag        = true,
-        itFlag          = true,
-        buildFlag       = true,
-        repoVersion     = Version("3.0.0"),
-        teams           = List.empty,
-        repoType        = Service
-      )
-
-      repository.put(Seq(metaArtefactDependency1)).futureValue
-      repository.find(Some("group-1"),Some("artifact-1"), None).futureValue mustBe Seq(metaArtefactDependency1)
-
-      repository.put(Seq(metaArtefactDependencyUpdate)).futureValue
-      repository.find(Some("group-1"),Some("artifact-1"), None).futureValue mustBe Seq(metaArtefactDependencyUpdate)
-    }
   }
 
   "find" should {

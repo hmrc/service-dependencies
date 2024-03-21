@@ -23,7 +23,7 @@ import com.google.inject.{Inject, Singleton}
 import org.mongodb.scala.ClientSession
 import org.mongodb.scala.bson.{BsonArray, BsonDocument}
 import org.mongodb.scala.bson.conversions.Bson
-import org.mongodb.scala.model.{IndexModel, IndexOptions, UpdateOptions, Variable}
+import org.mongodb.scala.model.{IndexModel, IndexOptions, UpdateOptions, Sorts, Variable}
 import org.mongodb.scala.model.Aggregates._
 import org.mongodb.scala.model.Filters._
 import org.mongodb.scala.model.Updates.{set, _}
@@ -81,16 +81,17 @@ class DeploymentRepository @Inject()(
     logger.debug(s"clearing ${flags.size} flags on ${names.size} services")
     collection
       .updateMany(
-          filter = in("name", names:_ *),
-          update = combine(flags.map(flag => set(flag.asString, false)):_ *)
+          filter = in("name", names: _*),
+          update = combine(flags.map(flag => set(flag.asString, false)): _*)
         )
       .toFuture()
       .map(_ => ())
   }
 
-  def find(): Future[Seq[Deployment]] =
+  def findDeployed(): Future[Seq[Deployment]] =
     collection
-      .find() // TODO can every flag be false?
+      .find(or(SlugInfoFlag.values.map(v => equal(v.asString, true)): _*))
+      .sort(Sorts.ascending("name"))
       .toFuture()
 
   def getNames(flag: SlugInfoFlag): Future[Seq[String]] =

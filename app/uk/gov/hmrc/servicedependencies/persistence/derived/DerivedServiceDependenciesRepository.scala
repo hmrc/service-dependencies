@@ -115,11 +115,11 @@ class DerivedServiceDependenciesRepository @Inject()(
           dependencies.map(d =>
             ReplaceOneModel(
               filter         = Filters.and(
-                                 Filters.equal("repoName"   , d.repoName),
-                                 Filters.equal("repoVersion", d.repoVersion.original),
-                                 Filters.equal("group"      , d.depGroup),
-                                 Filters.equal("artefact"   , d.depArtefact),
-                                //  Filters.equal("version"    , d.depVersion.original), // TODO remove??
+                                 Filters.equal("repoName"   , d.repoName)
+                               , Filters.equal("repoVersion", d.repoVersion.original)
+                               , Filters.equal("group"      , d.depGroup)
+                               , Filters.equal("artefact"   , d.depArtefact)
+                               , Filters.equal("version"    , d.depVersion.original)
                                ),
               replacement    = d,
               replaceOptions = ReplaceOptions().upsert(true)
@@ -132,12 +132,12 @@ class DerivedServiceDependenciesRepository @Inject()(
   def delete(name: String, version: Option[Version] = None, ignoreVersions: Seq[Version] = Nil): Future[Unit] =
     collection
       .deleteMany(
-          Filters.and(
-            Filters.equal("repoName", name),
-            version.fold(Filters.empty())(v => Filters.equal("repoVersion", v.original)),
-            Filters.not(Filters.in("repoVersion", ignoreVersions.map(_.original)))
-          )
+        Filters.and(
+          Filters.equal("repoName", name)
+        , version.fold(Filters.empty())(v => Filters.equal("repoVersion", v.original))
+        , Filters.nin("repoVersion", ignoreVersions.map(_.original): _*)
         )
+      )
       .toFuture()
       .map(_ => ())
 }

@@ -66,7 +66,7 @@ class MetaArtefactUpdateHandler @Inject()(
                                   s"MetaArtefact for name: ${available.name}, version: ${available.version} was not found"
                                 )
                         _    <- recoverFutureInEitherT(
-                                  metaArtefactRepository.add(meta)
+                                  metaArtefactRepository.put(meta)
                                 , errorMessage = s"Could not store MetaArtefact for message with ID '${message.messageId()}' (${meta.name} ${meta.version})"
                                 )
                         _    <- recoverFutureInEitherT(
@@ -83,6 +83,8 @@ class MetaArtefactUpdateHandler @Inject()(
                                                   .parseMetaArtefact(meta)
                                                   .map { case (node, scopes) => MetaArtefactDependency.apply(meta, repoType, node, scopes) } // TODO move into parseMetaArtefact ??
                                                   .toSeq
+                                    _        <- if (isLatest) derivedDependencyRepository.delete(meta.name)
+                                                else          Future.unit
                                     _        <- if (isLatest) derivedDependencyRepository.put(deps)
                                                 else          Future.unit
                                   } yield ()

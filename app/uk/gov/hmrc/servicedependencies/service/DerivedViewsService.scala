@@ -109,8 +109,7 @@ class DerivedViewsService @Inject()(
       activeRepos <- teamsAndRepositoriesConnector.getAllRepositories(archived = Some(false))
 
       _           =  logger.info(s"Running DerivedDependencyRepository changes")
-
-      latestMeta  <- metaArtefactRepository.getLatest()
+      latestMeta  <- metaArtefactRepository.findLatest()
       _           <- latestMeta
                        .flatMap(m => activeRepos.find(_.name == m.name).map(r => (m, r.repoType)))
                        .foldLeftM(()) { case (_, (meta, repoType)) =>
@@ -133,27 +132,27 @@ class DerivedViewsService @Inject()(
       _           =  logger.info(s"Finished running DerivedDependencyRepository changes")
 
       _           =  logger.info(s"Running DerivedServiceDependenciesRepository changes")
-      deployments <- deploymentRepository.find()
+      deployments <- deploymentRepository.findDeployed()
       _           <- deployments
                        .groupBy(_.slugName)
                        .toSeq
-                       .foldLeftM(()) { case (_, (slugName, deployments)) =>
-                          derivedServiceDependenciesRepository.delete(slugName, ignoreVersions = deployments.map(_.slugVersion))
+                       .foldLeftM(()) { case (_, (slugName, slugDeployments)) =>
+                          derivedServiceDependenciesRepository.delete(slugName, ignoreVersions = slugDeployments.map(_.slugVersion))
                        }
       _           <- deployments
-                       .sortBy(_.slugName)
                        .filter(d => activeRepos.exists(_.name == d.slugName))
-                       .flatMap(d => d.flags.filterNot(_ == SlugInfoFlag.Latest).map(f => (d.slugName, d.slugVersion, f)))
+                       .flatMap(d => d.flags.filterNot(_ == SlugInfoFlag.Latest).map(f => (d.slugName, d.slugVersion, f))) // Get all deployed versions
+                       .distinctBy { case (slugName, slugVersion, _) => (slugName, slugVersion) }                          // Flag just included for lookup but isn't needed
                        .foldLeftM(()) { case (_, (slugName, slugVersion, flag)) =>
                          for {
                            ds <- derivedServiceDependenciesRepository.find(flag = flag, slugName = Some(slugName), slugVersion = Some(slugVersion))
                            ms <- metaArtefactRepository.find(repositoryName = slugName, version = slugVersion)
                            _  <- (ds.isEmpty, ms.headOption) match {
                                    case (true, Some(meta)) => derivedServiceDependenciesRepository.put(
-                                                                 DependencyService
-                                                                   .parseMetaArtefact(meta)
-                                                                   .map { case (node, scopes) => MetaArtefactDependency.apply(meta, RepoType.Service, node, scopes) } // TODO move into parseMetaArtefact ??
-                                                                   .toSeq
+                                                                DependencyService
+                                                                  .parseMetaArtefact(meta)
+                                                                  .map { case (node, scopes) => MetaArtefactDependency.apply(meta, RepoType.Service, node, scopes) } // TODO move into parseMetaArtefact ??
+                                                                  .toSeq
                                                               )
                                    case __                 => Future.unit
                                  }

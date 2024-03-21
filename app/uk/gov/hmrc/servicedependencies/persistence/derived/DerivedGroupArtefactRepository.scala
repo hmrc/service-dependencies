@@ -53,7 +53,6 @@ class DerivedGroupArtefactRepository @Inject()(
       .map(g => g.copy(artefacts = g.artefacts.sorted))
       .toFuture()
 
-
   private val groupArtefactsTransformationPipeline: List[Bson] = {
     Aggregates.project(
       Projections.fields(

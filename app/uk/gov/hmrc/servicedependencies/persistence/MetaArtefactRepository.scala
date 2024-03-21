@@ -16,10 +16,12 @@
 
 package uk.gov.hmrc.servicedependencies.persistence
 
-import org.mongodb.scala.bson.BsonDocument
-import org.mongodb.scala.model.{Aggregates, Filters, IndexModel, IndexOptions, Indexes, Projections, ReplaceOptions}
 import play.api.Logging
+import org.mongodb.scala.ClientSession
+import org.mongodb.scala.bson.BsonDocument
+import org.mongodb.scala.model.{Aggregates, Filters, IndexModel, IndexOptions, Indexes, Projections, ReplaceOptions, Sorts, UpdateOptions, Updates}
 import uk.gov.hmrc.mongo.MongoComponent
+import uk.gov.hmrc.mongo.transaction.{TransactionConfiguration, Transactions}
 import uk.gov.hmrc.mongo.play.json.PlayMongoRepository
 import uk.gov.hmrc.servicedependencies.model.{MetaArtefact, Version}
 
@@ -28,7 +30,7 @@ import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
 class MetaArtefactRepository @Inject()(
-  mongoComponent: MongoComponent
+  final val mongoComponent: MongoComponent
 )(implicit
   ec: ExecutionContext
 ) extends PlayMongoRepository[MetaArtefact](
@@ -36,108 +38,122 @@ class MetaArtefactRepository @Inject()(
   mongoComponent = mongoComponent,
   domainFormat   = MetaArtefact.mongoFormat,
   indexes        = Seq(IndexModel(Indexes.ascending("name", "version"), IndexOptions().unique(true)))
-) with Logging {
+) with Transactions with Logging {
 
-  // we remove meta-artefacts when, artefactProcess detects, they've been deleted from artifactory
+  // MetaArtefacts are removed when ArtefactProcess detects they've been deleted (or the related Slug) from Artifactory
   override lazy val requiresTtlIndex = false
 
-  def add(metaArtefact: MetaArtefact): Future[Unit] =
-    collection
-      .replaceOne(
-          filter      = Filters.and(
-                          Filters.equal("name"   , metaArtefact.name),
-                          Filters.equal("version", metaArtefact.version.toString)
-                        )
-        , replacement = metaArtefact
-        , options     = ReplaceOptions().upsert(true)
-        )
-      .toFuture()
-      .map(_ => ())
+  private implicit val tc: TransactionConfiguration = TransactionConfiguration.strict
+
+  def put(meta: MetaArtefact): Future[Unit] =
+    withSessionAndTransaction { session =>
+      for {
+        _    <- collection
+                  .replaceOne(
+                    clientSession = session
+                  , filter        = Filters.and(
+                                      Filters.equal("name"   , meta.name)
+                                    , Filters.equal("version", meta.version.toString)
+                                    )
+                  , replacement   = meta
+                  , options       = ReplaceOptions().upsert(true)
+                  )
+                  .toFuture()
+        oMax <- maxVersion(meta.name, session)
+        _    <- oMax.fold(Future.unit)(v => markLatest(meta.name, v, session))
+      } yield ()
+    }
 
   def delete(repositoryName: String, version: Version): Future[Unit] =
+    withSessionAndTransaction { session =>
+      for {
+        _    <- collection
+                  .deleteOne(
+                    clientSession = session
+                  , filter        = Filters.and(
+                                      Filters.equal("name"   , repositoryName)
+                                    , Filters.equal("version", version.toString)
+                                    )
+                  )
+                  .toFuture()
+        oMax <- maxVersion(repositoryName, session)
+        _    <- oMax.fold(Future.unit)(v => markLatest(repositoryName, v, session))
+      } yield ()
+    }
+
+  private def maxVersion(repositoryName: String, session: ClientSession): Future[Option[Version]] =
     collection
-      .deleteOne(
-          Filters.and(
-            Filters.equal("name"   , repositoryName),
-            Filters.equal("version", version.toString)
-          )
-        )
+      .aggregate[BsonDocument](
+        clientSession = session
+      , pipeline      = List(
+                          Aggregates.`match`(Filters.equal("name", repositoryName))
+                        , Aggregates.project(Projections.fields( Projections.excludeId(), Projections.include("version")))
+                        )
+      )
+      .toFuture()
+      .map(_.map(b => Version(b.getString("version").getValue)))
+      .map(vs => if (vs.nonEmpty) Some(vs.max) else None)
+
+  private def clearLatest(name: String, session: ClientSession): Future[Unit] =
+    collection
+      .updateMany(
+        clientSession = session
+      , filter        = Filters.equal("name", name)
+      , update        = Updates.set("latest", false)
+      )
       .toFuture()
       .map(_ => ())
 
-  def find(repositoryName: String): Future[Option[MetaArtefact]] =
+  private def markLatest(name: String, version: Version, session: ClientSession): Future[Unit] =
     for {
-      version <- mongoComponent.database.getCollection("metaArtefacts")
-                   .find(Filters.equal("name", repositoryName))
-                   .projection(Projections.include("version"))
-                   .map(bson => Version(bson.getString("version")))
-                   .filter(_.isReleaseCandidate == false)
-                   .foldLeft(Version("0.0.0"))((prev,cur) => if(cur > prev) cur else prev)
-                   .toFuture()
-      meta    <- find(repositoryName, version)
-    } yield meta
+      _ <- clearLatest(name, session)
+      _ <- collection
+             .updateOne(
+               clientSession = session
+             , filter        = Filters.and(
+                                 Filters.equal("name", name)
+                               , Filters.equal("version", version.original)
+                               )
+             , update        = Updates.set("latest", true)
+             , options       = UpdateOptions().upsert(true)
+             )
+             .toFuture()
+    } yield ()
+
+  def find(repositoryName: String): Future[Option[MetaArtefact]] =
+    collection
+      .find(
+        Filters.and(
+          Filters.equal("name"  , repositoryName)
+        , Filters.equal("latest", true)
+        )
+      )
+      .headOption()
 
   def find(repositoryName: String, version: Version): Future[Option[MetaArtefact]] =
-    collection.find(
-      filter = Filters.and(
-                 Filters.equal("name"   , repositoryName),
-                 Filters.equal("version", version.toString)
-               )
+    collection
+      .find(
+        Filters.and(
+          Filters.equal("name"   , repositoryName)
+        , Filters.equal("version", version.toString)
+        )
       )
       .headOption()
 
   def findAllVersions(repositoryName: String): Future[Seq[MetaArtefact]] =
-    collection.find(
-      filter = Filters.equal("name", repositoryName)
-    ).toFuture()
-
-  import cats.implicits._
-  def getLatest(): Future[Seq[MetaArtefact]] = {
-    import scala.jdk.CollectionConverters._
     collection
-      .aggregate[BsonDocument](
-        List(
-          Aggregates.project(   // projection removes graphs to avoid memory issues
-            Projections.fields(
-              Projections.excludeId(),
-              Projections.include("name"),
-              Projections.include("version"),
-            )
-          ),
-          BsonDocument("$group" ->
-            BsonDocument(
-              "_id"  -> BsonDocument("name" -> "$name"),
-              "meta" -> BsonDocument("$addToSet" ->
-                          BsonDocument(
-                            "name"    -> "$name",
-                            "version" -> "$version"
-                          )
-                      )
-            )
-          )
-        )
-      ).toFuture()
-      .map(
-        _.flatMap(
-          _.getArray("meta")
-          .getValues()
-          .asScala
-          .foldLeft(Option.empty[(String, Version)]){ (optMax, bson) =>
-              val v = Version(bson.asDocument.get("version").asString.getValue)
-              val n = bson.asDocument.get("name").asString.getValue
-              if (optMax.map(_._2).exists(_ > v))
-                optMax
-              else
-                Some(n -> v)
-          }
-          .toSeq
-        )
-      )
-      .flatMap(_.foldLeftM(List.empty[MetaArtefact]) { case (acc, (name, version)) => find(name, version).map(_.fold(acc)(x => acc :+ x)) })
-  }
+      .find(filter = Filters.equal("name", repositoryName))
+      .toFuture()
+
+  def findLatest(): Future[Seq[MetaArtefact]] =
+    collection
+      .find(Filters.equal("latest", true))
+      .sort(Sorts.ascending("name"))
+      .toFuture()
 
   def clearAllData(): Future[Unit] =
-    collection.deleteMany(BsonDocument())
+    collection
+      .deleteMany(BsonDocument())
       .toFuture()
       .map(_ => ())
 }
