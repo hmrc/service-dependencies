@@ -27,7 +27,7 @@ import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 import uk.gov.hmrc.servicedependencies.connector.{ServiceConfigsConnector, TeamsAndRepositoriesConnector}
 import uk.gov.hmrc.servicedependencies.controller.model.{Dependencies, Dependency, DependencyBobbyRule}
 import uk.gov.hmrc.servicedependencies.model._
-import uk.gov.hmrc.servicedependencies.persistence.derived.{DerivedDependencyRepository, DerivedModuleRepository, DerivedServiceDependenciesRepository}
+import uk.gov.hmrc.servicedependencies.persistence.derived.{DerivedDeployedDependencyRepository, DerivedLatestDependencyRepository, DerivedModuleRepository}
 import uk.gov.hmrc.servicedependencies.persistence.{LatestVersionRepository, MetaArtefactRepository}
 import uk.gov.hmrc.servicedependencies.service.{CuratedLibrariesService, SlugInfoService, TeamDependencyService}
 
@@ -36,17 +36,17 @@ import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
 class ServiceDependenciesController @Inject()(
-  slugInfoService                     : SlugInfoService
-, curatedLibrariesService             : CuratedLibrariesService
-, serviceConfigsConnector             : ServiceConfigsConnector
-, teamDependencyService               : TeamDependencyService
-, metaArtefactRepository              : MetaArtefactRepository
-, latestVersionRepository             : LatestVersionRepository
-, derivedModuleRepository             : DerivedModuleRepository
-, derivedDependencyRepository         : DerivedDependencyRepository
-, derivedServiceDependencyRepository  : DerivedServiceDependenciesRepository
-, teamsAndRepositoriesConnector       : TeamsAndRepositoriesConnector
-, cc                                  : ControllerComponents
+  slugInfoService                    : SlugInfoService
+, curatedLibrariesService            : CuratedLibrariesService
+, serviceConfigsConnector            : ServiceConfigsConnector
+, teamDependencyService              : TeamDependencyService
+, metaArtefactRepository             : MetaArtefactRepository
+, latestVersionRepository            : LatestVersionRepository
+, derivedDeployedDependencyRepository: DerivedDeployedDependencyRepository
+, derivedLatestDependencyRepository  : DerivedLatestDependencyRepository
+, derivedModuleRepository            : DerivedModuleRepository
+, teamsAndRepositoriesConnector      : TeamsAndRepositoriesConnector
+, cc                                 : ControllerComponents
 )(implicit
   ec                     : ExecutionContext
 ) extends BackendController(cc) {
@@ -70,12 +70,10 @@ class ServiceDependenciesController @Inject()(
   ): Action[AnyContent] = Action.async { implicit request =>
     implicit val madWrites: OWrites[MetaArtefactDependency] = MetaArtefactDependency.apiWrites
     for {
-      allTeams     <- teamsAndRepositoriesConnector.getTeamsForServices
+      allTeams     <- teamsAndRepositoriesConnector.getTeamsForServices()
       dependencies <- flag match {
-                        case SlugInfoFlag.Latest => derivedDependencyRepository
-                                                      .find(group = Some(group), artefact = Some(artefact), repoType = repoType, scopes = scope)
-                        case _                   => derivedServiceDependencyRepository
-                                                      .find(flag = flag, group = Some(group), artefact = Some(artefact), scopes = scope)
+                        case SlugInfoFlag.Latest => derivedLatestDependencyRepository  .find(group = Some(group), artefact = Some(artefact), scopes = scope, repoType = repoType)
+                        case _                   => derivedDeployedDependencyRepository.find(group = Some(group), artefact = Some(artefact), scopes = scope, flag     = flag)
                       }
       result       =  versionRange
                         .map(range => dependencies.filter(s => range.includes(s.depVersion))).getOrElse(dependencies)

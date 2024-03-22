@@ -27,7 +27,7 @@ import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
-class DerivedServiceDependenciesRepository @Inject()(
+class DerivedDeployedDependencyRepository @Inject()(
   mongoComponent       : MongoComponent,
   deploymentRepository : DeploymentRepository
 )(implicit
@@ -35,7 +35,7 @@ class DerivedServiceDependenciesRepository @Inject()(
 ) extends PlayMongoRepository[MetaArtefactDependency](
   collectionName = "DERIVED-deployed-dependencies"
 , mongoComponent = mongoComponent
-, domainFormat   = MetaArtefactDependency.mongoFormat // TODO work out what to do for slugName ... currently its repoName
+, domainFormat   = MetaArtefactDependency.mongoFormat
 , indexes        = Seq(
                      IndexModel(
                        Indexes.compoundIndex(

@@ -40,37 +40,37 @@ class DerivedViewsServiceSpec
 
   implicit val hc: HeaderCarrier = HeaderCarrier()
 
-  private val mockedTeamsAndRepositoriesConnector         = mock[TeamsAndRepositoriesConnector       ]
-  private val mockedGitHubProxyConnector                  = mock[GitHubProxyConnector                ]
-  private val mockedReleasesApiConnector                  = mock[ReleasesApiConnector                ]
-  private val mockedMetaArtefactRepository                = mock[MetaArtefactRepository              ]
-  private val mockedSlugInfoRepository                    = mock[SlugInfoRepository                  ]
-  private val mockedSlugVersionRepository                 = mock[SlugVersionRepository               ]
-  private val mockedDeploymentRepository                  = mock[DeploymentRepository                ]
-  private val mockedDerivedGroupArtefactRepository        = mock[DerivedGroupArtefactRepository      ]
-  private val mockedDerivedModuleRepository               = mock[DerivedModuleRepository             ]
-  private val mockedDerivedDependencyRepository           = mock[DerivedDependencyRepository         ]
-  private val mockedDerivedServiceDependenciesRepository  = mock[DerivedServiceDependenciesRepository]
+  private val mockedTeamsAndRepositoriesConnector         = mock[TeamsAndRepositoriesConnector      ]
+  private val mockedGitHubProxyConnector                  = mock[GitHubProxyConnector               ]
+  private val mockedReleasesApiConnector                  = mock[ReleasesApiConnector               ]
+  private val mockedMetaArtefactRepository                = mock[MetaArtefactRepository             ]
+  private val mockedSlugInfoRepository                    = mock[SlugInfoRepository                 ]
+  private val mockedSlugVersionRepository                 = mock[SlugVersionRepository              ]
+  private val mockedDeploymentRepository                  = mock[DeploymentRepository               ]
+  private val mockedDerivedGroupArtefactRepository        = mock[DerivedGroupArtefactRepository     ]
+  private val mockedDerivedModuleRepository               = mock[DerivedModuleRepository            ]
+  private val mockedDerivedDeployedDependencyRepository   = mock[DerivedDeployedDependencyRepository]
+  private val mockedDerivedLatestDependencyRepository     = mock[DerivedLatestDependencyRepository  ]
 
   private val underTest = new DerivedViewsService(
-    teamsAndRepositoriesConnector        = mockedTeamsAndRepositoriesConnector
-  , gitHubProxyConnector                 = mockedGitHubProxyConnector
-  , releasesApiConnector                 = mockedReleasesApiConnector
-  , metaArtefactRepository               = mockedMetaArtefactRepository
-  , slugInfoRepository                   = mockedSlugInfoRepository
-  , slugVersionRepository                = mockedSlugVersionRepository
-  , deploymentRepository                 = mockedDeploymentRepository
-  , derivedGroupArtefactRepository       = mockedDerivedGroupArtefactRepository
-  , derivedModuleRepository              = mockedDerivedModuleRepository
-  , derivedDependencyRepository          = mockedDerivedDependencyRepository
-  , derivedServiceDependenciesRepository = mockedDerivedServiceDependenciesRepository
+    teamsAndRepositoriesConnector       = mockedTeamsAndRepositoriesConnector
+  , gitHubProxyConnector                = mockedGitHubProxyConnector
+  , releasesApiConnector                = mockedReleasesApiConnector
+  , metaArtefactRepository              = mockedMetaArtefactRepository
+  , slugInfoRepository                  = mockedSlugInfoRepository
+  , slugVersionRepository               = mockedSlugVersionRepository
+  , deploymentRepository                = mockedDeploymentRepository
+  , derivedGroupArtefactRepository      = mockedDerivedGroupArtefactRepository
+  , derivedModuleRepository             = mockedDerivedModuleRepository
+  , derivedDeployedDependencyRepository = mockedDerivedDeployedDependencyRepository
+  , derivedLatestDependencyRepository   = mockedDerivedLatestDependencyRepository
   )
 
-  "MetaArtefactService.updateMetadata" should {
+  "DerivedViewsService.updateDeploymentData" should {
     "clear latest flag for decommissioned services" in {
       val decommissionedServices = List("service1")
 
-      when(mockedSlugInfoRepository.getUniqueSlugNames)
+      when(mockedSlugInfoRepository.getUniqueSlugNames())
         .thenReturn(Future.successful(Seq.empty))
 
       when(mockedReleasesApiConnector.getWhatIsRunningWhere)
@@ -107,7 +107,7 @@ class DerivedViewsServiceSpec
       val activeServices      = List("service1", "service3").map(toRepositoryInfo)
       val servicesToBeCleared = List("service2")
 
-      when(mockedSlugInfoRepository.getUniqueSlugNames)
+      when(mockedSlugInfoRepository.getUniqueSlugNames())
         .thenReturn(Future.successful(knownSlugs))
 
       when(mockedReleasesApiConnector.getWhatIsRunningWhere)

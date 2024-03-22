@@ -25,21 +25,20 @@ import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.servicedependencies.connector.{ArtefactProcessorConnector, TeamsAndRepositoriesConnector}
 import uk.gov.hmrc.servicedependencies.model.{RepoType, MetaArtefactDependency}
 import uk.gov.hmrc.servicedependencies.persistence.MetaArtefactRepository
-import uk.gov.hmrc.servicedependencies.persistence.derived.{DerivedDependencyRepository, DerivedModuleRepository}
-import uk.gov.hmrc.servicedependencies.service.DependencyService
+import uk.gov.hmrc.servicedependencies.persistence.derived.{DerivedLatestDependencyRepository, DerivedModuleRepository}
+import uk.gov.hmrc.servicedependencies.util.DependencyGraphParser
 
 import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
 class MetaArtefactUpdateHandler @Inject()(
-  configuration                : Configuration,
-  artefactProcessorConnector   : ArtefactProcessorConnector,
-  teamsAndRepositoriesConnector: TeamsAndRepositoriesConnector,
-  metaArtefactRepository       : MetaArtefactRepository,
-  derivedModuleRepository      : DerivedModuleRepository,
-  derivedDependencyRepository  : DerivedDependencyRepository
-  // dependencyService           : DependencyService
+  configuration                    : Configuration,
+  artefactProcessorConnector       : ArtefactProcessorConnector,
+  teamsAndRepositoriesConnector    : TeamsAndRepositoriesConnector,
+  metaArtefactRepository           : MetaArtefactRepository,
+  derivedModuleRepository          : DerivedModuleRepository,
+  derivedLatestDependencyRepository: DerivedLatestDependencyRepository
 )(implicit
   actorSystem               : ActorSystem,
   ec                        : ExecutionContext
@@ -79,13 +78,13 @@ class MetaArtefactUpdateHandler @Inject()(
                                                     case Some(storedMeta) => meta.version >= storedMeta.version
                                                     case None             => true
                                                   }
-                                    deps     =  DependencyService
+                                    deps     =  DependencyGraphParser
                                                   .parseMetaArtefact(meta)
-                                                  .map { case (node, scopes) => MetaArtefactDependency.apply(meta, repoType, node, scopes) } // TODO move into parseMetaArtefact ??
+                                                  .map { case (node, scopes) => MetaArtefactDependency.apply(meta, repoType, node, scopes) }
                                                   .toSeq
-                                    _        <- if (isLatest) derivedDependencyRepository.delete(meta.name)
+                                    _        <- if (isLatest) derivedLatestDependencyRepository.delete(meta.name)
                                                 else          Future.unit
-                                    _        <- if (isLatest) derivedDependencyRepository.put(deps)
+                                    _        <- if (isLatest) derivedLatestDependencyRepository.put(deps)
                                                 else          Future.unit
                                   } yield ()
                                 , errorMessage = s"Could not store MetaArtefact Derived Dependencies for message with ID '${message.messageId()}' (${meta.name} ${meta.version})"
@@ -106,7 +105,7 @@ class MetaArtefactUpdateHandler @Inject()(
                              , errorMessage = s"Could not delete MetaArtefact for message with ID '${message.messageId()}' (${deleted.name} ${deleted.version})"
                              )
                         _ <- recoverFutureInEitherT(
-                               derivedDependencyRepository.delete(deleted.name, Some(deleted.version))
+                               derivedLatestDependencyRepository.delete(deleted.name, Some(deleted.version))
                              , errorMessage = s"Could not delete MetaArtefact Derived Dependencies for message with ID '${message.messageId()}' ${deleted.name} ${deleted.version}"
                              )
                         _ <- recoverFutureInEitherT(

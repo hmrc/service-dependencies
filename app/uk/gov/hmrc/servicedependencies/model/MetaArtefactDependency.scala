@@ -16,13 +16,12 @@
 
 package uk.gov.hmrc.servicedependencies.model
 
-import play.api.libs.functional.syntax.toFunctionalBuilderOps
+import play.api.libs.functional.syntax._
 import play.api.libs.json.Format.GenericFormat
 import play.api.libs.json._
 
 import uk.gov.hmrc.servicedependencies.util.DependencyGraphParser
 
-// TODO rename + add opt slug name?
 case class MetaArtefactDependency(
   repoName    : String,
   repoVersion : Version,
@@ -31,7 +30,6 @@ case class MetaArtefactDependency(
   depGroup    : String,
   depArtefact : String,
   depVersion  : Version,
-  // TODO scala versions ??
   compileFlag : Boolean,
   providedFlag: Boolean,
   testFlag    : Boolean,
@@ -56,64 +54,54 @@ object MetaArtefactDependency {
     buildFlag    = scopes.contains(DependencyScope.Build)
   )
 
-  implicit val versionFormats: Format[Version] = Version.format
+  private def ignore[A] = OWrites[A](_ => Json.obj())
 
   val mongoFormat: OFormat[MetaArtefactDependency] =
     ( (__ \ "repoName"      ).format[String]
-    ~ (__ \ "repoVersion"   ).format[Version]
+    ~ (__ \ "repoVersion"   ).format[Version](Version.format)
     ~ (__ \ "repoType"      ).format[RepoType]
+    ~ OFormat(
+      Reads.pure(List.empty[String])
+    , ignore[List[String]]
+    )
     ~ (__ \ "group"         ).format[String]
     ~ (__ \ "artefact"      ).format[String]
-    ~ (__ \ "version"       ).format[Version]
+    ~ (__ \ "version"       ).format[Version](Version.format)
     ~ (__ \ "scope_compile" ).format[Boolean]
     ~ (__ \ "scope_provided").format[Boolean]
     ~ (__ \ "scope_test"    ).format[Boolean]
     ~ (__ \ "scope_it"      ).format[Boolean]
     ~ (__ \ "scope_build"   ).format[Boolean]
-    )((sn, sv, rt, g, a, av, cf, pf, tf, itf, bf) =>
-      MetaArtefactDependency(sn, sv, rt, List.empty, g, a, av, cf, pf, tf, itf, bf), ( mad =>
-        (
-          mad.repoName,
-          mad.repoVersion,
-          mad.repoType,
-          mad.depGroup,
-          mad.depArtefact,
-          mad.depVersion,
-          mad.compileFlag,
-          mad.providedFlag,
-          mad.testFlag,
-          mad.itFlag,
-          mad.buildFlag
-        )
-      )
-    )
+    )(MetaArtefactDependency.apply, unlift(MetaArtefactDependency.unapply))
 
   val apiWrites: OWrites[MetaArtefactDependency] = {
-
-    implicit val scopeFormat   = DependencyScope.dependencyScopeFormat
-
-    (
-      (__ \ "repoName").write[String] ~
-      (__ \ "repoVersion").write[String] ~
-      (__ \ "repoType").write[RepoType] ~
-      (__ \ "teams").write[List[String]] ~
-      (__ \ "depGroup").write[String] ~
-      (__ \ "depArtefact").write[String] ~
-      (__ \ "depVersion").write[String] ~
-      (__ \ "scopes").write[Set[DependencyScope]]
-      ) (mad => (
+    implicit val scopeFormat = DependencyScope.dependencyScopeFormat
+    ( (__ \ "repoName"   ).write[String]
+    ~ (__ \ "repoVersion").write[String]
+    ~ (__ \ "repoType"   ).write[RepoType]
+    ~ (__ \ "teams"      ).write[List[String]]
+    ~ (__ \ "depGroup"   ).write[String]
+    ~ (__ \ "depArtefact").write[String]
+    ~ (__ \ "depVersion" ).write[String]
+    ~ (__ \ "scopes"     ).write[Set[DependencyScope]]
+    ) (mad => (
       mad.repoName,
-      mad.repoVersion.toString,
+      mad.repoVersion.original,
       mad.repoType,
       mad.teams,
       mad.depGroup,
       mad.depArtefact,
-      mad.depVersion.toString,
-        Set[DependencyScope](DependencyScope.Compile).filter(_ => mad.compileFlag) ++
-        Set[DependencyScope](DependencyScope.Provided).filter(_ => mad.providedFlag) ++
-        Set[DependencyScope](DependencyScope.Test).filter(_ => mad.testFlag) ++
-        Set[DependencyScope](DependencyScope.It).filter(_ => mad.itFlag) ++
-        Set[DependencyScope](DependencyScope.Build).filter(_ => mad.buildFlag)
+      mad.depVersion.original,
+      DependencyScope
+        .values
+        .toSet
+        .filter {
+          case DependencyScope.Compile  => mad.compileFlag
+          case DependencyScope.Provided => mad.providedFlag
+          case DependencyScope.Test     => mad.testFlag
+          case DependencyScope.It       => mad.itFlag
+          case DependencyScope.Build    => mad.buildFlag
+        }
     ))
   }
 }

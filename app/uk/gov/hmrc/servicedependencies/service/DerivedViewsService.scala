@@ -24,7 +24,8 @@ import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.servicedependencies.connector.{GitHubProxyConnector, ReleasesApiConnector, TeamsAndRepositoriesConnector}
 import uk.gov.hmrc.servicedependencies.model._
 import uk.gov.hmrc.servicedependencies.persistence.{DeploymentRepository, MetaArtefactRepository, SlugInfoRepository, SlugVersionRepository}
-import uk.gov.hmrc.servicedependencies.persistence.derived.{DerivedDependencyRepository, DerivedGroupArtefactRepository, DerivedModuleRepository, DerivedServiceDependenciesRepository}
+import uk.gov.hmrc.servicedependencies.persistence.derived.{DerivedDeployedDependencyRepository, DerivedGroupArtefactRepository, DerivedLatestDependencyRepository, DerivedModuleRepository}
+import uk.gov.hmrc.servicedependencies.util.DependencyGraphParser
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -39,8 +40,8 @@ class DerivedViewsService @Inject()(
 , deploymentRepository                : DeploymentRepository
 , derivedGroupArtefactRepository      : DerivedGroupArtefactRepository
 , derivedModuleRepository             : DerivedModuleRepository
-, derivedDependencyRepository         : DerivedDependencyRepository
-, derivedServiceDependenciesRepository: DerivedServiceDependenciesRepository
+, derivedDeployedDependencyRepository : DerivedDeployedDependencyRepository
+, derivedLatestDependencyRepository   : DerivedLatestDependencyRepository
 )(implicit ec: ExecutionContext
 ) extends Logging {
 
@@ -103,24 +104,23 @@ class DerivedViewsService @Inject()(
                                 } else Future.unit
     } yield ()
 
-  // TODO fix repo name lookup - it will delete if not found
   def updateDerivedViews()(implicit hc: HeaderCarrier): Future[Unit] =
     for {
       activeRepos <- teamsAndRepositoriesConnector.getAllRepositories(archived = Some(false))
 
-      _           =  logger.info(s"Running DerivedDependencyRepository changes")
+      _           =  logger.info(s"Running DerivedLatestDependencyRepository changes")
       latestMeta  <- metaArtefactRepository.findLatest()
       _           <- latestMeta
                        .flatMap(m => activeRepos.find(_.name == m.name).map(r => (m, r.repoType)))
                        .foldLeftM(()) { case (_, (meta, repoType)) =>
                          for {
-                           ds <- derivedDependencyRepository.find(repoName = Some(meta.name), repoVersion = Some(meta.version))
-                           _  <- if (ds.isEmpty) derivedDependencyRepository.delete(meta.name)
+                           ds <- derivedLatestDependencyRepository.find(repoName = Some(meta.name), repoVersion = Some(meta.version))
+                           _  <- if (ds.isEmpty) derivedLatestDependencyRepository.delete(meta.name)
                                  else            Future.unit
-                           _  <- if (ds.isEmpty) derivedDependencyRepository.put(
-                                                   DependencyService
+                           _  <- if (ds.isEmpty) derivedLatestDependencyRepository.put(
+                                                   DependencyGraphParser
                                                      .parseMetaArtefact(meta)
-                                                     .map { case (node, scopes) => MetaArtefactDependency.apply(meta, repoType, node, scopes) } // TODO move into parseMetaArtefact ??
+                                                     .map { case (node, scopes) => MetaArtefactDependency.apply(meta, repoType, node, scopes) }
                                                      .toSeq
                                                  )
                                  else            Future.unit
@@ -128,16 +128,16 @@ class DerivedViewsService @Inject()(
                        }
       _           <- latestMeta
                        .filterNot(m => activeRepos.exists(_.name == m.name))
-                       .foldLeftM(()) { (_, meta) => derivedDependencyRepository.delete(meta.name)  }
-      _           =  logger.info(s"Finished running DerivedDependencyRepository changes")
+                       .foldLeftM(()) { (_, meta) => derivedLatestDependencyRepository.delete(meta.name)  }
+      _           =  logger.info(s"Finished running DerivedLatestDependencyRepository changes")
 
-      _           =  logger.info(s"Running DerivedServiceDependenciesRepository changes")
+      _           =  logger.info(s"Running DerivedDeployedDependencyRepository changes")
       deployments <- deploymentRepository.findDeployed()
       _           <- deployments
                        .groupBy(_.slugName)
                        .toSeq
                        .foldLeftM(()) { case (_, (slugName, slugDeployments)) =>
-                          derivedServiceDependenciesRepository.delete(slugName, ignoreVersions = slugDeployments.map(_.slugVersion))
+                          derivedDeployedDependencyRepository.delete(slugName, ignoreVersions = slugDeployments.map(_.slugVersion))
                        }
       _           <- deployments
                        .filter(d => activeRepos.exists(_.name == d.slugName))
@@ -145,13 +145,13 @@ class DerivedViewsService @Inject()(
                        .distinctBy { case (slugName, slugVersion, _) => (slugName, slugVersion) }                          // Flag just included for lookup but isn't needed
                        .foldLeftM(()) { case (_, (slugName, slugVersion, flag)) =>
                          for {
-                           ds <- derivedServiceDependenciesRepository.find(flag = flag, slugName = Some(slugName), slugVersion = Some(slugVersion))
+                           ds <- derivedDeployedDependencyRepository.find(flag = flag, slugName = Some(slugName), slugVersion = Some(slugVersion))
                            ms <- metaArtefactRepository.find(repositoryName = slugName, version = slugVersion)
                            _  <- (ds.isEmpty, ms.headOption) match {
-                                   case (true, Some(meta)) => derivedServiceDependenciesRepository.put(
-                                                                DependencyService
+                                   case (true, Some(meta)) => derivedDeployedDependencyRepository.put(
+                                                                DependencyGraphParser
                                                                   .parseMetaArtefact(meta)
-                                                                  .map { case (node, scopes) => MetaArtefactDependency.apply(meta, RepoType.Service, node, scopes) } // TODO move into parseMetaArtefact ??
+                                                                  .map { case (node, scopes) => MetaArtefactDependency.apply(meta, RepoType.Service, node, scopes) }
                                                                   .toSeq
                                                               )
                                    case __                 => Future.unit
@@ -160,8 +160,8 @@ class DerivedViewsService @Inject()(
                        }
       _           <- deployments
                        .filterNot(d => activeRepos.exists(_.name == d.slugName))
-                       .foldLeftM(()) { (_, deployment) => derivedServiceDependenciesRepository.delete(deployment.slugName)  }
-      _           =  logger.info(s"Finished running DerivedServiceDependenciesRepository changes")
+                       .foldLeftM(()) { (_, deployment) => derivedDeployedDependencyRepository.delete(deployment.slugName)  }
+      _           =  logger.info(s"Finished running DerivedDeployedDependencyRepository changes")
 
       _           =  logger.info(s"Running DerivedGroupArtefactRepository.populate")
       _           <- derivedGroupArtefactRepository

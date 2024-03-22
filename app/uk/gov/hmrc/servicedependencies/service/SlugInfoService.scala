@@ -22,7 +22,7 @@ import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.servicedependencies.connector.TeamsAndRepositoriesConnector
 import uk.gov.hmrc.servicedependencies.model._
 import uk.gov.hmrc.servicedependencies.persistence.{DeploymentRepository, JdkVersionRepository, SbtVersionRepository, SlugInfoRepository, SlugVersionRepository}
-import uk.gov.hmrc.servicedependencies.persistence.derived.{DerivedGroupArtefactRepository, DerivedServiceDependenciesRepository}
+import uk.gov.hmrc.servicedependencies.persistence.derived.{DerivedDeployedDependencyRepository, DerivedGroupArtefactRepository, DerivedLatestDependencyRepository}
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -34,7 +34,8 @@ class SlugInfoService @Inject()(
   sbtVersionRepository               : SbtVersionRepository,
   deploymentRepository               : DeploymentRepository,
   teamsAndRepositoriesConnector      : TeamsAndRepositoriesConnector,
-  derivedServiceDependencyRepository : DerivedServiceDependenciesRepository,
+  derivedDeployedDependencyRepository: DerivedDeployedDependencyRepository,
+  derivedLatestDependencyRepository  : DerivedLatestDependencyRepository,
   derivedGroupArtefactRepository     : DerivedGroupArtefactRepository,
 )(implicit ec: ExecutionContext
 ) extends Logging {
@@ -73,12 +74,15 @@ class SlugInfoService @Inject()(
     , scopes      : Option[List[DependencyScope]]
     )(implicit hc: HeaderCarrier): Future[Seq[MetaArtefactDependency]] =
       for {
-        services            <- derivedServiceDependencyRepository.find(flag, group = Some(group), artefact = Some(artefact), scopes = scopes)
-        servicesWithinRange =  services.filter(s => versionRange.includes(s.depVersion))
-        teamsForServices    <- teamsAndRepositoriesConnector.getTeamsForServices
-      } yield servicesWithinRange.map { r =>
-        r.copy(teams = teamsForServices.getTeams(r.repoName).toList.sorted)
-      }
+        allTeams <- teamsAndRepositoriesConnector.getTeamsForServices()
+        services <- flag match {
+                      case SlugInfoFlag.Latest => derivedLatestDependencyRepository.find  (group = Some(group), artefact = Some(artefact), scopes = scopes, repoType = Some(List(RepoType.Service)))
+                      case _                   => derivedDeployedDependencyRepository.find(group = Some(group), artefact = Some(artefact), scopes = scopes, flag     = flag)
+                    }
+        results  =  services
+                      .filter(s => versionRange.includes(s.depVersion))
+                      .map(r => r.copy(teams = allTeams.getTeams(r.repoName).toList.sorted))
+      } yield results
 
   def findGroupsArtefacts(): Future[Seq[GroupArtefacts]] =
     derivedGroupArtefactRepository.findGroupsArtefacts()

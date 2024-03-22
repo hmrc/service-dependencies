@@ -52,7 +52,7 @@ class TeamsAndRepositoriesConnector @Inject()(
       .get(url"$teamsAndRepositoriesApiBase/api/repositories/$repositoryName")
       .execute[Option[Repository]]
 
-  def getTeamsForServices(implicit hc: HeaderCarrier): Future[TeamsForServices] =
+  def getTeamsForServices()(implicit hc: HeaderCarrier): Future[TeamsForServices] =
     cache.getOrElseUpdate("teams-for-services", serviceConfiguration.teamsAndRepositoriesCacheExpiration){
       httpClientV2
         .get(url"$teamsAndRepositoriesApiBase/api/repository_teams")

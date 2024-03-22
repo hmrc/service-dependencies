@@ -29,7 +29,7 @@ import uk.gov.hmrc.servicedependencies.connector.{ServiceConfigsConnector, Teams
 import uk.gov.hmrc.servicedependencies.model.RepoType.Service
 import uk.gov.hmrc.servicedependencies.model.SlugInfoFlag.{Development, Latest}
 import uk.gov.hmrc.servicedependencies.model._
-import uk.gov.hmrc.servicedependencies.persistence.derived.{DerivedDependencyRepository, DerivedModuleRepository, DerivedServiceDependenciesRepository}
+import uk.gov.hmrc.servicedependencies.persistence.derived.{DerivedDeployedDependencyRepository, DerivedModuleRepository, DerivedLatestDependencyRepository}
 import uk.gov.hmrc.servicedependencies.persistence.{LatestVersionRepository, MetaArtefactRepository}
 import uk.gov.hmrc.servicedependencies.service._
 
@@ -113,11 +113,11 @@ class ServiceDependenciesControllerSpec
     "get slug info for services when flag is not Latest and set teams" in {
       val boot = Boot.init
 
-      when(boot.mockTeamsAndRepositories.getTeamsForServices(any())).thenReturn(
+      when(boot.mockTeamsAndRepositories.getTeamsForServices()(any())).thenReturn(
         Future.successful(TeamsForServices(Map("repo-name" -> Seq("team-name"))))
       )
 
-      when(boot.mockDerivedServiceDependenciesRepository.find(any(), any(), any(), any(), any(), any())).thenReturn(
+      when(boot.mockDerivedDeployedDependencyRepository.find(any(), any(), any(), any(), any(), any())).thenReturn(
         Future.successful(Seq(
           metaArtefactDependency(Version("1.0.0")),
           metaArtefactDependency(Version("2.0.0")),
@@ -142,17 +142,17 @@ class ServiceDependenciesControllerSpec
         metaArtefactDependency(Version("2.0.0"))
       ))
 
-      verifyZeroInteractions(boot.mockDerivedDependencyRepository)
+      verifyZeroInteractions(boot.mockDerivedLatestDependencyRepository)
     }
 
     "get slug info for services when flag is not Latest, filter by range and set teams" in {
       val boot = Boot.init
 
-      when(boot.mockTeamsAndRepositories.getTeamsForServices(any())).thenReturn(
+      when(boot.mockTeamsAndRepositories.getTeamsForServices()(any())).thenReturn(
         Future.successful(TeamsForServices(Map("repo-name" -> Seq("team-name"))))
       )
 
-      when(boot.mockDerivedServiceDependenciesRepository.find(any(), any(), any(), any(), any(), any())).thenReturn(
+      when(boot.mockDerivedDeployedDependencyRepository.find(any(), any(), any(), any(), any(), any())).thenReturn(
         Future.successful(Seq(
           metaArtefactDependency(Version("1.0.0")),
           metaArtefactDependency(Version("2.0.0")),
@@ -176,17 +176,17 @@ class ServiceDependenciesControllerSpec
         metaArtefactDependency(Version("1.0.0"))
       ))
 
-      verifyZeroInteractions(boot.mockDerivedDependencyRepository)
+      verifyZeroInteractions(boot.mockDerivedLatestDependencyRepository)
     }
 
     "get artefact dependencies when flag is Latest and set teams" in {
       val boot = Boot.init
 
-      when(boot.mockTeamsAndRepositories.getTeamsForServices(any())).thenReturn(
+      when(boot.mockTeamsAndRepositories.getTeamsForServices()(any())).thenReturn(
         Future.successful(TeamsForServices(Map("repo-name" -> Seq("team-name"))))
       )
 
-      when(boot.mockDerivedDependencyRepository.find(any(), any(), any(), any(), any(), any())).thenReturn(
+      when(boot.mockDerivedLatestDependencyRepository.find(any(), any(), any(), any(), any(), any())).thenReturn(
         Future.successful(Seq(
           metaArtefactDependency(Version("1.0.0")),
           metaArtefactDependency(Version("2.0.0"))
@@ -211,17 +211,17 @@ class ServiceDependenciesControllerSpec
         metaArtefactDependency(Version("2.0.0")))
       )
 
-      verifyZeroInteractions(boot.mockDerivedServiceDependenciesRepository)
+      verifyZeroInteractions(boot.mockDerivedDeployedDependencyRepository)
     }
 
     "get artefact dependencies when flag is Latest, filter by range and set teams" in {
       val boot = Boot.init
 
-      when(boot.mockTeamsAndRepositories.getTeamsForServices(any())).thenReturn(
+      when(boot.mockTeamsAndRepositories.getTeamsForServices()(any())).thenReturn(
         Future.successful(TeamsForServices(Map("repo-name" -> Seq("team-name"))))
       )
 
-      when(boot.mockDerivedDependencyRepository.find(any(), any(), any(), any(), any(), any())).thenReturn(
+      when(boot.mockDerivedLatestDependencyRepository.find(any(), any(), any(), any(), any(), any())).thenReturn(
         Future.successful(Seq(
           metaArtefactDependency(Version("1.0.0")),
           metaArtefactDependency(Version("2.0.0"))
@@ -246,36 +246,36 @@ class ServiceDependenciesControllerSpec
         )
       )
 
-      verifyZeroInteractions(boot.mockDerivedServiceDependenciesRepository)
+      verifyZeroInteractions(boot.mockDerivedDeployedDependencyRepository)
     }
   }
 
   case class Boot(
-      mockSlugInfoService                     : SlugInfoService
-    , mockCuratedLibrariesService             : CuratedLibrariesService
-    , mockServiceConfigsConnector             : ServiceConfigsConnector
-    , mockTeamDependencyService               : TeamDependencyService
-    , mockMetaArtefactRepository              : MetaArtefactRepository
-    , mockTeamsAndRepositories                : TeamsAndRepositoriesConnector
-    , mockLatestVersionRepository             : LatestVersionRepository
-    , mockDerivedDependencyRepository         : DerivedDependencyRepository
-    , mockDerivedServiceDependenciesRepository: DerivedServiceDependenciesRepository
+      mockSlugInfoService                    : SlugInfoService
+    , mockCuratedLibrariesService            : CuratedLibrariesService
+    , mockServiceConfigsConnector            : ServiceConfigsConnector
+    , mockTeamDependencyService              : TeamDependencyService
+    , mockMetaArtefactRepository             : MetaArtefactRepository
+    , mockTeamsAndRepositories               : TeamsAndRepositoriesConnector
+    , mockLatestVersionRepository            : LatestVersionRepository
+    , mockDerivedDeployedDependencyRepository: DerivedDeployedDependencyRepository
+    , mockDerivedLatestDependencyRepository  : DerivedLatestDependencyRepository
     , mockDerivedModuleRepository             : DerivedModuleRepository
     , controller                              : ServiceDependenciesController
     )
 
   object Boot {
     def init: Boot = {
-      val mockSlugInfoService                       = mock[SlugInfoService]
-      val mockCuratedLibrariesService               = mock[CuratedLibrariesService]
-      val mockServiceConfigsConnector               = mock[ServiceConfigsConnector]
-      val mockTeamDependencyService                 = mock[TeamDependencyService]
-      val mockMetaArtefactRepository                = mock[MetaArtefactRepository]
-      val mockLatestVersionRepository               = mock[LatestVersionRepository]
-      val mockDerivedModuleRepository               = mock[DerivedModuleRepository]
-      val mockDerivedDependencyRepository           = mock[DerivedDependencyRepository]
-      val mockDerivedServiceDependenciesRepository  = mock[DerivedServiceDependenciesRepository]
-      val mockTeamsAndRepositoryConnector           = mock[TeamsAndRepositoriesConnector]
+      val mockSlugInfoService                     = mock[SlugInfoService]
+      val mockCuratedLibrariesService             = mock[CuratedLibrariesService]
+      val mockServiceConfigsConnector             = mock[ServiceConfigsConnector]
+      val mockTeamDependencyService               = mock[TeamDependencyService]
+      val mockMetaArtefactRepository              = mock[MetaArtefactRepository]
+      val mockLatestVersionRepository             = mock[LatestVersionRepository]
+      val mockDerivedModuleRepository             = mock[DerivedModuleRepository]
+      val mockDerivedDeployedDependencyRepository = mock[DerivedDeployedDependencyRepository]
+      val mockDerivedLatestDependencyRepository   = mock[DerivedLatestDependencyRepository]
+      val mockTeamsAndRepositoryConnector         = mock[TeamsAndRepositoriesConnector]
       val controller = new ServiceDependenciesController(
         mockSlugInfoService,
         mockCuratedLibrariesService,
@@ -283,9 +283,9 @@ class ServiceDependenciesControllerSpec
         mockTeamDependencyService,
         mockMetaArtefactRepository,
         mockLatestVersionRepository,
+        mockDerivedDeployedDependencyRepository,
+        mockDerivedLatestDependencyRepository,
         mockDerivedModuleRepository,
-        mockDerivedDependencyRepository,
-        mockDerivedServiceDependenciesRepository,
         mockTeamsAndRepositoryConnector,
         stubControllerComponents()
       )
@@ -297,8 +297,8 @@ class ServiceDependenciesControllerSpec
         mockMetaArtefactRepository,
         mockTeamsAndRepositoryConnector,
         mockLatestVersionRepository,
-        mockDerivedDependencyRepository,
-        mockDerivedServiceDependenciesRepository,
+        mockDerivedDeployedDependencyRepository,
+        mockDerivedLatestDependencyRepository,
         mockDerivedModuleRepository,
         controller
       )

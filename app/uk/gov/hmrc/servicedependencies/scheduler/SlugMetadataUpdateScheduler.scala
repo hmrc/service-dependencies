@@ -54,8 +54,8 @@ class SlugMetadataUpdateScheduler @Inject()(
   scheduleWithLock("Slug Metadata Updater", schedulerConfigs.slugMetadataUpdate, lock) {
     logger.info("Updating slug metadata")
     for {
-      // _ <- derivedViewsService.updateDeploymentData()
-      // _ =  logger.info("Finished updating deployment data")
+      _ <- derivedViewsService.updateDeploymentData()
+      _ =  logger.info("Finished updating deployment data")
       _ <- derivedViewsService.updateDerivedViews()
       _ =  logger.info("Finished updating derived views")
     } yield ()

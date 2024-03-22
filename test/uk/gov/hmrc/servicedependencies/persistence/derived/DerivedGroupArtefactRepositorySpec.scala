@@ -34,13 +34,9 @@ class DerivedGroupArtefactRepositorySpec
      with MockitoSugar
      with DefaultPlayMongoRepositorySupport[GroupArtefacts] {
 
-  lazy val dependencyRepository  = new DerivedDependencyRepository(mongoComponent)
-  lazy val deploymentRepository  = new DeploymentRepository(mongoComponent)
-  lazy val derivedServiceDependenciesRepository =
-    new DerivedServiceDependenciesRepository(
-      mongoComponent,
-      deploymentRepository
-    )
+  lazy val derivedLatestDependencyRepository   = new DerivedLatestDependencyRepository(mongoComponent)
+  lazy val deploymentRepository                = new DeploymentRepository(mongoComponent)
+  lazy val derivedDeployedDependencyRepository = new DerivedDeployedDependencyRepository(mongoComponent, deploymentRepository)
 
   override def checkIndexedQueries = false
 
@@ -48,7 +44,7 @@ class DerivedGroupArtefactRepositorySpec
 
   "DerivedGroupArtefactRepository.findGroupsArtefacts" should {
     "return a map of artefact group to list of found artefacts" in {
-      dependencyRepository.put(
+      derivedLatestDependencyRepository.put(
         Seq(
           MetaArtefactDependency("repo1", Version("1.0.0"), Service, List.empty, "test.group.1", "test.artefact.1", Version("1.1.0"), compileFlag = true, providedFlag = true, testFlag = true, itFlag = true, buildFlag = true),
           MetaArtefactDependency("repo2", Version("1.0.0"), Service, List.empty, "test.group.1", "test.artefact.2", Version("1.1.0"), compileFlag = true, providedFlag = true, testFlag = true, itFlag = true, buildFlag = true),
@@ -59,7 +55,7 @@ class DerivedGroupArtefactRepositorySpec
 
       deploymentRepository.setFlag(SlugInfoFlag.QA, "repo5", Version("1.0.0")).futureValue
 
-      derivedServiceDependenciesRepository.put(
+      derivedDeployedDependencyRepository.put(
         Seq(
           MetaArtefactDependency("repo5", Version("1.0.0"), Service, List.empty, "test.group.1", "test.artefact.3", Version("1.1.0"), compileFlag = true, providedFlag = true, testFlag = true, itFlag = true, buildFlag = true),
           MetaArtefactDependency("repo5", Version("1.0.0"), Service, List.empty, "test.group.3", "test.artefact.1", Version("1.1.0"), compileFlag = true, providedFlag = true, testFlag = true, itFlag = true, buildFlag = true),

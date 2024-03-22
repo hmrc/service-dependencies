@@ -21,7 +21,7 @@ import play.api.Logging
 import uk.gov.hmrc.servicedependencies.connector.ServiceConfigsConnector
 import uk.gov.hmrc.servicedependencies.model._
 import uk.gov.hmrc.servicedependencies.persistence.BobbyRulesSummaryRepository
-import uk.gov.hmrc.servicedependencies.persistence.derived.{DerivedDependencyRepository, DerivedServiceDependenciesRepository}
+import uk.gov.hmrc.servicedependencies.persistence.derived.{DerivedDeployedDependencyRepository, DerivedLatestDependencyRepository}
 
 import java.time.LocalDate
 import java.time.temporal.ChronoUnit
@@ -30,10 +30,10 @@ import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
 class DependencyLookupService @Inject() (
-  serviceConfigs                      : ServiceConfigsConnector
-, bobbyRulesSummaryRepo               : BobbyRulesSummaryRepository
-, derivedServiceDependenciesRepository: DerivedServiceDependenciesRepository
-, derivedDependencyRepository         : DerivedDependencyRepository
+  serviceConfigs                     : ServiceConfigsConnector
+, bobbyRulesSummaryRepo              : BobbyRulesSummaryRepository
+, derivedDeployedDependencyRepository: DerivedDeployedDependencyRepository
+, derivedLatestDependencyRepository  : DerivedLatestDependencyRepository
 )(implicit ec: ExecutionContext
 ) extends Logging {
 
@@ -47,10 +47,8 @@ class DependencyLookupService @Inject() (
     def calculateCounts(rules: Seq[BobbyRule])(env: SlugInfoFlag): Future[Seq[((BobbyRule, SlugInfoFlag), Int)]] =
       for {
         dependencies <- env match {
-                          case SlugInfoFlag.Latest => derivedDependencyRepository
-                                                        .find(scopes = Some(DependencyScope.values))
-                          case _                   => derivedServiceDependenciesRepository
-                                                        .find(env, scopes = Some(List(DependencyScope.Compile)))
+                          case SlugInfoFlag.Latest => derivedLatestDependencyRepository.find  (scopes = Some(DependencyScope.values))
+                          case _                   => derivedDeployedDependencyRepository.find(scopes = Some(List(DependencyScope.Compile)), flag = env)
                         }
         lookup       =  dependencies
                           .groupBy(d => s"${d.depGroup}:${d.depArtefact}")

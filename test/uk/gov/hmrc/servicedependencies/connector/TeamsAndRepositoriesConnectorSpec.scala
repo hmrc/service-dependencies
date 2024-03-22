@@ -80,7 +80,7 @@ class TeamsAndRepositoriesConnectorSpec
           .willReturn(aResponse().withBodyFile("teams-and-repositories/service-teams.json"))
       )
 
-      val teams = connector.getTeamsForServices.futureValue
+      val teams = connector.getTeamsForServices().futureValue
       teams shouldBe TeamsForServices(Map("test-repo" -> Seq("PlatOps", "WebOps"), "another-repo" -> Seq("PlatOps")))
     }
   }

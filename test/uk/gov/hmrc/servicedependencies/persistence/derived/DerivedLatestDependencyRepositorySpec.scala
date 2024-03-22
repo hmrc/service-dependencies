@@ -27,57 +27,57 @@ import uk.gov.hmrc.servicedependencies.model.{MetaArtefactDependency, Version}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
-class DerivedDependencyRepositorySpec
+class DerivedLatestDependencyRepositorySpec
   extends AnyWordSpecLike
      with Matchers
      with MockitoSugar
      with DefaultPlayMongoRepositorySupport[MetaArtefactDependency] {
 
-  override lazy val repository = new DerivedDependencyRepository(mongoComponent)
+  override lazy val repository = new DerivedLatestDependencyRepository(mongoComponent)
 
   private val metaArtefactDependency1 = MetaArtefactDependency(
-    repoName        = "name-1",
-    depGroup        = "group-1",
-    depArtefact     = "artifact-1",
-    depVersion      = Version("1.0.0"),
-    compileFlag     = true,
-    providedFlag    = false,
-    testFlag        = false,
-    itFlag          = false,
-    buildFlag       = false,
-    teams           = List.empty,
-    repoVersion     = Version("2.0.0"),
-    repoType        = Service
+    repoName     = "name-1",
+    depGroup     = "group-1",
+    depArtefact  = "artifact-1",
+    depVersion   = Version("1.0.0"),
+    compileFlag  = true,
+    providedFlag = false,
+    testFlag     = false,
+    itFlag       = false,
+    buildFlag    = false,
+    teams        = List.empty,
+    repoVersion  = Version("2.0.0"),
+    repoType     = Service
   )
 
   private val metaArtefactDependency2 = MetaArtefactDependency(
-    repoName        = "name-2",
-    depGroup        = "group-1",
-    depArtefact     = "artifact-1",
-    depVersion      = Version("1.0.0"),
-    compileFlag     = false,
-    providedFlag    = true,
-    testFlag        = false,
-    itFlag          = false,
-    buildFlag       = false,
-    teams           = List.empty,
-    repoVersion     = Version("2.0.0"),
-    repoType        = Other
+    repoName     = "name-2",
+    depGroup     = "group-1",
+    depArtefact  = "artifact-1",
+    depVersion   = Version("1.0.0"),
+    compileFlag  = false,
+    providedFlag = true,
+    testFlag     = false,
+    itFlag       = false,
+    buildFlag    = false,
+    teams        = List.empty,
+    repoVersion  = Version("2.0.0"),
+    repoType     = Other
   )
 
   private val metaArtefactDependency3 = MetaArtefactDependency(
-    repoName        = "name-3",
-    depGroup        = "group-3",
-    depArtefact     = "artifact-3",
-    depVersion      = Version("1.0.0"),
-    compileFlag     = false,
-    providedFlag    = false,
-    testFlag        = true,
-    itFlag          = false,
-    buildFlag       = false,
-    teams           = List.empty,
-    repoVersion     = Version("2.0.0"),
-    repoType        = Test
+    repoName      = "name-3",
+    depGroup      = "group-3",
+    depArtefact   = "artifact-3",
+    depVersion    = Version("1.0.0"),
+    compileFlag   = false,
+    providedFlag  = false,
+    testFlag      = true,
+    itFlag        = false,
+    buildFlag     = false,
+    teams         = List.empty,
+    repoVersion   = Version("2.0.0"),
+    repoType      = Test
   )
 
   override def beforeEach(): Unit = {
@@ -89,7 +89,7 @@ class DerivedDependencyRepositorySpec
     "insert new documents" in {
       repository.put(Seq(metaArtefactDependency1, metaArtefactDependency2, metaArtefactDependency3)).futureValue
       repository.find(Some("group-1"), Some("artifact-1"), None, None).futureValue.sortBy(_.repoName) mustBe Seq(metaArtefactDependency1, metaArtefactDependency2)
-      repository.find(Some("group-3"), Some("artifact-3"), None, None).futureValue mustBe Seq(metaArtefactDependency3)
+      repository.find(Some("group-3"), Some("artifact-3"), None, None).futureValue                    mustBe Seq(metaArtefactDependency3)
     }
   }
 
