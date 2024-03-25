@@ -34,58 +34,31 @@ class DerivedGroupArtefactRepositorySpec
      with MockitoSugar
      with DefaultPlayMongoRepositorySupport[GroupArtefacts] {
 
-  lazy val dependencyRepository  = new DerivedDependencyRepository(mongoComponent)
-  lazy val deploymentRepository  = new DeploymentRepository(mongoComponent)
-  lazy val derivedServiceDependenciesRepository =
-    new DerivedServiceDependenciesRepository(
-      mongoComponent,
-      deploymentRepository
-    )
+  lazy val derivedLatestDependencyRepository   = new DerivedLatestDependencyRepository(mongoComponent)
+  lazy val deploymentRepository                = new DeploymentRepository(mongoComponent)
+  lazy val derivedDeployedDependencyRepository = new DerivedDeployedDependencyRepository(mongoComponent, deploymentRepository)
 
   override def checkIndexedQueries = false
 
   override lazy val repository = new DerivedGroupArtefactRepository(mongoComponent, deploymentRepository)
 
-  val compileDependency  = "digraph \"dependency-graph\" {\n    graph[rankdir=\"LR\"]\n    edge [\n        arrowtail=\"none\"\n    ]\n        \"test.group.1:test.artefact.1:1.23.0\" -> \"test.group.1:test.artefact.1:1.23.0\" \n}"
-  val provideDependency  = "digraph \"dependency-graph\" {\n    graph[rankdir=\"LR\"]\n    edge [\n        arrowtail=\"none\"\n    ]\n        \"test.group.3:test.artefact.1:1.23.0\" -> \"test.group.3:test.artefact.1:1.23.0\" \n}"
-  val testDependency     = "digraph \"dependency-graph\" {\n    graph[rankdir=\"LR\"]\n    edge [\n        arrowtail=\"none\"\n    ]\n        \"test.group.1:test.artefact.3:1.23.0\" -> \"test.group.1:test.artefact.3:1.23.0\" \n}"
-
-  val metaArtefactModule =
-    MetaArtefactModule(
-      name = "sub-module",
-      group = "uk.gov.hmrc",
-      sbtVersion = None,
-      crossScalaVersions = None,
-      publishSkip = Some(false),
-      dependencyDotCompile = Some(compileDependency),
-      dependencyDotProvided = Some(provideDependency),
-      dependencyDotTest = Some(testDependency),
-      dependencyDotIt = None
-    )
-
-  val metaArtefact =
-    MetaArtefact(
-      name = "repo5",
-      version = Version("1.0.0"),
-      uri = "",
-      gitUrl = None,
-      dependencyDotBuild = None,
-      modules = Seq(metaArtefactModule)
-    )
-
   "DerivedGroupArtefactRepository.findGroupsArtefacts" should {
     "return a map of artefact group to list of found artefacts" in {
-
-      deploymentRepository.markLatest(metaArtefact.name, metaArtefact.version).futureValue
-
-      derivedServiceDependenciesRepository.populateDependencies(metaArtefact).futureValue
-
-      dependencyRepository.put(
+      derivedLatestDependencyRepository.put(
         Seq(
-          MetaArtefactDependency("repo1", Version("1.0.0"), List.empty, Service, "test.group.1", "test.artefact.1", Version("1.1.0"), compileFlag = true, providedFlag = true, testFlag = true, itFlag = true, buildFlag = true),
-          MetaArtefactDependency("repo2", Version("1.0.0"), List.empty, Service, "test.group.1", "test.artefact.2", Version("1.1.0"), compileFlag = true, providedFlag = true, testFlag = true, itFlag = true, buildFlag = true),
-          MetaArtefactDependency("repo3", Version("1.0.0"), List.empty, Service, "test.group.1", "test.artefact.1", Version("1.1.0"), compileFlag = true, providedFlag = true, testFlag = true, itFlag = true, buildFlag = true),
-          MetaArtefactDependency("repo4", Version("1.0.0"), List.empty, Service, "test.group.2", "test.artefact.1", Version("1.1.0"), compileFlag = true, providedFlag = true, testFlag = true, itFlag = true, buildFlag = true)
+          MetaArtefactDependency("repo1", Version("1.0.0"), Service, List.empty, "test.group.1", "test.artefact.1", Version("1.1.0"), compileFlag = true, providedFlag = true, testFlag = true, itFlag = true, buildFlag = true),
+          MetaArtefactDependency("repo2", Version("1.0.0"), Service, List.empty, "test.group.1", "test.artefact.2", Version("1.1.0"), compileFlag = true, providedFlag = true, testFlag = true, itFlag = true, buildFlag = true),
+          MetaArtefactDependency("repo3", Version("1.0.0"), Service, List.empty, "test.group.1", "test.artefact.1", Version("1.1.0"), compileFlag = true, providedFlag = true, testFlag = true, itFlag = true, buildFlag = true),
+          MetaArtefactDependency("repo4", Version("1.0.0"), Service, List.empty, "test.group.2", "test.artefact.1", Version("1.1.0"), compileFlag = true, providedFlag = true, testFlag = true, itFlag = true, buildFlag = true)
+        )
+      ).futureValue
+
+      deploymentRepository.setFlag(SlugInfoFlag.QA, "repo5", Version("1.0.0")).futureValue
+
+      derivedDeployedDependencyRepository.put(
+        Seq(
+          MetaArtefactDependency("repo5", Version("1.0.0"), Service, List.empty, "test.group.1", "test.artefact.3", Version("1.1.0"), compileFlag = true, providedFlag = true, testFlag = true, itFlag = true, buildFlag = true),
+          MetaArtefactDependency("repo5", Version("1.0.0"), Service, List.empty, "test.group.3", "test.artefact.1", Version("1.1.0"), compileFlag = true, providedFlag = true, testFlag = true, itFlag = true, buildFlag = true),
         )
       ).futureValue
 

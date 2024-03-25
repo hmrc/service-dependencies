@@ -16,8 +16,42 @@
 
 package uk.gov.hmrc.servicedependencies.util
 
+import uk.gov.hmrc.servicedependencies.model.{DependencyScope, MetaArtefact}
 
 object DependencyGraphParser {
+
+  private def parseStr(opt: Option[String], scope: DependencyScope): Seq[(DependencyGraphParser.Node, DependencyScope)] =
+    parse(opt.getOrElse("")).dependencies.map((_, scope))
+
+  def parseMetaArtefact(meta: MetaArtefact): Map[DependencyGraphParser.Node, Set[DependencyScope]] = {
+    val build   = parseStr(meta.dependencyDotBuild, DependencyScope.Build)
+    val modules = meta.modules.foldLeft(Seq.empty[(DependencyGraphParser.Node, DependencyScope)]) { (acc, module) =>
+      acc                                                              ++
+      parseStr(module.dependencyDotCompile , DependencyScope.Compile ) ++
+      parseStr(module.dependencyDotProvided, DependencyScope.Provided) ++
+      parseStr(module.dependencyDotTest    , DependencyScope.Test    ) ++
+      parseStr(module.dependencyDotIt      , DependencyScope.It      )
+    }
+
+    val scala = meta
+                  .modules
+                  .flatMap(_.crossScalaVersions.toSeq.flatten)
+                  .headOption
+                  .map(v => DependencyGraphParser.Node.apply(s"org.scala-lang:scala-library:${v.original}"))
+                  .fold(Map.empty[DependencyGraphParser.Node, Set[DependencyScope]])(n => Map(n ->  Set(DependencyScope.Compile, DependencyScope.Test)))
+    val sbt   = meta
+                  .modules
+                  .flatMap(_.sbtVersion)
+                  .headOption
+                  .map(v => DependencyGraphParser.Node.apply(s"org.scala-sbt:sbt:${v.original}"))
+                  .fold(Map.empty[DependencyGraphParser.Node, Set[DependencyScope]])(n => Map(n ->  Set(DependencyScope.Build)))
+    val deps  = (build ++ modules)
+                  .foldLeft(Map.empty[DependencyGraphParser.Node, Set[DependencyScope]]) { case (acc, (n, flag)) => acc + (n -> (acc.getOrElse(n, Set.empty) + flag)) }
+                  .filterNot { case (node, _) => node.group == "default"     && node.artefact == "project" }
+                  .filterNot { case (node, _) => node.group == "uk.gov.hmrc" && node.artefact == meta.name }
+
+    scala ++ sbt ++ deps
+  }
 
   def parse(input: String): DependencyGraph = {
     val graph = lexer(input.split("\n").toIndexedSeq)

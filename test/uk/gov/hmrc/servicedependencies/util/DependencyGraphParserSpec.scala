@@ -19,11 +19,104 @@ package uk.gov.hmrc.servicedependencies.util
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 
+import uk.gov.hmrc.servicedependencies.model.{DependencyScope, MetaArtefact, MetaArtefactModule, Version}
+
+import java.time.Instant
+
 class DependencyGraphParserSpec
   extends AnyWordSpec
      with Matchers {
 
-  import DependencyGraphParser.Node
+   import DependencyGraphParser.Node, DependencyScope._
+  "DependencyGraphParser.parseMetaArtefact" should {
+    val compileDependency  = "digraph \"dependency-graph\" {\n    graph[rankdir=\"LR\"]\n    edge [\n        arrowtail=\"none\"\n    ]\n        \"artefact:build_1.00:1.23.0\" -> \"artefact:build_1.00:1.23.0\" \n}"
+    val providedDependency = "digraph \"dependency-graph\" {\n    graph[rankdir=\"LR\"]\n    edge [\n        arrowtail=\"none\"\n    ]\n        \"artefact:build_2.00:1.23.0\" -> \"artefact:build_2.00:1.23.0\" \n}"
+    val testDependency     = "digraph \"dependency-graph\" {\n    graph[rankdir=\"LR\"]\n    edge [\n        arrowtail=\"none\"\n    ]\n        \"artefact:build_3.00:1.23.0\" -> \"artefact:build_3.00:1.23.0\" \n}"
+    val itDependency       = "digraph \"dependency-graph\" {\n    graph[rankdir=\"LR\"]\n    edge [\n        arrowtail=\"none\"\n    ]\n        \"artefact:build_4.00:1.23.0\" -> \"artefact:build_4.00:1.23.0\" \n}"
+    val buildDependency    = "digraph \"dependency-graph\" {\n    graph[rankdir=\"LR\"]\n    edge [\n        arrowtail=\"none\"\n    ]\n        \"artefact:build_5.00:1.23.0\" -> \"artefact:build_5.00:1.23.0\" \n}"
+
+    val module1 = MetaArtefactModule(
+      name                  = "sub-module-1",
+      group                 = "uk.gov.hmrc",
+      sbtVersion            = Some(Version("1.4.9")),
+      crossScalaVersions    = Some(List(Version("2.12.14"))),
+      publishSkip           = Some(false),
+      dependencyDotCompile  = Some(compileDependency),
+      dependencyDotProvided = Some(providedDependency),
+      dependencyDotTest     = None,
+      dependencyDotIt       = None
+    )
+
+    val module2 = module1.copy(
+      name                  = "sub-module-2",
+      dependencyDotCompile  = None,
+      dependencyDotProvided = None,
+      dependencyDotTest     = Some(testDependency),
+      dependencyDotIt       = None
+    )
+
+    val module3 = module1.copy(
+      name                  = "sub-module-3",
+      dependencyDotCompile  = None,
+      dependencyDotProvided = None,
+      dependencyDotTest     = None,
+      dependencyDotIt       = Some(itDependency)
+    )
+
+    val libraryMetaArtefact = MetaArtefact(
+      name               = "library-repo",
+      version            = Version("1.0.0"),
+      uri                = "https://artefacts/metadata/some/repo-v1.0.0.meta.tgz",
+      gitUrl             = Some("https://github.com/hmrc/repo.git"),
+      dependencyDotBuild = Some(buildDependency),
+      buildInfo          = Map.empty,
+      modules            = Seq(module1, module2, module3),
+      created            = Instant.parse("2007-12-03T10:15:30.00Z")
+    )
+
+    "parse meta artefact dependencies to map of node and scopes, when all dependencies are different" in {
+      DependencyGraphParser.parseMetaArtefact(libraryMetaArtefact) shouldBe Map(
+        Node("org.scala-lang:scala-library:2.12.14") -> Set(DependencyScope.Compile, Test),
+        Node("org.scala-sbt:sbt:1.4.9")              -> Set(Build),
+        Node("artefact:build_1.00:1.23.0")           -> Set(Compile),
+        Node("artefact:build_2.00:1.23.0")           -> Set(Provided),
+        Node("artefact:build_3.00:1.23.0")           -> Set(Test),
+        Node("artefact:build_4.00:1.23.0")           -> Set(It),
+        Node("artefact:build_5.00:1.23.0")           -> Set(Build),
+      )
+    }
+
+    "parse meta artefact dependencies to map of node and scopes, when dependencies are same across scopes" in {
+      val crossScopeDependency = "digraph \"dependency-graph\" {\n    graph[rankdir=\"LR\"]\n    edge [\n        arrowtail=\"none\"\n    ]\n        \"artefact:build_1.00:1.23.0\" -> \"artefact:build_1.00:1.23.0\" \n}"
+      val meta = libraryMetaArtefact.copy(
+        dependencyDotBuild = Some(crossScopeDependency),
+        modules            = Seq(
+                               module1.copy(dependencyDotCompile = Some(crossScopeDependency), dependencyDotProvided = Some(crossScopeDependency)),
+                               module2.copy(dependencyDotTest    = Some(crossScopeDependency)                                                    ),
+                               module3.copy(dependencyDotIt      = Some(crossScopeDependency)                                                    )
+                             )
+      )
+
+      DependencyGraphParser.parseMetaArtefact(meta) shouldBe Map(
+        Node("org.scala-lang:scala-library:2.12.14") -> Set(Compile, Test),
+        Node("org.scala-sbt:sbt:1.4.9")              -> Set(Build),
+        Node("artefact:build_1.00:1.23.0")           -> Set(Compile, Provided, Test, It, Build)
+      )
+    }
+
+    "parse meta artefact dependencies to empty Map if non are found" in {
+      val meta = libraryMetaArtefact.copy(
+        dependencyDotBuild = None,
+        modules            = Seq(
+                               module1.copy(dependencyDotCompile = None, dependencyDotProvided = None,  crossScalaVersions = None, sbtVersion = None),
+                               module2.copy(dependencyDotTest    = None                              ,  crossScalaVersions = None, sbtVersion = None),
+                               module3.copy(dependencyDotIt      = None                              ,  crossScalaVersions = None, sbtVersion = None)
+                             )
+      )
+
+      DependencyGraphParser.parseMetaArtefact(meta) shouldBe Map.empty
+    }
+  }
 
   "DependencyGraphParser.parse" should {
     "return dependencies with evictions applied" in {

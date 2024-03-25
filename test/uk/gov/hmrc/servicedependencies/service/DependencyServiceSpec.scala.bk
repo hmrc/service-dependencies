@@ -135,54 +135,46 @@ class DependencyServiceSpec
   "parseArtefactDependencies" should {
 
     "parse meta artefact dependencies to map of node and scopes, when all dependencies are different" in {
-
-      val expectedResult = Map(
-        Node("artefact:build_1.00:1.23.0") -> Set(Compile),
-        Node("artefact:build_2.00:1.23.0") -> Set(Provided),
-        Node("artefact:build_3.00:1.23.0") -> Set(Test),
-        Node("artefact:build_4.00:1.23.0") -> Set(It),
-        Node("artefact:build_5.00:1.23.0") -> Set(Build),
+      DependencyService.parseMetaArtefact(libraryMetaArtefact) shouldBe Map(
+        Node("org.scala-lang:scala-library:2.12.14") -> Set(Compile, Test),
+        Node("org.scala-sbt:sbt:1.4.9")              -> Set(Build),
+        Node("artefact:build_1.00:1.23.0")           -> Set(Compile),
+        Node("artefact:build_2.00:1.23.0")           -> Set(Provided),
+        Node("artefact:build_3.00:1.23.0")           -> Set(Test),
+        Node("artefact:build_4.00:1.23.0")           -> Set(It),
+        Node("artefact:build_5.00:1.23.0")           -> Set(Build),
       )
-
-      DependencyService.parseArtefactDependencies(libraryMetaArtefact) shouldBe expectedResult
     }
 
     "parse meta artefact dependencies to map of node and scopes, when dependencies are same across scopes" in {
-
-      val crossScopeDependency  = "digraph \"dependency-graph\" {\n    graph[rankdir=\"LR\"]\n    edge [\n        arrowtail=\"none\"\n    ]\n        \"artefact:build_1.00:1.23.0\" -> \"artefact:build_1.00:1.23.0\" \n}"
-
-      val updatedModules = Seq(
-        module1.copy(dependencyDotCompile = Some(crossScopeDependency), dependencyDotProvided = Some(crossScopeDependency)),
-        module2.copy(dependencyDotTest = Some(crossScopeDependency)),
-        module3.copy(dependencyDotIt = Some(crossScopeDependency))
-      )
-
-      val newArtefact = libraryMetaArtefact.copy(
+      val crossScopeDependency = "digraph \"dependency-graph\" {\n    graph[rankdir=\"LR\"]\n    edge [\n        arrowtail=\"none\"\n    ]\n        \"artefact:build_1.00:1.23.0\" -> \"artefact:build_1.00:1.23.0\" \n}"
+      val meta = libraryMetaArtefact.copy(
         dependencyDotBuild = Some(crossScopeDependency),
-        modules = updatedModules
+        modules            = Seq(
+                               module1.copy(dependencyDotCompile = Some(crossScopeDependency), dependencyDotProvided = Some(crossScopeDependency)),
+                               module2.copy(dependencyDotTest    = Some(crossScopeDependency)                                                    ),
+                               module3.copy(dependencyDotIt      = Some(crossScopeDependency)                                                    )
+                             )
       )
 
-      val expectedResult = Map(
-        Node("artefact:build_1.00:1.23.0") -> Set(Compile, Provided, Test, It, Build)
+      DependencyService.parseMetaArtefact(meta) shouldBe Map(
+        Node("org.scala-lang:scala-library:2.12.14") -> Set(Compile, Test),
+        Node("org.scala-sbt:sbt:1.4.9")              -> Set(Build),
+        Node("artefact:build_1.00:1.23.0")           -> Set(Compile, Provided, Test, It, Build)
       )
-
-      DependencyService.parseArtefactDependencies(newArtefact) shouldBe expectedResult
     }
 
     "parse meta artefact dependencies to empty Map if non are found" in {
-
-      val updatedModules = Seq(
-        module1.copy(dependencyDotCompile = None, dependencyDotProvided = None),
-        module2.copy(dependencyDotTest = None),
-        module3.copy(dependencyDotIt = None)
-      )
-
-      val newArtefact = libraryMetaArtefact.copy(
+      val meta = libraryMetaArtefact.copy(
         dependencyDotBuild = None,
-        modules = updatedModules
+        modules            = Seq(
+                               module1.copy(dependencyDotCompile = None, dependencyDotProvided = None,  crossScalaVersions = None, sbtVersion = None),
+                               module2.copy(dependencyDotTest    = None                              ,  crossScalaVersions = None, sbtVersion = None),
+                               module3.copy(dependencyDotIt      = None                              ,  crossScalaVersions = None, sbtVersion = None)
+                             )
       )
 
-      DependencyService.parseArtefactDependencies(newArtefact) shouldBe Map.empty
+      DependencyService.parseMetaArtefact(meta) shouldBe Map.empty
     }
   }
 
@@ -191,36 +183,39 @@ class DependencyServiceSpec
     "add service" in {
       when(mockArtifactRepository.find(any())).thenReturn(Future.successful(None))
       when(mockDependencyRepository.put(any())).thenReturn(Future.unit)
-      when(mockServiceDependencyRepository.populateDependencies(any())).thenReturn(Future.unit)
+      when(mockServiceDependencyRepository.put(any())).thenReturn(Future.unit)
       when(mockTeamsAndRepositoriesConnector.getRepository(any())(any())).thenReturn(Future.successful(Some(serviceRepo)))
 
-      val newVersionArtefact: MetaArtefact = serviceMetaArtefact.copy(
-        version = Version("1.1.0")
-      )
+      val meta: MetaArtefact = serviceMetaArtefact.copy(version = Version("1.1.0"))
 
-      service.setArtefactDependencies(newVersionArtefact).futureValue mustBe ()
+      service.addDependencies(meta).futureValue mustBe ()
 
-      verify(mockDependencyRepository, times(1))
-        .put(MetaArtefactDependency.fromMetaArtefact(newVersionArtefact, RepoType.Service))
+      val deps =
+        DependencyService
+          .parseMetaArtefact(meta)
+          .map { case (node, scopes) => MetaArtefactDependency.apply(meta, RepoType.Service, node, scopes) }
+          .toSeq
 
-      verify(mockServiceDependencyRepository, times(1))
-        .populateDependencies(newVersionArtefact)
+      verify(mockDependencyRepository       , times(1)).put(deps)
+      // verify(mockServiceDependencyRepository, times(1)).put(deps)
     }
-
 
     "replace meta artefact when given the same version" in {
       when(mockArtifactRepository.find(any())).thenReturn(Future.successful(Some(libraryMetaArtefact)))
       when(mockDependencyRepository.put(any())).thenReturn(Future.unit)
       when(mockTeamsAndRepositoriesConnector.getRepository(any())(any())).thenReturn(Future.successful(Some(libraryRepo)))
 
-      val newVersionArtefact: MetaArtefact = libraryMetaArtefact.copy(
-        version = Version("1.0.0")
-      )
+      val meta: MetaArtefact = libraryMetaArtefact.copy(version = Version("1.0.0"))
 
-      service.setArtefactDependencies(newVersionArtefact).futureValue mustBe()
+      service.addDependencies(meta).futureValue mustBe()
 
-      verify(mockDependencyRepository, times(1))
-        .put(MetaArtefactDependency.fromMetaArtefact(newVersionArtefact, RepoType.Library))
+      val deps =
+        DependencyService
+          .parseMetaArtefact(meta)
+          .map { case (node, scopes) => MetaArtefactDependency.apply(meta, RepoType.Library, node, scopes) }
+          .toSeq
+
+      verify(mockDependencyRepository, times(1)).put(deps)
     }
 
     "replace meta artefact when given a new version" in {
@@ -228,14 +223,17 @@ class DependencyServiceSpec
       when(mockDependencyRepository.put(any())).thenReturn(Future.unit)
       when(mockTeamsAndRepositoriesConnector.getRepository(any())(any())).thenReturn(Future.successful(Some(libraryRepo)))
 
-      val newVersionArtefact: MetaArtefact = libraryMetaArtefact.copy(
-        version = Version("1.1.0")
-      )
+      val meta: MetaArtefact = libraryMetaArtefact.copy(version = Version("1.1.0"))
 
-      service.setArtefactDependencies(newVersionArtefact).futureValue mustBe ()
+      service.addDependencies(meta).futureValue mustBe ()
 
-      verify(mockDependencyRepository, times(1))
-        .put(MetaArtefactDependency.fromMetaArtefact(newVersionArtefact, RepoType.Library))
+      val deps =
+        DependencyService
+          .parseMetaArtefact(meta)
+          .map { case (node, scopes) => MetaArtefactDependency.apply(meta, RepoType.Library, node, scopes) }
+          .toSeq
+
+      verify(mockDependencyRepository, times(1)).put(deps)
     }
 
     "replace meta artefact when given a new version and set repo type to Other if it cannot be found" in {
@@ -243,14 +241,17 @@ class DependencyServiceSpec
       when(mockDependencyRepository.put(any())).thenReturn(Future.unit)
       when(mockTeamsAndRepositoriesConnector.getRepository(any())(any())).thenReturn(Future.successful(None))
 
-      val newVersionArtefact: MetaArtefact = libraryMetaArtefact.copy(
-        version = Version("1.1.0")
-      )
+      val meta: MetaArtefact = libraryMetaArtefact.copy(version = Version("1.1.0"))
 
-      service.setArtefactDependencies(newVersionArtefact).futureValue mustBe()
+      service.addDependencies(meta).futureValue mustBe ()
 
-      verify(mockDependencyRepository, times(1))
-        .put(MetaArtefactDependency.fromMetaArtefact(newVersionArtefact, RepoType.Other))
+      val deps =
+        DependencyService
+          .parseMetaArtefact(meta)
+          .map { case (node, scopes) => MetaArtefactDependency.apply(meta, RepoType.Other, node, scopes) }
+          .toSeq
+
+      verify(mockDependencyRepository, times(1)).put(deps)
     }
 
     "not add meta artefact when given a old version" in {
@@ -260,7 +261,7 @@ class DependencyServiceSpec
         version = Version("0.9.0")
       )
 
-      service.setArtefactDependencies(oldVersionArtefact).futureValue mustBe()
+      service.addDependencies(oldVersionArtefact).futureValue mustBe()
 
       verifyNoMoreInteractions(mockDependencyRepository)
     }

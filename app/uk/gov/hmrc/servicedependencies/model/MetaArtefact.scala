@@ -29,7 +29,8 @@ case class MetaArtefact(
   dependencyDotBuild: Option[String]      = None,
   buildInfo         : Map[String, String] = Map.empty,
   modules           : Seq[MetaArtefactModule],
-  created           : Instant             = Instant.now()
+  created           : Instant             = Instant.now(),
+  latest            : Boolean             = false
 ) {
   def subModuleNames = modules.collect { case x if x.name != name => x.name }
 }
@@ -46,6 +47,7 @@ object MetaArtefact {
     ~ (__ \ "buildInfo"         ).format[Map[String, String]]
     ~ (__ \ "modules"           ).format[Seq[MetaArtefactModule]]
     ~ (__ \ "created"           ).format[Instant](MongoJavatimeFormats.instantFormat)
+    ~ (__ \ "latest"            ).formatWithDefault[Boolean](false)
     )(MetaArtefact.apply, unlift(MetaArtefact.unapply))
 
   val apiFormat: OFormat[MetaArtefact] =
@@ -57,6 +59,7 @@ object MetaArtefact {
     ~ (__ \ "buildInfo"         ).format[Map[String, String]]
     ~ (__ \ "modules"           ).format[Seq[MetaArtefactModule]]
     ~ (__ \ "created"           ).format[Instant]
+    ~ (__ \ "latest"            ).formatWithDefault[Boolean](false)
     )(MetaArtefact.apply, unlift(MetaArtefact.unapply))
 }
 

@@ -24,15 +24,13 @@ import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.mongo.TimestampSupport
 import uk.gov.hmrc.mongo.lock.{ScheduledLockService, MongoLockRepository}
 import uk.gov.hmrc.servicedependencies.config.SchedulerConfigs
-import uk.gov.hmrc.servicedependencies.service.{DerivedViewsService}
-import uk.gov.hmrc.servicedependencies.service.MetaArtefactService
+import uk.gov.hmrc.servicedependencies.service.DerivedViewsService
 import uk.gov.hmrc.servicedependencies.util.SchedulerUtils
 
 import scala.concurrent.ExecutionContext
 
 class SlugMetadataUpdateScheduler @Inject()(
    schedulerConfigs   : SchedulerConfigs,
-   metaArtefactService: MetaArtefactService,
    derivedViewsService: DerivedViewsService,
    mongoLockRepository: MongoLockRepository,
    timestampSupport   : TimestampSupport
@@ -56,9 +54,9 @@ class SlugMetadataUpdateScheduler @Inject()(
   scheduleWithLock("Slug Metadata Updater", schedulerConfigs.slugMetadataUpdate, lock) {
     logger.info("Updating slug metadata")
     for {
-      _ <- metaArtefactService.updateMetadata()
-      _ =  logger.info("Finished updating slug metadata")
-      _ <- derivedViewsService.generateAllViews()
+      _ <- derivedViewsService.updateDeploymentData()
+      _ =  logger.info("Finished updating deployment data")
+      _ <- derivedViewsService.updateDerivedViews()
       _ =  logger.info("Finished updating derived views")
     } yield ()
   }

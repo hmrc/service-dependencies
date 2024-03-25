@@ -16,130 +16,93 @@
 
 package uk.gov.hmrc.servicedependencies.model
 
-import play.api.libs.functional.syntax.toFunctionalBuilderOps
+import play.api.libs.functional.syntax._
 import play.api.libs.json.Format.GenericFormat
 import play.api.libs.json._
-import uk.gov.hmrc.servicedependencies.model.RepoType.Service
-import uk.gov.hmrc.servicedependencies.service.DependencyService
+
+import uk.gov.hmrc.servicedependencies.util.DependencyGraphParser
 
 case class MetaArtefactDependency(
-  repoName: String,
-  repoVersion: Version,
-  teams: List[String], // Override on write
-  repoType: RepoType,
-  depGroup: String,
-  depArtefact: String,
-  depVersion: Version,
-  compileFlag: Boolean,
+  repoName    : String,
+  repoVersion : Version,
+  repoType    : RepoType,
+  teams       : List[String], // Override on write
+  depGroup    : String,
+  depArtefact : String,
+  depVersion  : Version,
+  compileFlag : Boolean,
   providedFlag: Boolean,
-  testFlag: Boolean,
-  itFlag: Boolean,
-  buildFlag: Boolean
+  testFlag    : Boolean,
+  itFlag      : Boolean,
+  buildFlag   : Boolean
 )
 
 object MetaArtefactDependency {
 
-  implicit val versionFormats: Format[Version] = Version.format
+  def apply(metaArtefact: MetaArtefact, repoType: RepoType, node: DependencyGraphParser.Node, scopes: Set[DependencyScope]): MetaArtefactDependency = MetaArtefactDependency(
+    repoName     = metaArtefact.name,
+    repoVersion  = metaArtefact.version,
+    repoType     = repoType,
+    teams        = List.empty,
+    depGroup     = node.group,
+    depArtefact  = node.artefact,
+    depVersion   = Version(node.version),
+    compileFlag  = scopes.contains(DependencyScope.Compile),
+    providedFlag = scopes.contains(DependencyScope.Provided),
+    testFlag     = scopes.contains(DependencyScope.Test),
+    itFlag       = scopes.contains(DependencyScope.It),
+    buildFlag    = scopes.contains(DependencyScope.Build)
+  )
 
-  val mongoFormat: OFormat[MetaArtefactDependency] = {
-    ((__ \ "repoName").format[String]
-      ~ (__ \ "repoVersion").format[Version]
-      ~ (__ \ "repoType").format[RepoType]
-      ~ (__ \ "group").format[String]
-      ~ (__ \ "artefact").format[String]
-      ~ (__ \ "version").format[Version]
-      ~ (__ \ "scope_compile").format[Boolean]
-      ~ (__ \ "scope_provided").format[Boolean]
-      ~ (__ \ "scope_test").format[Boolean]
-      ~ (__ \ "scope_it").format[Boolean]
-      ~ (__ \ "scope_build").format[Boolean]
-      )((sn, sv, rt, g, a, av, cf, pf, tf, itf, bf) =>
-      MetaArtefactDependency(
-        sn, sv, List.empty, rt, g, a, av, cf, pf, tf, itf, bf
-      ),
-      ( mad => (mad.repoName,
-        mad.repoVersion,
-        mad.repoType,
-        mad.depGroup,
-        mad.depArtefact,
-        mad.depVersion,
-        mad.compileFlag,
-        mad.providedFlag,
-        mad.testFlag,
-        mad.itFlag,
-        mad.buildFlag
-      ))
+  private def ignore[A] = OWrites[A](_ => Json.obj())
+
+  val mongoFormat: OFormat[MetaArtefactDependency] =
+    ( (__ \ "repoName"      ).format[String]
+    ~ (__ \ "repoVersion"   ).format[Version](Version.format)
+    ~ (__ \ "repoType"      ).format[RepoType]
+    ~ OFormat(
+      Reads.pure(List.empty[String])
+    , ignore[List[String]]
     )
-  }
-
+    ~ (__ \ "group"         ).format[String]
+    ~ (__ \ "artefact"      ).format[String]
+    ~ (__ \ "version"       ).format[Version](Version.format)
+    ~ (__ \ "scope_compile" ).format[Boolean]
+    ~ (__ \ "scope_provided").format[Boolean]
+    ~ (__ \ "scope_test"    ).format[Boolean]
+    ~ (__ \ "scope_it"      ).format[Boolean]
+    ~ (__ \ "scope_build"   ).format[Boolean]
+    )(MetaArtefactDependency.apply, unlift(MetaArtefactDependency.unapply))
 
   val apiWrites: OWrites[MetaArtefactDependency] = {
-
-    implicit val scopeFormat   = DependencyScope.dependencyScopeFormat
-
-    (
-      (__ \ "repoName").write[String] ~
-      (__ \ "repoVersion").write[String] ~
-      (__ \ "teams").write[List[String]] ~
-      (__ \ "repoType").write[RepoType] ~
-      (__ \ "depGroup").write[String] ~
-      (__ \ "depArtefact").write[String] ~
-      (__ \ "depVersion").write[String] ~
-      (__ \ "scopes").write[Set[DependencyScope]]
-      ) (mad => (
+    implicit val scopeFormat = DependencyScope.dependencyScopeFormat
+    ( (__ \ "repoName"   ).write[String]
+    ~ (__ \ "repoVersion").write[String]
+    ~ (__ \ "repoType"   ).write[RepoType]
+    ~ (__ \ "teams"      ).write[List[String]]
+    ~ (__ \ "depGroup"   ).write[String]
+    ~ (__ \ "depArtefact").write[String]
+    ~ (__ \ "depVersion" ).write[String]
+    ~ (__ \ "scopes"     ).write[Set[DependencyScope]]
+    ) (mad => (
       mad.repoName,
-      mad.repoVersion.toString,
-      mad.teams,
+      mad.repoVersion.original,
       mad.repoType,
+      mad.teams,
       mad.depGroup,
       mad.depArtefact,
-      mad.depVersion.toString,
-        Set[DependencyScope](DependencyScope.Compile).filter(_ => mad.compileFlag) ++
-        Set[DependencyScope](DependencyScope.Provided).filter(_ => mad.providedFlag) ++
-        Set[DependencyScope](DependencyScope.Test).filter(_ => mad.testFlag) ++
-        Set[DependencyScope](DependencyScope.It).filter(_ => mad.itFlag) ++
-        Set[DependencyScope](DependencyScope.Build).filter(_ => mad.buildFlag)
+      mad.depVersion.original,
+      DependencyScope
+        .values
+        .toSet
+        .filter {
+          case DependencyScope.Compile  => mad.compileFlag
+          case DependencyScope.Provided => mad.providedFlag
+          case DependencyScope.Test     => mad.testFlag
+          case DependencyScope.It       => mad.itFlag
+          case DependencyScope.Build    => mad.buildFlag
+        }
     ))
-  }
-
-  def fromMetaArtefact(metaArtefact: MetaArtefact, repoType: RepoType): Seq[MetaArtefactDependency] = {
-    DependencyService.parseArtefactDependencies(metaArtefact).map {
-      case (node, scope) =>
-        MetaArtefactDependency(
-          metaArtefact.name,
-          metaArtefact.version,
-          List.empty,
-          repoType,
-          node.group,
-          node.artefact,
-          Version(node.version),
-          compileFlag   = scope.contains(DependencyScope.Compile),
-          providedFlag  = scope.contains(DependencyScope.Provided),
-          testFlag      = scope.contains(DependencyScope.Test),
-          itFlag        = scope.contains(DependencyScope.It),
-          buildFlag     = scope.contains(DependencyScope.Build)
-        )
-    }.toSeq
-  }
-
-  def fromServiceDependency(serviceDependency: ServiceDependency): MetaArtefactDependency = {
-    serviceDependency match {
-      case ServiceDependency(slugName, slugVersion, teams, depGroup, depArtefact, depVersion, _, scope) =>
-        MetaArtefactDependency(
-          repoName        = slugName,
-          repoVersion     = slugVersion,
-          teams           = teams,
-          repoType        = Service,
-          depGroup        = depGroup,
-          depArtefact     = depArtefact,
-          depVersion      = depVersion,
-          compileFlag     = scope.contains(DependencyScope.Compile),
-          providedFlag    = scope.contains(DependencyScope.Provided),
-          testFlag        = scope.contains(DependencyScope.Test),
-          itFlag          = scope.contains(DependencyScope.It),
-          buildFlag       = scope.contains(DependencyScope.Build)
-        )
-    }
   }
 }
 

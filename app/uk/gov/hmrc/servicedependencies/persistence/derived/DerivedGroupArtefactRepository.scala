@@ -20,7 +20,6 @@ import cats.implicits._
 import org.mongodb.scala.bson.BsonDocument
 import org.mongodb.scala.bson.conversions.Bson
 import org.mongodb.scala.model.Aggregates.`match`
-import org.mongodb.scala.model.Filters.{and, equal, nin}
 import org.mongodb.scala.model._
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.play.json.{CollectionFactory, PlayMongoRepository}
@@ -54,7 +53,6 @@ class DerivedGroupArtefactRepository @Inject()(
       .map(g => g.copy(artefacts = g.artefacts.sorted))
       .toFuture()
 
-
   private val groupArtefactsTransformationPipeline: List[Bson] = {
     Aggregates.project(
       Projections.fields(
@@ -64,9 +62,9 @@ class DerivedGroupArtefactRepository @Inject()(
     ) ::
       BsonDocument(
         "$group" -> BsonDocument(
-          "_id" -> BsonDocument("group" -> "$group")
+            "_id" -> BsonDocument("group" -> "$group")
           , "artifacts" -> BsonDocument("$addToSet" -> "$artefact")
-        )
+          )
       ) ::
       Aggregates.project( // reproject the result so fields are at the root level
         Projections.fields(
@@ -77,57 +75,51 @@ class DerivedGroupArtefactRepository @Inject()(
       ) ::
       Aggregates.addFields(
         Field("scope_compile", true)
-        , Field("scope_provided", true)
-        , Field("scope_test", true)
-        , Field("scope_it", true)
-        , Field("scope_build", true)
+      , Field("scope_provided", true)
+      , Field("scope_test", true)
+      , Field("scope_it", true)
+      , Field("scope_build", true)
       ) :: Nil
   }
 
-  private def getFromSlugInfo(): Future[Seq[GroupArtefacts]] =
+  private def derivedDeployedDependencies(): Future[Seq[GroupArtefacts]] =
     deploymentRepository.lookupAgainstDeployments(
-      collectionName = "DERIVED-slug-dependencies"
-      , domainFormat = MongoSlugInfoFormats.groupArtefactsFormat
-      , slugNameField = "slugName"
-      , slugVersionField = "slugVersion"
+      collectionName   = "DERIVED-deployed-dependencies"
+    , domainFormat     = MongoSlugInfoFormats.groupArtefactsFormat
+    , slugNameField    = "repoName"
+    , slugVersionField = "repoVersion"
     )(
       deploymentsFilter = Filters.or(SlugInfoFlag.values.map(flag => Filters.equal(flag.asString, true)): _*)
-      , domainFilter = BsonDocument()
-      , pipeline = groupArtefactsTransformationPipeline
+    , domainFilter      = BsonDocument()
+    , pipeline          = groupArtefactsTransformationPipeline
     )
 
-  private def getFromMetaArtefacts(): Future[Seq[GroupArtefacts]] = {
-    CollectionFactory.collection(mongoComponent.database, "DERIVED-dependencies", domainFormat)
-      .aggregate(
-        List(
-          `match`(
-            and(
-              nin("name", SlugDenylist.denylistedSlugs)
-            )
-          )
-        ) ++ groupArtefactsTransformationPipeline
-      ).toFuture()
+  private def derivedLatestDependencies(): Future[Seq[GroupArtefacts]] = {
+    CollectionFactory
+      .collection(mongoComponent.database, "DERIVED-latest-dependencies", domainFormat)
+      .aggregate(`match`(Filters.nin("name", SlugDenylist.denylistedSlugs)) :: groupArtefactsTransformationPipeline)
+      .toFuture()
   }
 
   def populateAll(): Future[Unit] = {
     for {
-      groupFromSlug <- getFromSlugInfo()
-      groupFromMeta <- getFromMetaArtefacts()
-      groupSlugToMap = groupFromSlug.map(group => (group.group, group.artefacts)).toMap
-      groupMetaToMap = groupFromMeta.map(group => (group.group, group.artefacts)).toMap
-      toGroup        = groupSlugToMap.combine(groupMetaToMap).map{ case (k, v) => GroupArtefacts(k, v.distinct)}.toSeq
-      _             <- collection
-        .bulkWrite(
-          toGroup.map(d =>
-            ReplaceOneModel(
-              filter = Filters.and(
-                equal("group", d.group)
-              ),
-              replacement = d,
-              replaceOptions = ReplaceOptions().upsert(true)
-            )
-          )
-        ).toFuture()
+      deployedDeps <- derivedDeployedDependencies()
+                        .map(_.map(group => (group.group, group.artefacts)).toMap)
+      latestDeps   <- derivedLatestDependencies()
+                        .map(_.map(group => (group.group, group.artefacts)).toMap)
+      all          =  deployedDeps
+                        .combine(latestDeps)
+                        .map { case (k, v) => GroupArtefacts(k, v.distinct)}
+                        .toSeq
+      _            <- collection
+                        .bulkWrite(all.map(d =>
+                          ReplaceOneModel(
+                            filter         = Filters.equal("group", d.group),
+                            replacement    = d,
+                            replaceOptions = ReplaceOptions().upsert(true)
+                          )
+                        ))
+                        .toFuture()
     } yield ()
   }
 }

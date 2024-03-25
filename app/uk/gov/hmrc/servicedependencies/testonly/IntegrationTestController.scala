@@ -26,22 +26,22 @@ import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 import uk.gov.hmrc.servicedependencies.model._
 import uk.gov.hmrc.servicedependencies.persistence._
 import uk.gov.hmrc.servicedependencies.service.{DependencyLookupService, DerivedViewsService, SlugInfoService}
-import uk.gov.hmrc.servicedependencies.persistence.derived.{DerivedDependencyRepository, DerivedServiceDependenciesRepository}
+import uk.gov.hmrc.servicedependencies.persistence.derived.{DerivedDeployedDependencyRepository, DerivedLatestDependencyRepository}
 
 import scala.concurrent.{ExecutionContext, Future}
 
 class IntegrationTestController @Inject()(
-    latestVersionRepository             : LatestVersionRepository
-  , slugInfoRepo                        : SlugInfoRepository
-  , slugInfoService                     : SlugInfoService
-  , bobbyRulesSummaryRepo               : BobbyRulesSummaryRepository
-  , derivedViewsService                 : DerivedViewsService
-  , deploymentsRepo                     : DeploymentRepository
-  , derivedServiceDependenciesRepository: DerivedServiceDependenciesRepository
-  , derivedDependencyRepository         : DerivedDependencyRepository
-  , metaArtefactRepository              : MetaArtefactRepository
-  , dependencyLookupService             : DependencyLookupService
-  , cc                                  : ControllerComponents
+    latestVersionRepository            : LatestVersionRepository
+  , slugInfoRepo                       : SlugInfoRepository
+  , slugInfoService                    : SlugInfoService
+  , bobbyRulesSummaryRepo              : BobbyRulesSummaryRepository
+  , derivedViewsService                : DerivedViewsService
+  , deploymentsRepo                    : DeploymentRepository
+  , derivedDeployedDependencyRepository: DerivedDeployedDependencyRepository
+  , derivedLatestDependencyRepository  : DerivedLatestDependencyRepository
+  , metaArtefactRepository             : MetaArtefactRepository
+  , dependencyLookupService            : DependencyLookupService
+  , cc                                 : ControllerComponents
   )(implicit ec: ExecutionContext
   ) extends BackendController(cc) {
 
@@ -71,7 +71,7 @@ class IntegrationTestController @Inject()(
   def addMetaArtefacts = {
     implicit val maf = MetaArtefact.apiFormat
     Action.async(validateJson[List[MetaArtefact]]) { implicit request =>
-      request.body.traverse(metaArtefactRepository.add)
+      request.body.traverse(metaArtefactRepository.put)
         .map(_ => NoContent)
     }
   }
@@ -79,15 +79,17 @@ class IntegrationTestController @Inject()(
   def addMetaArtefactDependencies(): Action[List[MetaArtefactDependency]] = {
     implicit val mad = MetaArtefactDependency.mongoFormat
     Action.async(validateJson[List[MetaArtefactDependency]]) { implicit request =>
-      derivedDependencyRepository.put(request.body).map {
-        _ => NoContent
-      }
+      derivedLatestDependencyRepository
+        .put(request.body)
+        .map(_ => NoContent)
     }
   }
 
   def deleteMetaArtefactDependencies =
     Action.async {
-      derivedDependencyRepository.clearAllData()
+      derivedLatestDependencyRepository
+        .collection
+        .deleteMany(BsonDocument()).toFuture()
         .map(_ => NoContent)
     }
 
@@ -108,11 +110,7 @@ class IntegrationTestController @Inject()(
             Future.unit
 
         for {
-          m <- metaArtefactRepository
-                .find(slugInfoWithFlag.slugInfo.name, slugInfoWithFlag.slugInfo.version)
-                .map(_.getOrElse(sys.error(s"Can't find meta artefact for service: ${slugInfoWithFlag.slugInfo.name} version: ${slugInfoWithFlag.slugInfo.version}"))) // addMetaArtefacts should be called before addSluginfos
           _ <- slugInfoService.addSlugInfo(slugInfoWithFlag.slugInfo)
-          _ <- derivedServiceDependenciesRepository.populateDependencies(m)
           _ <- updateFlag(slugInfoWithFlag, SlugInfoFlag.Latest      , _.latest      )
           _ <- updateFlag(slugInfoWithFlag, SlugInfoFlag.Production  , _.production  )
           _ <- updateFlag(slugInfoWithFlag, SlugInfoFlag.QA          , _.qa          )
@@ -120,7 +118,7 @@ class IntegrationTestController @Inject()(
           _ <- updateFlag(slugInfoWithFlag, SlugInfoFlag.Development , _.development )
           _ <- updateFlag(slugInfoWithFlag, SlugInfoFlag.ExternalTest, _.externalTest)
           _ <- updateFlag(slugInfoWithFlag, SlugInfoFlag.Integration , _.integration )
-          _ <- derivedViewsService.generateAllViews()
+          _ <- derivedViewsService.updateDerivedViews()
         } yield ()
       }.map(_ => NoContent)
     }
@@ -130,7 +128,7 @@ class IntegrationTestController @Inject()(
     Action.async {
       for {
         _ <- slugInfoRepo.clearAllData()
-        _ <- derivedServiceDependenciesRepository.collection.deleteMany(BsonDocument()).toFuture()
+        _ <- derivedDeployedDependencyRepository.collection.deleteMany(BsonDocument()).toFuture()
       } yield NoContent
     }
 
@@ -155,7 +153,7 @@ class IntegrationTestController @Inject()(
         , slugInfoRepo.clearAllData()
         , bobbyRulesSummaryRepo.clearAllData()
         , deploymentsRepo.clearAllData()
-        , derivedServiceDependenciesRepository.collection.deleteMany(BsonDocument()).toFuture()
+        , derivedDeployedDependencyRepository.collection.deleteMany(BsonDocument()).toFuture()
         , metaArtefactRepository.clearAllData()
         ).sequence
          .map(_ => NoContent)

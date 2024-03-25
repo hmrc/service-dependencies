@@ -23,7 +23,7 @@ import com.google.inject.{Inject, Singleton}
 import org.mongodb.scala.ClientSession
 import org.mongodb.scala.bson.{BsonArray, BsonDocument}
 import org.mongodb.scala.bson.conversions.Bson
-import org.mongodb.scala.model.{IndexModel, IndexOptions, UpdateOptions, Variable}
+import org.mongodb.scala.model.{IndexModel, IndexOptions, UpdateOptions, Sorts, Variable}
 import org.mongodb.scala.model.Aggregates._
 import org.mongodb.scala.model.Filters._
 import org.mongodb.scala.model.Updates.{set, _}
@@ -81,12 +81,18 @@ class DeploymentRepository @Inject()(
     logger.debug(s"clearing ${flags.size} flags on ${names.size} services")
     collection
       .updateMany(
-          filter = in("name", names:_ *),
-          update = combine(flags.map(flag => set(flag.asString, false)):_ *)
+          filter = in("name", names: _*),
+          update = combine(flags.map(flag => set(flag.asString, false)): _*)
         )
       .toFuture()
       .map(_ => ())
   }
+
+  def findDeployed(): Future[Seq[Deployment]] =
+    collection
+      .find(or(SlugInfoFlag.values.map(v => equal(v.asString, true)): _*))
+      .sort(Sorts.ascending("name"))
+      .toFuture()
 
   def getNames(flag: SlugInfoFlag): Future[Seq[String]] =
     collection
@@ -191,7 +197,20 @@ case class Deployment(
   development  : Boolean,
   externalTest : Boolean,
   integration  : Boolean
-)
+) {
+  lazy val flags: List[SlugInfoFlag] =
+    SlugInfoFlag
+      .values
+      .filter {
+        case SlugInfoFlag.Latest       => latest
+        case SlugInfoFlag.Production   => production
+        case SlugInfoFlag.QA           => qa
+        case SlugInfoFlag.Staging      => staging
+        case SlugInfoFlag.Development  => development
+        case SlugInfoFlag.ExternalTest => externalTest
+        case SlugInfoFlag.Integration  => integration
+      }
+}
 
 object Deployment {
   val mongoFormat: Format[Deployment] = {

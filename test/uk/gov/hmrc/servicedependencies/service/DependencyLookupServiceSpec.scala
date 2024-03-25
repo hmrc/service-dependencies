@@ -26,7 +26,7 @@ import uk.gov.hmrc.mongo.test.MongoSupport
 import uk.gov.hmrc.servicedependencies.connector.ServiceConfigsConnector
 import uk.gov.hmrc.servicedependencies.model._
 import uk.gov.hmrc.servicedependencies.persistence.BobbyRulesSummaryRepository
-import uk.gov.hmrc.servicedependencies.persistence.derived.{DerivedDependencyRepository, DerivedServiceDependenciesRepository}
+import uk.gov.hmrc.servicedependencies.persistence.derived.{DerivedDeployedDependencyRepository, DerivedLatestDependencyRepository}
 
 import java.time.LocalDate
 import java.util.concurrent.atomic.AtomicReference
@@ -45,9 +45,9 @@ class DependencyLookupServiceSpec
 
   import ExecutionContext.Implicits.global
 
-  private val configService                         = mock[ServiceConfigsConnector]
-  private val derivedServiceDependenciesRepository  = mock[DerivedServiceDependenciesRepository]
-  private val derivedDependenciesRepository         = mock[DerivedDependencyRepository]
+  private val mockedConfigService                       = mock[ServiceConfigsConnector]
+  private val mockedDerivedDeployedDependencyRepository = mock[DerivedDeployedDependencyRepository]
+  private val mockedDerivedLatestDependencyRepository   = mock[DerivedLatestDependencyRepository]
 
   private val bobbyRulesSummaryRepo = new BobbyRulesSummaryRepository(mongoComponent) {
 
@@ -73,9 +73,9 @@ class DependencyLookupServiceSpec
   }
   override protected def beforeEach(): Unit = {
     super.beforeEach()
-    reset(configService)
-    reset(derivedServiceDependenciesRepository)
-    reset(derivedDependenciesRepository)
+    reset(mockedConfigService)
+    reset(mockedDerivedDeployedDependencyRepository)
+    reset(mockedDerivedLatestDependencyRepository)
     bobbyRulesSummaryRepo.clearAllData().futureValue
   }
 
@@ -110,22 +110,19 @@ class DependencyLookupServiceSpec
 
     "return the number of repositories violating a bobby rule for latest" in {
 
-      val serviceDeb1Meta = MetaArtefactDependency.fromServiceDependency(serviceDep1)
-      val serviceDeb2Meta = MetaArtefactDependency.fromServiceDependency(serviceDep2)
-
-      when(configService.getBobbyRules())
+      when(mockedConfigService.getBobbyRules())
         .thenReturn(Future(BobbyRules(Map(("uk.gov.hmrc", "libs") -> List(bobbyRule)))))
-      when(derivedServiceDependenciesRepository.findDependencies(any[SlugInfoFlag], any[Option[List[DependencyScope]]]))
+      when(mockedDerivedDeployedDependencyRepository.find(flag = any[SlugInfoFlag], group = any[Option[String]], artefact = any[Option[String]], scopes = any[Option[List[DependencyScope]]], slugName = any[Option[String]], slugVersion = any[Option[Version]]))
         .thenReturn(Future.successful(Seq.empty))
-      when(derivedDependenciesRepository.findDependencies(Some(DependencyScope.values)))
+      when(mockedDerivedLatestDependencyRepository.find(artefact = None, group = None, scopes = Some(DependencyScope.values)))
         .thenReturn(Future.successful(Seq(
-          serviceDeb1Meta
-          , serviceDeb1Meta.copy(repoVersion = Version("1.1.0"))
-          , serviceDeb1Meta.copy(repoVersion = Version("1.2.0"), depVersion = Version("5.12.0"))
-          , serviceDeb2Meta
-        )))
+          dep1
+        , dep1.copy(repoVersion = Version("1.1.0"))
+        , dep1.copy(repoVersion = Version("1.2.0"), depVersion = Version("5.12.0"))
+        , dep2
+      )))
 
-      val lookupService = new DependencyLookupService(configService, bobbyRulesSummaryRepo, derivedServiceDependenciesRepository, derivedDependenciesRepository)
+      val lookupService = new DependencyLookupService(mockedConfigService, bobbyRulesSummaryRepo, mockedDerivedDeployedDependencyRepository, mockedDerivedLatestDependencyRepository)
 
       lookupService.updateBobbyRulesSummary().futureValue
       val res = lookupService.getLatestBobbyRuleViolations.futureValue
@@ -142,21 +139,21 @@ class DependencyLookupServiceSpec
 
     "return the number of repositories violating a bobby rule for environments" in {
 
-      when(configService.getBobbyRules())
+      when(mockedConfigService.getBobbyRules())
         .thenReturn(Future(BobbyRules(Map(("uk.gov.hmrc", "libs") -> List(bobbyRule)))))
-      when(derivedServiceDependenciesRepository.findDependencies(any[SlugInfoFlag], any[Option[List[DependencyScope]]]))
+     when(mockedDerivedDeployedDependencyRepository.find(flag = any[SlugInfoFlag], group = any[Option[String]], artefact = any[Option[String]], scopes = any[Option[List[DependencyScope]]], slugName = any[Option[String]], slugVersion = any[Option[Version]]))
         .thenReturn(Future.successful(Seq.empty))
-      when(derivedDependenciesRepository.findDependencies(any[Option[List[DependencyScope]]]))
+      when(mockedDerivedLatestDependencyRepository.find(group = any[Option[String]], artefact = any[Option[String]], repoType = any[Option[List[RepoType]]], scopes = any[Option[List[DependencyScope]]], repoName = any[Option[String]], repoVersion = any[Option[Version]]))
         .thenReturn(Future.successful(Seq.empty))
-      when(derivedServiceDependenciesRepository.findDependencies(SlugInfoFlag.Production, Some(List(DependencyScope.Compile))))
+      when(mockedDerivedDeployedDependencyRepository.find(SlugInfoFlag.Production, group = None, artefact = None, scopes = Some(List(DependencyScope.Compile))))
         .thenReturn(Future.successful(Seq(
-          serviceDep1
-        , serviceDep1.copy(slugVersion = Version("1.1.0"))
-        , serviceDep1.copy(slugVersion = Version("1.2.0"), depVersion = Version("5.12.0"))
-        , serviceDep2
+          dep1
+        , dep1.copy(repoVersion = Version("1.1.0"))
+        , dep1.copy(repoVersion = Version("1.2.0"), depVersion = Version("5.12.0"))
+        , dep2
         )))
 
-      val lookupService = new DependencyLookupService(configService, bobbyRulesSummaryRepo, derivedServiceDependenciesRepository, derivedDependenciesRepository)
+      val lookupService = new DependencyLookupService(mockedConfigService, bobbyRulesSummaryRepo, mockedDerivedDeployedDependencyRepository, mockedDerivedLatestDependencyRepository)
 
       lookupService.updateBobbyRulesSummary().futureValue
       val res = lookupService.getLatestBobbyRuleViolations.futureValue
@@ -205,30 +202,36 @@ class DependencyLookupServiceSpec
   }
 }
 
-
 object DependencyLookupServiceTestData {
-  val serviceDep1 = ServiceDependency(
-    slugName     = "test-1"
-  , slugVersion  = Version("1.0.0")
-  , teams        = List.empty
-  , depGroup     = "org.libs"
-  , depArtefact  = "mylib"
-  , depVersion   = Version("5.11.0")
-  , scalaVersion = None
-  , scopes       = Set(DependencyScope.Compile)
+  val dep1 = MetaArtefactDependency(
+    repoName      = "test-1"
+  , repoVersion   = Version("1.0.0")
+  , repoType      = RepoType.Service
+  , teams         = List.empty
+  , depGroup      = "org.libs"
+  , depArtefact   = "mylib"
+  , depVersion    = Version("5.11.0")
+  , compileFlag   = false
+  , providedFlag  = true
+  , testFlag      = true
+  , itFlag        = true
+  , buildFlag     = true
   )
 
-  val serviceDep2 = ServiceDependency(
-    slugName = "test-2"
-  , slugVersion = Version("1.0.0")
-  , teams = List.empty
-  , depGroup = "org.libs"
-  , depArtefact = "mylib"
-  , depVersion = Version("5.12.0")
-  , scalaVersion = None
-  , scopes = Set(DependencyScope.Test, DependencyScope.Provided, DependencyScope.It, DependencyScope.Build)
+  val dep2 = MetaArtefactDependency(
+    repoName      = "test-2"
+  , repoVersion   = Version("1.0.0")
+  , repoType      = RepoType.Service
+  , teams         = List.empty
+  , depGroup      = "org.libs"
+  , depArtefact   = "mylib"
+  , depVersion    = Version("5.12.0")
+  , compileFlag   = false
+  , providedFlag  = true
+  , testFlag      = true
+  , itFlag        = true
+  , buildFlag     = true
   )
-
 
   val bobbyRule = BobbyRule(
     organisation = "org.libs",
