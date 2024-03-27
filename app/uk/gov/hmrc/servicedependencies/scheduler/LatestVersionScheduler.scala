@@ -20,19 +20,18 @@ import com.google.inject.Singleton
 
 import javax.inject.Inject
 import org.apache.pekko.actor.ActorSystem
+import play.api.Configuration
 import play.api.inject.ApplicationLifecycle
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.mongo.TimestampSupport
 import uk.gov.hmrc.mongo.lock.{ScheduledLockService, MongoLockRepository}
-import uk.gov.hmrc.servicedependencies.config.SchedulerConfigs
 import uk.gov.hmrc.servicedependencies.service.LatestVersionService
-import uk.gov.hmrc.servicedependencies.util.SchedulerUtils
 
 import scala.concurrent.ExecutionContext
 
 @Singleton
-class LatestVersionsReloadScheduler @Inject()(
-  schedulerConfigs    : SchedulerConfigs
+class LatestVersionScheduler @Inject()(
+  configuration       : Configuration
 , latestVersionService: LatestVersionService
 , mongoLockRepository : MongoLockRepository
 , timestampSupport    : TimestampSupport
@@ -42,23 +41,24 @@ class LatestVersionsReloadScheduler @Inject()(
 , ec                  : ExecutionContext
 ) extends SchedulerUtils {
 
+  private val schedulerConfigs =
+    SchedulerConfig(configuration, "scheduler.latestVersion")
+
   private val lock: ScheduledLockService =
     ScheduledLockService(
-      lockRepository    = mongoLockRepository,
-      lockId            = "dependencyVersions-reload-scheduler",
-      timestampSupport  = timestampSupport,
-      schedulerInterval = schedulerConfigs.latestVersionsReload.interval
+      lockRepository    = mongoLockRepository
+    , lockId            = "latest-versions-scheduler"
+    , timestampSupport  = timestampSupport
+    , schedulerInterval = schedulerConfigs.interval
     )
 
   implicit val hc: HeaderCarrier = HeaderCarrier()
 
-  scheduleWithLock(
-    label           = "latestVersionsReloader"
-  , schedulerConfig = schedulerConfigs.latestVersionsReload
-  , lock            = lock
-  ){
-    latestVersionService
-      .reloadLatestVersions()
-      .map(_ => ())
+  scheduleWithLock("Latest Version", schedulerConfigs, lock){
+    logger.info("Updating latest versions")
+    for {
+      _ <- latestVersionService.reloadLatestVersions()
+      _ =  logger.info("Finished updating latest versions")
+    } yield ()
   }
 }
