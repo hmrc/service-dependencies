@@ -14,9 +14,8 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.servicedependencies.config
+package uk.gov.hmrc.servicedependencies.scheduler
 
-import javax.inject.{Inject, Singleton}
 import play.api.Configuration
 
 import scala.concurrent.duration.FiniteDuration
@@ -43,11 +42,4 @@ object SchedulerConfig {
         initialDelay = configuration.get[FiniteDuration](initialDelayKey),
       )
     }
-}
-
-@Singleton
-class SchedulerConfigs @Inject()(configuration: Configuration) {
-  val slugMetadataUpdate   = SchedulerConfig(configuration, "repositoryDependencies.slugJob")
-  val bobbyRulesSummary    = SchedulerConfig(configuration, "repositoryDependencies.bobbyRulesSummaryScheduler")
-  val latestVersionsReload = SchedulerConfig(configuration, "dependencyVersionsReload.scheduler")
 }
