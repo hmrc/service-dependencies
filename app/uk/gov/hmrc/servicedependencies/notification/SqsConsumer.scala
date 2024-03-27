@@ -105,7 +105,7 @@ abstract class SqsConsumer(
     }
     .run()
     .andThen { res =>
-      logger.info(s"Queue $name terminated: $res - restarting")
+      logger.warn(s"Queue $name terminated: $res - restarting")
       actorSystem.scheduler.scheduleOnce(10.seconds)(runQueue())
     }
 

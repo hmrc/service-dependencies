@@ -20,8 +20,8 @@ import org.apache.pekko.stream.Materializer
 import play.api.{Configuration, Environment, Logger}
 import play.api.inject.Binding
 import play.api.libs.concurrent.MaterializerProvider
-import uk.gov.hmrc.servicedependencies.notification.{MetaArtefactUpdateHandler, MetaArtefactDeadLetterHandler, SlugInfoUpdatedHandler, SlugInfoDeadLetterHandler}
-import uk.gov.hmrc.servicedependencies.scheduler.{BobbyRulesSummaryScheduler, LatestVersionsReloadScheduler, SlugMetadataUpdateScheduler}
+import uk.gov.hmrc.servicedependencies.notification.{DeploymentHandler, MetaArtefactUpdateHandler, MetaArtefactDeadLetterHandler, SlugInfoUpdatedHandler, SlugInfoDeadLetterHandler}
+import uk.gov.hmrc.servicedependencies.scheduler.{BobbyRulesSummaryScheduler, DerivedViewsScheduler, LatestVersionScheduler}
 
 class Module extends play.api.inject.Module {
 
@@ -30,7 +30,8 @@ class Module extends play.api.inject.Module {
   private def ecsDeploymentsBindings(configuration: Configuration): Seq[Binding[_]] = {
     if (configuration.get[Boolean]("aws.sqs.enabled"))
       Seq(
-        bind[MetaArtefactUpdateHandler    ].toSelf.eagerly()
+        bind[DeploymentHandler            ].toSelf.eagerly()
+      , bind[MetaArtefactUpdateHandler    ].toSelf.eagerly()
       , bind[MetaArtefactDeadLetterHandler].toSelf.eagerly()
       , bind[SlugInfoUpdatedHandler       ].toSelf.eagerly()
       , bind[SlugInfoDeadLetterHandler    ].toSelf.eagerly()
@@ -43,10 +44,10 @@ class Module extends play.api.inject.Module {
 
   override def bindings(environment: Environment, configuration: Configuration): Seq[Binding[_]] =
     Seq(
-      bind[LatestVersionsReloadScheduler].toSelf.eagerly()
-    , bind[SlugMetadataUpdateScheduler  ].toSelf.eagerly()
-    , bind[BobbyRulesSummaryScheduler   ].toSelf.eagerly()
-    , bind[Materializer                 ].toProvider(classOf[MaterializerProvider])
+      bind[BobbyRulesSummaryScheduler].toSelf.eagerly()
+    , bind[DerivedViewsScheduler     ].toSelf.eagerly()
+    , bind[LatestVersionScheduler    ].toSelf.eagerly()
+    , bind[Materializer              ].toProvider(classOf[MaterializerProvider])
     ) ++
     ecsDeploymentsBindings(configuration)
 }

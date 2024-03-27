@@ -14,13 +14,12 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.servicedependencies.util
+package uk.gov.hmrc.servicedependencies.scheduler
 
 import org.apache.pekko.actor.ActorSystem
 import play.api.Logging
 import play.api.inject.ApplicationLifecycle
 import uk.gov.hmrc.mongo.lock.ScheduledLockService
-import uk.gov.hmrc.servicedependencies.config.SchedulerConfig
 
 import scala.concurrent.{ExecutionContext, Future}
 

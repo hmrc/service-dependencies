@@ -18,19 +18,17 @@ package uk.gov.hmrc.servicedependencies.scheduler
 
 import javax.inject.Inject
 import org.apache.pekko.actor.ActorSystem
-import play.api.Logging
+import play.api.{Configuration, Logging}
 import play.api.inject.ApplicationLifecycle
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.mongo.TimestampSupport
 import uk.gov.hmrc.mongo.lock.{ScheduledLockService, MongoLockRepository}
-import uk.gov.hmrc.servicedependencies.config.SchedulerConfigs
 import uk.gov.hmrc.servicedependencies.service.DerivedViewsService
-import uk.gov.hmrc.servicedependencies.util.SchedulerUtils
 
 import scala.concurrent.ExecutionContext
 
-class SlugMetadataUpdateScheduler @Inject()(
-   schedulerConfigs   : SchedulerConfigs,
+class DerivedViewsScheduler @Inject()(
+   configuration      : Configuration,
    derivedViewsService: DerivedViewsService,
    mongoLockRepository: MongoLockRepository,
    timestampSupport   : TimestampSupport
@@ -41,18 +39,21 @@ class SlugMetadataUpdateScheduler @Inject()(
  ) extends SchedulerUtils
    with Logging {
 
+  private val schedulerConfigs =
+    SchedulerConfig(configuration, "scheduler.derivedViews")
+
   private val lock: ScheduledLockService =
     ScheduledLockService(
-      lockRepository    = mongoLockRepository,
-      lockId            = "slug-job-scheduler",
-      timestampSupport  = timestampSupport,
-      schedulerInterval = schedulerConfigs.slugMetadataUpdate.interval
+      lockRepository    = mongoLockRepository
+    , lockId            = "derived-views-scheduler"
+    , timestampSupport  = timestampSupport
+    , schedulerInterval = schedulerConfigs.interval
     )
 
   implicit val hc: HeaderCarrier = HeaderCarrier()
 
-  scheduleWithLock("Slug Metadata Updater", schedulerConfigs.slugMetadataUpdate, lock) {
-    logger.info("Updating slug metadata")
+  scheduleWithLock("Derived Views", schedulerConfigs, lock) {
+    logger.info("Updating Derived Views & Deployment data")
     for {
       _ <- derivedViewsService.updateDeploymentData()
       _ =  logger.info("Finished updating deployment data")
