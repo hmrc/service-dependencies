@@ -23,11 +23,7 @@ import com.google.inject.{Inject, Singleton}
 import org.mongodb.scala.ClientSession
 import org.mongodb.scala.bson.{BsonArray, BsonDocument}
 import org.mongodb.scala.bson.conversions.Bson
-import org.mongodb.scala.model.{IndexModel, IndexOptions, UpdateOptions, Sorts, Variable}
-import org.mongodb.scala.model.Aggregates._
-import org.mongodb.scala.model.Filters._
-import org.mongodb.scala.model.Updates.{set, _}
-import org.mongodb.scala.model.Indexes.{ascending, compoundIndex}
+import org.mongodb.scala.model.{Aggregates, Filters, Indexes, IndexModel, IndexOptions, Updates, UpdateOptions, Sorts, Variable}
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.play.json.{CollectionFactory, PlayMongoRepository}
 import uk.gov.hmrc.mongo.transaction.{TransactionConfiguration, Transactions}
@@ -47,11 +43,11 @@ class DeploymentRepository @Inject()(
   domainFormat   = Deployment.mongoFormat,
   indexes        = Seq(
                      IndexModel(
-                       compoundIndex(ascending("name"), ascending("version")),
+                       Indexes.compoundIndex(Indexes.ascending("name"), Indexes.ascending("version")),
                        IndexOptions().name("nameVersionIdx")
                      ),
                      IndexModel(
-                       compoundIndex(SlugInfoFlag.values.map(f => ascending(f.asString)) :_*),
+                       Indexes.compoundIndex(SlugInfoFlag.values.map(f => Indexes.ascending(f.asString)) :_*),
                        IndexOptions().name("slugInfoFlagIdx").background(true)
                      )
                    )
@@ -70,8 +66,8 @@ class DeploymentRepository @Inject()(
     collection
       .updateMany(
           clientSession = session,
-          filter        = equal("name", name),
-          update        = set(flag.asString, false)
+          filter        = Filters.equal("name", name),
+          update        = Updates.set(flag.asString, false)
         )
       .toFuture()
       .map(_ => ())
@@ -81,22 +77,27 @@ class DeploymentRepository @Inject()(
     logger.debug(s"clearing ${flags.size} flags on ${names.size} services")
     collection
       .updateMany(
-          filter = in("name", names: _*),
-          update = combine(flags.map(flag => set(flag.asString, false)): _*)
+          filter = Filters.in("name", names: _*),
+          update = Updates.combine(flags.map(flag => Updates.set(flag.asString, false)): _*)
         )
       .toFuture()
       .map(_ => ())
   }
 
+  def find(flag: SlugInfoFlag, slugName: String): Future[Option[Deployment]] =
+    collection
+      .find(Filters.and(Filters.equal(flag.asString, true), Filters.equal("slugName", slugName)))
+      .headOption()
+
   def findDeployed(): Future[Seq[Deployment]] =
     collection
-      .find(or(SlugInfoFlag.values.map(v => equal(v.asString, true)): _*))
+      .find(Filters.or(SlugInfoFlag.values.map(v => Filters.equal(v.asString, true)): _*))
       .sort(Sorts.ascending("name"))
       .toFuture()
 
   def getNames(flag: SlugInfoFlag): Future[Seq[String]] =
     collection
-      .find(equal(flag.asString, true))
+      .find(Filters.equal(flag.asString, true))
       .map(_.slugName)
       .toFuture()
 
@@ -112,11 +113,11 @@ class DeploymentRepository @Inject()(
         _ <- collection
                .updateOne(
                  clientSession = session,
-                 filter        = and(
-                                   equal("name", name),
-                                   equal("version", version.original),
+                 filter        = Filters.and(
+                                   Filters.equal("name", name),
+                                   Filters.equal("version", version.original),
                                  ),
-                 update        = set(flag.asString, true),
+                 update        = Updates.set(flag.asString, true),
                  options       = UpdateOptions().upsert(true)
                )
                .toFuture()
@@ -136,23 +137,23 @@ class DeploymentRepository @Inject()(
     CollectionFactory.collection(mongoComponent.database, "deployments", domainFormat)
       .aggregate(
         List(
-          `match`(
-            and(
+          Aggregates.`match`(
+            Filters.and(
               deploymentsFilter,
-              nin("name", SlugDenylist.denylistedSlugs)
+              Filters.nin("name", SlugDenylist.denylistedSlugs)
             )
           ),
-          lookup(
+          Aggregates.lookup(
             from     = collectionName,
             let      = Seq(
                          Variable("sn", "$name"),
                          Variable("sv", "$version")
                        ),
             pipeline = List(
-                         `match`(
-                           and(
-                             expr(
-                               and(
+                         Aggregates.`match`(
+                           Filters.and(
+                             Filters.expr(
+                               Filters.and(
                                  // can't use Filters.eq which strips the $eq out, and thus complains about $name/$version not being operators
                                  BsonDocument("$eq" -> BsonArray("$" + slugNameField, "$$sn")),
                                  BsonDocument("$eq" -> BsonArray("$" + slugVersionField, "$$sv"))
@@ -164,17 +165,17 @@ class DeploymentRepository @Inject()(
                        ),
             as       = "res"
           ),
-          unwind("$res"),
-          replaceRoot("$res")
+          Aggregates.unwind("$res"),
+          Aggregates.replaceRoot("$res")
         ) ++ pipeline
       ).toFuture()
 
   def delete(repositoryName: String, version: Version): Future[Unit] =
     collection
       .deleteOne(
-          and(
-            equal("name"   , repositoryName),
-            equal("version", version.toString)
+          Filters.and(
+            Filters.equal("name"   , repositoryName),
+            Filters.equal("version", version.toString)
           )
         )
       .toFuture()
