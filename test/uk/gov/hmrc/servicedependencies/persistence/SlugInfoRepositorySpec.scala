@@ -65,7 +65,7 @@ class SlugInfoRepositorySpec
       repository.add(TestSlugInfos.slugInfo).futureValue
       repository.add(TestSlugInfos.otherSlug).futureValue
       repository.add(TestSlugInfos.otherSlug).futureValue
-      repository.getUniqueSlugNames.futureValue shouldBe Seq("my-slug", "other-slug")
+      repository.getUniqueSlugNames().futureValue shouldBe Seq("my-slug", "other-slug")
     }
   }
 }

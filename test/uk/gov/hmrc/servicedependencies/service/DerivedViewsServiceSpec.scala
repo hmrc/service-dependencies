@@ -23,8 +23,7 @@ import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.servicedependencies.connector.{GitHubProxyConnector, ReleasesApiConnector, TeamsAndRepositoriesConnector}
-import uk.gov.hmrc.servicedependencies.connector.model.RepositoryInfo
-import uk.gov.hmrc.servicedependencies.model.RepoType.Service
+import uk.gov.hmrc.servicedependencies.connector.model.Repository
 import uk.gov.hmrc.servicedependencies.model._
 import uk.gov.hmrc.servicedependencies.persistence.{DeploymentRepository, MetaArtefactRepository, SlugInfoRepository, SlugVersionRepository}
 import uk.gov.hmrc.servicedependencies.persistence.derived._
@@ -88,20 +87,20 @@ class DerivedViewsServiceSpec
       when(mockedDeploymentRepository.clearFlags(any[List[SlugInfoFlag]], any[List[String]]))
         .thenReturn(Future.unit)
 
-      underTest.updateDeploymentData().futureValue
+      underTest.updateDeploymentDataForAllServices().futureValue
 
       verify(mockedDeploymentRepository).clearFlags(SlugInfoFlag.values, decommissionedServices)
     }
 
     "clear latest flag for deleted/archived services" in {
       def toRepositoryInfo(name: String) =
-        RepositoryInfo(
-            name          = name
-          , createdAt     = Instant.parse("2015-09-15T16:27:38.000Z")
-          , lastUpdatedAt = Instant.parse("2017-05-19T11:00:51.000Z")
-          , repoType      = Service
-          , language      = None
-          )
+        Repository(
+          name       = name
+        , lastActive = Instant.parse("2016-05-12T10:18:53.000Z")
+        , teamNames  = Seq("PlatOps", "Webops")
+        , repoType   = RepoType.Service
+        , isArchived = false
+        )
 
       val knownSlugs          = List("service1", "service2", "service3")
       val activeServices      = List("service1", "service3").map(toRepositoryInfo)
@@ -128,7 +127,7 @@ class DerivedViewsServiceSpec
       when(mockedDeploymentRepository.clearFlags(any[List[SlugInfoFlag]], any[List[String]]))
         .thenReturn(Future.unit)
 
-      underTest.updateDeploymentData().futureValue
+      underTest.updateDeploymentDataForAllServices().futureValue
 
       verify(mockedDeploymentRepository).clearFlags(List(SlugInfoFlag.Latest), servicesToBeCleared)
     }

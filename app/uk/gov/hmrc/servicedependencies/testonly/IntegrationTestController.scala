@@ -118,7 +118,7 @@ class IntegrationTestController @Inject()(
           _ <- updateFlag(slugInfoWithFlag, SlugInfoFlag.Development , _.development )
           _ <- updateFlag(slugInfoWithFlag, SlugInfoFlag.ExternalTest, _.externalTest)
           _ <- updateFlag(slugInfoWithFlag, SlugInfoFlag.Integration , _.integration )
-          _ <- derivedViewsService.updateDerivedViews()
+          _ <- derivedViewsService.updateDerivedViewsForAllRepos()
         } yield ()
       }.map(_ => NoContent)
     }

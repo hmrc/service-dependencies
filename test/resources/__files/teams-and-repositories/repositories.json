@@ -2,13 +2,17 @@
   {
     "name": "test-repo",
     "createdAt": 1442334458000,
-    "lastUpdatedAt": 1495191651000,
-    "repoType": "Prototype"
+    "lastActive":1487165710000,
+    "repoType": "Prototype",
+    "teamNames":["PlatOps", "Webops"],
+    "isArchived": false
   },
   {
     "name": "another-repo",
     "createdAt": 1463048333000,
-    "lastUpdatedAt": 1463067812000,
-    "repoType": "Prototype"
+    "lastActive":1487165710000,
+    "repoType": "Prototype",
+    "teamNames":["PlatOps", "Webops"],
+    "isArchived": false
   }
 ]

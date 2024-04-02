@@ -22,12 +22,14 @@ import com.google.inject.{Inject, Singleton}
 import play.api.Logging
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.servicedependencies.connector.{GitHubProxyConnector, ReleasesApiConnector, TeamsAndRepositoriesConnector}
-import uk.gov.hmrc.servicedependencies.model._
-import uk.gov.hmrc.servicedependencies.persistence.{DeploymentRepository, MetaArtefactRepository, SlugInfoRepository, SlugVersionRepository}
+import uk.gov.hmrc.servicedependencies.connector.model.Repository
+import uk.gov.hmrc.servicedependencies.model.{MetaArtefactDependency, RepoType, SlugInfoFlag}
+import uk.gov.hmrc.servicedependencies.persistence.{Deployment, DeploymentRepository, MetaArtefactRepository, SlugInfoRepository, SlugVersionRepository}
 import uk.gov.hmrc.servicedependencies.persistence.derived.{DerivedDeployedDependencyRepository, DerivedGroupArtefactRepository, DerivedLatestDependencyRepository, DerivedModuleRepository}
 import uk.gov.hmrc.servicedependencies.util.DependencyGraphParser
 
 import scala.concurrent.{ExecutionContext, Future}
+import uk.gov.hmrc.servicedependencies.model.MetaArtefact
 
 @Singleton
 class DerivedViewsService @Inject()(
@@ -45,7 +47,7 @@ class DerivedViewsService @Inject()(
 )(implicit ec: ExecutionContext
 ) extends Logging {
 
-  def updateDeploymentData()(implicit hc: HeaderCarrier): Future[Unit] =
+  def updateDeploymentDataForAllServices()(implicit hc: HeaderCarrier): Future[Unit] =
     for {
       slugNames              <- slugInfoRepository.getUniqueSlugNames()
 
@@ -104,76 +106,86 @@ class DerivedViewsService @Inject()(
                                 } else Future.unit
     } yield ()
 
-  def updateDerivedViews()(implicit hc: HeaderCarrier): Future[Unit] =
+  def updateDerivedViews(repoName: String)(implicit hc: HeaderCarrier): Future[Unit] =
+    for {
+      oActiveRepo <- teamsAndRepositoriesConnector.getRepository(repoName).map(_.filter(_.isArchived).toSeq)
+      oLatestMeta <- metaArtefactRepository.find(repoName)
+      deployments <- deploymentRepository.findDeployed(Some(repoName))
+      _           <- updateDerivedViews(oActiveRepo.toSeq, oLatestMeta.toSeq, deployments)
+    } yield ()
+
+  def updateDerivedViewsForAllRepos()(implicit hc: HeaderCarrier): Future[Unit] =
     for {
       activeRepos <- teamsAndRepositoriesConnector.getAllRepositories(archived = Some(false))
-
-      _           =  logger.info(s"Running DerivedLatestDependencyRepository changes")
       latestMeta  <- metaArtefactRepository.findLatest()
-      _           <- latestMeta
-                       .flatMap(m => activeRepos.find(_.name == m.name).map(r => (m, r.repoType)))
-                       .foldLeftM(()) { case (_, (meta, repoType)) =>
-                         for {
-                           ds <- derivedLatestDependencyRepository.find(repoName = Some(meta.name), repoVersion = Some(meta.version))
-                           _  <- if (ds.isEmpty) derivedLatestDependencyRepository.delete(meta.name)
-                                 else            Future.unit
-                           _  <- if (ds.isEmpty) derivedLatestDependencyRepository.put(
-                                                   DependencyGraphParser
-                                                     .parseMetaArtefact(meta)
-                                                     .map { case (node, scopes) => MetaArtefactDependency.apply(meta, repoType, node, scopes) }
-                                                     .toSeq
-                                                 )
-                                 else            Future.unit
-                         } yield ()
-                       }
-      _           <- latestMeta
-                       .filterNot(m => activeRepos.exists(_.name == m.name))
-                       .foldLeftM(()) { (_, meta) => derivedLatestDependencyRepository.delete(meta.name)  }
-      _           =  logger.info(s"Finished running DerivedLatestDependencyRepository changes")
-
-      _           =  logger.info(s"Running DerivedDeployedDependencyRepository changes")
       deployments <- deploymentRepository.findDeployed()
-      _           <- deployments
-                       .groupBy(_.slugName)
-                       .toSeq
-                       .foldLeftM(()) { case (_, (slugName, slugDeployments)) =>
-                          derivedDeployedDependencyRepository.delete(slugName, ignoreVersions = slugDeployments.map(_.slugVersion))
-                       }
-      _           <- deployments
-                       .filter(d => activeRepos.exists(_.name == d.slugName))
-                       .flatMap(d => d.flags.filterNot(_ == SlugInfoFlag.Latest).map(f => (d.slugName, d.slugVersion, f))) // Get all deployed versions
-                       .distinctBy { case (slugName, slugVersion, _) => (slugName, slugVersion) }                          // Flag just included for lookup but isn't needed
-                       .foldLeftM(()) { case (_, (slugName, slugVersion, flag)) =>
-                         for {
-                           ds <- derivedDeployedDependencyRepository.find(flag = flag, slugName = Some(slugName), slugVersion = Some(slugVersion))
-                           ms <- metaArtefactRepository.find(repositoryName = slugName, version = slugVersion)
-                           _  <- (ds.isEmpty, ms.headOption) match {
-                                   case (true, Some(meta)) => derivedDeployedDependencyRepository.put(
-                                                                DependencyGraphParser
-                                                                  .parseMetaArtefact(meta)
-                                                                  .map { case (node, scopes) => MetaArtefactDependency.apply(meta, RepoType.Service, node, scopes) }
-                                                                  .toSeq
-                                                              )
-                                   case __                 => Future.unit
-                                 }
-                         } yield ()
-                       }
-      _           <- deployments
-                       .filterNot(d => activeRepos.exists(_.name == d.slugName))
-                       .foldLeftM(()) { (_, deployment) => derivedDeployedDependencyRepository.delete(deployment.slugName)  }
-      _           =  logger.info(s"Finished running DerivedDeployedDependencyRepository changes")
+      _           <- updateDerivedViews(activeRepos, latestMeta, deployments)
+    } yield ()
 
-      _           =  logger.info(s"Running DerivedGroupArtefactRepository.populate")
-      _           <- derivedGroupArtefactRepository
-                       .populateAll()
-                       .recover { case e => logger.error("Failed to update DerivedGroupArtefactRepository", e) }
-      _           =  logger.info(s"Finished running DerivedGroupArtefactRepository.populate")
-
-      _           =  logger.info(s"Running DerivedModuleRepository.populate")
-      _           <- derivedModuleRepository
-                       .populateAll()
-                       .recover { case e => logger.error("Failed to update DerivedModuleRepository", e) }
-      _           =  logger.info(s"Finished running DerivedModuleRepository.populate")
+  private def updateDerivedViews(activeRepos: Seq[Repository], latestMeta: Seq[MetaArtefact], deployments: Seq[Deployment] ): Future[Unit] =
+    for {
+      _ <- Future.unit
+      _ =  logger.info(s"Running DerivedLatestDependencyRepository changes")
+      _ <- latestMeta
+             .flatMap(m => activeRepos.find(_.name == m.name).map(r => (m, r.repoType)))
+             .foldLeftM(()) { case (_, (meta, repoType)) =>
+               for {
+                 ds <- derivedLatestDependencyRepository.find(repoName = Some(meta.name), repoVersion = Some(meta.version))
+                 _  <- if (ds.isEmpty) derivedLatestDependencyRepository.delete(meta.name)
+                       else            Future.unit
+                 _  <- if (ds.isEmpty) derivedLatestDependencyRepository.put(
+                                         DependencyGraphParser
+                                           .parseMetaArtefact(meta)
+                                           .map { case (node, scopes) => MetaArtefactDependency.apply(meta, repoType, node, scopes) }
+                                           .toSeq
+                                       )
+                       else            Future.unit
+               } yield ()
+             }
+      _ <- latestMeta
+             .filterNot(m => activeRepos.exists(_.name == m.name))
+             .foldLeftM(()) { (_, meta) => derivedLatestDependencyRepository.delete(meta.name)  }
+      _ =  logger.info(s"Finished running DerivedLatestDependencyRepository changes")
+      _ =  logger.info(s"Running DerivedDeployedDependencyRepository changes")
+      _ <- deployments
+             .groupBy(_.slugName)
+             .toSeq
+             .foldLeftM(()) { case (_, (slugName, slugDeployments)) =>
+                derivedDeployedDependencyRepository.delete(slugName, ignoreVersions = slugDeployments.map(_.slugVersion))
+             }
+      _ <- deployments
+             .filter(d => activeRepos.exists(_.name == d.slugName))
+             .flatMap(d => d.flags.filterNot(_ == SlugInfoFlag.Latest).map(f => (d.slugName, d.slugVersion, f))) // Get all deployed versions
+             .distinctBy { case (slugName, slugVersion, _) => (slugName, slugVersion) }                          // Flag just included for lookup but isn't needed
+             .foldLeftM(()) { case (_, (slugName, slugVersion, flag)) =>
+               for {
+                 ds <- derivedDeployedDependencyRepository.find(flag = flag, slugName = Some(slugName), slugVersion = Some(slugVersion))
+                 ms <- metaArtefactRepository.find(repositoryName = slugName, version = slugVersion)
+                 _  <- (ds.isEmpty, ms.headOption) match {
+                         case (true, Some(meta)) => derivedDeployedDependencyRepository.put(
+                                                      DependencyGraphParser
+                                                        .parseMetaArtefact(meta)
+                                                        .map { case (node, scopes) => MetaArtefactDependency.apply(meta, RepoType.Service, node, scopes) }
+                                                        .toSeq
+                                                    )
+                         case __                 => Future.unit
+                       }
+               } yield ()
+             }
+      _ <- deployments
+             .filterNot(d => activeRepos.exists(_.name == d.slugName))
+             .foldLeftM(()) { (_, deployment) => derivedDeployedDependencyRepository.delete(deployment.slugName)  }
+      _ =  logger.info(s"Finished running DerivedDeployedDependencyRepository changes")
+      _ =  logger.info(s"Running DerivedGroupArtefactRepository.populate")
+      _ <- derivedGroupArtefactRepository
+             .populateAll()
+             .recover { case e => logger.error("Failed to update DerivedGroupArtefactRepository", e) }
+      _ =  logger.info(s"Finished running DerivedGroupArtefactRepository.populate")
+      _ =  logger.info(s"Running DerivedModuleRepository.populate")
+      _ <- derivedModuleRepository
+             .populateAll()
+             .recover { case e => logger.error("Failed to update DerivedModuleRepository", e) }
+      _ =  logger.info(s"Finished running DerivedModuleRepository.populate")
     } yield ()
 
 }

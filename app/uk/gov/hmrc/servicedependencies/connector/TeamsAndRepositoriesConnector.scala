@@ -22,7 +22,7 @@ import play.api.libs.json.Format
 import uk.gov.hmrc.http.{HeaderCarrier, HttpReads, StringContextOps}
 import uk.gov.hmrc.http.client.HttpClientV2
 import uk.gov.hmrc.servicedependencies.config.ServiceDependenciesConfig
-import uk.gov.hmrc.servicedependencies.connector.model.{Repository, RepositoryInfo}
+import uk.gov.hmrc.servicedependencies.connector.model.Repository
 import uk.gov.hmrc.servicedependencies.model.Team
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -43,9 +43,8 @@ class TeamsAndRepositoriesConnector @Inject()(
 
   val teamsAndRepositoriesApiBase = serviceConfiguration.teamsAndRepositoriesServiceUrl
 
-  implicit val rf : Format[Repository]     = Repository.format
-  implicit val rif: Format[RepositoryInfo] = RepositoryInfo.format
-  implicit val tf : Format[Team]           = Team.format
+  implicit val rf : Format[Repository] = Repository.format
+  implicit val tf : Format[Team]       = Team.format
 
   def getRepository(repositoryName: String)(implicit hc: HeaderCarrier): Future[Option[Repository]] =
     httpClientV2
@@ -60,10 +59,10 @@ class TeamsAndRepositoriesConnector @Inject()(
         .map(TeamsForServices.apply)
     }
 
-  def getAllRepositories(archived: Option[Boolean])(implicit hc: HeaderCarrier): Future[Seq[RepositoryInfo]] =
+  def getAllRepositories(archived: Option[Boolean])(implicit hc: HeaderCarrier): Future[Seq[Repository]] =
     httpClientV2
       .get(url"$teamsAndRepositoriesApiBase/api/repositories?archived=$archived")
-      .execute[Seq[RepositoryInfo]]
+      .execute[Seq[Repository]]
 
   def getTeam(team: String)(implicit hc: HeaderCarrier): Future[Team] =
     httpClientV2
