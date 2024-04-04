@@ -16,7 +16,6 @@
 
 package uk.gov.hmrc.servicedependencies.connector
 
-import java.time.Instant
 import com.github.tomakehurst.wiremock.client.WireMock._
 import org.scalatest.OptionValues
 import org.scalatest.concurrent.{IntegrationPatience, ScalaFutures}
@@ -96,14 +95,12 @@ class TeamsAndRepositoriesConnectorSpec
       repositories shouldBe List(
         Repository(
           name       = "test-repo"
-        , lastActive = Instant.parse("2017-02-15T13:35:10.000Z")
         , teamNames  = Seq("PlatOps", "Webops")
         , repoType   = RepoType.Prototype
         , isArchived = false
         )
         , Repository(
           name       = "another-repo"
-        , lastActive = Instant.parse("2017-02-15T13:35:10.000Z")
         , teamNames  = Seq("PlatOps", "Webops")
         , repoType   = RepoType.Prototype
         , isArchived = false
