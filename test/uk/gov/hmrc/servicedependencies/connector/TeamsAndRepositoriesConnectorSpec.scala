@@ -27,8 +27,8 @@ import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.http.test.WireMockSupport
-import uk.gov.hmrc.servicedependencies.connector.model.RepositoryInfo
-import uk.gov.hmrc.servicedependencies.model.RepoType.Prototype
+import uk.gov.hmrc.servicedependencies.connector.model.Repository
+import uk.gov.hmrc.servicedependencies.model.RepoType
 
 class TeamsAndRepositoriesConnectorSpec
   extends AnyWordSpec
@@ -94,21 +94,21 @@ class TeamsAndRepositoriesConnectorSpec
 
       val repositories = connector.getAllRepositories(archived = None).futureValue
       repositories shouldBe List(
-        RepositoryInfo(
-            name          = "test-repo"
-          , createdAt     = Instant.parse("2015-09-15T16:27:38.000Z")
-          , lastUpdatedAt = Instant.parse("2017-05-19T11:00:51.000Z")
-          , repoType      = Prototype
-          , language      = None
-          )
-        , RepositoryInfo(
-            name          = "another-repo"
-          , createdAt     = Instant.parse("2016-05-12T10:18:53.000Z")
-          , lastUpdatedAt = Instant.parse("2016-05-12T15:43:32.000Z")
-          , repoType      = Prototype
-          , language      = None
-          )
+        Repository(
+          name       = "test-repo"
+        , lastActive = Instant.parse("2017-02-15T13:35:10.000Z")
+        , teamNames  = Seq("PlatOps", "Webops")
+        , repoType   = RepoType.Prototype
+        , isArchived = false
         )
+        , Repository(
+          name       = "another-repo"
+        , lastActive = Instant.parse("2017-02-15T13:35:10.000Z")
+        , teamNames  = Seq("PlatOps", "Webops")
+        , repoType   = RepoType.Prototype
+        , isArchived = false
+        )
+      )
 
       verify(getRequestedFor(urlEqualTo("/api/repositories")))
     }

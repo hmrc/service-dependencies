@@ -89,10 +89,14 @@ class DeploymentRepository @Inject()(
       .find(Filters.and(Filters.equal(flag.asString, true), Filters.equal("name", name)))
       .headOption()
 
-  def findDeployed(): Future[Seq[Deployment]] =
+  def findDeployed(name: Option[String] = None): Future[Seq[Deployment]] =
     collection
-      .find(Filters.or(SlugInfoFlag.values.map(v => Filters.equal(v.asString, true)): _*))
-      .sort(Sorts.ascending("name"))
+      .find(
+        Filters.and(
+          name.fold(Filters.empty())(n => Filters.equal("name", n))
+        , Filters.or(SlugInfoFlag.values.map(v => Filters.equal(v.asString, true)): _*)
+        )
+      ).sort(Sorts.ascending("name"))
       .toFuture()
 
   def getNames(flag: SlugInfoFlag): Future[Seq[String]] =

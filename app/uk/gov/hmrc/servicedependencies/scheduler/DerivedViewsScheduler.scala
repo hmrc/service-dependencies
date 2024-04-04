@@ -28,10 +28,10 @@ import uk.gov.hmrc.servicedependencies.service.DerivedViewsService
 import scala.concurrent.ExecutionContext
 
 class DerivedViewsScheduler @Inject()(
-   configuration      : Configuration,
-   derivedViewsService: DerivedViewsService,
-   mongoLockRepository: MongoLockRepository,
-   timestampSupport   : TimestampSupport
+   configuration       : Configuration,
+   derivedViewsService : DerivedViewsService,
+   mongoLockRepository : MongoLockRepository,
+   timestampSupport    : TimestampSupport
  )(implicit
    actorSystem         : ActorSystem,
    applicationLifecycle: ApplicationLifecycle,
@@ -55,9 +55,9 @@ class DerivedViewsScheduler @Inject()(
   scheduleWithLock("Derived Views", schedulerConfigs, lock) {
     logger.info("Updating Derived Views & Deployment data")
     for {
-      _ <- derivedViewsService.updateDeploymentData()
+      _ <- derivedViewsService.updateDeploymentDataForAllServices()
       _ =  logger.info("Finished updating deployment data")
-      _ <- derivedViewsService.updateDerivedViews()
+      _ <- derivedViewsService.updateDerivedViewsForAllRepos()
       _ =  logger.info("Finished updating derived views")
     } yield ()
   }

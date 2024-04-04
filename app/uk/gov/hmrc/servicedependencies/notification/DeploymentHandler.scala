@@ -26,20 +26,19 @@ import play.api.libs.json.Json
 
 import software.amazon.awssdk.services.sqs.model.Message
 
-import uk.gov.hmrc.servicedependencies.model.{MetaArtefactDependency, RepoType, SlugInfoFlag, Version}
-import uk.gov.hmrc.servicedependencies.persistence.{DeploymentRepository, MetaArtefactRepository}
-import uk.gov.hmrc.servicedependencies.persistence.derived.DerivedDeployedDependencyRepository
-import uk.gov.hmrc.servicedependencies.util.DependencyGraphParser
+import uk.gov.hmrc.http.HeaderCarrier
+import uk.gov.hmrc.servicedependencies.model.{SlugInfoFlag, Version}
+import uk.gov.hmrc.servicedependencies.persistence.DeploymentRepository
+import uk.gov.hmrc.servicedependencies.service.DerivedViewsService
 
 import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
 class DeploymentHandler @Inject()(
-  configuration                      : Configuration
-, deploymentRepository               : DeploymentRepository
-, derivedDeployedDependencyRepository: DerivedDeployedDependencyRepository
-, metaArtefactRepository             : MetaArtefactRepository
+  configuration       : Configuration
+, deploymentRepository: DeploymentRepository
+, derivedViewsService : DerivedViewsService
 )(implicit
   actorSystem    : ActorSystem,
   ec             : ExecutionContext
@@ -47,6 +46,8 @@ class DeploymentHandler @Inject()(
   name           = "Deployment"
 , config         = SqsConfig("aws.sqs.deployment", configuration)
 )(actorSystem, ec) {
+
+  private implicit val hc: HeaderCarrier = HeaderCarrier()
 
   private def prefix(payload: DeploymentHandler.DeploymentEvent) =
     s"Deployment (${payload.eventType}) ${payload.serviceName} ${payload.version.original} ${payload.environment.asString}"
@@ -58,10 +59,11 @@ class DeploymentHandler @Inject()(
                    .fromEither[Future](Json.parse(message.body).validate(DeploymentHandler.mdtpEventReads).asEither)
                    .leftMap(error => s"Could not parse Deployment message with ID '${message.messageId()}'. Reason: $error")
       _       <- payload.eventType match {
-                   case "undeployment-complete" => updateDeploymentAndDerivedData(payload, isDeployment = false)
-                   case "deployment-complete"   => updateDeploymentAndDerivedData(payload, isDeployment = true )
+                   case "undeployment-complete" => EitherT.right[String](deploymentRepository.setFlag  (payload.environment, payload.serviceName, payload.version))
+                   case "deployment-complete"   => EitherT.right[String](deploymentRepository.clearFlag(payload.environment, payload.serviceName                 ))
                    case _                       => EitherT.right[String](Future.unit)
                  }
+      _       <- EitherT.right[String](derivedViewsService.updateDerivedViews(repoName = payload.serviceName))
       _       =  logger.info(s"${prefix(payload)} with ID '${message.messageId()}' successfully processed.")
     } yield
       MessageAction.Delete(message)
@@ -70,37 +72,6 @@ class DeploymentHandler @Inject()(
       case Right(action) => action
     }
   }
-
-  private def updateDeploymentAndDerivedData(payload: DeploymentHandler.DeploymentEvent, isDeployment: Boolean): EitherT[Future, String, Unit] =
-    for {
-      oPrevious  <- EitherT.right[String](deploymentRepository.find(payload.environment, name = payload.serviceName))
-      deployedIn =  oPrevious // Can only remove when version is not deployed elsewhere
-                      .fold(List.empty[SlugInfoFlag])(_.flags)
-                      .filterNot(List(SlugInfoFlag.Latest, payload.environment).contains)
-      _          <- (oPrevious, deployedIn.isEmpty) match {
-                      case (Some(prev), true)  => logger.info(s"${prefix(payload)} - deleting previous version ${prev.slugVersion.original} from DERIVED-deployed-dependencies")
-                                                  EitherT.right[String](derivedDeployedDependencyRepository.delete(prev.slugName, Some(prev.slugVersion)))
-                      case (Some(prev), false) => logger.info(s"${prefix(payload)} - not deleting previous version ${prev.slugVersion.original} from DERIVED-deployed-dependencies. Deployed in ${deployedIn.map(_.asString).mkString(",")} environments")
-                                                  EitherT.right[String](Future.unit)
-                      case _                   => EitherT.right[String](Future.unit)
-                    }
-      _          <- EitherT.right[String](
-                      if  (isDeployment) deploymentRepository.setFlag  (payload.environment, payload.serviceName, payload.version)
-                      else               deploymentRepository.clearFlag(payload.environment, payload.serviceName                 )
-                    )
-      oMeta      <- EitherT.right[String](metaArtefactRepository.find(repositoryName = payload.serviceName, version = payload.version))
-      meta       <- EitherT.fromOption[Future](oMeta, s"${prefix(payload)} - Meta Artefact not found, cannot add to DERIVED-deployed-dependencies")
-      deps       <- EitherT.right[String](derivedDeployedDependencyRepository.find(payload.environment, slugName = Some(payload.serviceName), slugVersion = Some(payload.version)))
-      _          <- if (isDeployment && deps.isEmpty) {
-                      logger.info(s"${prefix(payload)} - adding ${payload.version.original} to DERIVED-deployed-dependencies")
-                      EitherT.right[String](derivedDeployedDependencyRepository.put(
-                        DependencyGraphParser
-                          .parseMetaArtefact(meta)
-                          .map { case (node, scopes) => MetaArtefactDependency.apply(meta, RepoType.Service, node, scopes) }
-                          .toSeq
-                      ))
-                    } else EitherT.right[String](Future.unit)
-    } yield ()
 }
 
 object DeploymentHandler {

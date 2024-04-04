@@ -20,7 +20,7 @@ import java.time.Instant
 import play.api.libs.json._
 import uk.gov.hmrc.servicedependencies.model.RepoType
 
-case class Repository(name: String, lastActive: Instant, teamNames: Seq[String], repoType: RepoType)
+case class Repository(name: String, lastActive: Instant, teamNames: Seq[String], repoType: RepoType, isArchived: Boolean)
 
 object Repository extends EnvReads with EnvWrites {
 

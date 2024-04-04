@@ -8,10 +8,10 @@
     "PlatOps",
     "Webops"
   ],
-  "githubUrl":
-    {
-      "name":"github-com",
-      "displayName":"GitHub.com",
-      "url":"https://github.com/hmrc/catalogue-frontend"
-    }
+  "githubUrl": {
+    "name":"github-com",
+    "displayName":"GitHub.com",
+    "url":"https://github.com/hmrc/catalogue-frontend"
+  },
+  "isArchived": false
 }
