@@ -16,7 +16,6 @@
 
 package uk.gov.hmrc.servicedependencies.service
 
-import java.time.Instant
 import org.mockito.scalatest.MockitoSugar
 import org.scalatest.concurrent.{IntegrationPatience, ScalaFutures}
 import org.scalatest.matchers.should.Matchers
@@ -96,7 +95,6 @@ class DerivedViewsServiceSpec
       def toRepositoryInfo(name: String) =
         Repository(
           name       = name
-        , lastActive = Instant.parse("2016-05-12T10:18:53.000Z")
         , teamNames  = Seq("PlatOps", "Webops")
         , repoType   = RepoType.Service
         , isArchived = false
