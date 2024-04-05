@@ -103,23 +103,25 @@ class DerivedGroupArtefactRepository @Inject()(
 
   def populateAll(): Future[Unit] = {
     for {
-      deployedDeps <- derivedDeployedDependencies()
-                        .map(_.map(group => (group.group, group.artefacts)).toMap)
-      latestDeps   <- derivedLatestDependencies()
-                        .map(_.map(group => (group.group, group.artefacts)).toMap)
-      all          =  deployedDeps
-                        .combine(latestDeps)
-                        .map { case (k, v) => GroupArtefacts(k, v.distinct)}
-                        .toSeq
-      _            <- collection
-                        .bulkWrite(all.map(d =>
-                          ReplaceOneModel(
-                            filter         = Filters.equal("group", d.group),
-                            replacement    = d,
-                            replaceOptions = ReplaceOptions().upsert(true)
-                          )
-                        ))
-                        .toFuture()
+      deployedDeps   <- derivedDeployedDependencies()
+                          .map(_.map(group => (group.group, group.artefacts)).toMap)
+      latestDeps     <- derivedLatestDependencies()
+                          .map(_.map(group => (group.group, group.artefacts)).toMap)
+      groupArtefacts =  deployedDeps
+                          .combine(latestDeps)
+                          .map { case (k, v) => GroupArtefacts(k, v.distinct)}
+                          .toSeq
+      _              <- collection
+                          .bulkWrite(
+                            groupArtefacts.map(groupArtefact =>
+                              ReplaceOneModel(
+                                filter         = Filters.equal("group", groupArtefact.group)
+                              , replacement    = groupArtefact
+                              , replaceOptions = ReplaceOptions().upsert(true)
+                              )
+                            ) :+ DeleteManyModel(filter = Filters.nin("group", groupArtefacts.map(_.group): _*))
+                          ).toFuture()
     } yield ()
   }
 }
+

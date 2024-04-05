@@ -111,7 +111,10 @@ class DerivedViewsService @Inject()(
       oActiveRepo <- teamsAndRepositoriesConnector.getRepository(repoName).map(_.filter(_.isArchived).toSeq)
       oLatestMeta <- metaArtefactRepository.find(repoName)
       deployments <- deploymentRepository.findDeployed(Some(repoName))
-      _           <- updateDerivedViews(oActiveRepo.toSeq, oLatestMeta.toSeq, deployments)
+      _           <- updateDerivedDependencyViews(oActiveRepo.toSeq, oLatestMeta.toSeq, deployments)
+      _           =  logger.info(s"Running DerivedModuleRepository.update")
+      _           <- oLatestMeta.fold(Future.unit)(meta => derivedModuleRepository.update(meta))
+      _           =  logger.info(s"Finished running DerivedModuleRepository.update")
     } yield ()
 
   def updateDerivedViewsForAllRepos()(implicit hc: HeaderCarrier): Future[Unit] =
@@ -119,10 +122,16 @@ class DerivedViewsService @Inject()(
       activeRepos <- teamsAndRepositoriesConnector.getAllRepositories(archived = Some(false))
       latestMeta  <- metaArtefactRepository.findLatest()
       deployments <- deploymentRepository.findDeployed()
-      _           <- updateDerivedViews(activeRepos, latestMeta, deployments)
+      _           <- updateDerivedDependencyViews(activeRepos, latestMeta, deployments)
+      _           =  logger.info(s"Running DerivedModuleRepository.populate")
+      _           <- derivedModuleRepository
+                       .populateAll()
+                       .recover { case e => logger.error("Failed to update DerivedModuleRepository", e) }
+      _           =  logger.info(s"Finished running DerivedModuleRepository.populate")
+
     } yield ()
 
-  private def updateDerivedViews(activeRepos: Seq[Repository], latestMeta: Seq[MetaArtefact], deployments: Seq[Deployment] ): Future[Unit] =
+  private def updateDerivedDependencyViews(activeRepos: Seq[Repository], latestMeta: Seq[MetaArtefact], deployments: Seq[Deployment] ): Future[Unit] =
     for {
       _ <- Future.unit
       _ =  logger.info(s"Running DerivedLatestDependencyRepository changes")
@@ -176,16 +185,11 @@ class DerivedViewsService @Inject()(
              .filterNot(d => activeRepos.exists(_.name == d.slugName))
              .foldLeftM(()) { (_, deployment) => derivedDeployedDependencyRepository.delete(deployment.slugName)  }
       _ =  logger.info(s"Finished running DerivedDeployedDependencyRepository changes")
-      _ =  logger.info(s"Running DerivedGroupArtefactRepository.populate")
+      _ =  logger.info(s"Running DerivedGroupArtefactRepository.populateAll")
       _ <- derivedGroupArtefactRepository
              .populateAll()
              .recover { case e => logger.error("Failed to update DerivedGroupArtefactRepository", e) }
-      _ =  logger.info(s"Finished running DerivedGroupArtefactRepository.populate")
-      _ =  logger.info(s"Running DerivedModuleRepository.populate")
-      _ <- derivedModuleRepository
-             .populateAll()
-             .recover { case e => logger.error("Failed to update DerivedModuleRepository", e) }
-      _ =  logger.info(s"Finished running DerivedModuleRepository.populate")
+      _ =  logger.info(s"Finished running DerivedGroupArtefactRepository.populateAll")
     } yield ()
 
 }

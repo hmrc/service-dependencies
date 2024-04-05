@@ -68,7 +68,7 @@ class DerivedModuleSpec
   "DerivedModuleSpec.findRepoNameByModule" should {
     "find repo name" in {
       (for {
-         _      <- repository.add(metaArtefact)
+         _      <- repository.update(metaArtefact)
          name   <- repository.findNameByModule(
                      group    = "uk.gov.hmrc",
                      artefact = "sub-module",
@@ -81,7 +81,7 @@ class DerivedModuleSpec
 
     "return data for any version if no match" in {
       (for {
-         _      <- repository.add(metaArtefact)
+         _      <- repository.update(metaArtefact)
          name   <- repository.findNameByModule(
                      group    = "uk.gov.hmrc",
                      artefact = "sub-module",
@@ -94,21 +94,12 @@ class DerivedModuleSpec
 
     "return none if no match" in {
       (for {
-         _      <- repository.add(metaArtefact)
          name   <- repository.findNameByModule(
                      group    = "uk.gov.hmrc",
                      artefact = "sub-module",
                      version  = Version("0.0.1") // no match for this
                    )
-         _      =  name shouldBe Some("library")
-
-         _      <- repository.delete(metaArtefact.name, metaArtefact.version)
-         name2  <- repository.findNameByModule(
-                     group    = "uk.gov.hmrc",
-                     artefact = "sub-module",
-                     version  = Version("0.0.1") // no match for this
-                   )
-         _      =  name2 shouldBe None
+         _      =  name shouldBe None
        } yield ()
       ).futureValue
     }
