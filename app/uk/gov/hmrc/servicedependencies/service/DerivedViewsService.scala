@@ -123,12 +123,16 @@ class DerivedViewsService @Inject()(
       latestMeta  <- metaArtefactRepository.findLatest()
       deployments <- deploymentRepository.findDeployed()
       _           <- updateDerivedDependencyViews(activeRepos, latestMeta, deployments)
-      _           =  logger.info(s"Running DerivedModuleRepository.populate")
+      _           =  logger.info(s"Running DerivedModuleRepository.populateAll")
       _           <- derivedModuleRepository
                        .populateAll()
                        .recover { case e => logger.error("Failed to update DerivedModuleRepository", e) }
-      _           =  logger.info(s"Finished running DerivedModuleRepository.populate")
-
+      _           =  logger.info(s"Finished running DerivedModuleRepository.populateAll")
+      _           =  logger.info(s"Running DerivedGroupArtefactRepository.populateAll")
+      _           <- derivedGroupArtefactRepository
+                       .populateAll()
+                       .recover { case e => logger.error("Failed to update DerivedGroupArtefactRepository", e) }
+      _           =  logger.info(s"Finished running DerivedGroupArtefactRepository.populateAll")
     } yield ()
 
   private def updateDerivedDependencyViews(activeRepos: Seq[Repository], latestMeta: Seq[MetaArtefact], deployments: Seq[Deployment] ): Future[Unit] =
@@ -185,11 +189,6 @@ class DerivedViewsService @Inject()(
              .filterNot(d => activeRepos.exists(_.name == d.slugName))
              .foldLeftM(()) { (_, deployment) => derivedDeployedDependencyRepository.delete(deployment.slugName)  }
       _ =  logger.info(s"Finished running DerivedDeployedDependencyRepository changes")
-      _ =  logger.info(s"Running DerivedGroupArtefactRepository.populateAll")
-      _ <- derivedGroupArtefactRepository
-             .populateAll()
-             .recover { case e => logger.error("Failed to update DerivedGroupArtefactRepository", e) }
-      _ =  logger.info(s"Finished running DerivedGroupArtefactRepository.populateAll")
     } yield ()
 
 }
