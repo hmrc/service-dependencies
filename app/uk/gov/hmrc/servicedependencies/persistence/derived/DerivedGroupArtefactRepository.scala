@@ -53,7 +53,7 @@ class DerivedGroupArtefactRepository @Inject()(
       .map(g => g.copy(artefacts = g.artefacts.sorted))
       .toFuture()
 
-  private val groupArtefactsTransformationPipeline: List[Bson] = {
+  private val groupArtefactsTransformationPipeline: List[Bson] =
     Aggregates.project(
       Projections.fields(
         Projections.excludeId()
@@ -80,7 +80,6 @@ class DerivedGroupArtefactRepository @Inject()(
       , Field("scope_it", true)
       , Field("scope_build", true)
       ) :: Nil
-  }
 
   private def derivedDeployedDependencies(): Future[Seq[GroupArtefacts]] =
     deploymentRepository.lookupAgainstDeployments(
@@ -94,14 +93,13 @@ class DerivedGroupArtefactRepository @Inject()(
     , pipeline          = groupArtefactsTransformationPipeline
     )
 
-  private def derivedLatestDependencies(): Future[Seq[GroupArtefacts]] = {
+  private def derivedLatestDependencies(): Future[Seq[GroupArtefacts]] =
     CollectionFactory
       .collection(mongoComponent.database, "DERIVED-latest-dependencies", domainFormat)
       .aggregate(`match`(Filters.nin("name", SlugDenylist.denylistedSlugs)) :: groupArtefactsTransformationPipeline)
       .toFuture()
-  }
 
-  def populateAll(): Future[Unit] = {
+  def populateAll(): Future[Unit] =
     for {
       deployedDeps   <- derivedDeployedDependencies()
                           .map(_.map(group => (group.group, group.artefacts)).toMap)
@@ -122,6 +120,5 @@ class DerivedGroupArtefactRepository @Inject()(
                             ) :+ DeleteManyModel(filter = Filters.nin("group", groupArtefacts.map(_.group): _*))
                           ).toFuture()
     } yield ()
-  }
 }
 
