@@ -41,7 +41,7 @@ object Dependency {
     ~ (__ \ "bobbyRuleViolations").lazyWrite(Writes.seq[DependencyBobbyRule](DependencyBobbyRule.writes))
     ~ (__ \ "importBy"           ).writeNullable[ImportedBy](ImportedBy.writes)
     ~ (__ \ "scope"              ).write[DependencyScope](DependencyScope.dependencyScopeFormat)
-    )(unlift(Dependency.unapply))
+    )(d => (d.name, d.group, d.currentVersion, d.latestVersion, d.bobbyRuleViolations, d.importBy, d.scope))
 }
 
 case class ImportedBy(name: String, group: String, version: Version)
@@ -51,5 +51,5 @@ object ImportedBy {
     ( (__ \ "name"          ).write[String]
     ~ (__ \ "group"         ).write[String]
     ~ (__ \ "currentVersion").write[Version](Version.legacyApiWrites)
-    )(unlift(ImportedBy.unapply))
+    )(i => (i.name, i.group, i.version))
 }

@@ -25,5 +25,5 @@ object GroupArtefacts {
   val apiFormat: OFormat[GroupArtefacts] =
     ( (__ \ "group"      ).format[String]
     ~ (__ \ "artefacts"  ).format[List[String]]
-    )(GroupArtefacts.apply, unlift(GroupArtefacts.unapply))
+    )(GroupArtefacts.apply, ga => (ga.group, ga.artefacts))
 }

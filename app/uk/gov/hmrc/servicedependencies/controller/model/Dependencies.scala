@@ -32,5 +32,5 @@ object Dependencies {
     ~ (__ \ "libraryDependencies"   ).lazyWrite(Writes.seq[Dependency](Dependency.writes))
     ~ (__ \ "sbtPluginsDependencies").lazyWrite(Writes.seq[Dependency](Dependency.writes))
     ~ (__ \ "otherDependencies"     ).lazyWrite(Writes.seq[Dependency](Dependency.writes))
-    )(unlift(Dependencies.unapply))
+    )(d => (d.repositoryName, d.libraryDependencies, d.sbtPluginsDependencies, d.otherDependencies))
 }

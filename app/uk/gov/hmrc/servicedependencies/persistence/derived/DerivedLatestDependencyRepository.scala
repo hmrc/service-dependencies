@@ -16,6 +16,7 @@
 
 package uk.gov.hmrc.servicedependencies.persistence.derived
 
+import org.mongodb.scala.{ObservableFuture, SingleObservableFuture}
 import org.mongodb.scala.model.{Filters, Indexes, IndexModel, IndexOptions}
 import play.api.Logging
 import uk.gov.hmrc.mongo.MongoComponent

@@ -57,7 +57,7 @@ object BobbyRule {
     ~ (__ \ "reason"        ).format[String]
     ~ (__ \ "from"          ).format[LocalDate]
     ~ (__ \ "exemptProjects").formatWithDefault[Seq[String]](Seq.empty)
-    )(BobbyRule.apply, unlift(BobbyRule.unapply))
+    )(BobbyRule.apply, br => (br.organisation, br.name, br.range, br.reason, br.from, br.exemptProjects))
   }
 }
 

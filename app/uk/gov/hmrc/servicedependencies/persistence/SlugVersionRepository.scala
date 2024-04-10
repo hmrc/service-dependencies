@@ -16,6 +16,7 @@
 
 package uk.gov.hmrc.servicedependencies.persistence
 
+import org.mongodb.scala.{ObservableFuture, SingleObservableFuture}
 import org.mongodb.scala.model.Filters.equal
 import org.mongodb.scala.model.Projections.include
 import uk.gov.hmrc.mongo.MongoComponent

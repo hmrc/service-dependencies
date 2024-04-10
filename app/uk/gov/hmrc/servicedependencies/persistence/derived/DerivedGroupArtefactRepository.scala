@@ -17,6 +17,7 @@
 package uk.gov.hmrc.servicedependencies.persistence.derived
 
 import cats.implicits._
+import org.mongodb.scala.{ObservableFuture, SingleObservableFuture}
 import org.mongodb.scala.bson.BsonDocument
 import org.mongodb.scala.bson.conversions.Bson
 import org.mongodb.scala.model.Aggregates.`match`
@@ -121,4 +122,3 @@ class DerivedGroupArtefactRepository @Inject()(
                           ).toFuture()
     } yield ()
 }
-

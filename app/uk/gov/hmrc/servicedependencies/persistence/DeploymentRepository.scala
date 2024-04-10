@@ -20,7 +20,7 @@ import play.api.Logger
 import play.api.libs.functional.syntax._
 import play.api.libs.json.{Format, __}
 import com.google.inject.{Inject, Singleton}
-import org.mongodb.scala.ClientSession
+import org.mongodb.scala.{ClientSession, ObservableFuture, SingleObservableFuture}
 import org.mongodb.scala.bson.{BsonArray, BsonDocument}
 import org.mongodb.scala.bson.conversions.Bson
 import org.mongodb.scala.model.{Aggregates, Filters, Indexes, IndexModel, Updates, UpdateOptions, Sorts, Variable}
@@ -228,6 +228,6 @@ object Deployment {
     ~ (__ \ "development"   ).formatWithDefault[Boolean](false)
     ~ (__ \ "external test" ).formatWithDefault[Boolean](false)
     ~ (__ \ "integration"   ).formatWithDefault[Boolean](false)
-    )(Deployment.apply, unlift(Deployment.unapply))
+    )(Deployment.apply, d => (d.slugName, d.slugVersion, d.latest, d.production, d.qa, d.staging, d.development, d.externalTest, d.integration))
   }
 }

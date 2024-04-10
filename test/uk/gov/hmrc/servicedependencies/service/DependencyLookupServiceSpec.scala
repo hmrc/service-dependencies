@@ -16,12 +16,13 @@
 
 package uk.gov.hmrc.servicedependencies.service
 
-import org.mockito.ArgumentMatchers.any
-import org.mockito.MockitoSugar
+import org.mockito.ArgumentMatchers.{any, eq => eqTo}
+import org.mockito.Mockito.{reset, when}
 import org.scalatest.BeforeAndAfterEach
 import org.scalatest.concurrent.IntegrationPatience
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
+import org.scalatestplus.mockito.MockitoSugar
 import uk.gov.hmrc.mongo.test.MongoSupport
 import uk.gov.hmrc.servicedependencies.connector.ServiceConfigsConnector
 import uk.gov.hmrc.servicedependencies.model._
@@ -39,7 +40,7 @@ class DependencyLookupServiceSpec
      with MockitoSugar
      with MongoSupport
      with IntegrationPatience
-    with BeforeAndAfterEach {
+     with BeforeAndAfterEach {
 
   import DependencyLookupServiceTestData._
 
@@ -50,7 +51,6 @@ class DependencyLookupServiceSpec
   private val mockedDerivedLatestDependencyRepository   = mock[DerivedLatestDependencyRepository]
 
   private val bobbyRulesSummaryRepo = new BobbyRulesSummaryRepository(mongoComponent) {
-
     import scala.jdk.FunctionConverters._
 
     private val store = new AtomicReference(List[BobbyRulesSummary]())
@@ -107,14 +107,19 @@ class DependencyLookupServiceSpec
   }
 
   "getLatestBobbyRuleViolations" should {
-
     "return the number of repositories violating a bobby rule for latest" in {
-
       when(mockedConfigService.getBobbyRules())
         .thenReturn(Future(BobbyRules(Map(("uk.gov.hmrc", "libs") -> List(bobbyRule)))))
       when(mockedDerivedDeployedDependencyRepository.findWithDeploymentLookup(flag = any[SlugInfoFlag], group = any[Option[String]], artefact = any[Option[String]], scopes = any[Option[List[DependencyScope]]], slugName = any[Option[String]], slugVersion = any[Option[Version]]))
         .thenReturn(Future.successful(Seq.empty))
-      when(mockedDerivedLatestDependencyRepository.find(artefact = None, group = None, scopes = Some(DependencyScope.values)))
+      when(mockedDerivedLatestDependencyRepository.find(
+          group       = any,
+          artefact    = any,
+          repoType    = any,
+          scopes      = eqTo(Some(DependencyScope.values)),
+          repoName    = any,
+          repoVersion = any
+        ))
         .thenReturn(Future.successful(Seq(
           dep1
         , dep1.copy(repoVersion = Version("1.1.0"))
@@ -138,10 +143,9 @@ class DependencyLookupServiceSpec
     }
 
     "return the number of repositories violating a bobby rule for environments" in {
-
       when(mockedConfigService.getBobbyRules())
         .thenReturn(Future(BobbyRules(Map(("uk.gov.hmrc", "libs") -> List(bobbyRule)))))
-     when(mockedDerivedDeployedDependencyRepository.findWithDeploymentLookup(flag = any[SlugInfoFlag], group = any[Option[String]], artefact = any[Option[String]], scopes = any[Option[List[DependencyScope]]], slugName = any[Option[String]], slugVersion = any[Option[Version]]))
+      when(mockedDerivedDeployedDependencyRepository.findWithDeploymentLookup(flag = any[SlugInfoFlag], group = any[Option[String]], artefact = any[Option[String]], scopes = any[Option[List[DependencyScope]]], slugName = any[Option[String]], slugVersion = any[Option[Version]]))
         .thenReturn(Future.successful(Seq.empty))
       when(mockedDerivedLatestDependencyRepository.find(group = any[Option[String]], artefact = any[Option[String]], repoType = any[Option[List[RepoType]]], scopes = any[Option[List[DependencyScope]]], repoName = any[Option[String]], repoVersion = any[Option[Version]]))
         .thenReturn(Future.successful(Seq.empty))

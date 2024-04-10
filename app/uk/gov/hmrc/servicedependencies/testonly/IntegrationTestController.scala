@@ -19,6 +19,7 @@ package uk.gov.hmrc.servicedependencies.testonly
 import cats.implicits._
 
 import javax.inject.Inject
+import org.mongodb.scala.{ObservableFuture, SingleObservableFuture}
 import org.mongodb.scala.bson.BsonDocument
 import play.api.libs.json._
 import play.api.mvc.{Action, ControllerComponents}
@@ -50,7 +51,7 @@ class IntegrationTestController @Inject()(
       _.validate[A].asEither.left.map(e => BadRequest(JsError.toJson(e)))
     )
 
-  def addLatestVersions = {
+  val addLatestVersions = {
     implicit val latestVersionReads = {
       implicit val vf = Version.format
       Json.using[Json.WithDefaultValues].reads[LatestVersion]
@@ -62,13 +63,13 @@ class IntegrationTestController @Inject()(
     }
   }
 
-  def deleteLatestVersions =
+  val deleteLatestVersions =
     Action.async {
       latestVersionRepository.clearAllData()
         .map(_ => NoContent)
     }
 
-  def addMetaArtefacts = {
+  val addMetaArtefacts = {
     implicit val maf = MetaArtefact.apiFormat
     Action.async(validateJson[List[MetaArtefact]]) { implicit request =>
       request.body.traverse(metaArtefactRepository.put)
@@ -76,7 +77,7 @@ class IntegrationTestController @Inject()(
     }
   }
 
-  def addMetaArtefactDependencies(): Action[List[MetaArtefactDependency]] = {
+  val addMetaArtefactDependencies: Action[List[MetaArtefactDependency]] = {
     implicit val mad = MetaArtefactDependency.mongoFormat
     Action.async(validateJson[List[MetaArtefactDependency]]) { implicit request =>
       derivedLatestDependencyRepository
@@ -86,7 +87,7 @@ class IntegrationTestController @Inject()(
     }
   }
 
-  def deleteMetaArtefactDependencies =
+  val deleteMetaArtefactDependencies =
     Action.async {
       derivedLatestDependencyRepository
         .collection
@@ -94,7 +95,7 @@ class IntegrationTestController @Inject()(
         .map(_ => NoContent)
     }
 
-  def deleteMetaArtefacts =
+  val deleteMetaArtefacts =
     Action.async {
       metaArtefactRepository.clearAllData()
         .map(_ => NoContent)
@@ -125,7 +126,7 @@ class IntegrationTestController @Inject()(
     }
   }
 
-  def deleteSluginfos =
+  val deleteSluginfos =
     Action.async {
       for {
         _ <- slugInfoRepo.clearAllData()
@@ -133,7 +134,7 @@ class IntegrationTestController @Inject()(
       } yield NoContent
     }
 
-  def addBobbyRulesSummaries = {
+  val addBobbyRulesSummaries = {
     implicit val brsf = BobbyRulesSummary.apiFormat
     Action.async(validateJson[List[BobbyRulesSummary]]) { implicit request =>
       request.body.traverse(bobbyRulesSummaryRepo.add)
@@ -141,13 +142,13 @@ class IntegrationTestController @Inject()(
     }
   }
 
-  def deleteBobbyRulesSummaries =
+  val deleteBobbyRulesSummaries =
     Action.async {
       bobbyRulesSummaryRepo.clearAllData()
         .map(_ => NoContent)
     }
 
-  def deleteAll =
+  val deleteAll =
     Action.async {
       List(
           latestVersionRepository.clearAllData()

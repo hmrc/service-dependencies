@@ -354,7 +354,7 @@ object Repository {
     ~ (__ \ "version"          ).writeNullable[Version]
     ~ (__ \ "dependenciesBuild").write[Seq[Dependency]]
     ~ (__ \ "modules"          ).write[Seq[RepositoryModule]]
-    )(unlift(Repository.unapply))
+    )(r => (r.name, r.version, r.dependenciesBuild, r.modules))
   }
 }
 
@@ -384,7 +384,7 @@ object RepositoryModule {
     ~ (__ \ "crossScalaVersions"  ).write[Seq[Version]].contramap[Option[Seq[Version]]](_.getOrElse(Seq.empty))
     ~ (__ \ "activeBobbyRules"    ).write[Seq[DependencyBobbyRule]]
     ~ (__ \ "pendingBobbyRules"   ).write[Seq[DependencyBobbyRule]]
-    )(unlift(RepositoryModule.unapply))
+    )(rm => (rm.name, rm.group, rm.dependenciesCompile, rm.dependenciesProvided, rm.dependenciesTest, rm.dependenciesIt, rm.crossScalaVersions, rm.activeBobbyRules, rm.pendingBobbyRules))
   }
 }
 
@@ -408,7 +408,7 @@ case class SlugInfoExtra(
   dependencyDotIt      : String,
   dependencyDotBuild   : String,
   applicationConfig    : String,
-  slugConfig           : String,
+  slugConfig           : String
 )
 
 case class SlugDependency(
@@ -427,7 +427,7 @@ object SlugInfoExtra {
       ~ (__ \ "group"   ).write[String]
       ~ (__ \ "artifact").write[String]
       ~ (__ \ "meta"    ).write[String]
-      )(unlift(SlugDependency.unapply))
+      )(sd => (sd.path, sd.version, sd.group, sd.artifact, sd.meta))
 
     ( (__ \ "uri"                       ).write[String]
     ~ (__ \ "created"                   ).write[Instant]
@@ -447,6 +447,6 @@ object SlugInfoExtra {
     ~ (__ \ "dependencyDot" \ "build"   ).write[String]
     ~ (__ \ "applicationConfig"         ).write[String]
     ~ (__ \ "slugConfig"                ).write[String]
-    )(unlift(SlugInfoExtra.unapply))
+    )(sie => (sie.uri, sie.created, sie.name, sie.version, sie.teams, sie.runnerVersion, sie.classpath, sie.java, sie.sbtVersion, sie.repoUrl, sie.dependencies, sie.dependencyDotCompile, sie.dependencyDotProvided, sie.dependencyDotTest, sie.dependencyDotIt, sie.dependencyDotBuild, sie.applicationConfig, sie.slugConfig))
   }
 }

@@ -36,6 +36,6 @@ object DependencyBobbyRule {
     ~ (__ \ "from"           ).write[LocalDate]
     ~ (__ \ "range"          ).write[BobbyVersionRange]
     ~ (__ \ "exemptProjects" ).write[Seq[String]]
-    )(unlift(DependencyBobbyRule.unapply))
+    )(dbr => (dbr.reason, dbr.from, dbr.range, dbr.exemptProjects))
   }
 }

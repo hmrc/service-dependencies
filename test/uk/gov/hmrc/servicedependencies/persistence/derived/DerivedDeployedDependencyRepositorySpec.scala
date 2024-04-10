@@ -16,10 +16,9 @@
 
 package uk.gov.hmrc.servicedependencies.persistence.derived
 
-import org.mockito.MockitoSugar
-import org.scalatest.matchers.must.Matchers.convertToAnyMustWrapper
 import org.scalatest.matchers.should.Matchers
-import org.scalatest.wordspec.AnyWordSpecLike
+import org.scalatest.wordspec.AnyWordSpec
+import org.scalatestplus.mockito.MockitoSugar
 import uk.gov.hmrc.mongo.test.DefaultPlayMongoRepositorySupport
 import uk.gov.hmrc.servicedependencies.model.DependencyScope.{Compile, Provided}
 import uk.gov.hmrc.servicedependencies.model.RepoType.Service
@@ -30,13 +29,15 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import uk.gov.hmrc.servicedependencies.model.SlugInfoFlag
 
 class DerivedDeployedDependencyRepositorySpec
-  extends AnyWordSpecLike
+  extends AnyWordSpec
      with Matchers
      with MockitoSugar
      with DefaultPlayMongoRepositorySupport[MetaArtefactDependency] {
 
   lazy val deploymentRepository = new DeploymentRepository(mongoComponent)
-  override lazy val repository  = new DerivedDeployedDependencyRepository(mongoComponent, deploymentRepository)
+
+  override val repository: DerivedDeployedDependencyRepository =
+    new DerivedDeployedDependencyRepository(mongoComponent, deploymentRepository)
 
   override def checkIndexedQueries = false
 
@@ -97,8 +98,8 @@ class DerivedDeployedDependencyRepositorySpec
       deploymentRepository.setFlag(SlugInfoFlag.QA, metaArtefactDependency3.repoName, metaArtefactDependency3.repoVersion).futureValue
 
       repository.insert(List(metaArtefactDependency1, metaArtefactDependency2, metaArtefactDependency3)).futureValue
-      repository.findWithDeploymentLookup(SlugInfoFlag.QA, Some("group-1"), Some("artifact-1"), None, None).futureValue.sortBy(_.repoName) mustBe Seq(metaArtefactDependency1, metaArtefactDependency2)
-      repository.findWithDeploymentLookup(SlugInfoFlag.QA, Some("group-3"), Some("artifact-3"), None, None).futureValue                    mustBe Seq(metaArtefactDependency3)
+      repository.findWithDeploymentLookup(SlugInfoFlag.QA, Some("group-1"), Some("artifact-1"), None, None).futureValue.sortBy(_.repoName) shouldBe Seq(metaArtefactDependency1, metaArtefactDependency2)
+      repository.findWithDeploymentLookup(SlugInfoFlag.QA, Some("group-3"), Some("artifact-3"), None, None).futureValue                    shouldBe Seq(metaArtefactDependency3)
     }
   }
 
@@ -108,10 +109,10 @@ class DerivedDeployedDependencyRepositorySpec
       deploymentRepository.setFlag(SlugInfoFlag.Production, metaArtefactDependency3.repoName, metaArtefactDependency3.repoVersion).futureValue
 
       repository.insert(List(metaArtefactDependency1, metaArtefactDependency3)).futureValue
-      repository.findWithDeploymentLookup(SlugInfoFlag.QA        , group = Some("group-1"), artefact = Some("artifact-1")).futureValue mustBe Seq(metaArtefactDependency1)
-      repository.findWithDeploymentLookup(SlugInfoFlag.Production, group = Some("group-1"), artefact = Some("artifact-1")).futureValue mustBe Seq.empty
-      repository.findWithDeploymentLookup(SlugInfoFlag.QA        , group = Some("group-3"), artefact = Some("artifact-3")).futureValue mustBe Seq.empty
-      repository.findWithDeploymentLookup(SlugInfoFlag.Production, group = Some("group-3"), artefact = Some("artifact-3")).futureValue mustBe Seq(metaArtefactDependency3)
+      repository.findWithDeploymentLookup(SlugInfoFlag.QA        , group = Some("group-1"), artefact = Some("artifact-1")).futureValue shouldBe Seq(metaArtefactDependency1)
+      repository.findWithDeploymentLookup(SlugInfoFlag.Production, group = Some("group-1"), artefact = Some("artifact-1")).futureValue shouldBe Seq.empty
+      repository.findWithDeploymentLookup(SlugInfoFlag.QA        , group = Some("group-3"), artefact = Some("artifact-3")).futureValue shouldBe Seq.empty
+      repository.findWithDeploymentLookup(SlugInfoFlag.Production, group = Some("group-3"), artefact = Some("artifact-3")).futureValue shouldBe Seq(metaArtefactDependency3)
     }
 
     "find document by group, artefact & scope" in {
@@ -119,9 +120,9 @@ class DerivedDeployedDependencyRepositorySpec
       deploymentRepository.setFlag(SlugInfoFlag.QA, metaArtefactDependency2.repoName, metaArtefactDependency2.repoVersion).futureValue
 
       repository.insert(List(metaArtefactDependency1, metaArtefactDependency2)).futureValue
-      repository.findWithDeploymentLookup(SlugInfoFlag.QA, scopes = Some(List(Compile))          , group = Some("group-1"), artefact = Some("artifact-1")).futureValue                    mustBe Seq(metaArtefactDependency1)
-      repository.findWithDeploymentLookup(SlugInfoFlag.QA, scopes = Some(List(Provided))         , group = Some("group-1"), artefact = Some("artifact-1")).futureValue                    mustBe Seq(metaArtefactDependency2)
-      repository.findWithDeploymentLookup(SlugInfoFlag.QA, scopes = Some(List(Compile, Provided)), group = Some("group-1"), artefact = Some("artifact-1")).futureValue.sortBy(_.repoName) mustBe Seq(metaArtefactDependency1, metaArtefactDependency2)
+      repository.findWithDeploymentLookup(SlugInfoFlag.QA, scopes = Some(List(Compile))          , group = Some("group-1"), artefact = Some("artifact-1")).futureValue                    shouldBe Seq(metaArtefactDependency1)
+      repository.findWithDeploymentLookup(SlugInfoFlag.QA, scopes = Some(List(Provided))         , group = Some("group-1"), artefact = Some("artifact-1")).futureValue                    shouldBe Seq(metaArtefactDependency2)
+      repository.findWithDeploymentLookup(SlugInfoFlag.QA, scopes = Some(List(Compile, Provided)), group = Some("group-1"), artefact = Some("artifact-1")).futureValue.sortBy(_.repoName) shouldBe Seq(metaArtefactDependency1, metaArtefactDependency2)
     }
 
     "find document just by scope" in {
@@ -129,9 +130,9 @@ class DerivedDeployedDependencyRepositorySpec
       deploymentRepository.setFlag(SlugInfoFlag.QA, metaArtefactDependency2.repoName, metaArtefactDependency2.repoVersion).futureValue
 
       repository.insert(List(metaArtefactDependency1, metaArtefactDependency2)).futureValue
-      repository.findWithDeploymentLookup(SlugInfoFlag.QA, scopes = Some(List(Compile))          ).futureValue                    mustBe Seq(metaArtefactDependency1)
-      repository.findWithDeploymentLookup(SlugInfoFlag.QA, scopes = Some(List(Provided))         ).futureValue                    mustBe Seq(metaArtefactDependency2)
-      repository.findWithDeploymentLookup(SlugInfoFlag.QA, scopes = Some(List(Compile, Provided))).futureValue.sortBy(_.repoName) mustBe Seq(metaArtefactDependency1, metaArtefactDependency2)
+      repository.findWithDeploymentLookup(SlugInfoFlag.QA, scopes = Some(List(Compile))          ).futureValue                    shouldBe Seq(metaArtefactDependency1)
+      repository.findWithDeploymentLookup(SlugInfoFlag.QA, scopes = Some(List(Provided))         ).futureValue                    shouldBe Seq(metaArtefactDependency2)
+      repository.findWithDeploymentLookup(SlugInfoFlag.QA, scopes = Some(List(Compile, Provided))).futureValue.sortBy(_.repoName) shouldBe Seq(metaArtefactDependency1, metaArtefactDependency2)
     }
   }
 }

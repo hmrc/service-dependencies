@@ -17,6 +17,7 @@
 package uk.gov.hmrc.servicedependencies.persistence.derived
 
 import javax.inject.{Inject, Singleton}
+import org.mongodb.scala.{ObservableFuture, SingleObservableFuture}
 import org.mongodb.scala.bson.BsonDocument
 import org.mongodb.scala.model.{Aggregates, DeleteManyModel, Filters, Indexes, IndexModel, Projections, ReplaceOneModel, ReplaceOptions}
 import uk.gov.hmrc.mongo.MongoComponent
@@ -115,16 +116,16 @@ object DerivedModule {
 
   def toDerivedModules(meta: MetaArtefact) =
     meta.modules.map(module => DerivedModule(
-    moduleGroup = module.group
-  , moduleName  = module.name
-  , name        = meta.name
-  , version     = meta.version
-  ))
+      moduleGroup = module.group
+    , moduleName  = module.name
+    , name        = meta.name
+    , version     = meta.version
+    ))
 
   val mongoFormat: Format[DerivedModule] =
     ( (__ \ "moduleGroup").format[String]
     ~ (__ \ "moduleName" ).format[String]
     ~ (__ \ "name"       ).format[String]
     ~ (__ \ "version"    ).format[Version](Version.format)
-    )(DerivedModule.apply, unlift(DerivedModule.unapply))
+    )(DerivedModule.apply, dm => (dm.moduleGroup, dm.moduleName, dm.name, dm.version))
 }

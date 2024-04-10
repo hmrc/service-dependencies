@@ -48,7 +48,7 @@ object MetaArtefact {
     ~ (__ \ "modules"           ).format[Seq[MetaArtefactModule]]
     ~ (__ \ "created"           ).format[Instant](MongoJavatimeFormats.instantFormat)
     ~ (__ \ "latest"            ).formatWithDefault[Boolean](false)
-    )(MetaArtefact.apply, unlift(MetaArtefact.unapply))
+    )(MetaArtefact.apply, ma => (ma.name, ma.version, ma.uri, ma.gitUrl, ma.dependencyDotBuild, ma.buildInfo, ma.modules, ma.created, ma.latest))
 
   val apiFormat: OFormat[MetaArtefact] =
     ( (__ \ "name"              ).format[String]
@@ -60,7 +60,7 @@ object MetaArtefact {
     ~ (__ \ "modules"           ).format[Seq[MetaArtefactModule]]
     ~ (__ \ "created"           ).format[Instant]
     ~ (__ \ "latest"            ).formatWithDefault[Boolean](false)
-    )(MetaArtefact.apply, unlift(MetaArtefact.unapply))
+    )(MetaArtefact.apply, ma => (ma.name, ma.version, ma.uri, ma.gitUrl, ma.dependencyDotBuild, ma.buildInfo, ma.modules, ma.created, ma.latest))
 }
 
 case class MetaArtefactModule(
@@ -87,6 +87,6 @@ object MetaArtefactModule {
     ~ (__ \ "dependencyDotProvided").formatNullable[String]
     ~ (__ \ "dependencyDotTest"    ).formatNullable[String]
     ~ (__ \ "dependencyDotIt"      ).formatNullable[String]
-    )(MetaArtefactModule.apply, unlift(MetaArtefactModule.unapply))
+    )(MetaArtefactModule.apply, ma => (ma.name, ma.group, ma.sbtVersion, ma.crossScalaVersions, ma.publishSkip, ma.dependencyDotCompile, ma.dependencyDotProvided, ma.dependencyDotTest, ma.dependencyDotIt))
   }
 }

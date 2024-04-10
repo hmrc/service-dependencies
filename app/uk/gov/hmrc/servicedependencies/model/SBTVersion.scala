@@ -29,7 +29,7 @@ trait SBTVersionFormats {
   val sbtVersionFormat: OFormat[SBTVersion] =
     ( (__ \ "serviceName").format[String]
     ~ (__ \ "version"    ).format[String]
-    )(SBTVersion.apply, unlift(SBTVersion.unapply))
+    )(SBTVersion.apply, sv => (sv.serviceName, sv.version))
 }
 
 object SBTVersionFormats extends SBTVersionFormats

@@ -9,8 +9,8 @@ lazy val microservice = Project("service-dependencies", file("."))
   .settings(PlayKeys.playDefaultPort := 8459)
   .settings(libraryDependencies ++= AppDependencies.compile ++ AppDependencies.test)
   .settings(resolvers += Resolver.jcenterRepo)
-  .settings(scalaVersion := "2.13.12")
-  .settings(scalacOptions += "-Wconf:src=routes/.*:s")
+  .settings(scalaVersion := "3.3.3")
+  //.settings(scalacOptions += "-Wconf:src=routes/.*:s") // src not valid for Scala 3 - alternative? needed (no warning seen)? https://docs.scala-lang.org/overviews/compiler-options/index.html
   .settings(
     Test / resources := (Test / resources).value ++ Seq(baseDirectory.value / "conf" / "application.conf")
   )
