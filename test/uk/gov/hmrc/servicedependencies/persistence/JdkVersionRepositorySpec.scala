@@ -16,9 +16,9 @@
 
 package uk.gov.hmrc.servicedependencies.persistence
 
-import org.mockito.MockitoSugar
 import org.scalatest.matchers.should.Matchers
-import org.scalatest.wordspec.AnyWordSpecLike
+import org.scalatest.wordspec.AnyWordSpec
+import org.scalatestplus.mockito.MockitoSugar
 import uk.gov.hmrc.mongo.MongoUtils
 import uk.gov.hmrc.mongo.test.DefaultPlayMongoRepositorySupport
 import uk.gov.hmrc.servicedependencies.model.JDKVersion
@@ -28,13 +28,15 @@ import uk.gov.hmrc.servicedependencies.persistence.TestSlugInfos
 import scala.concurrent.ExecutionContext.Implicits.global
 
 class JdkVersionRepositorySpec
-  extends AnyWordSpecLike
+  extends AnyWordSpec
     with Matchers
     with MockitoSugar
     with DefaultPlayMongoRepositorySupport[JDKVersion] {
 
   lazy val deploymentRepository = new DeploymentRepository(mongoComponent)
-  override protected lazy val repository = new JdkVersionRepository(mongoComponent, deploymentRepository)
+
+  override protected val repository: JdkVersionRepository =
+    new JdkVersionRepository(mongoComponent, deploymentRepository)
 
   lazy val slugInfoRepo  = new SlugInfoRepository(mongoComponent, deploymentRepository)
 

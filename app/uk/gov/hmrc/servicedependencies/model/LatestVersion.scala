@@ -37,8 +37,7 @@ object LatestVersion {
     ( (__ \ "artefact").write[String]
     ~ (__ \ "group"   ).write[String]
     ~ (__ \ "version" ).write[Version]
-    ~ ignore[Instant]
-    )(unlift(LatestVersion.unapply))
+    )(lv => (lv.name, lv.group, lv.version))
   }
 
   val mongoFormat = {
@@ -48,7 +47,7 @@ object LatestVersion {
     ~ (__ \ "group"       ).format[String]
     ~ (__ \ "version"     ).format[Version]
     ~ (__ \ "updateDate"  ).format[Instant]
-    )(LatestVersion.apply, unlift(LatestVersion.unapply))
+    )(LatestVersion.apply, lv => (lv.name, lv.group, lv.version, lv.updateDate))
   }
 
   val schema =

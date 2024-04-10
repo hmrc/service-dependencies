@@ -33,7 +33,7 @@ trait JDKVersionFormats {
     ~ (__ \ "version").format[String]
     ~ (__ \ "vendor" ).format[String]
     ~ (__ \ "kind"   ).format[String]
-    )(JDKVersion.apply, unlift(JDKVersion.unapply))
+    )(JDKVersion.apply, jv => (jv.name, jv.version, jv.vendor, jv.kind))
 }
 
 object JDKVersionFormats extends JDKVersionFormats

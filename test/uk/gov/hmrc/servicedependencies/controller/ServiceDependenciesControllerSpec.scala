@@ -17,11 +17,12 @@
 package uk.gov.hmrc.servicedependencies.controller
 
 import org.mockito.ArgumentMatchers.any
-import org.mockito.MockitoSugar
+import org.mockito.Mockito.{verifyNoInteractions, when}
 import org.scalatest.OptionValues
 import org.scalatest.concurrent.{IntegrationPatience, ScalaFutures}
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
+import org.scalatestplus.mockito.MockitoSugar
 import play.api.libs.json.{Json, OWrites}
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
@@ -142,7 +143,7 @@ class ServiceDependenciesControllerSpec
         metaArtefactDependency(Version("2.0.0"))
       ))
 
-      verifyZeroInteractions(boot.mockDerivedLatestDependencyRepository)
+      verifyNoInteractions(boot.mockDerivedLatestDependencyRepository)
     }
 
     "get slug info for services when flag is not Latest, filter by range and set teams" in {
@@ -176,7 +177,7 @@ class ServiceDependenciesControllerSpec
         metaArtefactDependency(Version("1.0.0"))
       ))
 
-      verifyZeroInteractions(boot.mockDerivedLatestDependencyRepository)
+      verifyNoInteractions(boot.mockDerivedLatestDependencyRepository)
     }
 
     "get artefact dependencies when flag is Latest and set teams" in {
@@ -211,7 +212,7 @@ class ServiceDependenciesControllerSpec
         metaArtefactDependency(Version("2.0.0")))
       )
 
-      verifyZeroInteractions(boot.mockDerivedDeployedDependencyRepository)
+      verifyNoInteractions(boot.mockDerivedDeployedDependencyRepository)
     }
 
     "get artefact dependencies when flag is Latest, filter by range and set teams" in {
@@ -246,7 +247,7 @@ class ServiceDependenciesControllerSpec
         )
       )
 
-      verifyZeroInteractions(boot.mockDerivedDeployedDependencyRepository)
+      verifyNoInteractions(boot.mockDerivedDeployedDependencyRepository)
     }
   }
 

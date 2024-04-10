@@ -17,56 +17,56 @@
 package uk.gov.hmrc.servicedependencies.model
 
 import org.scalatest.freespec.AnyFreeSpec
-import org.scalatest.matchers.must.Matchers
+import org.scalatest.matchers.should.Matchers
 
 class VersionSpec extends AnyFreeSpec with Matchers {
 
   "Can be lower than others" in {
-    Version("0.0.0") < Version("0.0.1") mustBe true
-    Version("0.0.1") < Version("0.0.0") mustBe false
+    Version("0.0.0") < Version("0.0.1") shouldBe true
+    Version("0.0.1") < Version("0.0.0") shouldBe false
 
-    Version("0.0.0") < Version("0.1.0") mustBe true
-    Version("0.1.0") < Version("0.0.0") mustBe false
+    Version("0.0.0") < Version("0.1.0") shouldBe true
+    Version("0.1.0") < Version("0.0.0") shouldBe false
 
-    Version("0.0.0") < Version("1.0.0") mustBe true
-    Version("1.0.0") < Version("0.0.0") mustBe false
+    Version("0.0.0") < Version("1.0.0") shouldBe true
+    Version("1.0.0") < Version("0.0.0") shouldBe false
 
-    Version("0.1.1") < Version("1.0.0") mustBe true
-    Version("1.0.0") < Version("0.1.1") mustBe false
+    Version("0.1.1") < Version("1.0.0") shouldBe true
+    Version("1.0.0") < Version("0.1.1") shouldBe false
 
-    Version("1.0.1") < Version("1.1.0") mustBe true
-    Version("1.1.0") < Version("1.0.1") mustBe false
+    Version("1.0.1") < Version("1.1.0") shouldBe true
+    Version("1.1.0") < Version("1.0.1") shouldBe false
 
-    Version("1.1.0") < Version("1.1.1") mustBe true
-    Version("1.1.1") < Version("1.1.0") mustBe false
+    Version("1.1.0") < Version("1.1.1") shouldBe true
+    Version("1.1.1") < Version("1.1.0") shouldBe false
 
-    Version("0.9.0-2-ga163db3") < Version("0.52.0") mustBe true
-    Version("0.52.0") < Version("0.9.0-2-ga163db3") mustBe false
+    Version("0.9.0-2-ga163db3") < Version("0.52.0") shouldBe true
+    Version("0.52.0") < Version("0.9.0-2-ga163db3") shouldBe false
 
-    Version("0.9.0-2-ga163db3") < Version("0.9.0") mustBe true
-    Version("0.9.0") < Version("0.9.0-2-ga163db3") mustBe false
+    Version("0.9.0-2-ga163db3") < Version("0.9.0") shouldBe true
+    Version("0.9.0") < Version("0.9.0-2-ga163db3") shouldBe false
 
-    Version("0.9.0-SNAPSHOT") < Version("0.9.0") mustBe true
-    Version("0.9.0") < Version("0.9.0-SNAPSHOT") mustBe false
+    Version("0.9.0-SNAPSHOT") < Version("0.9.0") shouldBe true
+    Version("0.9.0") < Version("0.9.0-SNAPSHOT") shouldBe false
   }
 
   "Can be parsed from strings" in {
-    Version("1.2.3")            mustBe Version(1, 2,  3, "1.2.3")
-    Version("2.3.4-play-26")    mustBe Version(2, 3,  4, "2.3.4-play-26")
-    Version("5.6.7-RC1")        mustBe Version(5, 6,  7, "5.6.7-RC1")
-    Version("9.2.24.v20180105") mustBe Version(9, 2, 24, "9.2.24.v20180105")
+    Version("1.2.3")            shouldBe Version(1, 2,  3, "1.2.3")
+    Version("2.3.4-play-26")    shouldBe Version(2, 3,  4, "2.3.4-play-26")
+    Version("5.6.7-RC1")        shouldBe Version(5, 6,  7, "5.6.7-RC1")
+    Version("9.2.24.v20180105") shouldBe Version(9, 2, 24, "9.2.24.v20180105")
 
-    Version("2.5")              mustBe Version(2, 5, 0, "2.5")
-    Version("2.19-SNAPSHOT")    mustBe Version(2, 19, 0, "2.19-SNAPSHOT")
-    Version("2.2-cj-1.1")       mustBe Version(2, 2, 0, "2.2-cj-1.1")
+    Version("2.5")              shouldBe Version(2, 5, 0, "2.5")
+    Version("2.19-SNAPSHOT")    shouldBe Version(2, 19, 0, "2.19-SNAPSHOT")
+    Version("2.2-cj-1.1")       shouldBe Version(2, 2, 0, "2.2-cj-1.1")
 
-    Version("2")                mustBe Version(0, 0, 2, "2")
-    Version("999-SNAPSHOT")     mustBe Version(0, 0, 999, "999-SNAPSHOT")
+    Version("2")                shouldBe Version(0, 0, 2, "2")
+    Version("999-SNAPSHOT")     shouldBe Version(0, 0, 999, "999-SNAPSHOT")
   }
 
   "Can be printed to strings" in {
-    Version(1, 2, 3                 ).toString mustBe "1.2.3"
-    Version(1, 2, 3, "1.2.3-play-26").toString mustBe "1.2.3-play-26"
+    Version(1, 2, 3                 ).toString shouldBe "1.2.3"
+    Version(1, 2, 3, "1.2.3-play-26").toString shouldBe "1.2.3-play-26"
   }
 
   "apply.toString == identity" in {
@@ -95,7 +95,7 @@ class VersionSpec extends AnyFreeSpec with Matchers {
       "2.2-cj-1.1",
       "v2-rev137-1.23.0")
     testcases.foreach { s =>
-      Version.apply(s).toString mustBe s
+      Version.apply(s).toString shouldBe s
     }
   }
 }

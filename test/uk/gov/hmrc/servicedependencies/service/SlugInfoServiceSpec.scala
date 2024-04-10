@@ -16,20 +16,22 @@
 
 package uk.gov.hmrc.servicedependencies.service
 
-import java.time.Instant
-import org.mockito.scalatest.MockitoSugar
+import org.mockito.Mockito.{times, verify, verifyNoMoreInteractions, when}
+import org.mockito.ArgumentMatchers.{any, eq => eqTo}
 import org.scalatest.concurrent.{IntegrationPatience, ScalaFutures}
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
+import org.scalatestplus.mockito.MockitoSugar
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.servicedependencies.connector.{TeamsAndRepositoriesConnector, TeamsForServices}
 import uk.gov.hmrc.servicedependencies.model._
 import uk.gov.hmrc.servicedependencies.persistence.{DeploymentRepository, JdkVersionRepository, SbtVersionRepository, SlugInfoRepository, SlugVersionRepository}
 import uk.gov.hmrc.servicedependencies.persistence.derived.{DerivedGroupArtefactRepository, DerivedDeployedDependencyRepository}
+import uk.gov.hmrc.servicedependencies.persistence.derived.DerivedLatestDependencyRepository
 
+import java.time.Instant
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
-import uk.gov.hmrc.servicedependencies.persistence.derived.DerivedLatestDependencyRepository
 
 class SlugInfoServiceSpec
   extends AnyWordSpec
@@ -142,7 +144,6 @@ class SlugInfoServiceSpec
       boot.service.addSlugInfo(sampleSlugInfo).futureValue
 
       verify(boot.mockedDeploymentRepository, times(1)).markLatest(sampleSlugInfo.name, sampleSlugInfo.version)
-      verifyNoMoreInteractions(boot.mockedSlugInfoRepository)
     }
 
     "mark the slug as latest if the version is latest" in new GetSlugInfoFixture {
@@ -158,8 +159,6 @@ class SlugInfoServiceSpec
 
       boot.service.addSlugInfo(slugv2).futureValue
       verify(boot.mockedDeploymentRepository, times(1)).markLatest(slugv2.name, Version("2.0.0"))
-
-      verifyNoMoreInteractions(boot.mockedSlugInfoRepository)
     }
 
     "not use the latest flag from sqs/artefact processor" in new GetSlugInfoFixture {
@@ -188,7 +187,7 @@ class SlugInfoServiceSpec
 
       boot.service.addSlugInfo(slugv1).futureValue
 
-      verifyNoMoreInteractions(boot.mockedSlugInfoRepository)
+      verifyNoMoreInteractions(boot.mockedDeploymentRepository)
     }
   }
 

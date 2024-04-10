@@ -112,7 +112,7 @@ trait MongoSlugInfoFormats {
     ~ (__ \ "repoUrl"          ).formatNullable[String]
     ~ (__ \ "applicationConfig").formatWithDefault[String]("")
     ~ (__ \ "slugConfig"       ).formatWithDefault[String]("")
-    )(SlugInfo.apply, unlift(SlugInfo.unapply))
+    )(SlugInfo.apply, si => (si.uri, si.created, si.name, si.version, si.teams, si.runnerVersion, si.classpath, si.java, si.sbtVersion, si.repoUrl, si.applicationConfig, si.slugConfig))
   }
 
   val jdkVersionFormat: OFormat[JDKVersion] =
@@ -120,12 +120,12 @@ trait MongoSlugInfoFormats {
     ~ (__ \ "version").format[String]
     ~ (__ \ "vendor" ).formatWithDefault[String]("Oracle")
     ~ (__ \ "kind"   ).formatWithDefault[String]("JDK")
-    )(JDKVersion.apply, unlift(JDKVersion.unapply))
+    )(JDKVersion.apply, jv => (jv.name, jv.version, jv.vendor, jv.kind))
 
   val groupArtefactsFormat: OFormat[GroupArtefacts] =
     ( (__ \ "group"    ).format[String]
     ~ (__ \ "artifacts").format[List[String]]
-    )(GroupArtefacts.apply, unlift(GroupArtefacts.unapply))
+    )(GroupArtefacts.apply, ga => (ga.group, ga.artefacts))
 
   val dependencyConfigFormat: OFormat[DependencyConfig] =
     ( (__ \ "group"   ).format[String]
@@ -135,7 +135,7 @@ trait MongoSlugInfoFormats {
                        .inmap[Map[String, String]]( _.map { case (k, v) => (k.replaceAll("_DOT_", "."    ), v) }  // for mongo < 3.6 compatibility - '.' and '$'' not permitted in keys
                                                   , _.map { case (k, v) => (k.replaceAll("\\."  , "_DOT_"), v) }
                                                   )
-    )(DependencyConfig.apply, unlift(DependencyConfig.unapply))
+    )(DependencyConfig.apply, dc => (dc.group, dc.artefact, dc.version, dc.configs))
 
   val schema =
     """
@@ -191,7 +191,7 @@ trait ApiSlugInfoFormats {
     ~ (__ \ "repoUrl"                   ).formatNullable[String]
     ~ (__ \ "applicationConfig"         ).format[String]
     ~ (__ \ "slugConfig"                ).format[String]
-    )(SlugInfo.apply, unlift(SlugInfo.unapply))
+    )(SlugInfo.apply, si => (si.uri, si.created, si.name, si.version, si.teams, si.runnerVersion, si.classpath, si.java, si.sbtVersion, si.repoUrl, si.applicationConfig, si.slugConfig))
   }
 
   val dependencyConfigFormat: OFormat[DependencyConfig] =
@@ -199,7 +199,7 @@ trait ApiSlugInfoFormats {
     ~ (__ \ "artefact").format[String]
     ~ (__ \ "version" ).format[String]
     ~ (__ \ "configs" ).format[Map[String, String]]
-    )(DependencyConfig.apply, unlift(DependencyConfig.unapply))
+    )(DependencyConfig.apply, dc => (dc.group, dc.artefact, dc.version, dc.configs))
 }
 
 object ApiSlugInfoFormats extends ApiSlugInfoFormats

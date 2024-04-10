@@ -16,10 +16,11 @@
 
 package uk.gov.hmrc.servicedependencies.service
 
-import org.mockito.{ArgumentMatchersSugar, MockitoSugar}
+import org.mockito.Mockito.when
 import org.scalatest.concurrent.{IntegrationPatience, ScalaFutures}
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
+import org.scalatestplus.mockito.MockitoSugar
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.servicedependencies.config.ServiceDependenciesConfig
 import uk.gov.hmrc.servicedependencies.config.model.{DependencyConfig, CuratedDependencyConfig}
@@ -36,8 +37,7 @@ class TeamDependencyServiceSpec
      with Matchers
      with MockitoSugar
      with ScalaFutures
-     with IntegrationPatience
-     with ArgumentMatchersSugar {
+     with IntegrationPatience {
 
   val mockTeamsAndReposConnector    = mock[TeamsAndRepositoriesConnector]
   val mockSlugInfoRepository        = mock[SlugInfoRepository]

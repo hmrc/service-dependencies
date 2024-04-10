@@ -17,6 +17,7 @@
 package uk.gov.hmrc.servicedependencies.persistence
 
 import com.google.inject.{Inject, Singleton}
+import org.mongodb.scala.{ObservableFuture, SingleObservableFuture}
 import org.mongodb.scala.bson.BsonDocument
 import org.mongodb.scala.bson.conversions.Bson
 import org.mongodb.scala.model.Filters.{and, equal}
@@ -72,7 +73,7 @@ class SlugInfoRepository @Inject()(
     collection.distinct[String]("name")
       .toFuture()
 
- def getSlugInfo(name: String, version: Version): Future[Option[SlugInfo]] =
+  def getSlugInfo(name: String, version: Version): Future[Option[SlugInfo]] =
     collection
       .find(
         filter = and(

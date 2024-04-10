@@ -20,6 +20,7 @@ package uk.gov.hmrc.servicedependencies.persistence
 import java.time.LocalDate
 import com.google.inject.{Inject, Singleton}
 import com.mongodb.client.model.Accumulators
+import org.mongodb.scala.{ObservableFuture, SingleObservableFuture}
 import org.mongodb.scala.bson.BsonDocument
 import org.mongodb.scala.model.{Filters, IndexModel, IndexOptions, ReplaceOptions, Sorts}
 import org.mongodb.scala.model.Aggregates.{`match`, group, sort, unwind}

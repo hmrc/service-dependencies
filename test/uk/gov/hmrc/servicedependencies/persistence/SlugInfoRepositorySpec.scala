@@ -16,23 +16,25 @@
 
 package uk.gov.hmrc.servicedependencies.persistence
 
-import org.mockito.MockitoSugar
 import uk.gov.hmrc.mongo.test.DefaultPlayMongoRepositorySupport
 import uk.gov.hmrc.servicedependencies.model.SlugInfo
 import uk.gov.hmrc.servicedependencies.persistence.TestSlugInfos
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpec
+import org.scalatestplus.mockito.MockitoSugar
 
 import scala.concurrent.ExecutionContext.Implicits.global
-import org.scalatest.matchers.should.Matchers
-import org.scalatest.wordspec.AnyWordSpecLike
 
 class SlugInfoRepositorySpec
-    extends AnyWordSpecLike
+    extends AnyWordSpec
       with Matchers
       with MockitoSugar
       with DefaultPlayMongoRepositorySupport[SlugInfo] {
 
   lazy val deploymentRepository = new DeploymentRepository(mongoComponent)
-  override lazy val repository = new SlugInfoRepository(mongoComponent, deploymentRepository)
+
+  override val repository: SlugInfoRepository =
+    new SlugInfoRepository(mongoComponent, deploymentRepository)
 
   "SlugInfoRepository.add" should {
     "insert correctly" in {

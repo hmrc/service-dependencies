@@ -39,5 +39,5 @@ object Team {
   val format =
     ( (__ \ "name" ).format[String]
     ~ (__ \ "repos").formatWithDefault[Map[String, Seq[String]]](Map.empty)
-    )(Team.apply, unlift(Team.unapply))
+    )(Team.apply, t => (t.name, t.repos))
 }

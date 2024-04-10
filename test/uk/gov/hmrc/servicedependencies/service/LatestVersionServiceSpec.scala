@@ -18,11 +18,12 @@ package uk.gov.hmrc.servicedependencies.service
 
 import java.time.{Instant, LocalDate}
 import org.mockito.ArgumentMatchers.any
-import org.mockito.MockitoSugar
+import org.mockito.Mockito.{times, verify, when}
 import org.scalatest.OptionValues
 import org.scalatest.concurrent.IntegrationPatience
 import org.scalatest.wordspec.AnyWordSpec
 import org.scalatest.matchers.should.Matchers
+import org.scalatestplus.mockito.MockitoSugar
 import uk.gov.hmrc.mongo.test.MongoSupport
 import uk.gov.hmrc.servicedependencies.config.ServiceDependenciesConfig
 import uk.gov.hmrc.servicedependencies.config.model.{CuratedDependencyConfig, DependencyConfig}
@@ -56,7 +57,7 @@ class LatestVersionServiceSpec
         .thenReturn(Future.successful(Map(ScalaVersion.SV_None -> Version("1.1.1"))))
 
       when(boot.mockLatestVersionRepository.update(any()))
-        .thenReturn(Future.successful(mock[LatestVersion]))
+        .thenReturn(Future.unit)
 
       when(boot.mockLatestVersionRepository.getAllEntries())
         .thenReturn(Future.successful(List(

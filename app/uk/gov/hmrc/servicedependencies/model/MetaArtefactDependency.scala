@@ -72,7 +72,7 @@ object MetaArtefactDependency {
     ~ (__ \ "scope_test"    ).format[Boolean]
     ~ (__ \ "scope_it"      ).format[Boolean]
     ~ (__ \ "scope_build"   ).format[Boolean]
-    )(MetaArtefactDependency.apply, unlift(MetaArtefactDependency.unapply))
+    )(MetaArtefactDependency.apply, mad => (mad.repoName, mad.repoVersion, mad.repoType, mad.teams, mad.depGroup, mad.depArtefact, mad.depVersion, mad.compileFlag, mad.providedFlag, mad.testFlag, mad.itFlag, mad.buildFlag))
 
   val apiWrites: OWrites[MetaArtefactDependency] = {
     implicit val scopeFormat = DependencyScope.dependencyScopeFormat
@@ -105,4 +105,3 @@ object MetaArtefactDependency {
     ))
   }
 }
-

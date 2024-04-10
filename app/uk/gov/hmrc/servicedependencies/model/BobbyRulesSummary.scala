@@ -55,8 +55,10 @@ private object DataFormat {
           )
       }.toList
 
-  def dataFormat[A : Format]: Format[Map[(BobbyRule, SlugInfoFlag), A]] =
+  def dataFormat[A : Format]: Format[Map[(BobbyRule, SlugInfoFlag), A]] = {
+    implicit val mw: Writes[Map[String, A]] = Writes.genericMapWrites // to disambiguate with deprecated Writes.mapWrites
     implicitly[Format[List[(JsValue, Map[String, A])]]].inmap(f[A], g[A])
+  }
 }
 
 object BobbyRulesSummary {
@@ -65,13 +67,13 @@ object BobbyRulesSummary {
   val apiFormat: OFormat[BobbyRulesSummary] =
     ( (__ \ "date"     ).format[LocalDate]
     ~ (__ \ "summary"  ).format[Map[(BobbyRule, SlugInfoFlag), Int]]
-    )(BobbyRulesSummary.apply _, unlift(BobbyRulesSummary.unapply _))
+    )(BobbyRulesSummary.apply _, brs => (brs.date, brs.summary))
 
   val mongoFormat: OFormat[BobbyRulesSummary] = {
     implicit val ldf = MongoJavatimeFormats.localDateFormat
     ( (__ \ "date"     ).format[LocalDate]
     ~ (__ \ "summary"  ).format[Map[(BobbyRule, SlugInfoFlag), Int]]
-    )(BobbyRulesSummary.apply _, unlift(BobbyRulesSummary.unapply _))
+    )(BobbyRulesSummary.apply _, brs => (brs.date, brs.summary))
   }
 
   val mongoSchema =
@@ -92,7 +94,7 @@ object HistoricBobbyRulesSummary {
   val apiFormat: OFormat[HistoricBobbyRulesSummary] =
     ( (__ \ "date"     ).format[LocalDate]
     ~ (__ \ "summary"  ).format[Map[(BobbyRule, SlugInfoFlag), List[Int]]]
-    )(HistoricBobbyRulesSummary.apply _, unlift(HistoricBobbyRulesSummary.unapply _))
+    )(HistoricBobbyRulesSummary.apply _, hbrs => (hbrs.date, hbrs.summary))
 
   def fromBobbyRulesSummary(bobbyRulesSummary: BobbyRulesSummary): HistoricBobbyRulesSummary =
     HistoricBobbyRulesSummary(
