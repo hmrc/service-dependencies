@@ -20,7 +20,7 @@ import play.api.Logger
 import play.api.libs.functional.syntax._
 import play.api.libs.json.{Format, __}
 import com.google.inject.{Inject, Singleton}
-import org.mongodb.scala.ClientSession
+import org.mongodb.scala.{ClientSession, ClientSessionOptions, ReadConcern, ReadPreference, TransactionOptions, WriteConcern}
 import org.mongodb.scala.bson.{BsonArray, BsonDocument}
 import org.mongodb.scala.bson.conversions.Bson
 import org.mongodb.scala.model.{Aggregates, Filters, Indexes, IndexModel, IndexOptions, Updates, UpdateOptions, Sorts, Variable}
@@ -54,7 +54,21 @@ class DeploymentRepository @Inject()(
 ) with Transactions {
   val logger = Logger(getClass)
 
-  private implicit val tc: TransactionConfiguration = TransactionConfiguration.strict
+  private implicit val tc: TransactionConfiguration =
+    TransactionConfiguration(
+      clientSessionOptions = Some(
+                               ClientSessionOptions.builder()
+                                 .causallyConsistent(true)
+                                 .build()
+                             ),
+      transactionOptions   = Some(
+                               TransactionOptions.builder()
+                                 .readConcern(ReadConcern.MAJORITY)
+                                 .writeConcern(WriteConcern.MAJORITY)
+                                 .readPreference(ReadPreference.primary())
+                                 .build()
+                             )
+    )
 
   def clearFlag(flag: SlugInfoFlag, name: String): Future[Unit] =
     withSessionAndTransaction { session =>

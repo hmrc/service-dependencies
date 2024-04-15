@@ -17,7 +17,7 @@
 package uk.gov.hmrc.servicedependencies.persistence
 
 import play.api.Logging
-import org.mongodb.scala.ClientSession
+import org.mongodb.scala.{ClientSession, ClientSessionOptions, ReadConcern, ReadPreference, TransactionOptions, WriteConcern}
 import org.mongodb.scala.bson.BsonDocument
 import org.mongodb.scala.model.{Aggregates, Filters, IndexModel, IndexOptions, Indexes, Projections, ReplaceOptions, Sorts, UpdateOptions, Updates}
 import uk.gov.hmrc.mongo.MongoComponent
@@ -43,7 +43,21 @@ class MetaArtefactRepository @Inject()(
   // MetaArtefacts are removed when ArtefactProcess detects they've been deleted (or the related Slug) from Artifactory
   override lazy val requiresTtlIndex = false
 
-  private implicit val tc: TransactionConfiguration = TransactionConfiguration.strict
+  private implicit val tc: TransactionConfiguration =
+    TransactionConfiguration(
+      clientSessionOptions = Some(
+                               ClientSessionOptions.builder()
+                                 .causallyConsistent(true)
+                                 .build()
+                             ),
+      transactionOptions   = Some(
+                               TransactionOptions.builder()
+                                 .readConcern(ReadConcern.MAJORITY)
+                                 .writeConcern(WriteConcern.MAJORITY)
+                                 .readPreference(ReadPreference.primary())
+                                 .build()
+                             )
+    )
 
   def put(meta: MetaArtefact): Future[Unit] =
     withSessionAndTransaction { session =>
@@ -153,7 +167,7 @@ class MetaArtefactRepository @Inject()(
 
   def clearAllData(): Future[Unit] =
     collection
-      .deleteMany(BsonDocument())
+      .deleteMany(Filters.empty())
       .toFuture()
       .map(_ => ())
 }
