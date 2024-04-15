@@ -54,7 +54,16 @@ class DeploymentRepository @Inject()(
 ) with Transactions {
   val logger = Logger(getClass)
 
-  private implicit val tc: TransactionConfiguration = TransactionConfiguration.strict
+  import org.mongodb.scala.{TransactionOptions, ReadConcern, WriteConcern, ReadPreference}
+  private implicit val tc: TransactionConfiguration = TransactionConfiguration.strict.copy(
+    transactionOptions = Some(
+                               TransactionOptions.builder()
+                                 .readConcern(ReadConcern.MAJORITY)
+                                 .writeConcern(WriteConcern.MAJORITY)
+                                 .readPreference(ReadPreference.primary())
+                                 .build()
+                             )
+  )
 
   def clearFlag(flag: SlugInfoFlag, name: String): Future[Unit] =
     withSessionAndTransaction { session =>

@@ -43,7 +43,16 @@ class MetaArtefactRepository @Inject()(
   // MetaArtefacts are removed when ArtefactProcess detects they've been deleted (or the related Slug) from Artifactory
   override lazy val requiresTtlIndex = false
 
-  private implicit val tc: TransactionConfiguration = TransactionConfiguration.strict
+  import org.mongodb.scala.{TransactionOptions, ReadConcern, WriteConcern, ReadPreference}
+  private implicit val tc: TransactionConfiguration = TransactionConfiguration.strict.copy(
+    transactionOptions = Some(
+                               TransactionOptions.builder()
+                                 .readConcern(ReadConcern.MAJORITY)
+                                 .writeConcern(WriteConcern.MAJORITY)
+                                 .readPreference(ReadPreference.primary())
+                                 .build()
+                             )
+  )
 
   def put(meta: MetaArtefact): Future[Unit] =
     withSessionAndTransaction { session =>
