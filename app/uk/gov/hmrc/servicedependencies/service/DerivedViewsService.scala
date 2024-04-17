@@ -108,7 +108,7 @@ class DerivedViewsService @Inject()(
 
   def updateDerivedViews(repoName: String)(implicit hc: HeaderCarrier): Future[Unit] =
     for {
-      oActiveRepo <- teamsAndRepositoriesConnector.getRepository(repoName).map(_.filter(_.isArchived).toSeq)
+      oActiveRepo <- teamsAndRepositoriesConnector.getRepository(repoName).map(_.filterNot(_.isArchived).toSeq)
       oLatestMeta <- metaArtefactRepository.find(repoName)
       deployments <- deploymentRepository.findDeployed(Some(repoName))
       _           <- updateDerivedDependencyViews(oActiveRepo.toSeq, oLatestMeta.toSeq, deployments)
