@@ -23,7 +23,7 @@ import com.google.inject.{Inject, Singleton}
 import org.mongodb.scala.{ClientSession, ClientSessionOptions, ReadConcern, ReadPreference, TransactionOptions, WriteConcern}
 import org.mongodb.scala.bson.{BsonArray, BsonDocument}
 import org.mongodb.scala.bson.conversions.Bson
-import org.mongodb.scala.model.{Aggregates, Filters, Indexes, IndexModel, IndexOptions, Updates, UpdateOptions, Sorts, Variable}
+import org.mongodb.scala.model.{Aggregates, Filters, Indexes, IndexModel, Updates, UpdateOptions, Sorts, Variable}
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.play.json.{CollectionFactory, PlayMongoRepository}
 import uk.gov.hmrc.mongo.transaction.{TransactionConfiguration, Transactions}
@@ -42,15 +42,11 @@ class DeploymentRepository @Inject()(
   mongoComponent = mongoComponent,
   domainFormat   = Deployment.mongoFormat,
   indexes        = Seq(
-                     IndexModel(
-                       Indexes.compoundIndex(Indexes.ascending("name"), Indexes.ascending("version")),
-                       IndexOptions().name("nameVersionIdx")
-                     ),
-                     IndexModel(
-                       Indexes.compoundIndex(SlugInfoFlag.values.map(f => Indexes.ascending(f.asString)) :_*),
-                       IndexOptions().name("slugInfoFlagIdx").background(true)
-                     )
-                   )
+                     IndexModel(Indexes.compoundIndex(Indexes.ascending("name"), Indexes.ascending("version"))),
+                     IndexModel(Indexes.ascending("name")),
+                     IndexModel(Indexes.compoundIndex(SlugInfoFlag.values.map(f => Indexes.ascending(f.asString)) :_*))
+                   ),
+  replaceIndexes = true
 ) with Transactions {
   val logger = Logger(getClass)
 
