@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.servicedependencies.persistence.derived
 
-import org.mongodb.scala.model.{Filters, Indexes, IndexOptions, IndexModel, ReplaceOneModel, ReplaceOptions}
+import org.mongodb.scala.model.{Filters, Indexes, IndexModel, ReplaceOneModel, ReplaceOptions}
 import play.api.Logging
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.play.json.PlayMongoRepository
@@ -30,15 +30,17 @@ class DerivedLatestDependencyRepository @Inject()(
   mongoComponent: MongoComponent
 )(implicit ec: ExecutionContext
 ) extends PlayMongoRepository[MetaArtefactDependency](
-    collectionName = "DERIVED-latest-dependencies"
-  , mongoComponent = mongoComponent
-  , domainFormat   = MetaArtefactDependency.mongoFormat
-  , indexes        = Seq(
-                       IndexModel(Indexes.ascending("repoName"), IndexOptions().name("repoNameIdx")),
-                       IndexModel(Indexes.ascending("group"),    IndexOptions().name("groupIdx")),
-                       IndexModel(Indexes.ascending("artefact"), IndexOptions().name("artefactIdx")),
-                       IndexModel(Indexes.ascending("repoType"), IndexOptions().name("repoIdx")),
-                     ) ++ DependencyScope.values.map(s => IndexModel(Indexes.ascending(s"scope_${s.asString}"), IndexOptions().name(s"scope_${s.asString}Idx")))
+  collectionName = "DERIVED-latest-dependencies"
+, mongoComponent = mongoComponent
+, domainFormat   = MetaArtefactDependency.mongoFormat
+, indexes        = Seq(
+                     IndexModel(Indexes.ascending("repoName")),
+                     IndexModel(Indexes.ascending("repoVersion")),
+                     IndexModel(Indexes.ascending("group")),
+                     IndexModel(Indexes.ascending("artefact")),
+                     IndexModel(Indexes.ascending("repoType")),
+                   ) ++ DependencyScope.values.map(s => IndexModel(Indexes.ascending(s"scope_${s.asString}")))
+, replaceIndexes = true
 ) with Logging {
 
   // automatically refreshed when given new meta data artefacts from update scheduler

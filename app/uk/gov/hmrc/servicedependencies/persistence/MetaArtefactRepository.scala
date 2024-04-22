@@ -37,7 +37,12 @@ class MetaArtefactRepository @Inject()(
   collectionName = "metaArtefacts",
   mongoComponent = mongoComponent,
   domainFormat   = MetaArtefact.mongoFormat,
-  indexes        = Seq(IndexModel(Indexes.ascending("name", "version"), IndexOptions().unique(true)))
+  indexes        = Seq(
+                     IndexModel(Indexes.ascending("name", "version"), IndexOptions().unique(true)),
+                     IndexModel(Indexes.ascending("name")),
+                     IndexModel(Indexes.ascending("latest"))
+                   ),
+  replaceIndexes = true
 ) with Transactions with Logging {
 
   // MetaArtefacts are removed when ArtefactProcess detects they've been deleted (or the related Slug) from Artifactory
