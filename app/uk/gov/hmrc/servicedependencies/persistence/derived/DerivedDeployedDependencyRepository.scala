@@ -52,10 +52,6 @@ class DerivedDeployedDependencyRepository @Inject()(
                        IndexOptions().name("group_artefact_idx").background(true)
                      ),
                      IndexModel(
-                       Indexes.compoundIndex(DependencyScope.values.map(s => Indexes.ascending("scope_" + s.asString)) :_*),
-                       IndexOptions().name("dependencyScope_idx").background(true)
-                     ),
-                     IndexModel(
                        Indexes.compoundIndex(
                          Indexes.ascending("repoName"),
                          Indexes.ascending("repoVersion"),
@@ -65,7 +61,7 @@ class DerivedDeployedDependencyRepository @Inject()(
                        ),
                        IndexOptions().name("uniqueIdx").unique(true).background(true)
                      )
-                   )
+                   ) ++ DependencyScope.values.map(s => IndexModel(Indexes.hashed("scope_" + s.asString)))
 , optSchema      = None
 , replaceIndexes = true
 ){
