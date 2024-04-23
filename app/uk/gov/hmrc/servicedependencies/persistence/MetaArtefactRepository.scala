@@ -39,8 +39,8 @@ class MetaArtefactRepository @Inject()(
   domainFormat   = MetaArtefact.mongoFormat,
   indexes        = Seq(
                      IndexModel(Indexes.ascending("name", "version"), IndexOptions().unique(true)),
-                     IndexModel(Indexes.ascending("name")),
-                     IndexModel(Indexes.ascending("latest"))
+                     IndexModel(Indexes.compoundIndex(Indexes.ascending("name"), Indexes.hashed("latest"))),
+                     IndexModel(Indexes.hashed("latest"))
                    ),
   replaceIndexes = true
 ) with Transactions with Logging {
