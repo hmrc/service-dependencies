@@ -68,14 +68,17 @@ class DeploymentRepository @Inject()(
   def clearFlag(flag: SlugInfoFlag, name: String): Future[Unit] =
     withSessionAndTransaction { session =>
       clearFlag(flag, name, session)
-   }
+    }
 
   private def clearFlag(flag: SlugInfoFlag, name: String, session: ClientSession): Future[Unit] = {
     logger.debug(s"clear ${flag.asString} flag on $name")
     collection
       .updateMany(
           clientSession = session,
-          filter        = Filters.equal("name", name),
+          filter        = Filters.and(
+                            Filters.equal("name", name),
+                            Filters.equal(flag.asString, true)
+                          ),
           update        = Updates.set(flag.asString, false)
         )
       .toFuture()
