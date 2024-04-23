@@ -42,10 +42,9 @@ class DeploymentRepository @Inject()(
   mongoComponent = mongoComponent,
   domainFormat   = Deployment.mongoFormat,
   indexes        = Seq(
-                     IndexModel(Indexes.compoundIndex(Indexes.ascending("name"), Indexes.ascending("version"))),
+                     IndexModel(Indexes.ascending("name", "version")),
                      IndexModel(Indexes.ascending("name")),
-                     IndexModel(Indexes.compoundIndex(SlugInfoFlag.values.map(f => Indexes.ascending(f.asString)) :_*))
-                   ),
+                   ) ++ SlugInfoFlag.values.map(f => IndexModel(Indexes.hashed(f.asString))),
   replaceIndexes = true
 ) with Transactions {
   val logger = Logger(getClass)
