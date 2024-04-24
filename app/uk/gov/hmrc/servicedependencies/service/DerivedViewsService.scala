@@ -144,15 +144,16 @@ class DerivedViewsService @Inject()(
              .foldLeftM(()) { case (_, (meta, repoType)) =>
                for {
                  ds <- derivedLatestDependencyRepository.find(repoName = Some(meta.name), repoVersion = Some(meta.version))
-                 _  <- if (ds.isEmpty) derivedLatestDependencyRepository.delete(meta.name)
-                       else            Future.unit
-                 _  <- if (ds.isEmpty) derivedLatestDependencyRepository.put(
-                                         DependencyGraphParser
-                                           .parseMetaArtefact(meta)
-                                           .map { case (node, scopes) => MetaArtefactDependency.apply(meta, repoType, node, scopes) }
-                                           .toSeq
-                                       )
-                       else            Future.unit
+                 _  <- if (ds.isEmpty || repoType == RepoType.Test)
+                         derivedLatestDependencyRepository.delete(meta.name) *>
+                         derivedLatestDependencyRepository.put(
+                           DependencyGraphParser
+                            .parseMetaArtefact(meta)
+                            .map { case (node, scopes) => MetaArtefactDependency.apply(meta, repoType, node, scopes) }
+                            .toSeq
+                         )
+                       else
+                         Future.unit
                } yield ()
              }
       _ <- latestMeta
