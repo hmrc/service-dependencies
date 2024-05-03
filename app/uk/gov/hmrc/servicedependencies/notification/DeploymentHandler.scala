@@ -59,8 +59,8 @@ class DeploymentHandler @Inject()(
                    .fromEither[Future](Json.parse(message.body).validate(DeploymentHandler.mdtpEventReads).asEither)
                    .leftMap(error => s"Could not parse Deployment message with ID '${message.messageId()}'. Reason: $error")
       _       <- payload.eventType match {
-                   case "undeployment-complete" => EitherT.right[String](deploymentRepository.setFlag  (payload.environment, payload.serviceName, payload.version))
-                   case "deployment-complete"   => EitherT.right[String](deploymentRepository.clearFlag(payload.environment, payload.serviceName                 ))
+                   case "deployment-complete"   => EitherT.right[String](deploymentRepository.setFlag  (payload.environment, payload.serviceName, payload.version))
+                   case "undeployment-complete" => EitherT.right[String](deploymentRepository.clearFlag(payload.environment, payload.serviceName                 ))
                    case _                       => EitherT.right[String](Future.unit)
                  }
       _       <- EitherT.right[String](derivedViewsService.updateDerivedViews(repoName = payload.serviceName))
