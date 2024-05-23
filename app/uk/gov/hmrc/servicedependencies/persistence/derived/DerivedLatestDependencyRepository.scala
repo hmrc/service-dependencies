@@ -29,7 +29,7 @@ import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
 class DerivedLatestDependencyRepository @Inject()(
-  final val mongoComponent: MongoComponent
+  override val mongoComponent: MongoComponent
 )(implicit ec: ExecutionContext
 ) extends PlayMongoRepository[MetaArtefactDependency](
   collectionName = "DERIVED-latest-dependencies"
@@ -45,7 +45,7 @@ class DerivedLatestDependencyRepository @Inject()(
                      :: IndexModel(Indexes.ascending("repoType"))
                      :: DependencyScope.values.map(s => IndexModel(Indexes.hashed("scope_" + s.asString)))
 , replaceIndexes = true
-) with Transactions with Logging {
+) with Transactions with Logging:
 
   // automatically refreshed when given new meta data artefacts from update scheduler
   override lazy val requiresTtlIndex = false
@@ -75,22 +75,19 @@ class DerivedLatestDependencyRepository @Inject()(
       ).toFuture()
 
   def update(repoName: String, dependencies: List[MetaArtefactDependency]): Future[Unit] =
-    if (dependencies.isEmpty)
+    if dependencies.isEmpty then
       Future.unit
-    else if (dependencies.exists(_.repoName != repoName))
+    else if dependencies.exists(_.repoName != repoName) then
       Future.failed(sys.error(s"Repo name: $repoName does not match dependencies ${dependencies.collect { case x if x.repoName != repoName => x.repoName}.mkString(",")}"))
     else
-      withSessionAndTransaction { session =>
-        for {
+      withSessionAndTransaction: session =>
+        for
           _ <- collection.deleteMany(session, Filters.equal("repoName", repoName)).toFuture()
           _ <- collection.insertMany(session, dependencies).toFuture()
-        } yield ()
-      }
+        yield ()
 
   def delete(repoName: String): Future[Unit] =
     collection
       .deleteMany(Filters.equal("repoName", repoName))
       .toFuture()
       .map(_ => ())
-
-}

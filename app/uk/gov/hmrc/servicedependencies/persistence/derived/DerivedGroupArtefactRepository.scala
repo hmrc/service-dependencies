@@ -34,7 +34,7 @@ import scala.concurrent.{ExecutionContext, Future}
 class DerivedGroupArtefactRepository @Inject()(
   mongoComponent      : MongoComponent
 , deploymentRepository: DeploymentRepository
-)(implicit
+)(using
   ec: ExecutionContext
 ) extends PlayMongoRepository[GroupArtefacts](
   collectionName = "DERIVED-artefact-lookup",
@@ -42,7 +42,7 @@ class DerivedGroupArtefactRepository @Inject()(
   domainFormat   = MongoSlugInfoFormats.groupArtefactsFormat,
   indexes        = Seq.empty,
   optSchema      = None
-){
+):
 
   // we replace all the data for each call to populateAll
   override lazy val requiresTtlIndex = false
@@ -101,24 +101,24 @@ class DerivedGroupArtefactRepository @Inject()(
       .toFuture()
 
   def populateAll(): Future[Unit] =
-    for {
+    for
       deployedDeps   <- derivedDeployedDependencies()
                           .map(_.map(group => (group.group, group.artefacts)).toMap)
       latestDeps     <- derivedLatestDependencies()
                           .map(_.map(group => (group.group, group.artefacts)).toMap)
       groupArtefacts =  deployedDeps
                           .combine(latestDeps)
-                          .map { case (k, v) => GroupArtefacts(k, v.distinct)}
+                          .map { (k, v) => GroupArtefacts(k, v.distinct)}
                           .toSeq
       _              <- collection
-                          .bulkWrite(
-                            groupArtefacts.map(groupArtefact =>
-                              ReplaceOneModel(
-                                filter         = Filters.equal("group", groupArtefact.group)
-                              , replacement    = groupArtefact
-                              , replaceOptions = ReplaceOptions().upsert(true)
-                              )
-                            ) :+ DeleteManyModel(filter = Filters.nin("group", groupArtefacts.map(_.group): _*))
-                          ).toFuture()
-    } yield ()
-}
+                          .bulkWrite:
+                            groupArtefacts
+                              .map(groupArtefact =>
+                                ReplaceOneModel(
+                                  filter         = Filters.equal("group", groupArtefact.group)
+                                , replacement    = groupArtefact
+                                , replaceOptions = ReplaceOptions().upsert(true)
+                                )
+                              ) :+ DeleteManyModel(filter = Filters.nin("group", groupArtefacts.map(_.group): _*))
+                          .toFuture()
+    yield ()

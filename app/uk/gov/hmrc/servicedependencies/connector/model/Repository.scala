@@ -19,9 +19,13 @@ package uk.gov.hmrc.servicedependencies.connector.model
 import play.api.libs.json._
 import uk.gov.hmrc.servicedependencies.model.RepoType
 
-case class Repository(name: String, teamNames: Seq[String], repoType: RepoType, isArchived: Boolean)
+case class Repository(
+  name      : String,
+  teamNames : Seq[String],
+  repoType  : RepoType,
+  isArchived: Boolean
+)
 
-object Repository extends EnvReads with EnvWrites {
+object Repository extends EnvReads with EnvWrites:
 
-  implicit val format: OFormat[Repository] = Json.format[Repository]
-}
+  given OFormat[Repository] = Json.format[Repository]

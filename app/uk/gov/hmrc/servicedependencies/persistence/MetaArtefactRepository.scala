@@ -31,7 +31,7 @@ import scala.concurrent.{ExecutionContext, Future}
 @Singleton
 class MetaArtefactRepository @Inject()(
   final val mongoComponent: MongoComponent
-)(implicit
+)(using
   ec: ExecutionContext
 ) extends PlayMongoRepository[MetaArtefact](
   collectionName = "metaArtefacts",
@@ -43,7 +43,8 @@ class MetaArtefactRepository @Inject()(
                      IndexModel(Indexes.hashed("latest"))
                    ),
   replaceIndexes = true
-) with Transactions with Logging {
+) with Transactions
+  with Logging:
 
   // MetaArtefacts are removed when ArtefactProcess detects they've been deleted (or the related Slug) from Artifactory
   override lazy val requiresTtlIndex = false
@@ -162,4 +163,3 @@ class MetaArtefactRepository @Inject()(
       .deleteMany(Filters.empty())
       .toFuture()
       .map(_ => ())
-}

@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.servicedependencies.controller
 
-import play.api.libs.json.Json
+import play.api.libs.json.{Json, Writes}
 import play.api.mvc._
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 import uk.gov.hmrc.servicedependencies.model.{BobbyRuleQuery, BobbyRulesSummary, HistoricBobbyRulesSummary}
@@ -29,21 +29,18 @@ import scala.concurrent.ExecutionContext
 class BobbyRuleViolationController @Inject() (
   dependencyLookup: DependencyLookupService,
   cc              : ControllerComponents
-  )(implicit ec: ExecutionContext) extends BackendController(cc) {
+)(using
+  ec: ExecutionContext
+) extends BackendController(cc):
 
-  def findBobbyRuleViolations: Action[AnyContent] = {
-    implicit val brsf = BobbyRulesSummary.apiFormat
-    Action.async {
+  def findBobbyRuleViolations: Action[AnyContent] =
+    given Writes[BobbyRulesSummary] = BobbyRulesSummary.apiFormat
+    Action.async:
       dependencyLookup.getLatestBobbyRuleViolations
         .map(v => Ok(Json.toJson(v)))
-    }
-  }
 
-  def findHistoricBobbyRuleViolations(query: List[BobbyRuleQuery], from: LocalDate, to: LocalDate): Action[AnyContent] = {
-    implicit val brsf = HistoricBobbyRulesSummary.apiFormat
-    Action.async {
+  def findHistoricBobbyRuleViolations(query: List[BobbyRuleQuery], from: LocalDate, to: LocalDate): Action[AnyContent] =
+    given Writes[HistoricBobbyRulesSummary] = HistoricBobbyRulesSummary.apiFormat
+    Action.async:
       dependencyLookup.getHistoricBobbyRuleViolations(query, from, to)
         .map(v => Ok(Json.toJson(v)))
-    }
-  }
-}

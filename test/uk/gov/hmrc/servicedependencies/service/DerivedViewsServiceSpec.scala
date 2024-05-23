@@ -39,7 +39,7 @@ class DerivedViewsServiceSpec
      with ScalaFutures
      with IntegrationPatience {
 
-  implicit val hc: HeaderCarrier = HeaderCarrier()
+  given HeaderCarrier = HeaderCarrier()
 
   private val mockedTeamsAndRepositoriesConnector         = mock[TeamsAndRepositoriesConnector      ]
   private val mockedGitHubProxyConnector                  = mock[GitHubProxyConnector               ]
@@ -53,7 +53,7 @@ class DerivedViewsServiceSpec
   private val mockedDerivedDeployedDependencyRepository   = mock[DerivedDeployedDependencyRepository]
   private val mockedDerivedLatestDependencyRepository     = mock[DerivedLatestDependencyRepository  ]
 
-  private val underTest = new DerivedViewsService(
+  private val underTest = DerivedViewsService(
     teamsAndRepositoriesConnector       = mockedTeamsAndRepositoriesConnector
   , gitHubProxyConnector                = mockedGitHubProxyConnector
   , releasesApiConnector                = mockedReleasesApiConnector
@@ -74,16 +74,16 @@ class DerivedViewsServiceSpec
       when(mockedSlugInfoRepository.getUniqueSlugNames())
         .thenReturn(Future.successful(Seq.empty))
 
-      when(mockedReleasesApiConnector.getWhatIsRunningWhere)
+      when(mockedReleasesApiConnector.getWhatIsRunningWhere())
         .thenReturn(Future.successful(List.empty))
 
-      when(mockedGitHubProxyConnector.decommissionedServices)
+      when(mockedGitHubProxyConnector.decommissionedServices())
         .thenReturn(Future.successful(decommissionedServices))
 
       when(mockedDeploymentRepository.getNames(SlugInfoFlag.Latest))
         .thenReturn(Future.successful(Seq.empty))
 
-      when(mockedTeamsAndRepositoriesConnector.getAllRepositories(eqTo(Some(false)))(any[HeaderCarrier]))
+      when(mockedTeamsAndRepositoriesConnector.getAllRepositories(Some(false)))
         .thenReturn(Future.successful(Seq.empty))
 
       when(mockedDeploymentRepository.clearFlags(any[List[SlugInfoFlag]], any[List[String]]))
@@ -110,16 +110,16 @@ class DerivedViewsServiceSpec
       when(mockedSlugInfoRepository.getUniqueSlugNames())
         .thenReturn(Future.successful(knownSlugs))
 
-      when(mockedReleasesApiConnector.getWhatIsRunningWhere)
+      when(mockedReleasesApiConnector.getWhatIsRunningWhere())
         .thenReturn(Future.successful(List.empty))
 
-      when(mockedGitHubProxyConnector.decommissionedServices)
+      when(mockedGitHubProxyConnector.decommissionedServices())
         .thenReturn(Future.successful(List.empty))
 
       when(mockedDeploymentRepository.getNames(SlugInfoFlag.Latest))
         .thenReturn(Future.successful(knownSlugs))
 
-      when(mockedTeamsAndRepositoriesConnector.getAllRepositories(eqTo(Some(false)))(any[HeaderCarrier]))
+      when(mockedTeamsAndRepositoriesConnector.getAllRepositories(Some(false)))
         .thenReturn(Future.successful(activeServices))
 
       when(mockedDeploymentRepository.clearFlag(any[SlugInfoFlag], any[String]))

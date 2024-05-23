@@ -35,14 +35,14 @@ class DerivedGroupArtefactRepositorySpec
      with MockitoSugar
      with DefaultPlayMongoRepositorySupport[GroupArtefacts] {
 
-  lazy val derivedLatestDependencyRepository   = new DerivedLatestDependencyRepository(mongoComponent)
-  lazy val deploymentRepository                = new DeploymentRepository(mongoComponent)
-  lazy val derivedDeployedDependencyRepository = new DerivedDeployedDependencyRepository(mongoComponent, deploymentRepository)
+  lazy val derivedLatestDependencyRepository   = DerivedLatestDependencyRepository(mongoComponent)
+  lazy val deploymentRepository                = DeploymentRepository(mongoComponent)
+  lazy val derivedDeployedDependencyRepository = DerivedDeployedDependencyRepository(mongoComponent, deploymentRepository)
 
   override def checkIndexedQueries = false
 
   override val repository: DerivedGroupArtefactRepository =
-    new DerivedGroupArtefactRepository(mongoComponent, deploymentRepository)
+    DerivedGroupArtefactRepository(mongoComponent, deploymentRepository)
 
   "DerivedGroupArtefactRepository.findGroupsArtefacts" should {
     "return a map of artefact group to list of found artefacts" in {

@@ -18,7 +18,7 @@ package uk.gov.hmrc.servicedependencies.controller.model
 
 import java.time.LocalDate
 import play.api.libs.functional.syntax._
-import play.api.libs.json.{OWrites, __}
+import play.api.libs.json.{Writes, __}
 import uk.gov.hmrc.servicedependencies.model.BobbyVersionRange
 
 case class DependencyBobbyRule(
@@ -28,14 +28,12 @@ case class DependencyBobbyRule(
   exemptProjects: Seq[String] = Seq.empty
 )
 
-object DependencyBobbyRule {
+object DependencyBobbyRule:
 
-  val writes: OWrites[DependencyBobbyRule] = {
-    implicit val bvrf = BobbyVersionRange.format
+  val writes: Writes[DependencyBobbyRule] =
+    given Writes[BobbyVersionRange] = BobbyVersionRange.format
     ( (__ \ "reason"         ).write[String]
     ~ (__ \ "from"           ).write[LocalDate]
     ~ (__ \ "range"          ).write[BobbyVersionRange]
     ~ (__ \ "exemptProjects" ).write[Seq[String]]
-    )(dbr => (dbr.reason, dbr.from, dbr.range, dbr.exemptProjects))
-  }
-}
+    )(dbr => Tuple.fromProductTyped(dbr))

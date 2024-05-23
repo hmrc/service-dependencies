@@ -30,22 +30,22 @@ import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
 class LatestVersionRepository @Inject()(
-    mongoComponent: MongoComponent
-  )(implicit ec: ExecutionContext
-  ) extends PlayMongoRepository[LatestVersion](
-    collectionName = "dependencyVersions"
-  , mongoComponent = mongoComponent
-  , domainFormat   = LatestVersion.mongoFormat
-  , indexes        = Seq(
-                       IndexModel(Indexes.ascending("name", "group"), IndexOptions().unique(true))
-                     )
-  , optSchema      = Some(BsonDocument(LatestVersion.schema))
-  ) with Logging {
+  mongoComponent: MongoComponent
+)(using ec: ExecutionContext
+) extends PlayMongoRepository[LatestVersion](
+  collectionName = "dependencyVersions"
+, mongoComponent = mongoComponent
+, domainFormat   = LatestVersion.mongoFormat
+, indexes        = Seq(
+                      IndexModel(Indexes.ascending("name", "group"), IndexOptions().unique(true))
+                    )
+, optSchema      = Some(BsonDocument(LatestVersion.schema))
+) with Logging:
 
   // unnecessary data is cleared with remove
   override lazy val requiresTtlIndex = false
 
-  def update(latestVersion: LatestVersion): Future[Unit] = {
+  def update(latestVersion: LatestVersion): Future[Unit] =
     logger.debug(s"writing $latestVersion")
     collection
       .replaceOne(
@@ -57,7 +57,6 @@ class LatestVersionRepository @Inject()(
         )
       .toFuture()
       .map(_ => ())
-  }
 
   def getAllEntries(): Future[Seq[LatestVersion]] =
     collection.find()
@@ -67,23 +66,25 @@ class LatestVersionRepository @Inject()(
     if (latestVersions.isEmpty)
       Future.unit
     else
-      collection.bulkWrite(latestVersions.map(latestVersion =>
-        DeleteOneModel(
-          and( equal("name" , latestVersion.name)
-             , equal("group", latestVersion.group)
-             )
-        )
-      ))
+      collection
+        .bulkWrite:
+          latestVersions.map: latestVersion =>
+            DeleteOneModel(
+              and( equal("name" , latestVersion.name)
+                 , equal("group", latestVersion.group)
+                 )
+            )
         .toFuture()
         .map(_ => ())
 
   def find(group: String, artefact: String): Future[Option[LatestVersion]] =
-    collection.find(and(equal("group", group), equal("name", artefact)))
+    collection
+      .find(and(equal("group", group), equal("name", artefact)))
       .toFuture()
       .map(_.headOption)
 
   def clearAllData(): Future[Unit] =
-    collection.deleteMany(BsonDocument())
+    collection
+      .deleteMany(BsonDocument())
       .toFuture()
       .map(_ => ())
-}

@@ -21,21 +21,20 @@ import play.api.libs.json.{__, Json, JsError, Reads}
 import uk.gov.hmrc.servicedependencies.model.Version
 
 case class DependencyConfig(
-    name         : String
-  , group        : String
-  , latestVersion: Option[Version]
-  )
+  name         : String
+, group        : String
+, latestVersion: Option[Version]
+)
 
-object DependencyConfig {
+object DependencyConfig:
   // Reads.failed not available in play-json 2.6
   private def failed[A](msg: String): Reads[A] =
-    Reads[A] { _ => JsError(msg) }
+    _ => JsError(msg)
 
   private def validateLatestVersion[C <: DependencyConfig](c: C): Reads[C] =
-    (c.group.startsWith("uk.gov.hmrc"), c.latestVersion.isDefined) match {
+    (c.group.startsWith("uk.gov.hmrc"), c.latestVersion.isDefined) match
       case (false, false) => failed("latestVersion is required for external (non 'uk.gov.hmrc') libraries")
       case _              => Reads.pure(c)
-    }
 
   val reads: Reads[DependencyConfig] =
     ( (__ \ "name"         ).read[String]
@@ -43,24 +42,20 @@ object DependencyConfig {
     ~ (__ \ "latestVersion").readNullable[Version](Version.format)
     )(DependencyConfig.apply _)
       .flatMap(validateLatestVersion)
-}
 
 case class CuratedDependencyConfig(
-    sbtPlugins: List[DependencyConfig]
-  , libraries : List[DependencyConfig]
-  , others    : List[DependencyConfig]
-  ) {
-    val allDependencies =
-      sbtPlugins ++ libraries ++ others
-  }
+  sbtPlugins: List[DependencyConfig]
+, libraries : List[DependencyConfig]
+, others    : List[DependencyConfig]
+):
+  val allDependencies =
+    sbtPlugins ++ libraries ++ others
 
-object CuratedDependencyConfig {
-  val reads = {
-    implicit val dcr = DependencyConfig.reads
+object CuratedDependencyConfig:
+  val reads: Reads[CuratedDependencyConfig] =
+    given Reads[DependencyConfig] = DependencyConfig.reads
     Json.reads[CuratedDependencyConfig]
     ( (__ \ "sbtPlugins").read[List[DependencyConfig]]
     ~ (__ \ "libraries" ).read[List[DependencyConfig]]
     ~ (__ \ "others"    ).read[List[DependencyConfig]]
     )(CuratedDependencyConfig.apply _)
-  }
-}

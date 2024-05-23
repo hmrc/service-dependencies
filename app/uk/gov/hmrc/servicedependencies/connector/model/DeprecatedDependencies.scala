@@ -20,7 +20,10 @@ import play.api.libs.functional.syntax._
 import play.api.libs.json.{Reads, __}
 import uk.gov.hmrc.servicedependencies.model.BobbyRule
 
-final case class DeprecatedDependencies(libraries: Seq[BobbyRule], plugins: Seq[BobbyRule])
+case class DeprecatedDependencies(
+  libraries: Seq[BobbyRule],
+  plugins  : Seq[BobbyRule]
+)
 
 object DeprecatedDependencies {
 

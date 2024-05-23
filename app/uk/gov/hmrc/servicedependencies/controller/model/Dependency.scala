@@ -22,16 +22,16 @@ import uk.gov.hmrc.servicedependencies.model.{DependencyScope, Version}
 
 
 case class Dependency(
-    name               : String
-  , group              : String
-  , currentVersion     : Version
-  , latestVersion      : Option[Version]
-  , bobbyRuleViolations: List[DependencyBobbyRule]
-  , importBy           : Option[ImportedBy]      = None
-  , scope              : DependencyScope
-  )
+  name               : String
+, group              : String
+, currentVersion     : Version
+, latestVersion      : Option[Version]
+, bobbyRuleViolations: List[DependencyBobbyRule]
+, importBy           : Option[ImportedBy]      = None
+, scope              : DependencyScope
+)
 
-object Dependency {
+object Dependency:
 
   val writes: OWrites[Dependency] =
     ( (__ \ "name"               ).write[String]
@@ -41,15 +41,17 @@ object Dependency {
     ~ (__ \ "bobbyRuleViolations").lazyWrite(Writes.seq[DependencyBobbyRule](DependencyBobbyRule.writes))
     ~ (__ \ "importBy"           ).writeNullable[ImportedBy](ImportedBy.writes)
     ~ (__ \ "scope"              ).write[DependencyScope](DependencyScope.dependencyScopeFormat)
-    )(d => (d.name, d.group, d.currentVersion, d.latestVersion, d.bobbyRuleViolations, d.importBy, d.scope))
-}
+    )(d => Tuple.fromProductTyped(d))
 
-case class ImportedBy(name: String, group: String, version: Version)
+case class ImportedBy(
+  name   : String,
+  group  : String,
+  version: Version
+)
 
-object ImportedBy {
+object ImportedBy:
   val writes: OWrites[ImportedBy] =
     ( (__ \ "name"          ).write[String]
     ~ (__ \ "group"         ).write[String]
     ~ (__ \ "currentVersion").write[Version](Version.legacyApiWrites)
-    )(i => (i.name, i.group, i.version))
-}
+    )(i => Tuple.fromProductTyped(i))

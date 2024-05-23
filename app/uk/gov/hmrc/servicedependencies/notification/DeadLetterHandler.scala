@@ -26,41 +26,35 @@ import scala.concurrent.{ExecutionContext, Future}
 @Singleton
 class SlugInfoDeadLetterHandler @Inject()(
   configuration: Configuration
-)(implicit
+)(using
   actorSystem  : ActorSystem,
   ec           : ExecutionContext
 ) extends SqsConsumer(
   name         = "Slug Dead Letter"
 , config       = SqsConfig("aws.sqs.slugDeadLetter", configuration)
-)(actorSystem, ec) {
-
-  protected def processMessage(message: Message) = {
+):
+  protected def processMessage(message: Message) =
     logger.warn(
       s"""Slug dead letter message with
          |ID: '${message.messageId}'
          |Body: '${message.body}'""".stripMargin
     )
     Future.successful(MessageAction.Delete(message))
-  }
-}
 
 @Singleton
 class MetaArtefactDeadLetterHandler @Inject()(
   configuration: Configuration
-)(implicit
+)(using
   actorSystem  : ActorSystem,
   ec           : ExecutionContext
 ) extends SqsConsumer(
   name         = "Meta Artefact Dead Letter"
 , config       = SqsConfig("aws.sqs.metaDeadLetter", configuration)
-)(actorSystem, ec) {
-
-  protected def processMessage(message: Message) = {
+):
+  protected def processMessage(message: Message) =
     logger.warn(
       s"""Meta Artefact dead letter message with
          |ID: '${message.messageId}'
          |Body: '${message.body}'""".stripMargin
     )
     Future.successful(MessageAction.Delete(message))
-  }
-}

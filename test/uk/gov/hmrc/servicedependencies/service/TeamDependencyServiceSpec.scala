@@ -46,19 +46,20 @@ class TeamDependencyServiceSpec
   val mockMetaArtefactRepository    = mock[MetaArtefactRepository]
   val mockServiceDependenciesConfig = mock[ServiceDependenciesConfig]
 
-  val tds = new TeamDependencyService(
+  val tds = TeamDependencyService(
       mockTeamsAndReposConnector
     , mockSlugInfoRepository
     , mockServiceConfigsConnector
-    , new CuratedLibrariesService(mockServiceDependenciesConfig)
+    , CuratedLibrariesService(mockServiceDependenciesConfig)
     , mockLatestVersionRepository
     , mockMetaArtefactRepository
     )
 
   "findAllDepsForTeam" should {
     "return dependencies for all projects belonging to team" in {
-      implicit val hc: HeaderCarrier = new HeaderCarrier()
-      val team = new Team("foo", Map("Service" -> Seq("my-slug")))
+      given HeaderCarrier = HeaderCarrier()
+
+      val team = Team("foo", Map("Service" -> Seq("my-slug")))
 
       when(mockTeamsAndReposConnector.getTeam("foo"))
         .thenReturn(Future.successful(team))

@@ -27,7 +27,7 @@ import javax.inject.{Inject, Singleton}
 @Singleton
 class CuratedLibrariesService @Inject()(
   serviceDependenciesConfig: ServiceDependenciesConfig
-) {
+):
 
   private lazy val curatedDependencyConfig: CuratedDependencyConfig =
     serviceDependenciesConfig.curatedDependencyConfig
@@ -39,7 +39,7 @@ class CuratedLibrariesService @Inject()(
     bobbyRules    : BobbyRules,
     scope         : DependencyScope,
     subModuleNames: Seq[String]
-  ): List[Dependency] = {
+  ): List[Dependency] =
     val graph = DependencyGraphParser.parse(dotFile)
     val dependencies = graph
       .dependencies
@@ -71,13 +71,10 @@ class CuratedLibrariesService @Inject()(
 
     val parentDepsOfViolations  = dependencies.filter(d => d.importBy.nonEmpty && d.bobbyRuleViolations.nonEmpty).flatMap(_.importBy).toSet
 
-    dependencies.filter(dependency =>
+    dependencies.filter: dependency =>
       (dependency.importBy.isEmpty && (
         dependency.group.startsWith("uk.gov.hmrc") ||
         curatedDependencyConfig.allDependencies.exists(d => d.group == dependency.group && d.name == dependency.name)
-      ))                                                                                                        || // any directly imported HMRC or curated dependency
-      dependency.bobbyRuleViolations.nonEmpty                                                                   || // or any dependency with a bobby rule violation
-      parentDepsOfViolations.contains(ImportedBy(dependency.name, dependency.group, dependency.currentVersion))    // or the parent that imported the violation
-    )
-  }
-}
+      ))                                                                                                           // any directly imported HMRC or curated dependency
+        || dependency.bobbyRuleViolations.nonEmpty                                                                   // or any dependency with a bobby rule violation
+        || parentDepsOfViolations.contains(ImportedBy(dependency.name, dependency.group, dependency.currentVersion)) // or the parent that imported the violation

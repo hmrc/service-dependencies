@@ -40,7 +40,7 @@ class SlugInfoServiceSpec
      with ScalaFutures
      with IntegrationPatience {
 
-  implicit val hc: HeaderCarrier = HeaderCarrier()
+  given HeaderCarrier = HeaderCarrier()
 
   val group    = "group"
   val artefact = "artefact"
@@ -215,7 +215,7 @@ class SlugInfoServiceSpec
       val mockedDerivedLatestDependencyRepository   = mock[DerivedLatestDependencyRepository]
       val mockedDerivedGroupArtefactRepository      = mock[DerivedGroupArtefactRepository]
 
-      val service = new SlugInfoService(
+      val service = SlugInfoService(
             mockedSlugInfoRepository
           , mockedSlugVersionRepository
           , mockedJdkVersionRepository

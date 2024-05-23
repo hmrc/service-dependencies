@@ -29,12 +29,12 @@ import scala.concurrent.{ExecutionContext, Future}
 class JdkVersionRepository @Inject()(
   mongoComponent      : MongoComponent,
   deploymentRepository: DeploymentRepository
-)(implicit
+)(using
   ec: ExecutionContext
 ) extends SlugInfoRepositoryBase[JDKVersion](
   mongoComponent,
   domainFormat = MongoSlugInfoFormats.jdkVersionFormat
-) {
+):
   def findJDKUsage(flag: SlugInfoFlag): Future[Seq[JDKVersion]] =
     deploymentRepository.lookupAgainstDeployments(
       collectionName   = "slugInfos",
@@ -59,4 +59,3 @@ class JdkVersionRepository @Inject()(
                             )
                           )
     )
-}

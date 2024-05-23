@@ -20,17 +20,16 @@ import play.api.libs.functional.syntax._
 import play.api.libs.json._
 
 case class Dependencies(
-    repositoryName        : String
-  , libraryDependencies   : Seq[Dependency]
-  , sbtPluginsDependencies: Seq[Dependency]
-  , otherDependencies     : Seq[Dependency]
-  )
+  repositoryName        : String
+, libraryDependencies   : Seq[Dependency]
+, sbtPluginsDependencies: Seq[Dependency]
+, otherDependencies     : Seq[Dependency]
+)
 
-object Dependencies {
+object Dependencies:
   val writes: OWrites[Dependencies] =
     ( (__ \ "repositoryName"        ).write[String]
     ~ (__ \ "libraryDependencies"   ).lazyWrite(Writes.seq[Dependency](Dependency.writes))
     ~ (__ \ "sbtPluginsDependencies").lazyWrite(Writes.seq[Dependency](Dependency.writes))
     ~ (__ \ "otherDependencies"     ).lazyWrite(Writes.seq[Dependency](Dependency.writes))
-    )(d => (d.repositoryName, d.libraryDependencies, d.sbtPluginsDependencies, d.otherDependencies))
-}
+    )(d => Tuple.fromProductTyped(d))

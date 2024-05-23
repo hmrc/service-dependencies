@@ -41,7 +41,7 @@ class ServiceConfigsConnectorSpec
      with MockitoSugar
      with WireMockSupport {
 
-  implicit val hc: HeaderCarrier = HeaderCarrier()
+  given HeaderCarrier = HeaderCarrier()
 
   override lazy val resetWireMockMappings = false
 
@@ -52,7 +52,7 @@ class ServiceConfigsConnectorSpec
   }
 
   override def fakeApplication(): Application =
-    new GuiceApplicationBuilder()
+    GuiceApplicationBuilder()
       .configure(
         "microservice.services.service-configs.host" -> wireMockHost,
         "microservice.services.service-configs.port" -> wireMockPort

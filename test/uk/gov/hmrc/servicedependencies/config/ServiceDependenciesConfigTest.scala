@@ -42,7 +42,7 @@ class ServiceDependenciesConfigTest
       val serviceConfig = mock[ServicesConfig]
       when(serviceConfig.baseUrl(any())).thenReturn("")
 
-      val sdc = new ServiceDependenciesConfig(config, serviceConfig)
+      val sdc = ServiceDependenciesConfig(config, serviceConfig)
 
       sdc.curatedDependencyConfig shouldBe CuratedDependencyConfig(
           sbtPlugins = List(

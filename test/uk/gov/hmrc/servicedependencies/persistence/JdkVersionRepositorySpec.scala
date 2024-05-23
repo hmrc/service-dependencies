@@ -33,12 +33,12 @@ class JdkVersionRepositorySpec
     with MockitoSugar
     with DefaultPlayMongoRepositorySupport[JDKVersion] {
 
-  lazy val deploymentRepository = new DeploymentRepository(mongoComponent)
+  lazy val deploymentRepository = DeploymentRepository(mongoComponent)
 
   override protected val repository: JdkVersionRepository =
-    new JdkVersionRepository(mongoComponent, deploymentRepository)
+    JdkVersionRepository(mongoComponent, deploymentRepository)
 
-  lazy val slugInfoRepo  = new SlugInfoRepository(mongoComponent, deploymentRepository)
+  lazy val slugInfoRepo = SlugInfoRepository(mongoComponent, deploymentRepository)
 
   override protected def beforeEach(): Unit = {
     super.beforeEach()

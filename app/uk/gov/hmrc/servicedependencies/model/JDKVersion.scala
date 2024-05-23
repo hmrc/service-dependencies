@@ -26,14 +26,13 @@ case class JDKVersion(
   kind   : String
 )
 
-trait JDKVersionFormats {
+trait JDKVersionFormats:
 
   val jdkVersionFormat: OFormat[JDKVersion] =
     ( (__ \ "name"   ).format[String]
     ~ (__ \ "version").format[String]
     ~ (__ \ "vendor" ).format[String]
     ~ (__ \ "kind"   ).format[String]
-    )(JDKVersion.apply, jv => (jv.name, jv.version, jv.vendor, jv.kind))
-}
+    )(JDKVersion.apply, jv => Tuple.fromProductTyped(jv))
 
 object JDKVersionFormats extends JDKVersionFormats

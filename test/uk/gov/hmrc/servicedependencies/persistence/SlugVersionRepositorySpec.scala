@@ -33,10 +33,13 @@ class SlugVersionRepositorySpec
   import ExecutionContext.Implicits.global
 
   override val repository: SlugVersionRepository =
-    new SlugVersionRepository(mongoComponent)
+    SlugVersionRepository(mongoComponent)
 
-  val deploymentRepository = new DeploymentRepository(mongoComponent)
-  val slugInfoRepository = new SlugInfoRepository(mongoComponent, deploymentRepository)
+  val deploymentRepository =
+    DeploymentRepository(mongoComponent)
+
+  val slugInfoRepository =
+    SlugInfoRepository(mongoComponent, deploymentRepository)
 
   "SlugVersionRepository" should {
     "return the max version" in {

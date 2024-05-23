@@ -41,10 +41,10 @@ class ArtefactProcessorConnectorSpec
      with MockitoSugar
      with WireMockSupport {
 
-  implicit val hc: HeaderCarrier = HeaderCarrier()
+  given HeaderCarrier = HeaderCarrier()
 
   override def fakeApplication(): Application =
-    new GuiceApplicationBuilder()
+    GuiceApplicationBuilder()
       .configure(
         "microservice.services.artefact-processor.host" -> wireMockHost,
         "microservice.services.artefact-processor.port" -> wireMockPort

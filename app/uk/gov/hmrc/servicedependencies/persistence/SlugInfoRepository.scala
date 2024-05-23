@@ -32,12 +32,12 @@ import scala.concurrent.{ExecutionContext, Future}
 class SlugInfoRepository @Inject()(
   mongoComponent      : MongoComponent,
   deploymentRepository: DeploymentRepository
-)(implicit
+)(using
   ec: ExecutionContext
 ) extends SlugInfoRepositoryBase[SlugInfo](
   mongoComponent,
   domainFormat   = MongoSlugInfoFormats.slugInfoFormat
-) with Logging {
+) with Logging:
 
   def add(slugInfo: SlugInfo): Future[Unit] =
     collection
@@ -106,4 +106,3 @@ class SlugInfoRepository @Inject()(
       deploymentsFilter = filter,
       domainFilter      = BsonDocument()
     )
-}

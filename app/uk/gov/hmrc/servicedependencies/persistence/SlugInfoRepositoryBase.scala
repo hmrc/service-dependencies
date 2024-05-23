@@ -32,7 +32,7 @@ import scala.reflect.ClassTag
 abstract class SlugInfoRepositoryBase[A: ClassTag] @Inject()(
   mongoComponent: MongoComponent
 , domainFormat  : Format[A]
-)(implicit
+)(using
   ec            : ExecutionContext
 ) extends PlayMongoRepository[A](
   collectionName = "slugInfos"
@@ -50,7 +50,6 @@ abstract class SlugInfoRepositoryBase[A: ClassTag] @Inject()(
                      )
                    )
 , optSchema      = Some(BsonDocument(MongoSlugInfoFormats.schema))
-) {
+):
   // we delete explicitly when we get a delete notification
   override lazy val requiresTtlIndex = false
-}

@@ -39,42 +39,39 @@ class DeploymentHandler @Inject()(
   configuration       : Configuration
 , deploymentRepository: DeploymentRepository
 , derivedViewsService : DerivedViewsService
-)(implicit
+)(using
   actorSystem    : ActorSystem,
   ec             : ExecutionContext
 ) extends SqsConsumer(
   name           = "Deployment"
 , config         = SqsConfig("aws.sqs.deployment", configuration)
-)(actorSystem, ec) {
+):
 
-  private implicit val hc: HeaderCarrier = HeaderCarrier()
+  private given HeaderCarrier = HeaderCarrier()
 
   private def prefix(payload: DeploymentHandler.DeploymentEvent) =
     s"Deployment (${payload.eventType}) ${payload.serviceName} ${payload.version.original} ${payload.environment.asString}"
 
-  override protected def processMessage(message: Message): Future[MessageAction] = {
+  override protected def processMessage(message: Message): Future[MessageAction] =
     logger.info(s"Starting processing Deployment message with ID '${message.messageId()}'")
-    (for {
-      payload <- EitherT
-                   .fromEither[Future](Json.parse(message.body).validate(DeploymentHandler.mdtpEventReads).asEither)
-                   .leftMap(error => s"Could not parse Deployment message with ID '${message.messageId()}'. Reason: $error")
-      _       <- payload.eventType match {
-                   case "deployment-complete"   => EitherT.right[String](deploymentRepository.setFlag  (payload.environment, payload.serviceName, payload.version))
-                   case "undeployment-complete" => EitherT.right[String](deploymentRepository.clearFlag(payload.environment, payload.serviceName                 ))
-                   case _                       => EitherT.right[String](Future.unit)
-                 }
-      _       <- EitherT.right[String](derivedViewsService.updateDerivedViews(repoName = payload.serviceName))
-      _       =  logger.info(s"${prefix(payload)} with ID '${message.messageId()}' successfully processed.")
-    } yield
+    (for
+       payload <- EitherT
+                    .fromEither[Future](Json.parse(message.body).validate(DeploymentHandler.mdtpEventReads).asEither)
+                    .leftMap(error => s"Could not parse Deployment message with ID '${message.messageId()}'. Reason: $error")
+       _       <- payload.eventType match {
+                    case "deployment-complete"   => EitherT.right[String](deploymentRepository.setFlag  (payload.environment, payload.serviceName, payload.version))
+                    case "undeployment-complete" => EitherT.right[String](deploymentRepository.clearFlag(payload.environment, payload.serviceName                 ))
+                    case _                       => EitherT.right[String](Future.unit)
+                  }
+       _       <- EitherT.right[String](derivedViewsService.updateDerivedViews(repoName = payload.serviceName))
+       _       =  logger.info(s"${prefix(payload)} with ID '${message.messageId()}' successfully processed.")
+     yield
       MessageAction.Delete(message)
-    ).value.map {
+    ).value.map:
       case Left(error)   => logger.error(error); MessageAction.Ignore(message)
       case Right(action) => action
-    }
-  }
-}
 
-object DeploymentHandler {
+object DeploymentHandler:
 
   case class DeploymentEvent(
     eventType   : String
@@ -88,10 +85,9 @@ object DeploymentHandler {
   import play.api.libs.json.{Reads, JsError, JsResult, JsSuccess, __}
 
   private def toResult[A](jsonValue: String, opt: Option[A]): JsResult[A] =
-    opt match {
+    opt match
       case Some(r) => JsSuccess(r)
       case None    => JsError(__, s"Not found - $jsonValue")
-    }
 
   lazy val readsSlugInfo: Reads[SlugInfoFlag] =
     _.validate[String]
@@ -104,4 +100,3 @@ object DeploymentHandler {
     ~ (__ \ "microservice_version").read[Version](Version.format)
     ~ (__ \ "stack_id"            ).read[String]
     )(DeploymentEvent.apply _)
-}

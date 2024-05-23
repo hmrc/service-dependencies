@@ -36,7 +36,7 @@ import scala.reflect.ClassTag
 @Singleton
 class DeploymentRepository @Inject()(
   final val mongoComponent: MongoComponent
-)(implicit ec: ExecutionContext
+)(using ec: ExecutionContext
 ) extends PlayMongoRepository[Deployment](
   collectionName = "deployments",
   mongoComponent = mongoComponent,
@@ -46,18 +46,17 @@ class DeploymentRepository @Inject()(
                      IndexModel(Indexes.ascending("name")),
                    ) ++ SlugInfoFlag.values.map(f => IndexModel(Indexes.hashed(f.asString))),
   replaceIndexes = true
-) with Transactions {
+) with Transactions:
   val logger = Logger(getClass)
 
   private implicit val tc: TransactionConfiguration =
     TransactionConfiguration.strict
 
   def clearFlag(flag: SlugInfoFlag, name: String): Future[Unit] =
-    withSessionAndTransaction { session =>
+    withSessionAndTransaction: session =>
       clearFlag(flag, name, session)
-    }
 
-  private def clearFlag(flag: SlugInfoFlag, name: String, session: ClientSession): Future[Unit] = {
+  private def clearFlag(flag: SlugInfoFlag, name: String, session: ClientSession): Future[Unit] =
     logger.debug(s"clear ${flag.asString} flag on $name")
     collection
       .updateMany(
@@ -70,9 +69,8 @@ class DeploymentRepository @Inject()(
         )
       .toFuture()
       .map(_ => ())
-  }
 
-  def clearFlags(flags: List[SlugInfoFlag], names: List[String]): Future[Unit] = {
+  def clearFlags(flags: List[SlugInfoFlag], names: List[String]): Future[Unit] =
     logger.debug(s"clearing ${flags.size} flags on ${names.size} services")
     collection
       .updateMany(
@@ -81,7 +79,6 @@ class DeploymentRepository @Inject()(
         )
       .toFuture()
       .map(_ => ())
-  }
 
   def find(flag: SlugInfoFlag, name: String): Future[Option[Deployment]] =
     collection
@@ -90,12 +87,12 @@ class DeploymentRepository @Inject()(
 
   def findDeployed(name: Option[String] = None): Future[Seq[Deployment]] =
     collection
-      .find(
+      .find:
         Filters.and(
           name.fold(Filters.empty())(n => Filters.equal("name", n))
         , Filters.or(SlugInfoFlag.values.map(v => Filters.equal(v.asString, true)): _*)
         )
-      ).sort(Sorts.ascending("name"))
+      .sort(Sorts.ascending("name"))
       .toFuture()
 
   def getNames(flag: SlugInfoFlag): Future[Seq[String]] =
@@ -109,8 +106,8 @@ class DeploymentRepository @Inject()(
 
   // TODO more efficient way to sync this data with release-api?
   def setFlag(flag: SlugInfoFlag, name: String, version: Version): Future[Unit] =
-    withSessionAndTransaction { session =>
-      for {
+    withSessionAndTransaction: session =>
+      for
         _ <- clearFlag(flag, name, session)
         _ =  logger.debug(s"mark slug $name $version with ${flag.asString} flag")
         _ <- collection
@@ -124,8 +121,7 @@ class DeploymentRepository @Inject()(
                  options       = UpdateOptions().upsert(true)
                )
                .toFuture()
-      } yield ()
-    }
+      yield ()
 
   def lookupAgainstDeployments[A: ClassTag](
     collectionName: String,
@@ -188,7 +184,6 @@ class DeploymentRepository @Inject()(
     collection.deleteMany(BsonDocument())
       .toFuture()
       .map(_ => ())
-}
 
 
 case class Deployment(
@@ -201,11 +196,11 @@ case class Deployment(
   development  : Boolean,
   externalTest : Boolean,
   integration  : Boolean
-) {
+):
   lazy val flags: List[SlugInfoFlag] =
     SlugInfoFlag
       .values
-      .filter {
+      .filter:
         case SlugInfoFlag.Latest       => latest
         case SlugInfoFlag.Production   => production
         case SlugInfoFlag.QA           => qa
@@ -213,12 +208,10 @@ case class Deployment(
         case SlugInfoFlag.Development  => development
         case SlugInfoFlag.ExternalTest => externalTest
         case SlugInfoFlag.Integration  => integration
-      }
-}
 
-object Deployment {
-  val mongoFormat: Format[Deployment] = {
-    implicit val vf = Version.format
+object Deployment:
+  val mongoFormat: Format[Deployment] =
+    given Format[Version] = Version.format
     ( (__ \ "name"          ).format[String]
     ~ (__ \ "version"       ).format[Version]
     ~ (__ \ "latest"        ).formatWithDefault[Boolean](false)
@@ -228,6 +221,4 @@ object Deployment {
     ~ (__ \ "development"   ).formatWithDefault[Boolean](false)
     ~ (__ \ "external test" ).formatWithDefault[Boolean](false)
     ~ (__ \ "integration"   ).formatWithDefault[Boolean](false)
-    )(Deployment.apply, d => (d.slugName, d.slugVersion, d.latest, d.production, d.qa, d.staging, d.development, d.externalTest, d.integration))
-  }
-}
+    )(Deployment.apply, d => Tuple.fromProductTyped(d))

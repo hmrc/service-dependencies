@@ -34,7 +34,7 @@ class DerivedLatestDependencyRepositorySpec
      with DefaultPlayMongoRepositorySupport[MetaArtefactDependency] {
 
   override val repository: DerivedLatestDependencyRepository =
-    new DerivedLatestDependencyRepository(mongoComponent)
+    DerivedLatestDependencyRepository(mongoComponent)
 
   private val metaArtefactDependency1 = MetaArtefactDependency(
     repoName     = "name-1"

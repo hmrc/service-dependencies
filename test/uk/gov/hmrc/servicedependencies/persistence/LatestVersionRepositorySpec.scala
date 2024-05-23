@@ -33,10 +33,10 @@ class LatestVersionRepositorySpec
      with MockitoSugar
      with DefaultPlayMongoRepositorySupport[LatestVersion] {
 
-  val metricsRegistry = new MetricRegistry()
+  val metricsRegistry = MetricRegistry()
 
   override val repository: LatestVersionRepository =
-    new LatestVersionRepository(mongoComponent)
+    LatestVersionRepository(mongoComponent)
 
   val latestVersion = LatestVersion(
       name       = "some-library"

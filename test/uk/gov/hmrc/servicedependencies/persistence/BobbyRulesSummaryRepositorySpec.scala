@@ -35,7 +35,7 @@ class BobbyRulesSummaryRepositorySpec
     with DefaultPlayMongoRepositorySupport[BobbyRulesSummary] {
 
   override protected val repository: BobbyRulesSummaryRepository =
-    new BobbyRulesSummaryRepository(mongoComponent)
+    BobbyRulesSummaryRepository(mongoComponent)
 
   "BobbyRulesSummaryRepository.add" should {
     val summary = bobbyRulesSummary(playFrontendBobbyRule, LocalDate.now(), SlugInfoFlag.Development, 1)

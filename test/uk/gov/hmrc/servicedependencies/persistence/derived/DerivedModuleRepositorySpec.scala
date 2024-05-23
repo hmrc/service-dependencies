@@ -33,7 +33,7 @@ class DerivedModuleSpec
      with DefaultPlayMongoRepositorySupport[DerivedModule] {
 
   override val repository: DerivedModuleRepository =
-    new DerivedModuleRepository(mongoComponent)
+    DerivedModuleRepository(mongoComponent)
 
   val metaArtefactModule =
     MetaArtefactModule(

@@ -31,7 +31,7 @@ import scala.concurrent.{ExecutionContext, Future}
 class DerivedDeployedDependencyRepository @Inject()(
   mongoComponent       : MongoComponent,
   deploymentRepository : DeploymentRepository
-)(implicit
+)(using
   ec: ExecutionContext
 ) extends PlayMongoRepository[MetaArtefactDependency](
   collectionName = "DERIVED-deployed-dependencies"
@@ -48,7 +48,7 @@ class DerivedDeployedDependencyRepository @Inject()(
                      :: DependencyScope.values.map(s => IndexModel(Indexes.hashed("scope_" + s.asString)))
 , optSchema      = None
 , replaceIndexes = true
-){
+):
   // we remove slugs when, artefactProcess detects, they've been deleted from artifactory
   override lazy val requiresTtlIndex = false
 
@@ -97,14 +97,13 @@ class DerivedDeployedDependencyRepository @Inject()(
     )
 
   def insert(dependencies: List[MetaArtefactDependency]): Future[Unit] =
-    if (dependencies.isEmpty)
+    if dependencies.isEmpty then
       Future.unit
-    else {
+    else
       collection
         .insertMany(dependencies)
         .toFuture()
         .map(_ => ())
-    }
 
   def delete(name: String, version: Option[Version] = None, ignoreVersions: Seq[Version] = Nil): Future[Unit] =
     collection
@@ -117,4 +116,3 @@ class DerivedDeployedDependencyRepository @Inject()(
       )
       .toFuture()
       .map(_ => ())
-}

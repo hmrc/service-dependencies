@@ -33,12 +33,14 @@ class SbtVersionRepositorySpec
     with MockitoSugar
     with DefaultPlayMongoRepositorySupport[SBTVersion] {
 
-  lazy val deploymentRepository = new DeploymentRepository(mongoComponent)
+  lazy val deploymentRepository =
+    DeploymentRepository(mongoComponent)
 
   override protected val repository: SbtVersionRepository =
-    new SbtVersionRepository(mongoComponent, deploymentRepository)
+    SbtVersionRepository(mongoComponent, deploymentRepository)
 
-  lazy val slugInfoRepo  = new SlugInfoRepository(mongoComponent, deploymentRepository)
+  lazy val slugInfoRepo =
+    SlugInfoRepository(mongoComponent, deploymentRepository)
 
   override protected def beforeEach(): Unit = {
     super.beforeEach()

@@ -32,37 +32,37 @@ case class HistoricBobbyRulesSummary(
 , summary: Map[(BobbyRule, SlugInfoFlag), List[Int]]
 )
 
-private object DataFormat {
-  private implicit val brvf: Format[BobbyRule] = BobbyRule.format
+private object DataFormat:
+  private given Format[BobbyRule] = BobbyRule.format
 
   private def f[A](map: List[(JsValue, Map[String, A])]): Map[(BobbyRule, SlugInfoFlag), A] =
-    map.flatMap { case (k1, v1) =>
-      v1.map { case (k2, v2) =>
-        ( ( k1.as[BobbyRule]
-          , SlugInfoFlag.parse(k2).getOrElse(sys.error(s"Invalid SlugInfoFlag $k2")) // TODO propagate failure into client Format
+    map
+      .flatMap: (k1, v1) =>
+        v1.map: (k2, v2) =>
+          ( ( k1.as[BobbyRule]
+            , SlugInfoFlag.parse(k2).getOrElse(sys.error(s"Invalid SlugInfoFlag $k2")) // TODO propagate failure into client Format
+            )
+          , v2
           )
-        , v2
-        )
-      }
-    }.toMap
+      .toMap
 
   private def g[A](map: Map[(BobbyRule, SlugInfoFlag), A]): List[(JsValue, Map[String, A])] =
-    map.groupBy { case ((r, _), _) => r }
-      .map {
-        case (r, v1) =>
-          ( Json.toJson(r)
-          , v1.map { case ((_, f), v2) => (f.asString, v2) }
-          )
-      }.toList
+    map
+      .groupBy:
+        case ((r, _), _) => r
+      .map: (r, v1) =>
+        ( Json.toJson(r)
+        , v1.map:
+            case ((_, f), v2) => (f.asString, v2)
+        )
+      .toList
 
-  def dataFormat[A : Format]: Format[Map[(BobbyRule, SlugInfoFlag), A]] = {
-    implicit val mw: Writes[Map[String, A]] = Writes.genericMapWrites // to disambiguate with deprecated Writes.mapWrites
-    implicitly[Format[List[(JsValue, Map[String, A])]]].inmap(f[A], g[A])
-  }
-}
+  def dataFormat[A : Format]: Format[Map[(BobbyRule, SlugInfoFlag), A]] =
+    summon[Format[List[(JsValue, Map[String, A])]]].inmap(f[A], g[A])
 
-object BobbyRulesSummary {
-  private implicit val df: Format[Map[(BobbyRule, SlugInfoFlag), Int]] = DataFormat.dataFormat[Int]
+object BobbyRulesSummary:
+  private given Format[Map[(BobbyRule, SlugInfoFlag), Int]] =
+    DataFormat.dataFormat[Int]
 
   val apiFormat: OFormat[BobbyRulesSummary] =
     ( (__ \ "date"     ).format[LocalDate]
@@ -70,7 +70,7 @@ object BobbyRulesSummary {
     )(BobbyRulesSummary.apply _, brs => (brs.date, brs.summary))
 
   val mongoFormat: OFormat[BobbyRulesSummary] = {
-    implicit val ldf = MongoJavatimeFormats.localDateFormat
+    given Format[LocalDate] = MongoJavatimeFormats.localDateFormat
     ( (__ \ "date"     ).format[LocalDate]
     ~ (__ \ "summary"  ).format[Map[(BobbyRule, SlugInfoFlag), Int]]
     )(BobbyRulesSummary.apply _, brs => (brs.date, brs.summary))
@@ -86,10 +86,10 @@ object BobbyRulesSummary {
       }
     }
     """
-}
 
-object HistoricBobbyRulesSummary {
-  private implicit val df: Format[Map[(BobbyRule, SlugInfoFlag), List[Int]]] = DataFormat.dataFormat[List[Int]]
+object HistoricBobbyRulesSummary:
+  private given Format[Map[(BobbyRule, SlugInfoFlag), List[Int]]] =
+    DataFormat.dataFormat[List[Int]]
 
   val apiFormat: OFormat[HistoricBobbyRulesSummary] =
     ( (__ \ "date"     ).format[LocalDate]
@@ -101,4 +101,3 @@ object HistoricBobbyRulesSummary {
       date    = bobbyRulesSummary.date
     , summary = bobbyRulesSummary.summary.view.mapValues(i => List(i)).toMap
     )
-}

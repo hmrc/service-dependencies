@@ -33,7 +33,7 @@ class MetaArtefactRepositorySpec
      with DefaultPlayMongoRepositorySupport[MetaArtefact] {
 
   override val repository: MetaArtefactRepository =
-    new MetaArtefactRepository(mongoComponent)
+    MetaArtefactRepository(mongoComponent)
 
   val metaArtefactModule =
     MetaArtefactModule(

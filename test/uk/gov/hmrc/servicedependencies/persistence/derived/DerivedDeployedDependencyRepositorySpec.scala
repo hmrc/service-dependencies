@@ -34,10 +34,11 @@ class DerivedDeployedDependencyRepositorySpec
      with MockitoSugar
      with DefaultPlayMongoRepositorySupport[MetaArtefactDependency] {
 
-  lazy val deploymentRepository = new DeploymentRepository(mongoComponent)
+  lazy val deploymentRepository =
+    DeploymentRepository(mongoComponent)
 
   override val repository: DerivedDeployedDependencyRepository =
-    new DerivedDeployedDependencyRepository(mongoComponent, deploymentRepository)
+    DerivedDeployedDependencyRepository(mongoComponent, deploymentRepository)
 
   override def checkIndexedQueries = false
 

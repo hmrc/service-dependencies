@@ -53,7 +53,7 @@ class DependencyLookupServiceSpec
   private val bobbyRulesSummaryRepo = new BobbyRulesSummaryRepository(mongoComponent) {
     import scala.jdk.FunctionConverters._
 
-    private val store = new AtomicReference(List[BobbyRulesSummary]())
+    private val store = AtomicReference(List[BobbyRulesSummary]())
 
     override def add(summary: BobbyRulesSummary): Future[Unit] =
       Future.successful {
@@ -127,7 +127,7 @@ class DependencyLookupServiceSpec
         , dep2
       )))
 
-      val lookupService = new DependencyLookupService(mockedConfigService, bobbyRulesSummaryRepo, mockedDerivedDeployedDependencyRepository, mockedDerivedLatestDependencyRepository)
+      val lookupService = DependencyLookupService(mockedConfigService, bobbyRulesSummaryRepo, mockedDerivedDeployedDependencyRepository, mockedDerivedLatestDependencyRepository)
 
       lookupService.updateBobbyRulesSummary().futureValue
       val res = lookupService.getLatestBobbyRuleViolations.futureValue
@@ -157,7 +157,7 @@ class DependencyLookupServiceSpec
         , dep2
         )))
 
-      val lookupService = new DependencyLookupService(mockedConfigService, bobbyRulesSummaryRepo, mockedDerivedDeployedDependencyRepository, mockedDerivedLatestDependencyRepository)
+      val lookupService = DependencyLookupService(mockedConfigService, bobbyRulesSummaryRepo, mockedDerivedDeployedDependencyRepository, mockedDerivedLatestDependencyRepository)
 
       lookupService.updateBobbyRulesSummary().futureValue
       val res = lookupService.getLatestBobbyRuleViolations.futureValue

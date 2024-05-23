@@ -17,26 +17,25 @@
 package uk.gov.hmrc.servicedependencies.model
 
 import java.time.LocalDate
-import play.api.data.format.Formats
 import play.api.libs.functional.syntax._
-import play.api.libs.json.{OFormat, __}
+import play.api.libs.json.{Format, __}
 import uk.gov.hmrc.servicedependencies.controller.model.{Dependency, DependencyBobbyRule}
 
 
-final case class BobbyVersion(
-    version  : Version
-  , inclusive: Boolean
-  )
+case class BobbyVersion(
+  version  : Version
+, inclusive: Boolean
+)
 
 
-final case class BobbyRule(
+case class BobbyRule(
   organisation  : String,
   name          : String,
   range         : BobbyVersionRange,
   reason        : String,
   from          : LocalDate,
-  exemptProjects: Seq[String] = Seq.empty ) {
-
+  exemptProjects: Seq[String] = Seq.empty
+):
   def asDependencyBobbyRule: DependencyBobbyRule =
     DependencyBobbyRule(
       reason         = this.reason,
@@ -44,24 +43,22 @@ final case class BobbyRule(
       range          = this.range,
       exemptProjects = this.exemptProjects
     )
-}
 
 
-object BobbyRule {
-  val format: OFormat[BobbyRule] = {
-    @annotation.nowarn implicit val ldw  = Formats.localDateFormat
-    implicit val bvwf = BobbyVersionRange.format
+object BobbyRule:
+  val format: Format[BobbyRule] =
+    given Format[BobbyVersionRange] = BobbyVersionRange.format
     ( (__ \ "organisation"  ).format[String]
     ~ (__ \ "name"          ).format[String]
     ~ (__ \ "range"         ).format[BobbyVersionRange]
     ~ (__ \ "reason"        ).format[String]
     ~ (__ \ "from"          ).format[LocalDate]
     ~ (__ \ "exemptProjects").formatWithDefault[Seq[String]](Seq.empty)
-    )(BobbyRule.apply, br => (br.organisation, br.name, br.range, br.reason, br.from, br.exemptProjects))
-  }
-}
+    )(BobbyRule.apply, br => Tuple.fromProductTyped(br))
 
-case class BobbyRules(asMap: Map[(String, String), List[BobbyRule]]) {
+case class BobbyRules(
+  asMap: Map[(String, String), List[BobbyRule]]
+):
   def violationsFor(dependency: Dependency): List[DependencyBobbyRule] =
     violationsFor(dependency.group, dependency.name, dependency.currentVersion)
 
@@ -70,4 +67,3 @@ case class BobbyRules(asMap: Map[(String, String), List[BobbyRule]]) {
       .getOrElse((group, name), Nil)
       .filter(_.range.includes(version))
       .map(_.asDependencyBobbyRule)
-}

@@ -27,16 +27,14 @@ import scala.concurrent.{ExecutionContext, Future}
 class AdministrationController @Inject()(
     latestVersionService: LatestVersionService
   , cc                  : ControllerComponents
-  )(implicit ec: ExecutionContext
-  ) extends BackendController(cc) {
+  )(using
+    ec: ExecutionContext
+  ) extends BackendController(cc):
 
   def reloadLatestVersions =
-    Action {
+    Action:
       latestVersionService
         .reloadLatestVersions()
-        .recoverWith {
-          case ex => Future.failed(new RuntimeException("reload of dependency versions failed", ex))
-        }
+        .recoverWith: ex =>
+          Future.failed(RuntimeException("reload of dependency versions failed", ex))
       Accepted("reload started")
-    }
-}

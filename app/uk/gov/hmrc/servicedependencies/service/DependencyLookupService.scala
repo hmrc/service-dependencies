@@ -34,8 +34,8 @@ class DependencyLookupService @Inject() (
 , bobbyRulesSummaryRepo              : BobbyRulesSummaryRepository
 , derivedDeployedDependencyRepository: DerivedDeployedDependencyRepository
 , derivedLatestDependencyRepository  : DerivedLatestDependencyRepository
-)(implicit ec: ExecutionContext
-) extends Logging {
+)(using ec: ExecutionContext
+) extends Logging:
 
   import DependencyLookupService._
 
@@ -45,41 +45,40 @@ class DependencyLookupService @Inject() (
 
   def updateBobbyRulesSummary(): Future[Unit] = {
     def calculateCounts(rules: Seq[BobbyRule])(env: SlugInfoFlag): Future[Seq[((BobbyRule, SlugInfoFlag), Int)]] =
-      for {
-        dependencies <- env match {
+      for
+        dependencies <- env match
                           case SlugInfoFlag.Latest => derivedLatestDependencyRepository.find(scopes = Some(DependencyScope.values))
                           case _                   => derivedDeployedDependencyRepository.findWithDeploymentLookup(scopes = Some(List(DependencyScope.Compile)), flag = env)
-                        }
         lookup       =  dependencies
                           .groupBy(d => s"${d.depGroup}:${d.depArtefact}")
                           .view
-                          .mapValues(
+                          .mapValues:
                             _.groupBy(_.depVersion)
                               .view
                               .mapValues(_.map(d => s"${d.repoName}:${d.repoVersion}").toSet)
                               .toMap
-                          )
                           .toMap
-        violations    = rules.map(rule => ((rule, env), findSlugsUsing(lookup, rule.organisation, rule.name, rule.range).length))
-      } yield violations
+        violations    = rules.map: rule =>
+                          ((rule, env), findSlugsUsing(lookup, rule.organisation, rule.name, rule.range).length)
+      yield violations
 
-    for {
+    for
       rules   <- serviceConfigs.getBobbyRules().map(_.asMap.values.flatten.toSeq)
       _       =  logger.debug(s"Found ${rules.size} rules")
       counts  <- SlugInfoFlag
                    .values  // traverse (in parallel) uses more memory and adds contention on data source - fold through it instead
-                   .foldLeftM(Seq[((BobbyRule, SlugInfoFlag), Int)]())((acc, env) => calculateCounts(rules)(env).map(acc ++ _))
+                   .foldLeftM(Seq[((BobbyRule, SlugInfoFlag), Int)]()): (acc, env) =>
+                     calculateCounts(rules)(env).map(acc ++ _)
       _       <- bobbyRulesSummaryRepo.add(BobbyRulesSummary(LocalDate.now(), counts.toMap))
-    } yield ()
+    yield ()
   }
 
   def getHistoricBobbyRuleViolations(query: List[BobbyRuleQuery], from: LocalDate, to: LocalDate): Future[HistoricBobbyRulesSummary] =
     bobbyRulesSummaryRepo.getHistoric(query, from, to)
       .map(combineBobbyRulesSummaries)
-}
 
 
-object DependencyLookupService {
+object DependencyLookupService:
 
   def findSlugsUsing(
       lookup  : Map[String, Map[Version, Set[String]]]
@@ -90,23 +89,19 @@ object DependencyLookupService {
       lookup
         .getOrElse(s"$group:$artifact", Map.empty)
         .view
-        .filterKeys(v => range.includes(v))
+        .filterKeys(range.includes)
         .toMap
         .values
         .flatten
         .toSeq
 
   def combineBobbyRulesSummaries(l: List[BobbyRulesSummary]): HistoricBobbyRulesSummary =
-    l match {
+    l match
       case Nil          => HistoricBobbyRulesSummary(LocalDate.now(), Map.empty)
       case head :: rest => rest
-                             .foldLeft(HistoricBobbyRulesSummary.fromBobbyRulesSummary(head)){ (acc, s) =>
+                             .foldLeft(HistoricBobbyRulesSummary.fromBobbyRulesSummary(head)): (acc, s) =>
                                val daysBetween = ChronoUnit.DAYS.between(s.date, acc.date).toInt
-                               val res = acc.summary.foldLeft(acc.summary) { case (acc2, (k, v)) =>
-                                  acc2 + (k -> (List.fill(daysBetween)(s.summary.getOrElse(k, v.head)) ++ v))
-                               }
+                               val res = acc.summary.foldLeft(acc.summary):
+                                  case (acc2, (k, v)) =>
+                                    acc2 + (k -> (List.fill(daysBetween)(s.summary.getOrElse(k, v.head)) ++ v))
                                HistoricBobbyRulesSummary(date = s.date, summary = res)
-                             }
-    }
-
-}

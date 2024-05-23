@@ -21,7 +21,7 @@ import play.api.mvc.QueryStringBindable
 
 sealed trait RepoType { def asString: String }
 
-object RepoType {
+object RepoType:
   case object Service   extends RepoType { override val asString = "Service"   }
   case object Library   extends RepoType { override val asString = "Library"   }
   case object Prototype extends RepoType { override val asString = "Prototype" }
@@ -36,26 +36,21 @@ object RepoType {
       .find(_.asString.equalsIgnoreCase(s))
       .toRight(s"Invalid repoType - should be one of: ${values.map(_.asString).mkString(", ")}")
 
-  implicit val format: Format[RepoType] = new Format[RepoType] {
+  given format: Format[RepoType] with
     override def reads(json: JsValue): JsResult[RepoType] =
-      json match {
+      json match
         case JsString(s) => parse(s).fold(msg => JsError(msg), x => JsSuccess(x))
         case _           => JsError("String value expected")
-      }
 
     override def writes(o: RepoType): JsValue =
       JsString(o.asString)
-  }
 
-  implicit val queryStringBindable: QueryStringBindable[RepoType] = new QueryStringBindable[RepoType] {
+  given queryStringBindable: QueryStringBindable[RepoType] with
     override def bind(key: String, params: Map[String, Seq[String]]): Option[Either[String, RepoType]] =
-      params.get(key).map {
+      params.get(key).map:
         case Nil         => Left("missing repoType value")
         case head :: Nil => RepoType.parse(head)
         case _           => Left("too many repoType values")
-      }
 
     override def unbind(key: String, value: RepoType): String =
       s"$key=${value.asString}"
-  }
-}

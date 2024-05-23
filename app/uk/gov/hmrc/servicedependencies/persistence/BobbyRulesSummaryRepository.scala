@@ -37,7 +37,7 @@ import scala.concurrent.{ExecutionContext, Future}
 @Singleton
 class BobbyRulesSummaryRepository @Inject()(
   mongoComponent: MongoComponent
-)(implicit
+)(using
   ec            : ExecutionContext
 ) extends PlayMongoRepository[BobbyRulesSummary](
   collectionName = "bobbyRulesSummary"
@@ -48,7 +48,7 @@ class BobbyRulesSummaryRepository @Inject()(
                    )
 , optSchema      = Some(BsonDocument(BobbyRulesSummary.mongoSchema))
 , replaceIndexes = true
-) {
+):
 
   def add(summary: BobbyRulesSummary): Future[Unit] =
     collection
@@ -64,10 +64,9 @@ class BobbyRulesSummaryRepository @Inject()(
     collection.find(equal("date", LocalDate.now()))
       .toFuture()
       .map(_.headOption)
-      .flatMap {
+      .flatMap:
         case Some(a) => Future(Some(a))
         case None    => getMostRecent()
-      }
 
   def getMostRecent() : Future[Option[BobbyRulesSummary]] =
     collection.find()
@@ -75,37 +74,36 @@ class BobbyRulesSummaryRepository @Inject()(
       .first()
       .toFuture()
       .map(Option.apply)
-      .recover {
-        case _ => None
-      }
+      .recover:
+        _ => None
 
   // Not yet timebound
-  def getHistoric(query: List[BobbyRuleQuery], from: LocalDate, to: LocalDate): Future[List[BobbyRulesSummary]] = {
+  def getHistoric(query: List[BobbyRuleQuery], from: LocalDate, to: LocalDate): Future[List[BobbyRulesSummary]] =
     val filters =
-      query.map(q =>
+      query.map: q =>
         Filters.and(
           Filters.eq("summary.0.name", q.name),
           Filters.eq("summary.0.range", q.range),
           Filters.eq("summary.0.organisation", q.organisation)
-        ))
+        )
 
-    collection.aggregate(Seq(
-      `match`(and(gte("date", from), lte("date", to))),
-      unwind("$summary"),
-      `match`(or(filters:_*)),
-      group(
-        "$_id",
-        Accumulators.max("date", "$date"),
-        Accumulators.push("summary", "$summary")
-      ),
-      sort(Sorts.descending("date"))
-    ))
+
+    collection
+      .aggregate(Seq(
+        `match`(and(gte("date", from), lte("date", to))),
+        unwind("$summary"),
+        `match`(or(filters:_*)),
+        group(
+          "$_id",
+          Accumulators.max("date", "$date"),
+          Accumulators.push("summary", "$summary")
+        ),
+        sort(Sorts.descending("date"))
+      ))
       .toFuture()
       .map(_.toList)
-  }
 
   def clearAllData(): Future[Unit] =
     collection.deleteMany(BsonDocument())
       .toFuture()
       .map(_ => ())
-}

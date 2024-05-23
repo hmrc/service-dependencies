@@ -24,12 +24,11 @@ case class SBTVersion(
   version     : String
 )
 
-trait SBTVersionFormats {
+trait SBTVersionFormats:
 
   val sbtVersionFormat: OFormat[SBTVersion] =
     ( (__ \ "serviceName").format[String]
     ~ (__ \ "version"    ).format[String]
-    )(SBTVersion.apply, sv => (sv.serviceName, sv.version))
-}
+    )(SBTVersion.apply, sv => Tuple.fromProductTyped(sv))
 
 object SBTVersionFormats extends SBTVersionFormats

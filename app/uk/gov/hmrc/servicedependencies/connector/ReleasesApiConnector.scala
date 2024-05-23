@@ -32,24 +32,24 @@ import scala.concurrent.{ExecutionContext, Future}
 class ReleasesApiConnector @Inject()(
   httpClientV2  : HttpClientV2,
   config        : ReleasesApiConfig
-)(implicit ec: ExecutionContext
-) {
+)(using
+  ec: ExecutionContext
+):
   import ReleasesApiConnector._
   import HttpReads.Implicits._
 
   private val serviceUrl: String = config.serviceUrl
 
-  implicit val sdir: Reads[ServiceDeploymentInformation] = ServiceDeploymentInformation.reads
+  given Reads[ServiceDeploymentInformation] = ServiceDeploymentInformation.reads
 
-  def getWhatIsRunningWhere(implicit hc: HeaderCarrier): Future[Seq[ServiceDeploymentInformation]] =
+  def getWhatIsRunningWhere()(using hc: HeaderCarrier): Future[Seq[ServiceDeploymentInformation]] =
     httpClientV2
       .get(url"$serviceUrl/releases-api/whats-running-where")
       .execute[Seq[ServiceDeploymentInformation]]
-}
 
-object ReleasesApiConnector extends Logging {
+object ReleasesApiConnector extends Logging:
   sealed trait Environment
-  object Environment {
+  object Environment:
     case object Production   extends Environment
     case object ExternalTest extends Environment
     case object Staging      extends Environment
@@ -57,7 +57,7 @@ object ReleasesApiConnector extends Logging {
     case object Integration  extends Environment
     case object Development  extends Environment
 
-    val reads: Reads[Option[Environment]] =
+    given Reads[Option[Environment]] =
       JsPath.read[String].map {
         case "production"   => Some(Production)
         case "externaltest" => Some(ExternalTest)
@@ -67,34 +67,28 @@ object ReleasesApiConnector extends Logging {
         case "development"  => Some(Development)
         case other          => logger.debug(s"Unsupported environment '$other'"); None
       }
-  }
 
   case class Deployment(
-      optEnvironment: Option[Environment]
-    , version       : Version
-    )
+    optEnvironment: Option[Environment]
+  , version       : Version
+  )
 
-  object Deployment {
-    val reads: Reads[Deployment] = {
-      implicit val dr = Environment.reads
-      implicit val vr = Version.format
+  object Deployment:
+    val reads: Reads[Deployment] =
+      import Environment.given
+      import Version.given
       ( (__ \ "environment"  ).read[Option[Environment]]
       ~ (__ \ "versionNumber").read[Version]
       )(Deployment.apply _)
-    }
-  }
 
   case class ServiceDeploymentInformation(
-      serviceName: String
-    , deployments: Seq[Deployment]
-    )
+    serviceName: String
+  , deployments: Seq[Deployment]
+  )
 
-  object ServiceDeploymentInformation {
-    val reads: Reads[ServiceDeploymentInformation] = {
-      implicit val dr = Deployment.reads
+  object ServiceDeploymentInformation:
+    val reads: Reads[ServiceDeploymentInformation] =
+      given Reads[Deployment] = Deployment.reads
       ( (__ \ "applicationName").read[String]
       ~ (__ \ "versions"       ).read[Seq[Deployment]]
       )(ServiceDeploymentInformation.apply _)
-    }
-  }
-}

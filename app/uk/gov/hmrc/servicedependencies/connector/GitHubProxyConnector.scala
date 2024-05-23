@@ -31,27 +31,23 @@ import scala.util.Try
 @Singleton
 class GitHubProxyConnector @Inject()(
   httpClientV2             : HttpClientV2,
-  serviceDependenciesConfig: ServiceDependenciesConfig,
-
-)(implicit
+  serviceDependenciesConfig: ServiceDependenciesConfig
+)(using
   ec: ExecutionContext
-) {
-  def decommissionedServices(implicit hc: HeaderCarrier): Future[List[String]] = {
+):
+  def decommissionedServices()(using hc: HeaderCarrier): Future[List[String]] =
     val url = url"${serviceDependenciesConfig.gitHubProxyBaseURL}/platops-github-proxy/github-raw/decommissioning/main/decommissioned-microservices.yaml"
     httpClientV2
       .get(url)
       .execute[Either[UpstreamErrorResponse, HttpResponse]]
-      .flatMap(
-        _.flatMap(res =>
-           Try(
-             new Yaml()
-               .load(res.body)
-               .asInstanceOf[java.util.List[java.util.LinkedHashMap[String, String]]].asScala.toList
-               .flatMap(_.asScala.get("service_name").toList)
-           ).toEither
-         )
-         .leftMap(e => new RuntimeException(s"Failed to call $url: $e", e))
-         .fold(Future.failed, Future.successful)
-      )
-  }
-}
+      .flatMap:
+        _
+          .flatMap: res =>
+            Try(
+              Yaml()
+                .load(res.body)
+                .asInstanceOf[java.util.List[java.util.LinkedHashMap[String, String]]].asScala.toList
+                .flatMap(_.asScala.get("service_name").toList)
+            ).toEither
+          .leftMap(e => RuntimeException(s"Failed to call $url: $e", e))
+          .fold(Future.failed, Future.successful)

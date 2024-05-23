@@ -47,7 +47,7 @@ class LatestVersionServiceSpec
 
   "reloadLatestVersions" should {
     "call the dependency version update function on the repository" in {
-      val boot = new Boot(CuratedDependencyConfig(
+      val boot = Boot(CuratedDependencyConfig(
         sbtPlugins = Nil
       , libraries  = List(DependencyConfig(name = "libYY", group= "uk.gov.hmrc", latestVersion = None))
       , others     = Nil
@@ -80,7 +80,7 @@ class LatestVersionServiceSpec
 
   "versionsToUpdate" should {
     "merge static configuration with derived group artefacts" in {
-      val boot = new Boot(CuratedDependencyConfig(
+      val boot = Boot(CuratedDependencyConfig(
         sbtPlugins = Nil
       , libraries  = List(
                        DependencyConfig(name = "libYY", group= "uk.gov.hmrc", latestVersion = None),
@@ -89,7 +89,7 @@ class LatestVersionServiceSpec
       , others     = Nil
       ))
 
-      when(boot.derivedGroupArtefactRepository.findGroupsArtefacts())
+      when(boot.mockDerivedGroupArtefactRepository.findGroupsArtefacts())
         .thenReturn(Future.successful(List(
           GroupArtefacts("uk.gov.hmrc"    , List("lib1", "lib2")),
           GroupArtefacts("uk.gov.hmrc.sub", List("lib3")),
@@ -104,7 +104,7 @@ class LatestVersionServiceSpec
     }
 
     "include any non HMRC dependencies with bobby rules" in {
-      val boot = new Boot(CuratedDependencyConfig(sbtPlugins = Nil, libraries  = Nil, others     = Nil))
+      val boot = Boot(CuratedDependencyConfig(sbtPlugins = Nil, libraries  = Nil, others     = Nil))
 
       when(boot.mockServiceConfigsConnector.getBobbyRules())
         .thenReturn(
@@ -125,7 +125,7 @@ class LatestVersionServiceSpec
     }
 
     "override non HMRC dependencies version with curated list" in {
-      val boot = new Boot(CuratedDependencyConfig(
+      val boot = Boot(CuratedDependencyConfig(
         sbtPlugins = Nil,
         libraries  = List(
                        DependencyConfig(name = "lib4" , group= "com.other", latestVersion = Some(Version("1.5.0"))),
@@ -153,17 +153,16 @@ class LatestVersionServiceSpec
   }
 
   class Boot(dependencyConfig: CuratedDependencyConfig) {
-    val mockServiceDependenciesConfig     = mock[ServiceDependenciesConfig]
-    val mockLatestVersionRepository       = mock[LatestVersionRepository]
-    val derivedGroupArtefactRepository    = mock[DerivedGroupArtefactRepository]
-    val mockTeamsAndRepositoriesConnector = mock[TeamsAndRepositoriesConnector]
-    val mockArtifactoryConnector          = mock[ArtifactoryConnector]
-    val mockServiceConfigsConnector       = mock[ServiceConfigsConnector]
+    val mockServiceDependenciesConfig      = mock[ServiceDependenciesConfig]
+    val mockLatestVersionRepository        = mock[LatestVersionRepository]
+    val mockDerivedGroupArtefactRepository = mock[DerivedGroupArtefactRepository]
+    val mockArtifactoryConnector           = mock[ArtifactoryConnector]
+    val mockServiceConfigsConnector        = mock[ServiceConfigsConnector]
 
     when(mockServiceDependenciesConfig.curatedDependencyConfig)
       .thenReturn(dependencyConfig)
 
-    when(derivedGroupArtefactRepository.findGroupsArtefacts())
+    when(mockDerivedGroupArtefactRepository.findGroupsArtefacts())
       .thenReturn(Future.successful(Seq.empty))
 
     when(mockServiceConfigsConnector.getBobbyRules())
@@ -172,8 +171,7 @@ class LatestVersionServiceSpec
     val latestVersionService = new LatestVersionService(
         mockServiceDependenciesConfig
       , mockLatestVersionRepository
-      , derivedGroupArtefactRepository
-      , mockTeamsAndRepositoriesConnector
+      , mockDerivedGroupArtefactRepository
       , mockArtifactoryConnector
       , mockServiceConfigsConnector
       ) {

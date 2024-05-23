@@ -26,6 +26,7 @@ import org.scalatestplus.mockito.MockitoSugar
 import play.api.libs.json.{Json, OWrites}
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
+import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.servicedependencies.connector.{ServiceConfigsConnector, TeamsAndRepositoriesConnector, TeamsForServices}
 import uk.gov.hmrc.servicedependencies.model.RepoType.Service
 import uk.gov.hmrc.servicedependencies.model.SlugInfoFlag.{Development, Latest}
@@ -110,20 +111,21 @@ class ServiceDependenciesControllerSpec
   }
 
   "metaArtefactDependencies" should {
-
     "get slug info for services when flag is not Latest and set teams" in {
       val boot = Boot.init
 
-      when(boot.mockTeamsAndRepositories.getTeamsForServices()(any())).thenReturn(
-        Future.successful(TeamsForServices(Map("repo-name" -> Seq("team-name"))))
-      )
+      when(boot.mockTeamsAndRepositories.getTeamsForServices()(using any[HeaderCarrier]))
+        .thenReturn(
+          Future.successful(TeamsForServices(Map("repo-name" -> Seq("team-name"))))
+        )
 
-      when(boot.mockDerivedDeployedDependencyRepository.findWithDeploymentLookup(any(), any(), any(), any(), any(), any())).thenReturn(
-        Future.successful(Seq(
-          metaArtefactDependency(Version("1.0.0")),
-          metaArtefactDependency(Version("2.0.0")),
-        ))
-      )
+      when(boot.mockDerivedDeployedDependencyRepository.findWithDeploymentLookup(any(), any(), any(), any(), any(), any()))
+        .thenReturn(
+          Future.successful(Seq(
+            metaArtefactDependency(Version("1.0.0")),
+            metaArtefactDependency(Version("2.0.0")),
+          ))
+        )
 
       val result = boot.controller.metaArtefactDependencies(
         flag          = Development,
@@ -136,7 +138,7 @@ class ServiceDependenciesControllerSpec
 
       status(result) shouldBe OK
 
-      implicit val madWrites: OWrites[MetaArtefactDependency] = MetaArtefactDependency.apiWrites
+      given OWrites[MetaArtefactDependency] = MetaArtefactDependency.apiWrites
 
       contentAsJson(result) shouldBe Json.toJson(Seq(
         metaArtefactDependency(Version("1.0.0")),
@@ -149,16 +151,18 @@ class ServiceDependenciesControllerSpec
     "get slug info for services when flag is not Latest, filter by range and set teams" in {
       val boot = Boot.init
 
-      when(boot.mockTeamsAndRepositories.getTeamsForServices()(any())).thenReturn(
-        Future.successful(TeamsForServices(Map("repo-name" -> Seq("team-name"))))
-      )
+      when(boot.mockTeamsAndRepositories.getTeamsForServices()(using any[HeaderCarrier]))
+        .thenReturn(
+          Future.successful(TeamsForServices(Map("repo-name" -> Seq("team-name"))))
+        )
 
-      when(boot.mockDerivedDeployedDependencyRepository.findWithDeploymentLookup(any(), any(), any(), any(), any(), any())).thenReturn(
-        Future.successful(Seq(
-          metaArtefactDependency(Version("1.0.0")),
-          metaArtefactDependency(Version("2.0.0")),
-        ))
-      )
+      when(boot.mockDerivedDeployedDependencyRepository.findWithDeploymentLookup(any(), any(), any(), any(), any(), any()))
+        .thenReturn(
+          Future.successful(Seq(
+            metaArtefactDependency(Version("1.0.0")),
+            metaArtefactDependency(Version("2.0.0")),
+          ))
+        )
 
       val result = boot.controller.metaArtefactDependencies(
         flag          = Development,
@@ -171,7 +175,7 @@ class ServiceDependenciesControllerSpec
 
       status(result) shouldBe OK
 
-      implicit val madWrites: OWrites[MetaArtefactDependency] = MetaArtefactDependency.apiWrites
+      given OWrites[MetaArtefactDependency] = MetaArtefactDependency.apiWrites
 
       contentAsJson(result) shouldBe Json.toJson(Seq(
         metaArtefactDependency(Version("1.0.0"))
@@ -183,16 +187,18 @@ class ServiceDependenciesControllerSpec
     "get artefact dependencies when flag is Latest and set teams" in {
       val boot = Boot.init
 
-      when(boot.mockTeamsAndRepositories.getTeamsForServices()(any())).thenReturn(
-        Future.successful(TeamsForServices(Map("repo-name" -> Seq("team-name"))))
-      )
+      when(boot.mockTeamsAndRepositories.getTeamsForServices()(using any[HeaderCarrier]))
+        .thenReturn(
+          Future.successful(TeamsForServices(Map("repo-name" -> Seq("team-name"))))
+        )
 
-      when(boot.mockDerivedLatestDependencyRepository.find(any(), any(), any(), any(), any(), any())).thenReturn(
-        Future.successful(Seq(
-          metaArtefactDependency(Version("1.0.0")),
-          metaArtefactDependency(Version("2.0.0"))
-        ))
-      )
+      when(boot.mockDerivedLatestDependencyRepository.find(any(), any(), any(), any(), any(), any()))
+        .thenReturn(
+          Future.successful(Seq(
+            metaArtefactDependency(Version("1.0.0")),
+            metaArtefactDependency(Version("2.0.0"))
+          ))
+        )
 
       val result = boot.controller.metaArtefactDependencies(
         repoType     = None,
@@ -205,7 +211,7 @@ class ServiceDependenciesControllerSpec
 
       status(result) shouldBe OK
 
-      implicit val madWrites: OWrites[MetaArtefactDependency] = MetaArtefactDependency.apiWrites
+      given OWrites[MetaArtefactDependency] = MetaArtefactDependency.apiWrites
 
       contentAsJson(result) shouldBe Json.toJson(Seq(
         metaArtefactDependency(Version("1.0.0")),
@@ -218,34 +224,36 @@ class ServiceDependenciesControllerSpec
     "get artefact dependencies when flag is Latest, filter by range and set teams" in {
       val boot = Boot.init
 
-      when(boot.mockTeamsAndRepositories.getTeamsForServices()(any())).thenReturn(
-        Future.successful(TeamsForServices(Map("repo-name" -> Seq("team-name"))))
-      )
+      when(boot.mockTeamsAndRepositories.getTeamsForServices()(using any[HeaderCarrier]))
+        .thenReturn(
+          Future.successful(TeamsForServices(Map("repo-name" -> Seq("team-name"))))
+        )
 
-      when(boot.mockDerivedLatestDependencyRepository.find(any(), any(), any(), any(), any(), any())).thenReturn(
-        Future.successful(Seq(
-          metaArtefactDependency(Version("1.0.0")),
-          metaArtefactDependency(Version("2.0.0"))
-        ))
-      )
+      when(boot.mockDerivedLatestDependencyRepository.find(any(), any(), any(), any(), any(), any()))
+        .thenReturn(
+          Future.successful(Seq(
+            metaArtefactDependency(Version("1.0.0")),
+            metaArtefactDependency(Version("2.0.0"))
+          ))
+        )
 
-      val result = boot.controller.metaArtefactDependencies(
-        repoType = None,
-        group = "group",
-        artefact = "artefact",
-        flag = Latest,
-        versionRange  = Some(BobbyVersionRange("[1.0.0,1.1.0]")),
-        scope = None
-      ).apply(FakeRequest())
+      val result =
+        boot.controller.metaArtefactDependencies(
+          repoType     = None,
+          group        = "group",
+          artefact     = "artefact",
+          flag         = Latest,
+          versionRange = Some(BobbyVersionRange("[1.0.0,1.1.0]")),
+          scope        = None
+        ).apply(FakeRequest())
 
       status(result) shouldBe OK
 
-      implicit val madWrites: OWrites[MetaArtefactDependency] = MetaArtefactDependency.apiWrites
+      given OWrites[MetaArtefactDependency] = MetaArtefactDependency.apiWrites
 
       contentAsJson(result) shouldBe Json.toJson(Seq(
         metaArtefactDependency(Version("1.0.0"))
-        )
-      )
+      ))
 
       verifyNoInteractions(boot.mockDerivedDeployedDependencyRepository)
     }
@@ -277,7 +285,7 @@ class ServiceDependenciesControllerSpec
       val mockDerivedDeployedDependencyRepository = mock[DerivedDeployedDependencyRepository]
       val mockDerivedLatestDependencyRepository   = mock[DerivedLatestDependencyRepository]
       val mockTeamsAndRepositoryConnector         = mock[TeamsAndRepositoriesConnector]
-      val controller = new ServiceDependenciesController(
+      val controller = ServiceDependenciesController(
         mockSlugInfoService,
         mockCuratedLibrariesService,
         mockServiceConfigsConnector,

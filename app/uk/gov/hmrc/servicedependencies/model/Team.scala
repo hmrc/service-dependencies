@@ -20,24 +20,23 @@ import play.api.libs.json._
 import play.api.libs.functional.syntax._
 
 case class Team(
-    name: String
-  , repos: Map[String, Seq[String]]
-  ) {
+  name: String
+, repos: Map[String, Seq[String]]
+):
   def allRepos: Seq[String] =
     repos.values.toSeq.flatten
 
-  private def findRepo(name: String): Seq[String] = repos.getOrElse(name, Seq.empty)
+  private def findRepo(name: String): Seq[String] =
+    repos.getOrElse(name, Seq.empty)
 
   def libraries  : Seq[String] = findRepo("Library")
   def others     : Seq[String] = findRepo("Other")
   def prototypes : Seq[String] = findRepo("Prototype")
   def services   : Seq[String] = findRepo("Service")
   def tests      : Seq[String] = findRepo("Test")
-}
 
-object Team {
+object Team:
   val format =
     ( (__ \ "name" ).format[String]
     ~ (__ \ "repos").formatWithDefault[Map[String, Seq[String]]](Map.empty)
-    )(Team.apply, t => (t.name, t.repos))
-}
+    )(Team.apply, t => Tuple.fromProductTyped(t))

@@ -31,12 +31,13 @@ case class MetaArtefact(
   modules           : Seq[MetaArtefactModule],
   created           : Instant             = Instant.now(),
   latest            : Boolean             = false
-) {
-  def subModuleNames = modules.collect { case x if x.name != name => x.name }
-}
+):
+  def subModuleNames: Seq[String] =
+    modules.collect { case x if x.name != name => x.name }
 
-object MetaArtefact {
-  private implicit val mamf: Format[MetaArtefactModule] = MetaArtefactModule.format
+object MetaArtefact:
+  private given Format[MetaArtefactModule] =
+    MetaArtefactModule.format
 
   val mongoFormat: OFormat[MetaArtefact] =
     ( (__ \ "name"              ).format[String]
@@ -48,7 +49,7 @@ object MetaArtefact {
     ~ (__ \ "modules"           ).format[Seq[MetaArtefactModule]]
     ~ (__ \ "created"           ).format[Instant](MongoJavatimeFormats.instantFormat)
     ~ (__ \ "latest"            ).formatWithDefault[Boolean](false)
-    )(MetaArtefact.apply, ma => (ma.name, ma.version, ma.uri, ma.gitUrl, ma.dependencyDotBuild, ma.buildInfo, ma.modules, ma.created, ma.latest))
+    )(MetaArtefact.apply, ma => Tuple.fromProductTyped(ma))
 
   val apiFormat: OFormat[MetaArtefact] =
     ( (__ \ "name"              ).format[String]
@@ -60,8 +61,7 @@ object MetaArtefact {
     ~ (__ \ "modules"           ).format[Seq[MetaArtefactModule]]
     ~ (__ \ "created"           ).format[Instant]
     ~ (__ \ "latest"            ).formatWithDefault[Boolean](false)
-    )(MetaArtefact.apply, ma => (ma.name, ma.version, ma.uri, ma.gitUrl, ma.dependencyDotBuild, ma.buildInfo, ma.modules, ma.created, ma.latest))
-}
+    )(MetaArtefact.apply, ma => Tuple.fromProductTyped(ma))
 
 case class MetaArtefactModule(
   name                 : String,
@@ -75,9 +75,9 @@ case class MetaArtefactModule(
   dependencyDotIt      : Option[String]
 )
 
-object MetaArtefactModule {
-  val format: OFormat[MetaArtefactModule] = {
-    implicit val vf = Version.format
+object MetaArtefactModule:
+  val format: OFormat[MetaArtefactModule] =
+    given Format[Version] = Version.format
     ( (__ \ "name"                 ).format[String]
     ~ (__ \ "group"                ).formatWithDefault[String]("uk.gov.hmrc")
     ~ (__ \ "sbtVersion"           ).formatNullable[Version]
@@ -87,6 +87,4 @@ object MetaArtefactModule {
     ~ (__ \ "dependencyDotProvided").formatNullable[String]
     ~ (__ \ "dependencyDotTest"    ).formatNullable[String]
     ~ (__ \ "dependencyDotIt"      ).formatNullable[String]
-    )(MetaArtefactModule.apply, ma => (ma.name, ma.group, ma.sbtVersion, ma.crossScalaVersions, ma.publishSkip, ma.dependencyDotCompile, ma.dependencyDotProvided, ma.dependencyDotTest, ma.dependencyDotIt))
-  }
-}
+    )(MetaArtefactModule.apply, ma => Tuple.fromProductTyped(ma))

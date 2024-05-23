@@ -39,6 +39,7 @@ class GitHubProxyConnectorSpec
      with HttpClientV2Support {
 
   import ExecutionContext.Implicits.global
+  given HeaderCarrier = HeaderCarrier()
 
   "GitHubProxyConnector" should {
     "parse decommissioned services" in {
@@ -58,7 +59,7 @@ class GitHubProxyConnectorSpec
           .willReturn(aResponse().withBody(body))
       )
 
-      boot.gitHubProxyConnector.decommissionedServices(HeaderCarrier()).futureValue shouldBe
+      boot.gitHubProxyConnector.decommissionedServices().futureValue shouldBe
         List(
           "cds-stub"
         , "journey-backend-transport"
@@ -72,15 +73,15 @@ class GitHubProxyConnectorSpec
 
   object Boot {
     def init(): Boot = {
-      val serviceDependenciesConfig = new ServiceDependenciesConfig(
+      val serviceDependenciesConfig = ServiceDependenciesConfig(
         Configuration(),
-        new ServicesConfig(Configuration(
+        ServicesConfig(Configuration(
           "microservice.services.platops-github-proxy.port" -> wireMockPort,
           "microservice.services.platops-github-proxy.host" -> wireMockHost
         ))
       )
 
-      val gitHubProxyConnector = new GitHubProxyConnector(
+      val gitHubProxyConnector = GitHubProxyConnector(
           httpClientV2,
           serviceDependenciesConfig
         )

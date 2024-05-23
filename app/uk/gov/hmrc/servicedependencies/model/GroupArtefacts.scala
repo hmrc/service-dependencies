@@ -16,9 +16,12 @@
 
 package uk.gov.hmrc.servicedependencies.model
 
-case class GroupArtefacts(group: String, artefacts: List[String])
+case class GroupArtefacts(
+  group    : String,
+  artefacts: List[String]
+)
 
-object GroupArtefacts {
+object GroupArtefacts:
   import play.api.libs.json._
   import play.api.libs.functional.syntax._
 
@@ -26,4 +29,3 @@ object GroupArtefacts {
     ( (__ \ "group"      ).format[String]
     ~ (__ \ "artefacts"  ).format[List[String]]
     )(GroupArtefacts.apply, ga => (ga.group, ga.artefacts))
-}

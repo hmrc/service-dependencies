@@ -59,7 +59,7 @@ class AdministrationControllerSpec
     def init: Boot = {
       val mockLatestVersionService = mock[LatestVersionService]
 
-      val controller = new AdministrationController(
+      val controller = AdministrationController(
           mockLatestVersionService
         , stubControllerComponents()
         )
