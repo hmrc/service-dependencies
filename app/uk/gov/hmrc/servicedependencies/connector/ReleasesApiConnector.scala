@@ -79,7 +79,7 @@ object ReleasesApiConnector extends Logging:
       import Version.given
       ( (__ \ "environment"  ).read[Option[Environment]]
       ~ (__ \ "versionNumber").read[Version]
-      )(Deployment.apply _)
+      )(Deployment.apply)
 
   case class ServiceDeploymentInformation(
     serviceName: String
@@ -91,4 +91,4 @@ object ReleasesApiConnector extends Logging:
       given Reads[Deployment] = Deployment.reads
       ( (__ \ "applicationName").read[String]
       ~ (__ \ "versions"       ).read[Seq[Deployment]]
-      )(ServiceDeploymentInformation.apply _)
+      )(ServiceDeploymentInformation.apply)

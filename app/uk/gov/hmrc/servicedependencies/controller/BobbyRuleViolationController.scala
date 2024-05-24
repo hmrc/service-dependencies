@@ -36,7 +36,7 @@ class BobbyRuleViolationController @Inject() (
   def findBobbyRuleViolations: Action[AnyContent] =
     given Writes[BobbyRulesSummary] = BobbyRulesSummary.apiFormat
     Action.async:
-      dependencyLookup.getLatestBobbyRuleViolations
+      dependencyLookup.getLatestBobbyRuleViolations()
         .map(v => Ok(Json.toJson(v)))
 
   def findHistoricBobbyRuleViolations(query: List[BobbyRuleQuery], from: LocalDate, to: LocalDate): Action[AnyContent] =

@@ -82,13 +82,13 @@ case class DependencyConfig(
 
 trait MongoSlugInfoFormats:
 
-  val javaInfoFormat: OFormat[JavaInfo] =
+  val javaInfoFormat: Format[JavaInfo] =
     Json.format[JavaInfo]
 
   def ignore[A]: OWrites[A] =
-    OWrites[A](_ => Json.obj())
+    _ => Json.obj()
 
-  val slugInfoFormat: OFormat[SlugInfo] =
+  val slugInfoFormat: Format[SlugInfo] =
     given Format[Version]   = Version.format
     given Format[JavaInfo] = javaInfoFormat
     ( (__ \ "uri"              ).format[String]
@@ -107,19 +107,19 @@ trait MongoSlugInfoFormats:
     ~ (__ \ "slugConfig"       ).formatWithDefault[String]("")
     )(SlugInfo.apply, si => Tuple.fromProductTyped(si))
 
-  val jdkVersionFormat: OFormat[JDKVersion] =
+  val jdkVersionFormat: Format[JDKVersion] =
     ( (__ \ "name"   ).format[String]
     ~ (__ \ "version").format[String]
     ~ (__ \ "vendor" ).formatWithDefault[String]("Oracle")
     ~ (__ \ "kind"   ).formatWithDefault[String]("JDK")
     )(JDKVersion.apply, jv => Tuple.fromProductTyped(jv))
 
-  val groupArtefactsFormat: OFormat[GroupArtefacts] =
+  val groupArtefactsFormat: Format[GroupArtefacts] =
     ( (__ \ "group"    ).format[String]
     ~ (__ \ "artifacts").format[List[String]]
     )(GroupArtefacts.apply, ga => Tuple.fromProductTyped(ga))
 
-  val dependencyConfigFormat: OFormat[DependencyConfig] =
+  val dependencyConfigFormat: Format[DependencyConfig] =
     ( (__ \ "group"   ).format[String]
     ~ (__ \ "artefact").format[String]
     ~ (__ \ "version" ).format[String]
@@ -164,10 +164,10 @@ trait MongoSlugInfoFormats:
 object MongoSlugInfoFormats extends MongoSlugInfoFormats
 
 trait ApiSlugInfoFormats:
-  val javaInfoFormat: OFormat[JavaInfo] =
+  val javaInfoFormat: Format[JavaInfo] =
     Json.format[JavaInfo]
 
-  val slugInfoFormat: OFormat[SlugInfo] =
+  val slugInfoFormat: Format[SlugInfo] =
     given Format[Version]  = Version.format
     given Format[JavaInfo] = javaInfoFormat
     ( (__ \ "uri"                       ).format[String]
@@ -184,7 +184,7 @@ trait ApiSlugInfoFormats:
     ~ (__ \ "slugConfig"                ).format[String]
     )(SlugInfo.apply, si => Tuple.fromProductTyped(si))
 
-  val dependencyConfigFormat: OFormat[DependencyConfig] =
+  val dependencyConfigFormat: Format[DependencyConfig] =
     ( (__ \ "group"   ).format[String]
     ~ (__ \ "artefact").format[String]
     ~ (__ \ "version" ).format[String]

@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.servicedependencies.model
 
-import play.api.libs.json.{__, OFormat}
+import play.api.libs.json.{__, Format}
 import play.api.libs.functional.syntax._
 
 case class SBTVersion(
@@ -26,7 +26,7 @@ case class SBTVersion(
 
 trait SBTVersionFormats:
 
-  val sbtVersionFormat: OFormat[SBTVersion] =
+  val sbtVersionFormat: Format[SBTVersion] =
     ( (__ \ "serviceName").format[String]
     ~ (__ \ "version"    ).format[String]
     )(SBTVersion.apply, sv => Tuple.fromProductTyped(sv))

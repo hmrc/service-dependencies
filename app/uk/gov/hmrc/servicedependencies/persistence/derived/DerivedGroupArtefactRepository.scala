@@ -89,7 +89,7 @@ class DerivedGroupArtefactRepository @Inject()(
     , slugNameField    = "repoName"
     , slugVersionField = "repoVersion"
     )(
-      deploymentsFilter = Filters.or(SlugInfoFlag.values.map(flag => Filters.equal(flag.asString, true)): _*)
+      deploymentsFilter = Filters.or(SlugInfoFlag.values.map(flag => Filters.equal(flag.asString, true))*)
     , domainFilter      = BsonDocument()
     , pipeline          = groupArtefactsTransformationPipeline
     )
@@ -119,6 +119,6 @@ class DerivedGroupArtefactRepository @Inject()(
                                 , replacement    = groupArtefact
                                 , replaceOptions = ReplaceOptions().upsert(true)
                                 )
-                              ) :+ DeleteManyModel(filter = Filters.nin("group", groupArtefacts.map(_.group): _*))
+                              ) :+ DeleteManyModel(filter = Filters.nin("group", groupArtefacts.map(_.group)*))
                           .toFuture()
     yield ()

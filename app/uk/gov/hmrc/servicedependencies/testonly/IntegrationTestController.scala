@@ -175,4 +175,4 @@ class IntegrationTestController @Inject()(
       ~ (__ \ "development" ).read[Boolean]
       ~ (__ \ "externalTest").read[Boolean]
       ~ (__ \ "integration" ).read[Boolean]
-      )(SlugInfoWithFlags.apply _)
+      )(SlugInfoWithFlags.apply)

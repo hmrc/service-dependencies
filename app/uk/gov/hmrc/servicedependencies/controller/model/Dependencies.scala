@@ -17,7 +17,7 @@
 package uk.gov.hmrc.servicedependencies.controller.model
 
 import play.api.libs.functional.syntax._
-import play.api.libs.json._
+import play.api.libs.json.{Writes, __}
 
 case class Dependencies(
   repositoryName        : String
@@ -27,7 +27,7 @@ case class Dependencies(
 )
 
 object Dependencies:
-  val writes: OWrites[Dependencies] =
+  val writes: Writes[Dependencies] =
     ( (__ \ "repositoryName"        ).write[String]
     ~ (__ \ "libraryDependencies"   ).lazyWrite(Writes.seq[Dependency](Dependency.writes))
     ~ (__ \ "sbtPluginsDependencies").lazyWrite(Writes.seq[Dependency](Dependency.writes))

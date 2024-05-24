@@ -5,7 +5,6 @@ lazy val microservice = Project("service-dependencies", file("."))
   .enablePlugins(play.sbt.PlayScala, SbtDistributablesPlugin)
   .disablePlugins(JUnitXmlReportPlugin) //Required to prevent https://github.com/scalatest/scalatest/issues/1427
   .settings(majorVersion := 2)
-  .settings(PlayKeys.devSettings += "play.server.netty.maxInitialLineLength" -> "65536")
   .settings(PlayKeys.playDefaultPort := 8459)
   .settings(libraryDependencies ++= AppDependencies.compile ++ AppDependencies.test)
   .settings(resolvers += Resolver.jcenterRepo)

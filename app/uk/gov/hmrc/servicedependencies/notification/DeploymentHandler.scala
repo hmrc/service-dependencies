@@ -99,4 +99,4 @@ object DeploymentHandler:
     ~ (__ \ "microservice"        ).read[String]
     ~ (__ \ "microservice_version").read[Version](Version.format)
     ~ (__ \ "stack_id"            ).read[String]
-    )(DeploymentEvent.apply _)
+    )(DeploymentEvent.apply)

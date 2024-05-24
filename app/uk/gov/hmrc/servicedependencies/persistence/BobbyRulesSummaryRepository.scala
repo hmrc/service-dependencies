@@ -92,7 +92,7 @@ class BobbyRulesSummaryRepository @Inject()(
       .aggregate(Seq(
         `match`(and(gte("date", from), lte("date", to))),
         unwind("$summary"),
-        `match`(or(filters:_*)),
+        `match`(or(filters*)),
         group(
           "$_id",
           Accumulators.max("date", "$date"),

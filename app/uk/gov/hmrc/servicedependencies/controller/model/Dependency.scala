@@ -17,7 +17,7 @@
 package uk.gov.hmrc.servicedependencies.controller.model
 
 import play.api.libs.functional.syntax._
-import play.api.libs.json.{OWrites, Writes, __}
+import play.api.libs.json.{Writes, __}
 import uk.gov.hmrc.servicedependencies.model.{DependencyScope, Version}
 
 
@@ -33,7 +33,7 @@ case class Dependency(
 
 object Dependency:
 
-  val writes: OWrites[Dependency] =
+  val writes: Writes[Dependency] =
     ( (__ \ "name"               ).write[String]
     ~ (__ \ "group"              ).write[String]
     ~ (__ \ "currentVersion"     ).write[Version](Version.legacyApiWrites)
@@ -50,7 +50,7 @@ case class ImportedBy(
 )
 
 object ImportedBy:
-  val writes: OWrites[ImportedBy] =
+  val writes: Writes[ImportedBy] =
     ( (__ \ "name"          ).write[String]
     ~ (__ \ "group"         ).write[String]
     ~ (__ \ "currentVersion").write[Version](Version.legacyApiWrites)

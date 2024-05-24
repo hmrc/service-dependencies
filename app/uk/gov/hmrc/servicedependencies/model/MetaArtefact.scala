@@ -39,7 +39,7 @@ object MetaArtefact:
   private given Format[MetaArtefactModule] =
     MetaArtefactModule.format
 
-  val mongoFormat: OFormat[MetaArtefact] =
+  val mongoFormat: Format[MetaArtefact] =
     ( (__ \ "name"              ).format[String]
     ~ (__ \ "version"           ).format[Version](Version.format)
     ~ (__ \ "uri"               ).format[String]
@@ -51,7 +51,7 @@ object MetaArtefact:
     ~ (__ \ "latest"            ).formatWithDefault[Boolean](false)
     )(MetaArtefact.apply, ma => Tuple.fromProductTyped(ma))
 
-  val apiFormat: OFormat[MetaArtefact] =
+  val apiFormat: Format[MetaArtefact] =
     ( (__ \ "name"              ).format[String]
     ~ (__ \ "version"           ).format[Version](Version.format)
     ~ (__ \ "uri"               ).format[String]
@@ -76,7 +76,7 @@ case class MetaArtefactModule(
 )
 
 object MetaArtefactModule:
-  val format: OFormat[MetaArtefactModule] =
+  val format: Format[MetaArtefactModule] =
     given Format[Version] = Version.format
     ( (__ \ "name"                 ).format[String]
     ~ (__ \ "group"                ).formatWithDefault[String]("uk.gov.hmrc")

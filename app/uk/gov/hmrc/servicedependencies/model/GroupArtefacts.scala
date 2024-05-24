@@ -25,7 +25,7 @@ object GroupArtefacts:
   import play.api.libs.json._
   import play.api.libs.functional.syntax._
 
-  val apiFormat: OFormat[GroupArtefacts] =
+  val apiFormat: Format[GroupArtefacts] =
     ( (__ \ "group"      ).format[String]
     ~ (__ \ "artefacts"  ).format[List[String]]
     )(GroupArtefacts.apply, ga => (ga.group, ga.artefacts))

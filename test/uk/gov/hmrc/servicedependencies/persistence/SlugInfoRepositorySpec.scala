@@ -18,7 +18,6 @@ package uk.gov.hmrc.servicedependencies.persistence
 
 import uk.gov.hmrc.mongo.test.DefaultPlayMongoRepositorySupport
 import uk.gov.hmrc.servicedependencies.model.SlugInfo
-import uk.gov.hmrc.servicedependencies.persistence.TestSlugInfos
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 import org.scalatestplus.mockito.MockitoSugar

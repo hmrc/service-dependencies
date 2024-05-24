@@ -44,7 +44,7 @@ object MessagePayload:
     ~ (__ \ "name"   ).read[String]
     ~ (__ \ "version").read[Version]
     ~ (__ \ "url"    ).read[String]
-    )(JobAvailable.apply _)
+    )(JobAvailable.apply)
 
   private val jobDeletedReads: Reads[JobDeleted] =
     import play.api.libs.functional.syntax._
@@ -53,7 +53,7 @@ object MessagePayload:
     ~ (__ \ "name"   ).read[String]
     ~ (__ \ "version").read[Version]
     ~ (__ \ "url"    ).read[String]
-    )(JobDeleted.apply _)
+    )(JobDeleted.apply)
 
   val reads: Reads[MessagePayload] =
     (__ \ "type").read[String].flatMap:

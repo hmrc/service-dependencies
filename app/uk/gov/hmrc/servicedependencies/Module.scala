@@ -27,7 +27,7 @@ class Module extends play.api.inject.Module:
 
   private val logger = Logger(getClass)
 
-  private def ecsDeploymentsBindings(configuration: Configuration): Seq[Binding[_]] =
+  private def ecsDeploymentsBindings(configuration: Configuration): Seq[Binding[?]] =
     if configuration.get[Boolean]("aws.sqs.enabled") then
       Seq(
         bind[DeploymentHandler            ].toSelf.eagerly()
@@ -40,7 +40,7 @@ class Module extends play.api.inject.Module:
       logger.warn("SQS handlers are disabled")
       Seq.empty
 
-  override def bindings(environment: Environment, configuration: Configuration): Seq[Binding[_]] =
+  override def bindings(environment: Environment, configuration: Configuration): Seq[Binding[?]] =
     Seq(
       bind[BobbyRulesSummaryScheduler].toSelf.eagerly()
     , bind[DerivedViewsScheduler     ].toSelf.eagerly()

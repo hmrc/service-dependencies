@@ -74,8 +74,8 @@ class DeploymentRepository @Inject()(
     logger.debug(s"clearing ${flags.size} flags on ${names.size} services")
     collection
       .updateMany(
-          filter = Filters.in("name", names: _*),
-          update = Updates.combine(flags.map(flag => Updates.set(flag.asString, false)): _*)
+          filter = Filters.in("name", names*),
+          update = Updates.combine(flags.map(flag => Updates.set(flag.asString, false))*)
         )
       .toFuture()
       .map(_ => ())
@@ -90,7 +90,7 @@ class DeploymentRepository @Inject()(
       .find:
         Filters.and(
           name.fold(Filters.empty())(n => Filters.equal("name", n))
-        , Filters.or(SlugInfoFlag.values.map(v => Filters.equal(v.asString, true)): _*)
+        , Filters.or(SlugInfoFlag.values.map(v => Filters.equal(v.asString, true))*)
         )
       .sort(Sorts.ascending("name"))
       .toFuture()

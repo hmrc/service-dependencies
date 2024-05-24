@@ -19,7 +19,7 @@ package uk.gov.hmrc.servicedependencies.persistence
 import java.time.LocalDate
 import cats.instances.all._
 import cats.syntax.all._
-import org.mongodb.scala.{ObservableFuture, SingleObservableFuture}
+import org.mongodb.scala.SingleObservableFuture
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 import org.scalatestplus.mockito.MockitoSugar

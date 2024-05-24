@@ -17,7 +17,7 @@
 package uk.gov.hmrc.servicedependencies.service
 
 import org.mockito.Mockito.{times, verify, verifyNoMoreInteractions, when}
-import org.mockito.ArgumentMatchers.{any, eq => eqTo}
+import org.mockito.ArgumentMatchers.any
 import org.scalatest.concurrent.{IntegrationPatience, ScalaFutures}
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec

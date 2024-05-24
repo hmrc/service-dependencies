@@ -20,7 +20,6 @@ import cats.data.EitherT
 import cats.implicits._
 import com.google.inject.{Inject, Singleton}
 import play.api.libs.functional.syntax._
-import play.api.libs.json.Format.GenericFormat
 import play.api.libs.json._
 import play.api.mvc._
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
@@ -51,7 +50,7 @@ class ServiceDependenciesController @Inject()(
   ec                     : ExecutionContext
 ) extends BackendController(cc):
 
-  given OWrites[Dependencies] = Dependencies.writes
+  given Writes[Dependencies] = Dependencies.writes
 
   def dependenciesForTeam(teamName: String): Action[AnyContent] =
     Action.async { implicit request =>
@@ -68,15 +67,15 @@ class ServiceDependenciesController @Inject()(
     versionRange: Option[BobbyVersionRange],
     scope       : Option[List[DependencyScope]]
   ): Action[AnyContent] = Action.async { implicit request =>
-    given OWrites[MetaArtefactDependency] = MetaArtefactDependency.apiWrites
+    given Writes[MetaArtefactDependency] = MetaArtefactDependency.apiWrites
     for
       allTeams     <- teamsAndRepositoriesConnector.getTeamsForServices()
       dependencies <- flag match
                         case SlugInfoFlag.Latest => derivedLatestDependencyRepository.find(group = Some(group), artefact = Some(artefact), scopes = scope, repoType = repoType)
                         case _                   => derivedDeployedDependencyRepository.findWithDeploymentLookup(group = Some(group), artefact = Some(artefact), scopes = scope, flag = flag)
       result       =  versionRange
-                         .map(range => dependencies.filter(s => range.includes(s.depVersion))).getOrElse(dependencies)
-                         .map(repo => repo.copy(teams = allTeams.getTeams(repo.repoName).toList.sorted))
+                        .map(range => dependencies.filter(s => range.includes(s.depVersion))).getOrElse(dependencies)
+                        .map(repo => repo.copy(teams = allTeams.getTeams(repo.repoName).toList.sorted))
     yield Ok(Json.toJson(result))
   }
 
@@ -197,7 +196,7 @@ class ServiceDependenciesController @Inject()(
                             case None                                 => metaArtefactRepository.findAllVersions(repositoryName)
         repositories   =  metaArtefacts.map(toRepository(_, latestVersions, bobbyRules))
       yield
-        given OWrites[Repository] = Repository.writes
+        given Writes[Repository] = Repository.writes
         Ok(Json.toJson(repositories))
 
   private def toRepository(meta: MetaArtefact, latestVersions: Seq[LatestVersion], bobbyRules: BobbyRules) =
@@ -325,7 +324,7 @@ case class Repository(
 )
 
 object Repository:
-  val writes: OWrites[Repository] =
+  val writes: Writes[Repository] =
     given Writes[Dependency]       = Dependency.writes
     given Writes[RepositoryModule] = RepositoryModule.writes
     given Writes[Version]          = Version.format
@@ -348,7 +347,7 @@ case class RepositoryModule(
 )
 
 object RepositoryModule:
-  val writes: OWrites[RepositoryModule] =
+  val writes: Writes[RepositoryModule] =
     given Writes[DependencyBobbyRule] = DependencyBobbyRule.writes
     given Writes[Dependency]          = Dependency.writes
     given Writes[Version]             = Version.format
@@ -395,8 +394,8 @@ case class SlugDependency(
 )
 
 object SlugInfoExtra:
-  val write: OWrites[SlugInfoExtra] =
-    given OWrites[SlugDependency] =
+  val write: Writes[SlugInfoExtra] =
+    given Writes[SlugDependency] =
       ( (__ \ "path"    ).write[String]
       ~ (__ \ "version" ).write[Version](Version.format)
       ~ (__ \ "group"   ).write[String]

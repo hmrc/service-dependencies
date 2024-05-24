@@ -23,7 +23,6 @@ import uk.gov.hmrc.mongo.MongoUtils
 import uk.gov.hmrc.mongo.test.DefaultPlayMongoRepositorySupport
 import uk.gov.hmrc.servicedependencies.model.JDKVersion
 import uk.gov.hmrc.servicedependencies.model.SlugInfoFlag.Latest
-import uk.gov.hmrc.servicedependencies.persistence.TestSlugInfos
 
 import scala.concurrent.ExecutionContext.Implicits.global
 

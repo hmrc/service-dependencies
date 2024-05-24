@@ -17,7 +17,7 @@
 package uk.gov.hmrc.servicedependencies.config.model
 
 import play.api.libs.functional.syntax._
-import play.api.libs.json.{__, Json, JsError, Reads}
+import play.api.libs.json.{__, JsError, Reads}
 import uk.gov.hmrc.servicedependencies.model.Version
 
 case class DependencyConfig(
@@ -40,7 +40,7 @@ object DependencyConfig:
     ( (__ \ "name"         ).read[String]
     ~ (__ \ "group"        ).read[String]
     ~ (__ \ "latestVersion").readNullable[Version](Version.format)
-    )(DependencyConfig.apply _)
+    )(DependencyConfig.apply)
       .flatMap(validateLatestVersion)
 
 case class CuratedDependencyConfig(
@@ -54,8 +54,7 @@ case class CuratedDependencyConfig(
 object CuratedDependencyConfig:
   val reads: Reads[CuratedDependencyConfig] =
     given Reads[DependencyConfig] = DependencyConfig.reads
-    Json.reads[CuratedDependencyConfig]
     ( (__ \ "sbtPlugins").read[List[DependencyConfig]]
     ~ (__ \ "libraries" ).read[List[DependencyConfig]]
     ~ (__ \ "others"    ).read[List[DependencyConfig]]
-    )(CuratedDependencyConfig.apply _)
+    )(CuratedDependencyConfig.apply)

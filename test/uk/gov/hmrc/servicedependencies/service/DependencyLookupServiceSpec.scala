@@ -130,26 +130,26 @@ class DependencyLookupServiceSpec
       val lookupService = DependencyLookupService(mockedConfigService, bobbyRulesSummaryRepo, mockedDerivedDeployedDependencyRepository, mockedDerivedLatestDependencyRepository)
 
       lookupService.updateBobbyRulesSummary().futureValue
-      val res = lookupService.getLatestBobbyRuleViolations.futureValue
+      val res = lookupService.getLatestBobbyRuleViolations().futureValue
       res.summary shouldBe Map(
-        (bobbyRule, SlugInfoFlag.Latest) -> 2
-        , (bobbyRule, SlugInfoFlag.Development) -> 0
-        , (bobbyRule, SlugInfoFlag.ExternalTest) -> 0
-        , (bobbyRule, SlugInfoFlag.Production) -> 0
-        , (bobbyRule, SlugInfoFlag.QA) -> 0
-        , (bobbyRule, SlugInfoFlag.Staging) -> 0
-        , (bobbyRule, SlugInfoFlag.Integration) -> 0
+        (bobbyRule, SlugInfoFlag.Latest      ) -> 2
+      , (bobbyRule, SlugInfoFlag.Development ) -> 0
+      , (bobbyRule, SlugInfoFlag.ExternalTest) -> 0
+      , (bobbyRule, SlugInfoFlag.Production  ) -> 0
+      , (bobbyRule, SlugInfoFlag.QA          ) -> 0
+      , (bobbyRule, SlugInfoFlag.Staging     ) -> 0
+      , (bobbyRule, SlugInfoFlag.Integration ) -> 0
       )
     }
 
     "return the number of repositories violating a bobby rule for environments" in {
       when(mockedConfigService.getBobbyRules())
         .thenReturn(Future(BobbyRules(Map(("uk.gov.hmrc", "libs") -> List(bobbyRule)))))
-      when(mockedDerivedDeployedDependencyRepository.findWithDeploymentLookup(flag = any[SlugInfoFlag], group = any[Option[String]], artefact = any[Option[String]], scopes = any[Option[List[DependencyScope]]], slugName = any[Option[String]], slugVersion = any[Option[Version]]))
-        .thenReturn(Future.successful(Seq.empty))
       when(mockedDerivedLatestDependencyRepository.find(group = any[Option[String]], artefact = any[Option[String]], repoType = any[Option[List[RepoType]]], scopes = any[Option[List[DependencyScope]]], repoName = any[Option[String]], repoVersion = any[Option[Version]]))
         .thenReturn(Future.successful(Seq.empty))
-      when(mockedDerivedDeployedDependencyRepository.findWithDeploymentLookup(SlugInfoFlag.Production, group = None, artefact = None, scopes = Some(List(DependencyScope.Compile))))
+      when(mockedDerivedDeployedDependencyRepository.findWithDeploymentLookup(flag = any[SlugInfoFlag], group = any[Option[String]], artefact = any[Option[String]], scopes = any[Option[List[DependencyScope]]], slugName = any[Option[String]], slugVersion = any[Option[Version]]))
+        .thenReturn(Future.successful(Seq.empty))
+      when(mockedDerivedDeployedDependencyRepository.findWithDeploymentLookup(scopes = Some(List(DependencyScope.Compile)), flag = SlugInfoFlag.Production))
         .thenReturn(Future.successful(Seq(
           dep1
         , dep1.copy(repoVersion = Version("1.1.0"))
@@ -160,7 +160,7 @@ class DependencyLookupServiceSpec
       val lookupService = DependencyLookupService(mockedConfigService, bobbyRulesSummaryRepo, mockedDerivedDeployedDependencyRepository, mockedDerivedLatestDependencyRepository)
 
       lookupService.updateBobbyRulesSummary().futureValue
-      val res = lookupService.getLatestBobbyRuleViolations.futureValue
+      val res = lookupService.getLatestBobbyRuleViolations().futureValue
       res.summary shouldBe Map(
           (bobbyRule, SlugInfoFlag.Latest      ) -> 0
         , (bobbyRule, SlugInfoFlag.Development ) -> 0

@@ -23,7 +23,7 @@ import org.scalatest.concurrent.{IntegrationPatience, ScalaFutures}
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 import org.scalatestplus.mockito.MockitoSugar
-import play.api.libs.json.{Json, OWrites}
+import play.api.libs.json.{Json, Writes}
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
 import uk.gov.hmrc.http.HeaderCarrier
@@ -138,7 +138,7 @@ class ServiceDependenciesControllerSpec
 
       status(result) shouldBe OK
 
-      given OWrites[MetaArtefactDependency] = MetaArtefactDependency.apiWrites
+      given Writes[MetaArtefactDependency] = MetaArtefactDependency.apiWrites
 
       contentAsJson(result) shouldBe Json.toJson(Seq(
         metaArtefactDependency(Version("1.0.0")),
@@ -175,7 +175,7 @@ class ServiceDependenciesControllerSpec
 
       status(result) shouldBe OK
 
-      given OWrites[MetaArtefactDependency] = MetaArtefactDependency.apiWrites
+      given Writes[MetaArtefactDependency] = MetaArtefactDependency.apiWrites
 
       contentAsJson(result) shouldBe Json.toJson(Seq(
         metaArtefactDependency(Version("1.0.0"))
@@ -211,7 +211,7 @@ class ServiceDependenciesControllerSpec
 
       status(result) shouldBe OK
 
-      given OWrites[MetaArtefactDependency] = MetaArtefactDependency.apiWrites
+      given Writes[MetaArtefactDependency] = MetaArtefactDependency.apiWrites
 
       contentAsJson(result) shouldBe Json.toJson(Seq(
         metaArtefactDependency(Version("1.0.0")),
@@ -249,7 +249,7 @@ class ServiceDependenciesControllerSpec
 
       status(result) shouldBe OK
 
-      given OWrites[MetaArtefactDependency] = MetaArtefactDependency.apiWrites
+      given Writes[MetaArtefactDependency] = MetaArtefactDependency.apiWrites
 
       contentAsJson(result) shouldBe Json.toJson(Seq(
         metaArtefactDependency(Version("1.0.0"))

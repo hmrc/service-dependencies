@@ -39,7 +39,7 @@ class DependencyLookupService @Inject() (
 
   import DependencyLookupService._
 
-  def getLatestBobbyRuleViolations: Future[BobbyRulesSummary] =
+  def getLatestBobbyRuleViolations(): Future[BobbyRulesSummary] =
     bobbyRulesSummaryRepo.getLatest()
       .map(_.getOrElse(BobbyRulesSummary(LocalDate.now(), Map.empty)))
 
@@ -47,7 +47,7 @@ class DependencyLookupService @Inject() (
     def calculateCounts(rules: Seq[BobbyRule])(env: SlugInfoFlag): Future[Seq[((BobbyRule, SlugInfoFlag), Int)]] =
       for
         dependencies <- env match
-                          case SlugInfoFlag.Latest => derivedLatestDependencyRepository.find(scopes = Some(DependencyScope.values))
+                          case SlugInfoFlag.Latest => derivedLatestDependencyRepository.find(scopes = Some(DependencyScope.values.toSeq))
                           case _                   => derivedDeployedDependencyRepository.findWithDeploymentLookup(scopes = Some(List(DependencyScope.Compile)), flag = env)
         lookup       =  dependencies
                           .groupBy(d => s"${d.depGroup}:${d.depArtefact}")

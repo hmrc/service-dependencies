@@ -45,7 +45,7 @@ class DerivedDeployedDependencyRepository @Inject()(
                      :: IndexModel(Indexes.ascending("group"))
                      :: IndexModel(Indexes.ascending("artefact"))
                      :: IndexModel(Indexes.ascending("repoType"))
-                     :: DependencyScope.values.map(s => IndexModel(Indexes.hashed("scope_" + s.asString)))
+                     :: DependencyScope.values.map(s => IndexModel(Indexes.hashed("scope_" + s.asString))).toList
 , optSchema      = None
 , replaceIndexes = true
 ):
@@ -65,7 +65,7 @@ class DerivedDeployedDependencyRepository @Inject()(
       dependencyFilter  = Seq(
                             group      .map(x  => Filters.equal("group", x)),
                             artefact   .map(x  => Filters.equal("artefact", x)),
-                            scopes     .map(xs => Filters.or(xs.map(x => Filters.equal(s"scope_${x.asString}", value = true)): _*)),
+                            scopes     .map(xs => Filters.or(xs.map(x => Filters.equal(s"scope_${x.asString}", value = true))*)),
                             slugName   .map(x  => Filters.equal("repoName", x)),
                             slugVersion.map(x  => Filters.equal("repoVersion", x.original)),
                           ).flatten
@@ -111,7 +111,7 @@ class DerivedDeployedDependencyRepository @Inject()(
         Filters.and(
           Filters.equal("repoName", name)
         , version.fold(Filters.empty())(v => Filters.equal("repoVersion", v.original))
-        , Filters.nin("repoVersion", ignoreVersions.map(_.original): _*)
+        , Filters.nin("repoVersion", ignoreVersions.map(_.original)*)
         )
       )
       .toFuture()

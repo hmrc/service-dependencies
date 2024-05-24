@@ -30,6 +30,6 @@ object DeprecatedDependencies {
   val reads: Reads[DeprecatedDependencies] =
     ( (__ \ "libraries").lazyRead(Reads.seq[BobbyRule](BobbyRule.format))
     ~ (__ \ "plugins"  ).lazyRead(Reads.seq[BobbyRule](BobbyRule.format))
-    )(DeprecatedDependencies.apply _)
+    )(DeprecatedDependencies.apply)
 
 }

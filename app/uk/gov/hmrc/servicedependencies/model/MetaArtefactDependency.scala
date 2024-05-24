@@ -17,7 +17,6 @@
 package uk.gov.hmrc.servicedependencies.model
 
 import play.api.libs.functional.syntax._
-import play.api.libs.json.Format.GenericFormat
 import play.api.libs.json._
 
 import uk.gov.hmrc.servicedependencies.util.DependencyGraphParser
@@ -63,7 +62,7 @@ object MetaArtefactDependency:
   private def ignore[A]: OWrites[A] =
     _ => Json.obj()
 
-  val mongoFormat: OFormat[MetaArtefactDependency] =
+  val mongoFormat: Format[MetaArtefactDependency] =
     ( (__ \ "repoName"      ).format[String]
     ~ (__ \ "repoVersion"   ).format[Version](Version.format)
     ~ (__ \ "repoType"      ).format[RepoType]
@@ -81,7 +80,7 @@ object MetaArtefactDependency:
     ~ (__ \ "scope_build"   ).format[Boolean]
     )(MetaArtefactDependency.apply, mad => Tuple.fromProductTyped(mad))
 
-  val apiWrites: OWrites[MetaArtefactDependency] =
+  val apiWrites: Writes[MetaArtefactDependency] =
     given Writes[DependencyScope] = DependencyScope.dependencyScopeFormat
     ( (__ \ "repoName"   ).write[String]
     ~ (__ \ "repoVersion").write[String]
