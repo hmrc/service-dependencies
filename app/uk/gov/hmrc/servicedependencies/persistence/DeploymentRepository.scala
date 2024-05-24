@@ -199,7 +199,7 @@ case class Deployment(
 ):
   lazy val flags: List[SlugInfoFlag] =
     SlugInfoFlag
-      .values
+      .values.toList
       .filter:
         case SlugInfoFlag.Latest       => latest
         case SlugInfoFlag.Production   => production

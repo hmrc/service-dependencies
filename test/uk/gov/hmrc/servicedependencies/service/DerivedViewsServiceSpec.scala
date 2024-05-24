@@ -91,7 +91,7 @@ class DerivedViewsServiceSpec
 
       underTest.updateDeploymentDataForAllServices().futureValue
 
-      verify(mockedDeploymentRepository).clearFlags(SlugInfoFlag.values, decommissionedServices)
+      verify(mockedDeploymentRepository).clearFlags(SlugInfoFlag.values.toList, decommissionedServices)
     }
 
     "clear latest flag for deleted/archived services" in {

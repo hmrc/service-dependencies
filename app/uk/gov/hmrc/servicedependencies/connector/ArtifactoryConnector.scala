@@ -53,7 +53,7 @@ class ArtifactoryConnector @Inject()(
     group       : String
   , artefact    : String
   ): Future[Map[ScalaVersion, Version]] =
-    ScalaVersion.values
+    ScalaVersion.values.toList
       .foldLeftM(Map.empty[ScalaVersion, Version]): (acc, scalaVersion) =>
         findLatestVersion(group, artefact, scalaVersion)
           .map:

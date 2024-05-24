@@ -20,17 +20,16 @@ import cats.data.EitherT
 import play.api.libs.json._
 import play.api.mvc.QueryStringBindable
 
-sealed trait DependencyScope { def asString: String }
+enum DependencyScope(val asString: String):
+  case Compile  extends DependencyScope("compile" )
+  case Provided extends DependencyScope("provided")
+  case Test     extends DependencyScope("test"    )
+  case It       extends DependencyScope("it"      )
+  case Build    extends DependencyScope("build"   )
 
 object DependencyScope:
-  case object Compile  extends DependencyScope { override val asString = "compile"  }
-  case object Provided extends DependencyScope { override val asString = "provided" }
-  case object Test     extends DependencyScope { override val asString = "test"     }
-  case object It       extends DependencyScope { override val asString = "it"       }
-  case object Build    extends DependencyScope { override val asString = "build"    }
-
-  val values: List[DependencyScope] =
-    List(Compile, Provided, Test, It, Build)
+  val valuesAsSeq: Seq[DependencyScope] =
+    scala.collection.immutable.ArraySeq.unsafeWrapArray(values)
 
   def parse(s: String): Either[String, DependencyScope] =
     values
@@ -39,7 +38,7 @@ object DependencyScope:
 
   val dependencyScopeFormat: Format[DependencyScope] =
     Format(
-      _.validate[String].flatMap(DependencyScope.parse(_).fold(err => JsError(__, err), ds => JsSuccess(ds)))
+      _.validate[String].flatMap(parse(_).fold(err => JsError(__, err), ds => JsSuccess(ds)))
     , f => JsString(f.asString)
     )
 

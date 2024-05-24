@@ -48,15 +48,15 @@ class ReleasesApiConnector @Inject()(
       .execute[Seq[ServiceDeploymentInformation]]
 
 object ReleasesApiConnector extends Logging:
-  sealed trait Environment
-  object Environment:
-    case object Production   extends Environment
-    case object ExternalTest extends Environment
-    case object Staging      extends Environment
-    case object QA           extends Environment
-    case object Integration  extends Environment
-    case object Development  extends Environment
+  enum Environment:
+    case Production
+    case ExternalTest
+    case Staging
+    case QA
+    case Integration
+    case Development
 
+  object Environment:
     given Reads[Option[Environment]] =
       JsPath.read[String].map {
         case "production"   => Some(Production)

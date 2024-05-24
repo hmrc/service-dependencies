@@ -24,17 +24,16 @@ import play.api.libs.json._
 import play.api.mvc.QueryStringBindable
 import uk.gov.hmrc.mongo.play.json.formats.MongoJavatimeFormats
 
-sealed trait SlugInfoFlag { def asString: String }
-object SlugInfoFlag:
-  case object Latest          extends SlugInfoFlag { val asString = "latest"         }
-  case object Production      extends SlugInfoFlag { val asString = "production"     }
-  case object ExternalTest    extends SlugInfoFlag { val asString = "external test"  }
-  case object Staging         extends SlugInfoFlag { val asString = "staging"        }
-  case object QA              extends SlugInfoFlag { val asString = "qa"             }
-  case object Integration     extends SlugInfoFlag { val asString = "integration"    }
-  case object Development     extends SlugInfoFlag { val asString = "development"    }
+enum SlugInfoFlag(val asString: String):
+  case Latest          extends SlugInfoFlag("latest"       )
+  case Production      extends SlugInfoFlag("production"   )
+  case ExternalTest    extends SlugInfoFlag("external test")
+  case Staging         extends SlugInfoFlag("staging"      )
+  case QA              extends SlugInfoFlag("qa"           )
+  case Integration     extends SlugInfoFlag("integration"  )
+  case Development     extends SlugInfoFlag("development"  )
 
-  val values: List[SlugInfoFlag] = List(Latest, Production, ExternalTest, Staging, QA, Integration, Development)
+object SlugInfoFlag:
 
   def parse(s: String): Option[SlugInfoFlag] =
     if s.equalsIgnoreCase("externaltest") then

@@ -54,12 +54,12 @@ class DerivedLatestDependencyRepository @Inject()(
     TransactionConfiguration.strict
 
   def find(
-    group      : Option[String]                = None,
-    artefact   : Option[String]                = None,
-    repoType   : Option[List[RepoType]]        = None,
-    scopes     : Option[List[DependencyScope]] = None,
-    repoName   : Option[String]                = None,
-    repoVersion: Option[Version]               = None
+    group      : Option[String]               = None,
+    artefact   : Option[String]               = None,
+    repoType   : Option[Seq[RepoType]]        = None,
+    scopes     : Option[Seq[DependencyScope]] = None,
+    repoName   : Option[String]               = None,
+    repoVersion: Option[Version]              = None
   ): Future[Seq[MetaArtefactDependency]] =
     collection
       .find(

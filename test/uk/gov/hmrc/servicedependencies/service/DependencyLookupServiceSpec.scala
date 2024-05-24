@@ -116,7 +116,7 @@ class DependencyLookupServiceSpec
           group       = any,
           artefact    = any,
           repoType    = any,
-          scopes      = eqTo(Some(DependencyScope.values)),
+          scopes      = eqTo(Some(DependencyScope.values.toSeq)),
           repoName    = any,
           repoVersion = any
         ))

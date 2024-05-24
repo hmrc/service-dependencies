@@ -111,7 +111,6 @@ abstract class SqsConsumer(
 
   protected def processMessage(message: Message): Future[MessageAction]
 
-sealed trait MessageAction
-object MessageAction:
-  case class Delete(message: Message) extends MessageAction
-  case class Ignore(message: Message) extends MessageAction
+enum MessageAction:
+  case Delete(message: Message)
+  case Ignore(message: Message)

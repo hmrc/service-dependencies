@@ -84,7 +84,7 @@ class DerivedViewsService @Inject()(
                                 else Future.unit
 
       decommissionedServices <- gitHubProxyConnector.decommissionedServices()
-      _                      <- deploymentRepository.clearFlags(SlugInfoFlag.values, decommissionedServices)
+      _                      <- deploymentRepository.clearFlags(SlugInfoFlag.values.toList, decommissionedServices)
 
       missingLatestFlag      =  slugNames.intersect(activeRepos).diff(decommissionedServices).diff(latestServices)
       _                      <-
