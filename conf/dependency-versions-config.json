@@ -6,6 +6,7 @@
   "libraries": [
     { "group": "org.reactivemongo", "name": "reactivemongo"  , "latestVersion": "0.20.3" },
     { "group": "org.scala-lang"   , "name": "scala-library"  , "latestVersion": "2.13.12" },
+    { "group": "org.scala-lang"   , "name": "scala3-library" , "latestVersion": "3.3.3" },
     { "group": "com.typesafe.play", "name": "play"           , "latestVersion": "2.9.3" },
     { "group": "org.playframework", "name": "play"           , "latestVersion": "3.0.3" }
   ],

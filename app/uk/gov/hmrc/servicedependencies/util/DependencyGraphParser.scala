@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.servicedependencies.util
 
-import uk.gov.hmrc.servicedependencies.model.{DependencyScope, MetaArtefact}
+import uk.gov.hmrc.servicedependencies.model.{DependencyScope, MetaArtefact, Version}
 
 object DependencyGraphParser {
 
@@ -35,7 +35,7 @@ object DependencyGraphParser {
 
     val scala = meta
                   .modules
-                  .flatMap(_.crossScalaVersions.toSeq.flatten)
+                  .flatMap(_.crossScalaVersions.toSeq.flatten.filter(_ < Version("3.0.0"))) // Scala 3 will already be present in graph if applicable
                   .headOption
                   .map(v => DependencyGraphParser.Node.apply(s"org.scala-lang:scala-library:${v.original}"))
                   .fold(Map.empty[DependencyGraphParser.Node, Set[DependencyScope]])(n => Map(n ->  Set(DependencyScope.Compile, DependencyScope.Test)))
