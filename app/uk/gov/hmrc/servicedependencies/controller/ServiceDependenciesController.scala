@@ -291,7 +291,7 @@ class ServiceDependenciesController @Inject()(
                                                                dependencies = compileDependencies,
                                                                group        = "org.scala-lang",
                                                                artefact     = "scala-library",
-                                                               versions     = scalaVersions,
+                                                               versions     = scalaVersions.filter(_ < Version("3.0.0")),  // Scala 3 uses artefact `scala3-language` but it should already be in the Graph
                                                                scope        = DependencyScope.Compile
                                                              )
                                                            ),
@@ -302,7 +302,7 @@ class ServiceDependenciesController @Inject()(
                                                                dependencies = testDependencies,
                                                                group        = "org.scala-lang",
                                                                artefact     = "scala-library",
-                                                               versions     = scalaVersions,
+                                                               versions     = scalaVersions.filter(_ < Version("3.0.0")),
                                                                scope        = DependencyScope.Test
                                                              )
                                                            ),
@@ -312,7 +312,7 @@ class ServiceDependenciesController @Inject()(
                                                                dependencies = itDependencies,
                                                                group        = "org.scala-lang",
                                                                artefact     = "scala-library",
-                                                               versions     = scalaVersions,
+                                                               versions     = scalaVersions.filter(_ < Version("3.0.0")),
                                                                scope        = DependencyScope.It
                                                              )
                                                            ),
