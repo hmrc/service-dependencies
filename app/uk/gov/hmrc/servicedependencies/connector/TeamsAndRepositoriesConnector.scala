@@ -48,8 +48,13 @@ class TeamsAndRepositoriesConnector @Inject()(
 
   def getRepository(repositoryName: String)(implicit hc: HeaderCarrier): Future[Option[Repository]] =
     httpClientV2
-      .get(url"$teamsAndRepositoriesApiBase/api/repositories/$repositoryName")
+      .get(url"$teamsAndRepositoriesApiBase/api/v2/repositories/$repositoryName")
       .execute[Option[Repository]]
+
+  def getAllRepositories(archived: Option[Boolean])(implicit hc: HeaderCarrier): Future[Seq[Repository]] =
+    httpClientV2
+      .get(url"$teamsAndRepositoriesApiBase/api/v2/repositories?archived=$archived")
+      .execute[Seq[Repository]]
 
   def getTeamsForServices()(implicit hc: HeaderCarrier): Future[TeamsForServices] =
     cache.getOrElseUpdate("teams-for-services", serviceConfiguration.teamsAndRepositoriesCacheExpiration){
@@ -58,11 +63,6 @@ class TeamsAndRepositoriesConnector @Inject()(
         .execute[Map[String, Seq[String]]]
         .map(TeamsForServices.apply)
     }
-
-  def getAllRepositories(archived: Option[Boolean])(implicit hc: HeaderCarrier): Future[Seq[Repository]] =
-    httpClientV2
-      .get(url"$teamsAndRepositoriesApiBase/api/repositories?archived=$archived")
-      .execute[Seq[Repository]]
 
   def getTeam(team: String)(implicit hc: HeaderCarrier): Future[Team] =
     httpClientV2

@@ -16,10 +16,11 @@
 
 package uk.gov.hmrc.servicedependencies.persistence.derived
 
-import org.mongodb.scala.model.{Filters, Indexes, IndexModel, ReplaceOneModel, ReplaceOptions}
+import org.mongodb.scala.model.{Filters, Indexes, IndexModel, IndexOptions}
 import play.api.Logging
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.play.json.PlayMongoRepository
+import uk.gov.hmrc.mongo.transaction.{TransactionConfiguration, Transactions}
 import uk.gov.hmrc.servicedependencies.model.{DependencyScope, MetaArtefactDependency, RepoType, Version}
 
 import javax.inject.{Inject, Singleton}
@@ -27,24 +28,35 @@ import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
 class DerivedLatestDependencyRepository @Inject()(
-  mongoComponent: MongoComponent
+  final val mongoComponent: MongoComponent
 )(implicit ec: ExecutionContext
 ) extends PlayMongoRepository[MetaArtefactDependency](
   collectionName = "DERIVED-latest-dependencies"
 , mongoComponent = mongoComponent
 , domainFormat   = MetaArtefactDependency.mongoFormat
-, indexes        = Seq(
-                     IndexModel(Indexes.ascending("repoName")),
-                     IndexModel(Indexes.ascending("repoVersion")),
-                     IndexModel(Indexes.ascending("group")),
-                     IndexModel(Indexes.ascending("artefact")),
-                     IndexModel(Indexes.ascending("repoType")),
-                   ) ++ DependencyScope.values.map(s => IndexModel(Indexes.ascending(s"scope_${s.asString}")))
+, indexes        = IndexModel(
+                     Indexes.compoundIndex(
+                       Indexes.ascending("repoName"),
+                       Indexes.ascending("repoVersion"),
+                       Indexes.ascending("group"),
+                       Indexes.ascending("artefact"),
+                       Indexes.ascending("version")
+                     ),
+                     IndexOptions().name("uniqueIdx").unique(true)
+                   ) :: IndexModel(Indexes.ascending("repoName"))
+                     :: IndexModel(Indexes.ascending("repoVersion"))
+                     :: IndexModel(Indexes.ascending("group"))
+                     :: IndexModel(Indexes.ascending("artefact"))
+                     :: IndexModel(Indexes.ascending("repoType"))
+                     :: DependencyScope.values.map(s => IndexModel(Indexes.hashed("scope_" + s.asString)))
 , replaceIndexes = true
-) with Logging {
+) with Transactions with Logging {
 
   // automatically refreshed when given new meta data artefacts from update scheduler
   override lazy val requiresTtlIndex = false
+
+  private implicit val tc: TransactionConfiguration =
+    TransactionConfiguration.strict
 
   def find(
     group      : Option[String]                = None,
@@ -67,34 +79,23 @@ class DerivedLatestDependencyRepository @Inject()(
          .foldLeft(Filters.empty())(Filters.and(_, _))
       ).toFuture()
 
-  def put(dependencies: Seq[MetaArtefactDependency]): Future[Unit] =
+  def update(repoName: String, dependencies: List[MetaArtefactDependency]): Future[Unit] =
     if (dependencies.isEmpty)
       Future.unit
+    else if (dependencies.exists(_.repoName != repoName))
+      Future.failed(sys.error(s"Repo name: $repoName does not match dependencies ${dependencies.collect { case x if x.repoName != repoName => x.repoName}.mkString(",")}"))
     else
-      collection
-        .bulkWrite(
-          dependencies.map(d =>
-            ReplaceOneModel(
-              filter = Filters.and(
-                Filters.equal("repoName", d.repoName)
-              , Filters.equal("group"   , d.depGroup)
-              , Filters.equal("artefact", d.depArtefact)
-              , Filters.equal("version" , d.depVersion.original)
-              ),
-              replacement    = d,
-              replaceOptions = ReplaceOptions().upsert(true)
-            )
-          )
-        ).toFuture()
-        .map(_ => ())
+      withSessionAndTransaction { session =>
+        for {
+          _ <- collection.deleteMany(session, Filters.equal("repoName", repoName)).toFuture()
+          _ <- collection.insertMany(session, dependencies).toFuture()
+        } yield ()
+      }
 
-  def delete(name: String, version: Option[Version] = None): Future[Unit] =
+  def delete(repoName: String): Future[Unit] =
     collection
-      .deleteMany(
-        Filters.and(
-          Filters.equal("repoName"   , name),
-          version.fold(Filters.empty())(v => Filters.equal("repoVersion", v.original))
-        )
-      ).toFuture()
+      .deleteMany(Filters.equal("repoName", repoName))
+      .toFuture()
       .map(_ => ())
+
 }

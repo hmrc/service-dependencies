@@ -144,15 +144,11 @@ class DerivedViewsService @Inject()(
              .foldLeftM(()) { case (_, (meta, repoType)) =>
                for {
                  ds <- derivedLatestDependencyRepository.find(repoName = Some(meta.name), repoVersion = Some(meta.version))
-                 _  <- if (ds.isEmpty || repoType == RepoType.Test)
-                         derivedLatestDependencyRepository.delete(meta.name) *>
-                         derivedLatestDependencyRepository.put(
-                           DependencyGraphParser
-                            .parseMetaArtefact(meta)
-                            .map { case (node, scopes) => MetaArtefactDependency.apply(meta, repoType, node, scopes) }
-                            .toSeq
-                         )
-                       else
+                 _  <- if (ds.isEmpty || repoType == RepoType.Test) {
+                         val deps = toDependencies(meta, repoType)
+                         logger.info(s"DerivedLatestDependencyRepository repoName: ${meta.name}, repoVersion: ${meta.version} - storing ${deps.size}")
+                         derivedLatestDependencyRepository.update(meta.name, deps)
+                      } else
                          Future.unit
                } yield ()
              }
@@ -176,12 +172,9 @@ class DerivedViewsService @Inject()(
                  ds <- derivedDeployedDependencyRepository.find(flag = flag, slugName = Some(slugName), slugVersion = Some(slugVersion))
                  ms <- metaArtefactRepository.find(repositoryName = slugName, version = slugVersion)
                  _  <- (ds.isEmpty, ms.headOption) match {
-                         case (true, Some(meta)) => derivedDeployedDependencyRepository.put(
-                                                      DependencyGraphParser
-                                                        .parseMetaArtefact(meta)
-                                                        .map { case (node, scopes) => MetaArtefactDependency.apply(meta, RepoType.Service, node, scopes) }
-                                                        .toSeq
-                                                    )
+                         case (true, Some(meta)) => val deps = toDependencies(meta, RepoType.Service)
+                                                    logger.info(s"DerivedDeployedDependencyRepository repoName: ${meta.name}, repoVersion: ${meta.version} - storing ${deps.size}")
+                                                    derivedDeployedDependencyRepository.insert(deps)
                          case __                 => Future.unit
                        }
                } yield ()
@@ -192,4 +185,11 @@ class DerivedViewsService @Inject()(
       _ =  logger.info(s"Finished running DerivedDeployedDependencyRepository changes")
     } yield ()
 
+  private def toDependencies(meta: MetaArtefact, repoType: RepoType): List[MetaArtefactDependency] =
+    DependencyGraphParser
+      .parseMetaArtefact(meta)
+      .groupBy { case (node, _) => node.group + node.artefact }                             // Unique index does not consider Scala version
+      .flatMap { case (_, xs) => xs.headOption.map(x => (x._1 -> xs.flatMap(_._2).toSet)) } // Merge scopes with the same node minus scala version
+      .map { case (node, scopes) => MetaArtefactDependency.apply(meta, repoType, node, scopes) }
+      .toList
 }

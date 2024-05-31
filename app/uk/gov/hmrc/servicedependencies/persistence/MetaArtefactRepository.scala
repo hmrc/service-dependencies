@@ -49,20 +49,7 @@ class MetaArtefactRepository @Inject()(
   override lazy val requiresTtlIndex = false
 
   private implicit val tc: TransactionConfiguration =
-    TransactionConfiguration(
-      clientSessionOptions = Some(
-                               ClientSessionOptions.builder()
-                                 .causallyConsistent(true)
-                                 .build()
-                             ),
-      transactionOptions   = Some(
-                               TransactionOptions.builder()
-                                 .readConcern(ReadConcern.MAJORITY)
-                                 .writeConcern(WriteConcern.MAJORITY)
-                                 .readPreference(ReadPreference.primary())
-                                 .build()
-                             )
-    )
+    TransactionConfiguration.strict
 
   def put(meta: MetaArtefact): Future[Unit] =
     withSessionAndTransaction { session =>
