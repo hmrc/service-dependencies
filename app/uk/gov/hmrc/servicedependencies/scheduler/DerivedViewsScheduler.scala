@@ -55,8 +55,8 @@ class DerivedViewsScheduler @Inject()(
   scheduleWithLock("Derived Views", schedulerConfigs, lock) {
     logger.info("Updating Derived Views & Deployment data")
     for {
-      _ <- derivedViewsService.updateDeploymentDataForAllServices()
-      _ =  logger.info("Finished updating deployment data")
+      // _ <- derivedViewsService.updateDeploymentDataForAllServices()
+      // _ =  logger.info("Finished updating deployment data")
       _ <- derivedViewsService.updateDerivedViewsForAllRepos()
       _ =  logger.info("Finished updating derived views")
     } yield ()

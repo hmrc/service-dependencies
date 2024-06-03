@@ -57,7 +57,7 @@ class DerivedDeployedDependencyRepository @Inject()(
   // we remove slugs when, artefactProcess detects, they've been deleted from artifactory
   override lazy val requiresTtlIndex = false
 
-  def find(
+  def findWithDeploymentLookup(
     flag    : SlugInfoFlag,
     group   : Option[String]                = None,
     artefact: Option[String]                = None,
@@ -76,6 +76,16 @@ class DerivedDeployedDependencyRepository @Inject()(
                           ).flatten
                            .foldLeft(Filters.empty())(Filters.and(_, _))
     )
+
+  def find(slugName: String, slugVersion: Version): Future[Seq[MetaArtefactDependency]] =
+    collection
+      .find(
+        Filters.and(
+          Filters.equal("repoName"   , slugName)
+        , Filters.equal("repoVersion", slugVersion.toString)
+        )
+      )
+      .toFuture()
 
   private def findServiceDependenciesFromDeployments(
     deploymentsFilter: Bson,
