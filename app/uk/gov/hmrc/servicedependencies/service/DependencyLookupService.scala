@@ -47,8 +47,8 @@ class DependencyLookupService @Inject() (
     def calculateCounts(rules: Seq[BobbyRule])(env: SlugInfoFlag): Future[Seq[((BobbyRule, SlugInfoFlag), Int)]] =
       for {
         dependencies <- env match {
-                          case SlugInfoFlag.Latest => derivedLatestDependencyRepository.find  (scopes = Some(DependencyScope.values))
-                          case _                   => derivedDeployedDependencyRepository.find(scopes = Some(List(DependencyScope.Compile)), flag = env)
+                          case SlugInfoFlag.Latest => derivedLatestDependencyRepository.find(scopes = Some(DependencyScope.values))
+                          case _                   => derivedDeployedDependencyRepository.findWithDeploymentLookup(scopes = Some(List(DependencyScope.Compile)), flag = env)
                         }
         lookup       =  dependencies
                           .groupBy(d => s"${d.depGroup}:${d.depArtefact}")

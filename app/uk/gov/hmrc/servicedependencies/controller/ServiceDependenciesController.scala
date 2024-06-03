@@ -72,8 +72,8 @@ class ServiceDependenciesController @Inject()(
     for {
       allTeams     <- teamsAndRepositoriesConnector.getTeamsForServices()
       dependencies <- flag match {
-                        case SlugInfoFlag.Latest => derivedLatestDependencyRepository  .find(group = Some(group), artefact = Some(artefact), scopes = scope, repoType = repoType)
-                        case _                   => derivedDeployedDependencyRepository.find(group = Some(group), artefact = Some(artefact), scopes = scope, flag     = flag)
+                        case SlugInfoFlag.Latest => derivedLatestDependencyRepository.find(group = Some(group), artefact = Some(artefact), scopes = scope, repoType = repoType)
+                        case _                   => derivedDeployedDependencyRepository.findWithDeploymentLookup(group = Some(group), artefact = Some(artefact), scopes = scope, flag = flag)
                       }
       result       =  versionRange
                         .map(range => dependencies.filter(s => range.includes(s.depVersion))).getOrElse(dependencies)

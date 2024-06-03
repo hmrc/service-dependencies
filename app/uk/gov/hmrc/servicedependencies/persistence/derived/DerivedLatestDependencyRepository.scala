@@ -35,13 +35,7 @@ class DerivedLatestDependencyRepository @Inject()(
 , mongoComponent = mongoComponent
 , domainFormat   = MetaArtefactDependency.mongoFormat
 , indexes        = IndexModel(
-                     Indexes.compoundIndex(
-                       Indexes.ascending("repoName"),
-                       Indexes.ascending("repoVersion"),
-                       Indexes.ascending("group"),
-                       Indexes.ascending("artefact"),
-                       Indexes.ascending("version")
-                     ),
+                     Indexes.ascending("repoName", "repoVersion", "group", "artefact", "version"),
                      IndexOptions().name("uniqueIdx").unique(true)
                    ) :: IndexModel(Indexes.ascending("repoName"))
                      :: IndexModel(Indexes.ascending("repoVersion"))

@@ -146,7 +146,7 @@ class DerivedViewsService @Inject()(
                  ds <- derivedLatestDependencyRepository.find(repoName = Some(meta.name), repoVersion = Some(meta.version))
                  _  <- if (ds.isEmpty || repoType == RepoType.Test) {
                          val deps = toDependencies(meta, repoType)
-                         logger.info(s"DerivedLatestDependencyRepository repoName: ${meta.name}, repoVersion: ${meta.version} - storing ${deps.size}")
+                         logger.info(s"DerivedLatestDependencyRepository repoName: ${meta.name}, repoVersion: ${meta.version} - storing ${deps.size} dependencies")
                          derivedLatestDependencyRepository.update(meta.name, deps)
                       } else
                          Future.unit
@@ -165,15 +165,15 @@ class DerivedViewsService @Inject()(
              }
       _ <- deployments
              .filter(d => activeRepos.exists(_.name == d.slugName))
-             .flatMap(d => d.flags.filterNot(_ == SlugInfoFlag.Latest).map(f => (d.slugName, d.slugVersion, f))) // Get all deployed versions
-             .distinctBy { case (slugName, slugVersion, _) => (slugName, slugVersion) }                          // Flag just included for lookup but isn't needed
-             .foldLeftM(()) { case (_, (slugName, slugVersion, flag)) =>
+             .flatMap(d => d.flags.filterNot(_ == SlugInfoFlag.Latest).map(f => (d.slugName, d.slugVersion))) // Get all deployed versions
+             .distinct
+             .foldLeftM(()) { case (_, (slugName, slugVersion)) =>
                for {
-                 ds <- derivedDeployedDependencyRepository.find(flag = flag, slugName = Some(slugName), slugVersion = Some(slugVersion))
+                 ds <- derivedDeployedDependencyRepository.find(slugName = slugName, slugVersion = slugVersion)
                  ms <- metaArtefactRepository.find(repositoryName = slugName, version = slugVersion)
                  _  <- (ds.isEmpty, ms.headOption) match {
                          case (true, Some(meta)) => val deps = toDependencies(meta, RepoType.Service)
-                                                    logger.info(s"DerivedDeployedDependencyRepository repoName: ${meta.name}, repoVersion: ${meta.version} - storing ${deps.size}")
+                                                    logger.info(s"DerivedDeployedDependencyRepository repoName: ${meta.name}, repoVersion: ${meta.version} - storing ${deps.size} dependencies")
                                                     derivedDeployedDependencyRepository.insert(deps)
                          case __                 => Future.unit
                        }

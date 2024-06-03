@@ -112,7 +112,7 @@ class DependencyLookupServiceSpec
 
       when(mockedConfigService.getBobbyRules())
         .thenReturn(Future(BobbyRules(Map(("uk.gov.hmrc", "libs") -> List(bobbyRule)))))
-      when(mockedDerivedDeployedDependencyRepository.find(flag = any[SlugInfoFlag], group = any[Option[String]], artefact = any[Option[String]], scopes = any[Option[List[DependencyScope]]], slugName = any[Option[String]], slugVersion = any[Option[Version]]))
+      when(mockedDerivedDeployedDependencyRepository.findWithDeploymentLookup(flag = any[SlugInfoFlag], group = any[Option[String]], artefact = any[Option[String]], scopes = any[Option[List[DependencyScope]]], slugName = any[Option[String]], slugVersion = any[Option[Version]]))
         .thenReturn(Future.successful(Seq.empty))
       when(mockedDerivedLatestDependencyRepository.find(artefact = None, group = None, scopes = Some(DependencyScope.values)))
         .thenReturn(Future.successful(Seq(
@@ -141,11 +141,11 @@ class DependencyLookupServiceSpec
 
       when(mockedConfigService.getBobbyRules())
         .thenReturn(Future(BobbyRules(Map(("uk.gov.hmrc", "libs") -> List(bobbyRule)))))
-     when(mockedDerivedDeployedDependencyRepository.find(flag = any[SlugInfoFlag], group = any[Option[String]], artefact = any[Option[String]], scopes = any[Option[List[DependencyScope]]], slugName = any[Option[String]], slugVersion = any[Option[Version]]))
+     when(mockedDerivedDeployedDependencyRepository.findWithDeploymentLookup(flag = any[SlugInfoFlag], group = any[Option[String]], artefact = any[Option[String]], scopes = any[Option[List[DependencyScope]]], slugName = any[Option[String]], slugVersion = any[Option[Version]]))
         .thenReturn(Future.successful(Seq.empty))
       when(mockedDerivedLatestDependencyRepository.find(group = any[Option[String]], artefact = any[Option[String]], repoType = any[Option[List[RepoType]]], scopes = any[Option[List[DependencyScope]]], repoName = any[Option[String]], repoVersion = any[Option[Version]]))
         .thenReturn(Future.successful(Seq.empty))
-      when(mockedDerivedDeployedDependencyRepository.find(SlugInfoFlag.Production, group = None, artefact = None, scopes = Some(List(DependencyScope.Compile))))
+      when(mockedDerivedDeployedDependencyRepository.findWithDeploymentLookup(SlugInfoFlag.Production, group = None, artefact = None, scopes = Some(List(DependencyScope.Compile))))
         .thenReturn(Future.successful(Seq(
           dep1
         , dep1.copy(repoVersion = Version("1.1.0"))
