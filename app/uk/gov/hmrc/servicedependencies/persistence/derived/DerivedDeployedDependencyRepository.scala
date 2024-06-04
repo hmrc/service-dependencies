@@ -17,7 +17,7 @@
 package uk.gov.hmrc.servicedependencies.persistence.derived
 
 import org.mongodb.scala.bson.conversions.Bson
-import org.mongodb.scala.model.{IndexModel, IndexOptions, Indexes, Filters, ReplaceOneModel, ReplaceOptions}
+import org.mongodb.scala.model.{IndexModel, IndexOptions, Indexes, Filters}
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.play.json.PlayMongoRepository
 import uk.gov.hmrc.servicedependencies.model._
@@ -36,39 +36,22 @@ class DerivedDeployedDependencyRepository @Inject()(
   collectionName = "DERIVED-deployed-dependencies"
 , mongoComponent = mongoComponent
 , domainFormat   = MetaArtefactDependency.mongoFormat
-, indexes        = Seq(
-                     IndexModel(
-                       Indexes.compoundIndex(
-                         Indexes.ascending("repoName"),
-                         Indexes.ascending("repoVersion")
-                       ),
-                       IndexOptions().name("name_version_idx").background(true)
-                     ),
-                     IndexModel(
-                       Indexes.compoundIndex(
-                         Indexes.ascending("group"),
-                         Indexes.ascending("artefact")
-                       ),
-                       IndexOptions().name("group_artefact_idx").background(true)
-                     ),
-                     IndexModel(
-                       Indexes.compoundIndex(
-                         Indexes.ascending("repoName"),
-                         Indexes.ascending("repoVersion"),
-                         Indexes.ascending("group"),
-                         Indexes.ascending("artefact"),
-                         Indexes.ascending("version")
-                       ),
-                       IndexOptions().name("uniqueIdx").unique(true).background(true)
-                     )
-                   ) ++ DependencyScope.values.map(s => IndexModel(Indexes.hashed("scope_" + s.asString)))
+, indexes        = IndexModel(
+                     Indexes.ascending("repoName", "repoVersion", "group", "artefact", "version"),
+                     IndexOptions().name("uniqueIdx").unique(true)
+                   ) :: IndexModel(Indexes.ascending("repoName"))
+                     :: IndexModel(Indexes.ascending("repoVersion"))
+                     :: IndexModel(Indexes.ascending("group"))
+                     :: IndexModel(Indexes.ascending("artefact"))
+                     :: IndexModel(Indexes.ascending("repoType"))
+                     :: DependencyScope.values.map(s => IndexModel(Indexes.hashed("scope_" + s.asString)))
 , optSchema      = None
 , replaceIndexes = true
 ){
   // we remove slugs when, artefactProcess detects, they've been deleted from artifactory
   override lazy val requiresTtlIndex = false
 
-  def find(
+  def findWithDeploymentLookup(
     flag    : SlugInfoFlag,
     group   : Option[String]                = None,
     artefact: Option[String]                = None,
@@ -88,6 +71,16 @@ class DerivedDeployedDependencyRepository @Inject()(
                            .foldLeft(Filters.empty())(Filters.and(_, _))
     )
 
+  def find(slugName: String, slugVersion: Version): Future[Seq[MetaArtefactDependency]] =
+    collection
+      .find(
+        Filters.and(
+          Filters.equal("repoName"   , slugName)
+        , Filters.equal("repoVersion", slugVersion.toString)
+        )
+      )
+      .toFuture()
+
   private def findServiceDependenciesFromDeployments(
     deploymentsFilter: Bson,
     dependencyFilter : Bson
@@ -102,26 +95,13 @@ class DerivedDeployedDependencyRepository @Inject()(
       domainFilter      = dependencyFilter
     )
 
-  def put(dependencies: Seq[MetaArtefactDependency]): Future[Unit] =
+  def insert(dependencies: List[MetaArtefactDependency]): Future[Unit] =
     if (dependencies.isEmpty)
       Future.unit
     else {
       collection
-        .bulkWrite(
-          dependencies.map(d =>
-            ReplaceOneModel(
-              filter         = Filters.and(
-                                 Filters.equal("repoName"   , d.repoName)
-                               , Filters.equal("repoVersion", d.repoVersion.original)
-                               , Filters.equal("group"      , d.depGroup)
-                               , Filters.equal("artefact"   , d.depArtefact)
-                               , Filters.equal("version"    , d.depVersion.original)
-                               ),
-              replacement    = d,
-              replaceOptions = ReplaceOptions().upsert(true)
-            )
-          ).toSeq
-        ).toFuture()
+        .insertMany(dependencies)
+        .toFuture()
         .map(_ => ())
     }
 

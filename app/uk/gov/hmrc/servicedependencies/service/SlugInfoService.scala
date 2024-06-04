@@ -76,8 +76,8 @@ class SlugInfoService @Inject()(
       for {
         allTeams <- teamsAndRepositoriesConnector.getTeamsForServices()
         services <- flag match {
-                      case SlugInfoFlag.Latest => derivedLatestDependencyRepository.find  (group = Some(group), artefact = Some(artefact), scopes = scopes, repoType = Some(List(RepoType.Service)))
-                      case _                   => derivedDeployedDependencyRepository.find(group = Some(group), artefact = Some(artefact), scopes = scopes, flag     = flag)
+                      case SlugInfoFlag.Latest => derivedLatestDependencyRepository.find(group = Some(group), artefact = Some(artefact), scopes = scopes, repoType = Some(List(RepoType.Service)))
+                      case _                   => derivedDeployedDependencyRepository.findWithDeploymentLookup(group = Some(group), artefact = Some(artefact), scopes = scopes, flag     = flag)
                     }
         results  =  services
                       .filter(s => versionRange.includes(s.depVersion))

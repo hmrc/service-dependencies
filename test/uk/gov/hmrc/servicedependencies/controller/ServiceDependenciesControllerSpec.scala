@@ -117,7 +117,7 @@ class ServiceDependenciesControllerSpec
         Future.successful(TeamsForServices(Map("repo-name" -> Seq("team-name"))))
       )
 
-      when(boot.mockDerivedDeployedDependencyRepository.find(any(), any(), any(), any(), any(), any())).thenReturn(
+      when(boot.mockDerivedDeployedDependencyRepository.findWithDeploymentLookup(any(), any(), any(), any(), any(), any())).thenReturn(
         Future.successful(Seq(
           metaArtefactDependency(Version("1.0.0")),
           metaArtefactDependency(Version("2.0.0")),
@@ -152,7 +152,7 @@ class ServiceDependenciesControllerSpec
         Future.successful(TeamsForServices(Map("repo-name" -> Seq("team-name"))))
       )
 
-      when(boot.mockDerivedDeployedDependencyRepository.find(any(), any(), any(), any(), any(), any())).thenReturn(
+      when(boot.mockDerivedDeployedDependencyRepository.findWithDeploymentLookup(any(), any(), any(), any(), any(), any())).thenReturn(
         Future.successful(Seq(
           metaArtefactDependency(Version("1.0.0")),
           metaArtefactDependency(Version("2.0.0")),

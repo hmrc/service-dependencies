@@ -54,7 +54,7 @@ class TeamsAndRepositoriesConnectorSpec
   "TeamsAndRepositoriesConnector.getRepository" should {
     "correctly parse json response" in {
       stubFor(
-        get(urlEqualTo(s"/api/repositories/test-repo"))
+        get(urlEqualTo(s"/api/v2/repositories/test-repo"))
           .willReturn(aResponse().withBodyFile("teams-and-repositories/repository.json"))
       )
       val repository = connector.getRepository("test-repo").futureValue
@@ -63,7 +63,7 @@ class TeamsAndRepositoriesConnectorSpec
 
     "handle 404 - repository not found" in {
       stubFor(
-        get(urlEqualTo(s"/api/repositories/non-existing-test-repo"))
+        get(urlEqualTo(s"/api/v2/repositories/non-existing-test-repo"))
           .willReturn(aResponse().withStatus(404))
       )
 
@@ -87,7 +87,7 @@ class TeamsAndRepositoriesConnectorSpec
   "TeamsAndRepositoriesConnector.getAllRepositories" should {
     "correctly parse json response" in {
       stubFor(
-        get(urlEqualTo("/api/repositories"))
+        get(urlEqualTo("/api/v2/repositories"))
           .willReturn(aResponse().withBodyFile("teams-and-repositories/repositories.json"))
       )
 
@@ -107,18 +107,18 @@ class TeamsAndRepositoriesConnectorSpec
         )
       )
 
-      verify(getRequestedFor(urlEqualTo("/api/repositories")))
+      verify(getRequestedFor(urlEqualTo("/api/v2/repositories")))
     }
 
     "correctly pass query parameter" in {
       stubFor(
-        get(urlEqualTo("/api/repositories?archived=false"))
+        get(urlEqualTo("/api/v2/repositories?archived=false"))
           .willReturn(aResponse().withBodyFile("teams-and-repositories/repositories.json"))
       )
 
       connector.getAllRepositories(archived = Some(false)).futureValue
 
-      verify(getRequestedFor(urlEqualTo("/api/repositories?archived=false")))
+      verify(getRequestedFor(urlEqualTo("/api/v2/repositories?archived=false")))
     }
   }
 }

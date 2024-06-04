@@ -80,7 +80,8 @@ class IntegrationTestController @Inject()(
     implicit val mad = MetaArtefactDependency.mongoFormat
     Action.async(validateJson[List[MetaArtefactDependency]]) { implicit request =>
       derivedLatestDependencyRepository
-        .put(request.body)
+        .collection
+        .insertMany(request.body).toFuture()
         .map(_ => NoContent)
     }
   }

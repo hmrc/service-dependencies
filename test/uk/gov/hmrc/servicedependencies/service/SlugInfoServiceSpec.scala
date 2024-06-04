@@ -66,7 +66,7 @@ class SlugInfoServiceSpec
     "filter results by version" in {
       val boot = Boot.init
 
-      when(boot.mockedDerivedDeployedDependencyRepository.find(SlugInfoFlag.QA, group = Some(group), artefact = Some(artefact), scopes = Some(List(scope))))
+      when(boot.mockedDerivedDeployedDependencyRepository.findWithDeploymentLookup(SlugInfoFlag.QA, group = Some(group), artefact = Some(artefact), scopes = Some(List(scope))))
         .thenReturn(Future(Seq(v100, v200, v205)))
 
       when(boot.mockedTeamsAndRepositoriesConnector.getTeamsForServices())
@@ -85,7 +85,7 @@ class SlugInfoServiceSpec
 
       val bad = v100.copy(depVersion = Version("r938"))
 
-      when(boot.mockedDerivedDeployedDependencyRepository.find(SlugInfoFlag.QA, group = Some(group), artefact = Some(artefact), scopes = Some(List(scope))))
+      when(boot.mockedDerivedDeployedDependencyRepository.findWithDeploymentLookup(SlugInfoFlag.QA, group = Some(group), artefact = Some(artefact), scopes = Some(List(scope))))
         .thenReturn(Future(Seq(v100, v200, v205, bad)))
 
       when(boot.mockedTeamsAndRepositoriesConnector.getTeamsForServices())

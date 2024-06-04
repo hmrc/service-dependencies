@@ -17,7 +17,7 @@
 package uk.gov.hmrc.servicedependencies.persistence
 
 import play.api.Logging
-import org.mongodb.scala.{ClientSession, ClientSessionOptions, ReadConcern, ReadPreference, TransactionOptions, WriteConcern}
+import org.mongodb.scala.ClientSession
 import org.mongodb.scala.bson.BsonDocument
 import org.mongodb.scala.model.{Aggregates, Filters, IndexModel, IndexOptions, Indexes, Projections, ReplaceOptions, Sorts, UpdateOptions, Updates}
 import uk.gov.hmrc.mongo.MongoComponent
@@ -49,20 +49,7 @@ class MetaArtefactRepository @Inject()(
   override lazy val requiresTtlIndex = false
 
   private implicit val tc: TransactionConfiguration =
-    TransactionConfiguration(
-      clientSessionOptions = Some(
-                               ClientSessionOptions.builder()
-                                 .causallyConsistent(true)
-                                 .build()
-                             ),
-      transactionOptions   = Some(
-                               TransactionOptions.builder()
-                                 .readConcern(ReadConcern.MAJORITY)
-                                 .writeConcern(WriteConcern.MAJORITY)
-                                 .readPreference(ReadPreference.primary())
-                                 .build()
-                             )
-    )
+    TransactionConfiguration.strict
 
   def put(meta: MetaArtefact): Future[Unit] =
     withSessionAndTransaction { session =>
