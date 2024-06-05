@@ -18,8 +18,10 @@ package uk.gov.hmrc.servicedependencies.persistence.derived
 
 import org.mongodb.scala.bson.conversions.Bson
 import org.mongodb.scala.model.{IndexModel, IndexOptions, Indexes, Filters}
+import play.api.Logging
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.play.json.PlayMongoRepository
+import uk.gov.hmrc.mongo.transaction.{TransactionConfiguration, Transactions}
 import uk.gov.hmrc.servicedependencies.model._
 import uk.gov.hmrc.servicedependencies.persistence.DeploymentRepository
 
@@ -28,8 +30,8 @@ import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
 class DerivedDeployedDependencyRepository @Inject()(
-  mongoComponent       : MongoComponent,
-  deploymentRepository : DeploymentRepository
+ final val mongoComponent: MongoComponent,
+  deploymentRepository   : DeploymentRepository
 )(implicit
   ec: ExecutionContext
 ) extends PlayMongoRepository[MetaArtefactDependency](
@@ -47,9 +49,13 @@ class DerivedDeployedDependencyRepository @Inject()(
                      :: DependencyScope.values.map(s => IndexModel(Indexes.hashed("scope_" + s.asString)))
 , optSchema      = None
 , replaceIndexes = true
-){
+) with Transactions with Logging {
+
   // we remove slugs when, artefactProcess detects, they've been deleted from artifactory
   override lazy val requiresTtlIndex = false
+
+  private implicit val tc: TransactionConfiguration =
+    TransactionConfiguration.strict
 
   def findWithDeploymentLookup(
     flag    : SlugInfoFlag,
@@ -95,15 +101,18 @@ class DerivedDeployedDependencyRepository @Inject()(
       domainFilter      = dependencyFilter
     )
 
-  def insert(dependencies: List[MetaArtefactDependency]): Future[Unit] =
+  def update(slugName: String, slugVersion: Version, dependencies: List[MetaArtefactDependency]): Future[Unit] =
     if (dependencies.isEmpty)
       Future.unit
-    else {
-      collection
-        .insertMany(dependencies)
-        .toFuture()
-        .map(_ => ())
-    }
+    else if (dependencies.exists(x => x.repoName != slugName || x.repoVersion != slugVersion))
+      Future.failed(sys.error(s"Repo $slugName:${slugVersion.original} does not match dependencies ${dependencies.collect { case x if x.repoName != slugName || x.repoVersion != slugVersion => s"${x.repoName}:${x.repoVersion.original}"}.mkString(",")}"))
+    else
+      withSessionAndTransaction { session =>
+        for {
+          _ <- collection.deleteMany(session, Filters.and(Filters.equal("repoName", slugName), Filters.equal("repoVersion", slugVersion.original))).toFuture()
+          _ <- collection.insertMany(session, dependencies).toFuture()
+        } yield ()
+      }
 
   def delete(name: String, version: Option[Version] = None, ignoreVersions: Seq[Version] = Nil): Future[Unit] =
     collection
