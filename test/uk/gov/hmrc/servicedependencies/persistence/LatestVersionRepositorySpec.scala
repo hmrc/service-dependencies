@@ -19,23 +19,24 @@ package uk.gov.hmrc.servicedependencies.persistence
 import java.time.Instant
 
 import com.codahale.metrics.MetricRegistry
-import org.mockito.MockitoSugar
 import org.scalatest.matchers.should.Matchers
-import org.scalatest.wordspec.AnyWordSpecLike
+import org.scalatest.wordspec.AnyWordSpec
+import org.scalatestplus.mockito.MockitoSugar
 import uk.gov.hmrc.mongo.test.DefaultPlayMongoRepositorySupport
 import uk.gov.hmrc.servicedependencies.model.{LatestVersion, Version}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
 class LatestVersionRepositorySpec
-  extends AnyWordSpecLike
+  extends AnyWordSpec
      with Matchers
      with MockitoSugar
      with DefaultPlayMongoRepositorySupport[LatestVersion] {
 
-  val metricsRegistry = new MetricRegistry()
+  val metricsRegistry = MetricRegistry()
 
-  override lazy val repository = new LatestVersionRepository(mongoComponent)
+  override val repository: LatestVersionRepository =
+    LatestVersionRepository(mongoComponent)
 
   val latestVersion = LatestVersion(
       name       = "some-library"

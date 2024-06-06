@@ -19,21 +19,23 @@ package uk.gov.hmrc.servicedependencies.persistence
 import java.time.LocalDate
 import cats.instances.all._
 import cats.syntax.all._
-import org.mockito.MockitoSugar
+import org.mongodb.scala.SingleObservableFuture
 import org.scalatest.matchers.should.Matchers
-import org.scalatest.wordspec.AnyWordSpecLike
+import org.scalatest.wordspec.AnyWordSpec
+import org.scalatestplus.mockito.MockitoSugar
 import uk.gov.hmrc.mongo.test.DefaultPlayMongoRepositorySupport
 import uk.gov.hmrc.servicedependencies.model.{BobbyRule, BobbyRuleQuery, BobbyRulesSummary, BobbyVersionRange, SlugInfoFlag}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
 class BobbyRulesSummaryRepositorySpec
-    extends AnyWordSpecLike
+    extends AnyWordSpec
     with Matchers
     with MockitoSugar
     with DefaultPlayMongoRepositorySupport[BobbyRulesSummary] {
 
-  override protected lazy val repository = new BobbyRulesSummaryRepository(mongoComponent)
+  override protected val repository: BobbyRulesSummaryRepository =
+    BobbyRulesSummaryRepository(mongoComponent)
 
   "BobbyRulesSummaryRepository.add" should {
     val summary = bobbyRulesSummary(playFrontendBobbyRule, LocalDate.now(), SlugInfoFlag.Development, 1)

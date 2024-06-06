@@ -17,23 +17,23 @@
 package uk.gov.hmrc.servicedependencies.controller.model
 
 import play.api.libs.functional.syntax._
-import play.api.libs.json.{OWrites, Writes, __}
+import play.api.libs.json.{Writes, __}
 import uk.gov.hmrc.servicedependencies.model.{DependencyScope, Version}
 
 
 case class Dependency(
-    name               : String
-  , group              : String
-  , currentVersion     : Version
-  , latestVersion      : Option[Version]
-  , bobbyRuleViolations: List[DependencyBobbyRule]
-  , importBy           : Option[ImportedBy]      = None
-  , scope              : DependencyScope
-  )
+  name               : String
+, group              : String
+, currentVersion     : Version
+, latestVersion      : Option[Version]
+, bobbyRuleViolations: List[DependencyBobbyRule]
+, importBy           : Option[ImportedBy]      = None
+, scope              : DependencyScope
+)
 
-object Dependency {
+object Dependency:
 
-  val writes: OWrites[Dependency] =
+  val writes: Writes[Dependency] =
     ( (__ \ "name"               ).write[String]
     ~ (__ \ "group"              ).write[String]
     ~ (__ \ "currentVersion"     ).write[Version](Version.legacyApiWrites)
@@ -41,15 +41,17 @@ object Dependency {
     ~ (__ \ "bobbyRuleViolations").lazyWrite(Writes.seq[DependencyBobbyRule](DependencyBobbyRule.writes))
     ~ (__ \ "importBy"           ).writeNullable[ImportedBy](ImportedBy.writes)
     ~ (__ \ "scope"              ).write[DependencyScope](DependencyScope.dependencyScopeFormat)
-    )(unlift(Dependency.unapply))
-}
+    )(d => Tuple.fromProductTyped(d))
 
-case class ImportedBy(name: String, group: String, version: Version)
+case class ImportedBy(
+  name   : String,
+  group  : String,
+  version: Version
+)
 
-object ImportedBy {
-  val writes: OWrites[ImportedBy] =
+object ImportedBy:
+  val writes: Writes[ImportedBy] =
     ( (__ \ "name"          ).write[String]
     ~ (__ \ "group"         ).write[String]
     ~ (__ \ "currentVersion").write[Version](Version.legacyApiWrites)
-    )(unlift(ImportedBy.unapply))
-}
+    )(i => Tuple.fromProductTyped(i))

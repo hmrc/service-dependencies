@@ -37,28 +37,27 @@ class SlugInfoService @Inject()(
   derivedDeployedDependencyRepository: DerivedDeployedDependencyRepository,
   derivedLatestDependencyRepository  : DerivedLatestDependencyRepository,
   derivedGroupArtefactRepository     : DerivedGroupArtefactRepository,
-)(implicit ec: ExecutionContext
-) extends Logging {
+)(using ec: ExecutionContext
+) extends Logging:
 
   def addSlugInfo(slug: SlugInfo): Future[Unit] =
     for {
       // Determine which slug is latest from the existing collection
       _        <- slugInfoRepository.add(slug)
       isLatest <- slugVersionRepository.getMaxVersion(name = slug.name)
-                    .map {
+                    .map:
                       case None             => true
                       case Some(maxVersion) => val isLatest = maxVersion == slug.version
                                                logger.info(s"Slug ${slug.name} ${slug.version} isLatest=$isLatest (latest is: ${maxVersion})")
                                                isLatest
-                    }
-      _        <- if (isLatest) deploymentRepository.markLatest(slug.name, slug.version) else Future.unit
+      _        <- if isLatest then deploymentRepository.markLatest(slug.name, slug.version) else Future.unit
     } yield ()
 
   def deleteSlugInfo(name: String, version: Version): Future[Unit] =
-    for {
+    for
       _ <- deploymentRepository.delete(name, version)
       _ <- slugInfoRepository.delete(name, version)
-    } yield ()
+    yield ()
 
   def getSlugInfo(name: String, flag: SlugInfoFlag): Future[Option[SlugInfo]] =
     slugInfoRepository.getSlugInfo(name, flag)
@@ -72,36 +71,34 @@ class SlugInfoService @Inject()(
     , artefact    : String
     , versionRange: BobbyVersionRange
     , scopes      : Option[List[DependencyScope]]
-    )(implicit hc: HeaderCarrier): Future[Seq[MetaArtefactDependency]] =
-      for {
+    )(using hc: HeaderCarrier): Future[Seq[MetaArtefactDependency]] =
+      for
         allTeams <- teamsAndRepositoriesConnector.getTeamsForServices()
-        services <- flag match {
+        services <- flag match
                       case SlugInfoFlag.Latest => derivedLatestDependencyRepository.find(group = Some(group), artefact = Some(artefact), scopes = scopes, repoType = Some(List(RepoType.Service)))
                       case _                   => derivedDeployedDependencyRepository.findWithDeploymentLookup(group = Some(group), artefact = Some(artefact), scopes = scopes, flag     = flag)
-                    }
         results  =  services
                       .filter(s => versionRange.includes(s.depVersion))
                       .map(r => r.copy(teams = allTeams.getTeams(r.repoName).toList.sorted))
-      } yield results
+      yield results
 
   def findGroupsArtefacts(): Future[Seq[GroupArtefacts]] =
     derivedGroupArtefactRepository.findGroupsArtefacts()
 
-  def findJDKVersions(teamName: Option[String], flag: SlugInfoFlag)(implicit hc: HeaderCarrier): Future[Seq[JDKVersion]] =
-    teamName match {
-      case Some(n) => for {
+  def findJDKVersions(teamName: Option[String], flag: SlugInfoFlag)(using hc: HeaderCarrier): Future[Seq[JDKVersion]] =
+    teamName match
+      case Some(n) =>
+                      for
                         team <- teamsAndRepositoriesConnector.getTeam(n)
                         xs   <- jdkVersionRepository.findJDKUsage(flag)
-                      } yield xs.filter(x => team.services.contains(x.name))
+                      yield xs.filter(x => team.services.contains(x.name))
       case None    => jdkVersionRepository.findJDKUsage(flag)
-    }
 
-  def findSBTVersions(teamName: Option[String], flag: SlugInfoFlag)(implicit hc: HeaderCarrier): Future[Seq[SBTVersion]] =
-    teamName match {
-      case Some(n) => for {
+  def findSBTVersions(teamName: Option[String], flag: SlugInfoFlag)(using hc: HeaderCarrier): Future[Seq[SBTVersion]] =
+    teamName match
+      case Some(n) =>
+                      for
                         team <- teamsAndRepositoriesConnector.getTeam(n)
                         xs   <- sbtVersionRepository.findSBTUsage(flag)
-                      } yield xs.filter(x => team.services.contains(x.serviceName))
+                      yield xs.filter(x => team.services.contains(x.serviceName))
       case None    => sbtVersionRepository.findSBTUsage(flag)
-    }
-}

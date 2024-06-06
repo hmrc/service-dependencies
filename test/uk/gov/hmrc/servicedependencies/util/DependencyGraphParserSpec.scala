@@ -27,7 +27,7 @@ class DependencyGraphParserSpec
   extends AnyWordSpec
      with Matchers {
 
-   import DependencyGraphParser.Node, DependencyScope._
+  import DependencyGraphParser.Node, DependencyScope._
   "DependencyGraphParser.parseMetaArtefact" should {
     val compileDependency  = "digraph \"dependency-graph\" {\n    graph[rankdir=\"LR\"]\n    edge [\n        arrowtail=\"none\"\n    ]\n        \"artefact:build_1.00:1.23.0\" -> \"artefact:build_1.00:1.23.0\" \n}"
     val providedDependency = "digraph \"dependency-graph\" {\n    graph[rankdir=\"LR\"]\n    edge [\n        arrowtail=\"none\"\n    ]\n        \"artefact:build_2.00:1.23.0\" -> \"artefact:build_2.00:1.23.0\" \n}"

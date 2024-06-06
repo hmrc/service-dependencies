@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.servicedependencies.model
 
-import play.api.libs.json.{__, OFormat}
+import play.api.libs.json.{__, Format}
 import play.api.libs.functional.syntax._
 
 case class JDKVersion(
@@ -26,14 +26,13 @@ case class JDKVersion(
   kind   : String
 )
 
-trait JDKVersionFormats {
+trait JDKVersionFormats:
 
-  val jdkVersionFormat: OFormat[JDKVersion] =
+  val jdkVersionFormat: Format[JDKVersion] =
     ( (__ \ "name"   ).format[String]
     ~ (__ \ "version").format[String]
     ~ (__ \ "vendor" ).format[String]
     ~ (__ \ "kind"   ).format[String]
-    )(JDKVersion.apply, unlift(JDKVersion.unapply))
-}
+    )(JDKVersion.apply, jv => Tuple.fromProductTyped(jv))
 
 object JDKVersionFormats extends JDKVersionFormats

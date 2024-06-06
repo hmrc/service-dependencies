@@ -16,10 +16,11 @@
 
 package uk.gov.hmrc.servicedependencies.persistence.derived
 
-import org.mockito.MockitoSugar
+import org.mongodb.scala.SingleObservableFuture
 import org.scalatest.OptionValues
 import org.scalatest.matchers.should.Matchers
-import org.scalatest.wordspec.AnyWordSpecLike
+import org.scalatest.wordspec.AnyWordSpec
+import org.scalatestplus.mockito.MockitoSugar
 import uk.gov.hmrc.mongo.test.DefaultPlayMongoRepositorySupport
 import uk.gov.hmrc.servicedependencies.model.RepoType.Service
 import uk.gov.hmrc.servicedependencies.model._
@@ -28,19 +29,20 @@ import uk.gov.hmrc.servicedependencies.persistence.DeploymentRepository
 import scala.concurrent.ExecutionContext.Implicits.global
 
 class DerivedGroupArtefactRepositorySpec
-  extends AnyWordSpecLike
+  extends AnyWordSpec
      with Matchers
      with OptionValues
      with MockitoSugar
      with DefaultPlayMongoRepositorySupport[GroupArtefacts] {
 
-  lazy val derivedLatestDependencyRepository   = new DerivedLatestDependencyRepository(mongoComponent)
-  lazy val deploymentRepository                = new DeploymentRepository(mongoComponent)
-  lazy val derivedDeployedDependencyRepository = new DerivedDeployedDependencyRepository(mongoComponent, deploymentRepository)
+  lazy val derivedLatestDependencyRepository   = DerivedLatestDependencyRepository(mongoComponent)
+  lazy val deploymentRepository                = DeploymentRepository(mongoComponent)
+  lazy val derivedDeployedDependencyRepository = DerivedDeployedDependencyRepository(mongoComponent, deploymentRepository)
 
   override def checkIndexedQueries = false
 
-  override lazy val repository = new DerivedGroupArtefactRepository(mongoComponent, deploymentRepository)
+  override val repository: DerivedGroupArtefactRepository =
+    DerivedGroupArtefactRepository(mongoComponent, deploymentRepository)
 
   "DerivedGroupArtefactRepository.findGroupsArtefacts" should {
     "return a map of artefact group to list of found artefacts" in {

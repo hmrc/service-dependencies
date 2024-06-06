@@ -32,12 +32,12 @@ class DerivedViewsScheduler @Inject()(
    derivedViewsService : DerivedViewsService,
    mongoLockRepository : MongoLockRepository,
    timestampSupport    : TimestampSupport
- )(implicit
+ )(using
    actorSystem         : ActorSystem,
    applicationLifecycle: ApplicationLifecycle,
    ec                  : ExecutionContext
  ) extends SchedulerUtils
-   with Logging {
+   with Logging:
 
   private val schedulerConfigs =
     SchedulerConfig(configuration, "scheduler.derivedViews")
@@ -50,15 +50,13 @@ class DerivedViewsScheduler @Inject()(
     , schedulerInterval = schedulerConfigs.interval
     )
 
-  implicit val hc: HeaderCarrier = HeaderCarrier()
+  given HeaderCarrier = HeaderCarrier()
 
-  scheduleWithLock("Derived Views", schedulerConfigs, lock) {
+  scheduleWithLock("Derived Views", schedulerConfigs, lock):
     logger.info("Updating Derived Views & Deployment data")
-    for {
+    for
       _ <- derivedViewsService.updateDeploymentDataForAllServices()
       _ =  logger.info("Finished updating deployment data")
       _ <- derivedViewsService.updateDerivedViewsForAllRepos()
       _ =  logger.info("Finished updating derived views")
-    } yield ()
-  }
-}
+    yield ()

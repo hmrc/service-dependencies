@@ -22,25 +22,29 @@ import play.api.Logging
 
 import scala.concurrent.{ExecutionContext, Future, Promise}
 
-object RetryStrategy extends Logging{
+object RetryStrategy extends Logging:
 
-  private def delay[T](delay: Double)(eventualT: => Future[T]): Future[T] = {
+  private def delay[T](delay: Double)(eventualT: => Future[T]): Future[T] =
     val promise = Promise[T]()
-    new Timer().schedule(new TimerTask {
-      override def run() = promise.completeWith(eventualT)
-    }, delay.toLong)
+    Timer()
+     .schedule(
+       new TimerTask:
+         override def run() = promise.completeWith(eventualT)
+     , delay.toLong
+     )
 
     promise.future
-  }
 
-  def exponentialRetry[T](times: Int, duration: Double = 10)(f: => Future[T])(
-    implicit executor: ExecutionContext): Future[T] =
-    f recoverWith {
+  def exponentialRetry[T](
+    times   : Int,
+    duration: Double = 10
+  )(f: => Future[T]
+  )(using
+    ec: ExecutionContext
+  ): Future[T] =
+    f.recoverWith:
       case e if times > 0 =>
         logger.error(s"error making request Retrying: ${e.getMessage}", e)
         logger.debug(s"Retrying with delay $duration attempts remaining: ${times - 1}")
-        delay(duration) {
+        delay(duration):
           exponentialRetry(times - 1, duration * 2)(f)
-        }
-    }
-}

@@ -17,6 +17,7 @@
 package uk.gov.hmrc.servicedependencies.persistence.derived
 
 import javax.inject.{Inject, Singleton}
+import org.mongodb.scala.{ObservableFuture, SingleObservableFuture}
 import org.mongodb.scala.bson.BsonDocument
 import org.mongodb.scala.model.{Aggregates, DeleteManyModel, Filters, Indexes, IndexModel, Projections, ReplaceOneModel, ReplaceOptions}
 import uk.gov.hmrc.mongo.MongoComponent
@@ -29,7 +30,7 @@ import scala.concurrent.{ExecutionContext, Future}
 @Singleton
 class DerivedModuleRepository @Inject()(
   val mongoComponent: MongoComponent
-)(implicit
+)(using
   ec: ExecutionContext
 ) extends PlayMongoRepository[DerivedModule](
     mongoComponent = mongoComponent
@@ -39,7 +40,7 @@ class DerivedModuleRepository @Inject()(
                      IndexModel(Indexes.ascending("name", "version")) ::
                      Nil
   , replaceIndexes = true
-) {
+):
 
   // we replace all the data for each call to populateAll
   override lazy val requiresTtlIndex = false
@@ -104,27 +105,30 @@ class DerivedModuleRepository @Inject()(
       .toFuture()
       .map(_ => ())
 
-}
-
-case class DerivedModule(moduleGroup: String, moduleName: String, name: String, version: Version)
+case class DerivedModule(
+  moduleGroup: String,
+  moduleName : String,
+  name       : String,
+  version    : Version
+)
 
 import play.api.libs.functional.syntax._
 import play.api.libs.json.{Format, __}
 
-object DerivedModule {
+object DerivedModule:
 
   def toDerivedModules(meta: MetaArtefact) =
-    meta.modules.map(module => DerivedModule(
-    moduleGroup = module.group
-  , moduleName  = module.name
-  , name        = meta.name
-  , version     = meta.version
-  ))
+    meta.modules.map: module =>
+      DerivedModule(
+        moduleGroup = module.group
+      , moduleName  = module.name
+      , name        = meta.name
+      , version     = meta.version
+      )
 
   val mongoFormat: Format[DerivedModule] =
     ( (__ \ "moduleGroup").format[String]
     ~ (__ \ "moduleName" ).format[String]
     ~ (__ \ "name"       ).format[String]
     ~ (__ \ "version"    ).format[Version](Version.format)
-    )(DerivedModule.apply, unlift(DerivedModule.unapply))
-}
+    )(DerivedModule.apply, dm => Tuple.fromProductTyped(dm))

@@ -20,44 +20,36 @@ import cats.data.EitherT
 import play.api.libs.json._
 import play.api.mvc.QueryStringBindable
 
-sealed trait DependencyScope { def asString: String }
+enum DependencyScope(val asString: String):
+  case Compile  extends DependencyScope("compile" )
+  case Provided extends DependencyScope("provided")
+  case Test     extends DependencyScope("test"    )
+  case It       extends DependencyScope("it"      )
+  case Build    extends DependencyScope("build"   )
 
-object DependencyScope {
-  case object Compile  extends DependencyScope { override val asString = "compile"  }
-  case object Provided extends DependencyScope { override val asString = "provided" }
-  case object Test     extends DependencyScope { override val asString = "test"     }
-  case object It       extends DependencyScope { override val asString = "it"       }
-  case object Build    extends DependencyScope { override val asString = "build"    }
-
-  val values: List[DependencyScope] =
-    List(Compile, Provided, Test, It, Build)
+object DependencyScope:
+  val valuesAsSeq: Seq[DependencyScope] =
+    scala.collection.immutable.ArraySeq.unsafeWrapArray(values)
 
   def parse(s: String): Either[String, DependencyScope] =
     values
       .find(_.asString == s)
       .toRight(s"Invalid dependency scope - should be one of: ${values.map(_.asString).mkString(", ")}")
 
-  val dependencyScopeFormat: Format[DependencyScope] = Format(
-       _.validate[String].flatMap(DependencyScope.parse(_).fold(err => JsError(__, err), ds => JsSuccess(ds)))
-    ,  f => JsString(f.asString)
-  )
+  val dependencyScopeFormat: Format[DependencyScope] =
+    Format(
+      _.validate[String].flatMap(parse(_).fold(err => JsError(__, err), ds => JsSuccess(ds)))
+    , f => JsString(f.asString)
+    )
 
 
-  implicit def bobbyVersionRangeStringBindable(implicit stringBinder: QueryStringBindable[String]): QueryStringBindable[DependencyScope] =
-    new QueryStringBindable[DependencyScope] {
-      override def bind(key: String, params: Map[String, Seq[String]]): Option[Either[String, DependencyScope]] = {
+  given bobbyVersionRangeStringBindable(using stringBinder: QueryStringBindable[String]): QueryStringBindable[DependencyScope] with
+    override def bind(key: String, params: Map[String, Seq[String]]): Option[Either[String, DependencyScope]] =
+      (for
+          x <- EitherT.apply(stringBinder.bind(key, params))
+          y <- EitherT.fromEither[Option](DependencyScope.parse(x))
+        yield y
+      ).value
 
-        (
-          for {
-            x <- EitherT.apply(stringBinder.bind(key, params))
-            y <- EitherT.fromEither[Option](DependencyScope.parse(x))
-          } yield y
-          ).value
-      }
-
-      override def unbind(key: String, value: DependencyScope): String = {
-        stringBinder.unbind(key, value.toString)
-      }
-    }
-
-}
+    override def unbind(key: String, value: DependencyScope): String =
+      stringBinder.unbind(key, value.toString)

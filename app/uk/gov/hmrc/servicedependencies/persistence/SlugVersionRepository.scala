@@ -16,6 +16,7 @@
 
 package uk.gov.hmrc.servicedependencies.persistence
 
+import org.mongodb.scala.SingleObservableFuture
 import org.mongodb.scala.model.Filters.equal
 import org.mongodb.scala.model.Projections.include
 import uk.gov.hmrc.mongo.MongoComponent
@@ -27,18 +28,17 @@ import scala.concurrent.{ExecutionContext, Future}
 @Singleton
 class SlugVersionRepository @Inject()(
   mongoComponent: MongoComponent
-)(implicit
+)(using
   ec            : ExecutionContext
 ) extends SlugInfoRepositoryBase[Version](
   mongoComponent,
   domainFormat = Version.mongoVersionRepositoryFormat
-){
+):
   def getMaxVersion(name: String): Future[Option[Version]] =
     collection
       .find(equal("name", name))
       .projection(include("version"))
-      .foldLeft(Option.empty[Version]){
+      .foldLeft(Option.empty[Version]):
         case (optMax, version) if optMax.exists(_ > version) => optMax
         case (_     , version)                               => Some(version)
-      }.toFuture()
-}
+      .toFuture()

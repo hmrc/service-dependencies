@@ -35,26 +35,27 @@ class MetaArtefactUpdateHandler @Inject()(
   artefactProcessorConnector: ArtefactProcessorConnector,
   metaArtefactRepository    : MetaArtefactRepository,
   derivedViewsService       : DerivedViewsService
-)(implicit
+)(using
   actorSystem               : ActorSystem,
   ec                        : ExecutionContext
 ) extends SqsConsumer(
   name                      = "MetaArtefact"
 , config                    = SqsConfig("aws.sqs.meta", configuration)
-)(actorSystem, ec) {
+):
 
-  private implicit val hc: HeaderCarrier = HeaderCarrier()
-  override protected def processMessage(message: Message): Future[MessageAction] = {
+  private given HeaderCarrier = HeaderCarrier()
+
+  override protected def processMessage(message: Message): Future[MessageAction] =
     logger.debug(s"Starting processing MetaArtefact message with ID '${message.messageId()}'")
-    (for {
+    (for
        payload <- EitherT.fromEither[Future](
                     Json.parse(message.body)
                       .validate(MessagePayload.reads)
                       .asEither.left.map(error => s"Could not parse message with ID '${message.messageId}'.  Reason: " + error.toString)
                   )
-       action  <- payload match {
+       action  <- payload match
                     case available: MessagePayload.JobAvailable =>
-                      for {
+                      for
                         _    <- EitherT.cond[Future](available.jobType == "meta", (), s"${available.jobType} was not 'meta'")
                         meta <- EitherT.fromOptionF(
                                   artefactProcessorConnector.getMetaArtefact(available.name, available.version)
@@ -65,38 +66,31 @@ class MetaArtefactUpdateHandler @Inject()(
                                 , errorMessage = s"Could not store MetaArtefact for message with ID '${message.messageId()}' (${meta.name} ${meta.version})"
                                 )
                         _    <- EitherT.right[String](derivedViewsService.updateDerivedViews(available.name))
-                      } yield {
+                      yield
                         logger.info(s"MetaArtefact available message with ID '${message.messageId()}' (${meta.name} ${meta.version}) successfully processed.")
                         MessageAction.Delete(message)
-                      }
                     case deleted: MessagePayload.JobDeleted =>
-                      for {
+                      for
                         _ <- EitherT.cond[Future](deleted.jobType == "meta", (), s"${deleted.jobType} was not 'meta'")
                         _ <- recoverFutureInEitherT(
                                metaArtefactRepository.delete(deleted.name, deleted.version)
                              , errorMessage = s"Could not delete MetaArtefact for message with ID '${message.messageId()}' (${deleted.name} ${deleted.version})"
                              )
                         _ <- EitherT.right[String](derivedViewsService.updateDerivedViews(deleted.name))
-                      } yield {
+                      yield
                         logger.info(s"MetaArtefact deleted message with ID '${message.messageId()}' (${deleted.name} ${deleted.version}) successfully processed.")
                         MessageAction.Delete(message)
-                      }
-                  }
-     } yield action
-    ).value.map {
+     yield action
+    ).value.map:
       case Left(error) =>
         logger.error(error)
         MessageAction.Ignore(message)
       case Right(action) =>
         action
-    }
-  }
 
-  private def recoverFutureInEitherT[A](f: Future[A], errorMessage: String) = EitherT(
-    f.map(Right.apply)
-     .recover {case e =>
-       logger.error(errorMessage, e)
-       Left(s"$errorMessage ${e.getMessage}")
-     }
-  )
-}
+  private def recoverFutureInEitherT[A](f: Future[A], errorMessage: String) =
+    EitherT:
+      f.map(Right.apply)
+       .recover: e =>
+         logger.error(errorMessage, e)
+         Left(s"$errorMessage ${e.getMessage}")

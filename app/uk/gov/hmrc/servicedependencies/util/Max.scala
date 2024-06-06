@@ -16,8 +16,7 @@
 
 package uk.gov.hmrc.servicedependencies.util
 
-object Max {
+object Max:
 
-  def maxOf[A](s: Iterable[A])(implicit cmp: Ordering[A]): Option[A] =
-    if (s.isEmpty) None else Some(s.max)
-}
+  def maxOf[A](s: Iterable[A])(using Ordering[A]): Option[A] =
+    if s.isEmpty then None else Some(s.max)

@@ -38,12 +38,12 @@ class TeamsAndRepositoriesConnectorSpec
      with GuiceOneAppPerSuite
      with WireMockSupport {
 
-  implicit val hc: HeaderCarrier = HeaderCarrier()
+  given HeaderCarrier = HeaderCarrier()
 
   override lazy val resetWireMockMappings = false
 
   override def fakeApplication(): Application =
-    new GuiceApplicationBuilder()
+    GuiceApplicationBuilder()
       .configure(
         "microservice.services.teams-and-repositories.host" -> wireMockHost,
         "microservice.services.teams-and-repositories.port" -> wireMockPort

@@ -29,37 +29,33 @@ import scala.concurrent.{ExecutionContext, Future}
 class ArtifactoryConnector @Inject()(
   httpClientV2: HttpClientV2,
   config      : ServiceDependenciesConfig
-)(implicit ec: ExecutionContext
-){
+)(using ec: ExecutionContext
+):
   import HttpReads.Implicits._
 
   private lazy val authorization: Option[Authorization] =
-    for {
+    for
       token <- config.artifactoryToken
-    } yield Authorization(s"Bearer $token")
+    yield Authorization(s"Bearer $token")
 
   def findLatestVersion(
     group       : String
   , artefact    : String
   , scalaVersion: ScalaVersion
-  ): Future[Option[Version]] = {
-    implicit val hc = HeaderCarrier(authorization = authorization)
+  ): Future[Option[Version]] =
+    given HeaderCarrier = HeaderCarrier(authorization = authorization)
     httpClientV2
       .get(url"${config.artifactoryBase}/api/search/latestVersion?g=$group&a=$artefact${scalaVersion.asClassifier}")
       .execute[Option[HttpResponse]]
       .map(_.map(_.body).map(Version.apply))
-  }
 
   def findLatestVersion(
     group       : String
   , artefact    : String
   ): Future[Map[ScalaVersion, Version]] =
-    ScalaVersion.values
-      .foldLeftM(Map.empty[ScalaVersion, Version]) {
-        case (acc, scalaVersion) => findLatestVersion(group, artefact, scalaVersion)
-                                       .map {
-                                         case Some(v) => acc + (scalaVersion -> v)
-                                         case None    => acc
-                                       }
-      }
-}
+    ScalaVersion.values.toList
+      .foldLeftM(Map.empty[ScalaVersion, Version]): (acc, scalaVersion) =>
+        findLatestVersion(group, artefact, scalaVersion)
+          .map:
+            case Some(v) => acc + (scalaVersion -> v)
+            case None    => acc

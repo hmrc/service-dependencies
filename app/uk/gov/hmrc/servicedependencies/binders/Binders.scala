@@ -21,14 +21,18 @@ import play.api.mvc.QueryStringBindable
 import java.time.LocalDate
 import scala.util.Try
 
-object Binders {
-  implicit def localDateBindable(implicit strBinder: QueryStringBindable[String]): QueryStringBindable[LocalDate] =
-    new QueryStringBindable[LocalDate] {
-      override def bind(key: String, params: Map[String, Seq[String]]): Option[Either[String, LocalDate]] =
-        strBinder.bind(key, params)
-          .map(_.flatMap(s => Try(LocalDate.parse(s)).toEither.left.map(_.getMessage)))
+object Binders:
+  given localDateBindable(using strBinder: QueryStringBindable[String]): QueryStringBindable[LocalDate] with
+    override def bind(key: String, params: Map[String, Seq[String]]): Option[Either[String, LocalDate]] =
+      strBinder
+        .bind(key, params)
+        .map:
+          _.flatMap: s =>
+            Try(LocalDate.parse(s))
+              .toEither
+              .left
+              .map:
+                _.getMessage
 
-      override def unbind(key: String, value: LocalDate): String =
-        strBinder.unbind(key, value.toString)
-    }
-}
+    override def unbind(key: String, value: LocalDate): String =
+      strBinder.unbind(key, value.toString)

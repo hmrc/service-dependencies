@@ -20,7 +20,6 @@ import cats.data.EitherT
 import cats.implicits._
 import com.google.inject.{Inject, Singleton}
 import play.api.libs.functional.syntax._
-import play.api.libs.json.Format.GenericFormat
 import play.api.libs.json._
 import play.api.mvc._
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
@@ -47,17 +46,17 @@ class ServiceDependenciesController @Inject()(
 , derivedModuleRepository            : DerivedModuleRepository
 , teamsAndRepositoriesConnector      : TeamsAndRepositoriesConnector
 , cc                                 : ControllerComponents
-)(implicit
+)(using
   ec                     : ExecutionContext
-) extends BackendController(cc) {
+) extends BackendController(cc):
 
-  implicit val dw: OWrites[Dependencies] = Dependencies.writes
+  given Writes[Dependencies] = Dependencies.writes
 
   def dependenciesForTeam(teamName: String): Action[AnyContent] =
     Action.async { implicit request =>
-      for {
+      for
         depsWithRules <- teamDependencyService.findAllDepsForTeam(teamName)
-      } yield Ok(Json.toJson(depsWithRules))
+      yield Ok(Json.toJson(depsWithRules))
   }
 
   def metaArtefactDependencies(
@@ -68,17 +67,16 @@ class ServiceDependenciesController @Inject()(
     versionRange: Option[BobbyVersionRange],
     scope       : Option[List[DependencyScope]]
   ): Action[AnyContent] = Action.async { implicit request =>
-    implicit val madWrites: OWrites[MetaArtefactDependency] = MetaArtefactDependency.apiWrites
-    for {
+    given Writes[MetaArtefactDependency] = MetaArtefactDependency.apiWrites
+    for
       allTeams     <- teamsAndRepositoriesConnector.getTeamsForServices()
-      dependencies <- flag match {
+      dependencies <- flag match
                         case SlugInfoFlag.Latest => derivedLatestDependencyRepository.find(group = Some(group), artefact = Some(artefact), scopes = scope, repoType = repoType)
                         case _                   => derivedDeployedDependencyRepository.findWithDeploymentLookup(group = Some(group), artefact = Some(artefact), scopes = scope, flag = flag)
-                      }
       result       =  versionRange
                         .map(range => dependencies.filter(s => range.includes(s.depVersion))).getOrElse(dependencies)
                         .map(repo => repo.copy(teams = allTeams.getTeams(repo.repoName).toList.sorted))
-    } yield Ok(Json.toJson(result))
+    yield Ok(Json.toJson(result))
   }
 
   def getServicesWithDependency(
@@ -89,38 +87,34 @@ class ServiceDependenciesController @Inject()(
     scope       : Option[List[String]]
   ): Action[AnyContent] =
     Action.async { implicit request =>
-      implicit val format = MetaArtefactDependency.apiWrites
+      given Writes[MetaArtefactDependency] = MetaArtefactDependency.apiWrites
       (for {
          f   <- EitherT.fromOption[Future](SlugInfoFlag.parse(flag), BadRequest(s"invalid flag '$flag'"))
-         sc  <- scope.fold(EitherT.pure[Future, Result](Option.empty[List[DependencyScope]]))(
-                  _.traverse( s => EitherT.fromEither[Future](DependencyScope.parse(s)).leftMap(BadRequest(_)))
+         sc  <- scope.fold(EitherT.pure[Future, Result](Option.empty[List[DependencyScope]])):
+                  _.traverse(s => EitherT.fromEither[Future](DependencyScope.parse(s)).leftMap(BadRequest(_)))
                     .map(Some.apply)
-                )
          vr  <- EitherT.fromOption[Future](BobbyVersionRange.parse(versionRange), BadRequest(s"invalid versionRange '$versionRange'"))
-         res <- EitherT.right[Result] {
+         res <- EitherT.right[Result]:
                   slugInfoService
                     .findServicesWithDependency(f, group, artefact, vr, sc)
-                }
        } yield Ok(Json.toJson(res))
       ).merge
     }
 
   def getGroupArtefacts: Action[AnyContent] =
-    Action.async {
-      implicit val format = GroupArtefacts.apiFormat
+    Action.async:
+      given Writes[GroupArtefacts] = GroupArtefacts.apiFormat
       slugInfoService
         .findGroupsArtefacts()
         .map(res => Ok(Json.toJson(res)))
-    }
 
   def slugInfo(name: String, version: Option[String]): Action[AnyContent] =
-    Action.async {
-      (for {
+    Action.async:
+      (for
          slugInfo        <- EitherT.fromOptionF(
-                              version match {
+                              version match
                                 case Some(version) => slugInfoService.getSlugInfo(name, Version(version))
                                 case None          => slugInfoService.getSlugInfo(name, SlugInfoFlag.Latest)
-                              }
                             , NotFound("")
                             )
          optMetaArtefact <- EitherT.right[Result](metaArtefactRepository.find(name, slugInfo.version))
@@ -145,77 +139,67 @@ class ServiceDependenciesController @Inject()(
          , applicationConfig     = slugInfo.applicationConfig
          , slugConfig            = slugInfo.slugConfig
         )
-      } yield {
+       yield
         Ok(Json.toJson(slugInfoExtra)(SlugInfoExtra.write))
-      }).merge
-    }
+      ).merge
 
   def dependenciesOfSlugForTeam(team: String, flag: String): Action[AnyContent] =
     Action.async { implicit request =>
-      (for {
+      (for
          f    <- EitherT.fromOption[Future](SlugInfoFlag.parse(flag), BadRequest(s"invalid flag '$flag'"))
-         deps <- EitherT.liftF[Future, Result, Map[String, Seq[Dependency]]](
+         deps <- EitherT.liftF[Future, Result, Map[String, Seq[Dependency]]]:
                    teamDependencyService.teamServiceDependenciesMap(team, f)
-                 )
-       } yield {
+       yield
          implicit val dw = Dependency.writes
          Ok(Json.toJson(deps))
-       }
       ).merge
     }
 
   def findJDKForEnvironment(team: Option[String], flag: String): Action[AnyContent] =
     Action.async { implicit request =>
-      (for {
+      (for
          f   <- EitherT.fromOption[Future](SlugInfoFlag.parse(flag), BadRequest(s"invalid flag '$flag'"))
-         res <- EitherT.liftF[Future, Result, Seq[JDKVersion]](
+         res <- EitherT.liftF[Future, Result, Seq[JDKVersion]]:
                   slugInfoService.findJDKVersions(team, f)
-                )
-       } yield {
-         implicit val jdkvf = JDKVersionFormats.jdkVersionFormat
+       yield
+         given Writes[JDKVersion] = JDKVersionFormats.jdkVersionFormat
          Ok(Json.toJson(res))
-       }
       ).merge
     }
 
   def findSBTForEnvironment(team: Option[String], flag: String): Action[AnyContent] =
     Action.async { implicit request =>
-      (for {
+      (for
          f   <- EitherT.fromOption[Future](SlugInfoFlag.parse(flag), BadRequest(s"invalid flag '$flag'"))
          res <- EitherT.liftF[Future, Result, Seq[SBTVersion]](
                   slugInfoService.findSBTVersions(team, f)
                 )
-       } yield {
-         implicit val sbtvf = SBTVersionFormats.sbtVersionFormat
+       yield
+         given Writes[SBTVersion] = SBTVersionFormats.sbtVersionFormat
          Ok(Json.toJson(res))
-       }
       ).merge
     }
 
   def repositoryName(group: String, artefact: String, version: String): Action[AnyContent] =
-    Action.async {
+    Action.async:
       derivedModuleRepository.findNameByModule(group, artefact, Version(version))
         .map(_.fold(NotFound(""))(res => Ok(Json.toJson(res))))
-    }
 
   def moduleDependencies(repositoryName: String, versionOption: Option[String]): Action[AnyContent] =
-    Action.async {
-      for {
+    Action.async:
+      for
         latestVersions <- latestVersionRepository.getAllEntries()
         bobbyRules     <- serviceConfigsConnector.getBobbyRules()
-        metaArtefacts  <- versionOption match {
+        metaArtefacts  <- versionOption match
                             case Some(version) if version == "latest" => metaArtefactRepository.find(repositoryName).map(_.toSeq)
                             case Some(version)                        => metaArtefactRepository.find(repositoryName, Version(version)).map(_.toSeq)
                             case None                                 => metaArtefactRepository.findAllVersions(repositoryName)
-                          }
         repositories   =  metaArtefacts.map(toRepository(_, latestVersions, bobbyRules))
-      } yield {
-        implicit val rw: OWrites[Repository] = Repository.writes
+      yield
+        given Writes[Repository] = Repository.writes
         Ok(Json.toJson(repositories))
-      }
-    }
 
-  private def toRepository(meta: MetaArtefact, latestVersions: Seq[LatestVersion], bobbyRules: BobbyRules) = {
+  private def toRepository(meta: MetaArtefact, latestVersions: Seq[LatestVersion], bobbyRules: BobbyRules) =
     def toDependencies(name: String, scope: DependencyScope, dotFile: String) =
       curatedLibrariesService.fromGraph(
         dotFile        = dotFile,
@@ -231,8 +215,7 @@ class ServiceDependenciesController @Inject()(
       meta.modules.flatMap(_.sbtVersion.toSeq).headOption
 
     def when[T](b: Boolean)(seq: => Seq[T]): Seq[T] =
-      if (b) seq
-      else Nil
+      if b then seq else Nil
 
     def dependencyIfMissing(
       dependencies: Seq[Dependency],
@@ -241,10 +224,10 @@ class ServiceDependenciesController @Inject()(
       versions    : Seq[Version],
       scope       : DependencyScope
     ): Seq[Dependency] =
-      for {
+      for
         v <- versions
         if dependencies.find(dep => dep.group == group && dep.name == artefact).isEmpty
-      } yield
+      yield
         Dependency(
           name                = artefact,
           group               = group,
@@ -270,7 +253,7 @@ class ServiceDependenciesController @Inject()(
                             ),
       modules           = meta.modules
                               .filter(_.publishSkip.fold(true)(!_))
-                              .map { m =>
+                              .map: m =>
                                 val compileDependencies  = m.dependencyDotCompile .fold(Seq.empty[Dependency])(s => toDependencies(m.name, DependencyScope.Compile , s))
                                 val providedDependencies = m.dependencyDotProvided.fold(Seq.empty[Dependency])(s => toDependencies(m.name, DependencyScope.Provided, s))
                                 val testDependencies     = m.dependencyDotTest    .fold(Seq.empty[Dependency])(s => toDependencies(m.name, DependencyScope.Test    , s))
@@ -320,23 +303,18 @@ class ServiceDependenciesController @Inject()(
                                   activeBobbyRuleViolations,
                                   pendingBobbyRuleViolations
                                 )
-                              }
     )
-  }
 
   def latestVersion(group: String, artefact: String): Action[AnyContent] =
-    Action.async {
+    Action.async:
       latestVersionRepository.find(group, artefact)
         .map(_.fold(NotFound(""))(res => Ok(Json.toJson(res)(LatestVersion.apiWrites))))
-    }
 
   def metaArtefact(repository: String, version: Option[String]): Action[AnyContent] =
-    Action.async {
+    Action.async:
       version
         .fold(metaArtefactRepository.find(repository))(v => metaArtefactRepository.find(repository, Version(v)))
         .map(_.fold(NotFound(""))(res => Ok(Json.toJson(res)(MetaArtefact.apiFormat))))
-    }
-}
 
 case class Repository(
   name             : String,
@@ -345,18 +323,16 @@ case class Repository(
   modules          : Seq[RepositoryModule]
 )
 
-object Repository {
-  val writes: OWrites[Repository] = {
-    implicit val dw  = Dependency.writes
-    implicit val rmw = RepositoryModule.writes
-    implicit val vf  = Version.format
+object Repository:
+  val writes: Writes[Repository] =
+    given Writes[Dependency]       = Dependency.writes
+    given Writes[RepositoryModule] = RepositoryModule.writes
+    given Writes[Version]          = Version.format
     ( (__ \ "name"             ).write[String]
     ~ (__ \ "version"          ).writeNullable[Version]
     ~ (__ \ "dependenciesBuild").write[Seq[Dependency]]
     ~ (__ \ "modules"          ).write[Seq[RepositoryModule]]
-    )(unlift(Repository.unapply))
-  }
-}
+    )(r => Tuple.fromProductTyped(r))
 
 case class RepositoryModule(
   name                : String,
@@ -370,11 +346,11 @@ case class RepositoryModule(
   pendingBobbyRules   : Seq[DependencyBobbyRule] = Seq()
 )
 
-object RepositoryModule {
-  val writes: OWrites[RepositoryModule] = {
-    implicit val bf = DependencyBobbyRule.writes
-    implicit val dw = Dependency.writes
-    implicit val vf = Version.format
+object RepositoryModule:
+  val writes: Writes[RepositoryModule] =
+    given Writes[DependencyBobbyRule] = DependencyBobbyRule.writes
+    given Writes[Dependency]          = Dependency.writes
+    given Writes[Version]             = Version.format
     ( (__ \ "name"                ).write[String]
     ~ (__ \ "group"               ).write[String]
     ~ (__ \ "dependenciesCompile" ).write[Seq[Dependency]]
@@ -384,9 +360,7 @@ object RepositoryModule {
     ~ (__ \ "crossScalaVersions"  ).write[Seq[Version]].contramap[Option[Seq[Version]]](_.getOrElse(Seq.empty))
     ~ (__ \ "activeBobbyRules"    ).write[Seq[DependencyBobbyRule]]
     ~ (__ \ "pendingBobbyRules"   ).write[Seq[DependencyBobbyRule]]
-    )(unlift(RepositoryModule.unapply))
-  }
-}
+    )(rm => Tuple.fromProductTyped(rm))
 
 import java.time.Instant
 
@@ -408,7 +382,7 @@ case class SlugInfoExtra(
   dependencyDotIt      : String,
   dependencyDotBuild   : String,
   applicationConfig    : String,
-  slugConfig           : String,
+  slugConfig           : String
 )
 
 case class SlugDependency(
@@ -419,15 +393,15 @@ case class SlugDependency(
   meta       : String = ""
 )
 
-object SlugInfoExtra {
-  val write: OWrites[SlugInfoExtra] = {
-    implicit val sdw: OWrites[SlugDependency] =
+object SlugInfoExtra:
+  val write: Writes[SlugInfoExtra] =
+    given Writes[SlugDependency] =
       ( (__ \ "path"    ).write[String]
       ~ (__ \ "version" ).write[Version](Version.format)
       ~ (__ \ "group"   ).write[String]
       ~ (__ \ "artifact").write[String]
       ~ (__ \ "meta"    ).write[String]
-      )(unlift(SlugDependency.unapply))
+      )(sd => Tuple.fromProductTyped(sd))
 
     ( (__ \ "uri"                       ).write[String]
     ~ (__ \ "created"                   ).write[Instant]
@@ -447,6 +421,4 @@ object SlugInfoExtra {
     ~ (__ \ "dependencyDot" \ "build"   ).write[String]
     ~ (__ \ "applicationConfig"         ).write[String]
     ~ (__ \ "slugConfig"                ).write[String]
-    )(unlift(SlugInfoExtra.unapply))
-  }
-}
+    )(sie => Tuple.fromProductTyped(sie))

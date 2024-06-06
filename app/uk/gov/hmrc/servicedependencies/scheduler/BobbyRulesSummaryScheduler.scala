@@ -32,12 +32,12 @@ class BobbyRulesSummaryScheduler @Inject()(
 , dependencyLookupService: DependencyLookupService
 , mongoLockRepository    : MongoLockRepository
 , timestampSupport       : TimestampSupport
-)(implicit
+)(using
    actorSystem         : ActorSystem
 ,  applicationLifecycle: ApplicationLifecycle
 ,  ec                  : ExecutionContext
 ) extends SchedulerUtils
-  with Logging {
+  with Logging:
 
   private val schedulerConfigs =
     SchedulerConfig(configuration, "scheduler.bobbyRulesSummary")
@@ -50,13 +50,11 @@ class BobbyRulesSummaryScheduler @Inject()(
     , schedulerInterval = schedulerConfigs.interval
     )
 
-  implicit val hc: HeaderCarrier = HeaderCarrier()
+  given HeaderCarrier = HeaderCarrier()
 
-  scheduleWithLock("Bobby Rules Summary", schedulerConfigs, lock) {
+  scheduleWithLock("Bobby Rules Summary", schedulerConfigs, lock):
     logger.info("Updating bobby rules summary")
-    for {
+    for
       _ <- dependencyLookupService.updateBobbyRulesSummary()
       _ =  logger.info("Finished updating bobby rules summary")
-    } yield ()
-  }
-}
+    yield ()

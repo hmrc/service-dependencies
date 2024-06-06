@@ -17,10 +17,11 @@
 package uk.gov.hmrc.servicedependencies.config
 
 import com.typesafe.config.ConfigFactory
+import org.mockito.Mockito.when
 import org.mockito.ArgumentMatchers.any
-import org.mockito.MockitoSugar
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
+import org.scalatestplus.mockito.MockitoSugar
 import play.api.Configuration
 import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
 import uk.gov.hmrc.servicedependencies.config.model.{CuratedDependencyConfig, DependencyConfig}
@@ -41,7 +42,7 @@ class ServiceDependenciesConfigTest
       val serviceConfig = mock[ServicesConfig]
       when(serviceConfig.baseUrl(any())).thenReturn("")
 
-      val sdc = new ServiceDependenciesConfig(config, serviceConfig)
+      val sdc = ServiceDependenciesConfig(config, serviceConfig)
 
       sdc.curatedDependencyConfig shouldBe CuratedDependencyConfig(
           sbtPlugins = List(

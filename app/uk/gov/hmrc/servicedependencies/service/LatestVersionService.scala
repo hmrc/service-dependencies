@@ -23,7 +23,7 @@ import com.google.inject.{Inject, Singleton}
 import play.api.Logging
 import uk.gov.hmrc.servicedependencies.config.ServiceDependenciesConfig
 import uk.gov.hmrc.servicedependencies.config.model.DependencyConfig
-import uk.gov.hmrc.servicedependencies.connector.{ArtifactoryConnector, ServiceConfigsConnector, TeamsAndRepositoriesConnector}
+import uk.gov.hmrc.servicedependencies.connector.{ArtifactoryConnector, ServiceConfigsConnector}
 import uk.gov.hmrc.servicedependencies.model.LatestVersion
 import uk.gov.hmrc.servicedependencies.persistence.LatestVersionRepository
 import uk.gov.hmrc.servicedependencies.persistence.derived.DerivedGroupArtefactRepository
@@ -36,72 +36,64 @@ class LatestVersionService @Inject()(
   serviceDependenciesConfig     : ServiceDependenciesConfig
 , latestVersionRepository       : LatestVersionRepository
 , derivedGroupArtefactRepository: DerivedGroupArtefactRepository
-, teamsAndRepositoriesConnector : TeamsAndRepositoriesConnector
 , artifactoryConnector          : ArtifactoryConnector
 , serviceConfigsConnector       : ServiceConfigsConnector
-)(implicit ec: ExecutionContext
-) extends Logging {
+)(using ec: ExecutionContext
+) extends Logging:
 
   protected def now(): Instant = Instant.now() // Overridden in unit tests
 
-  lazy val curatedDependencyConfig =
+  private lazy val curatedDependencyConfig =
     serviceDependenciesConfig.curatedDependencyConfig
 
   private[service] def versionsToUpdate(): Future[List[DependencyConfig]] =
-    for {
+    for
       hmrcDependencies                  <- hmrcDependencies()
       nonHmrcDependenciesWithBobbyRules <- nonHmrcDependenciesWithBobbyRules()
-    } yield
-      ((hmrcDependencies ++ nonHmrcDependenciesWithBobbyRules).groupBy(a => a.group + ":" + a.name) ++
-        curatedDependencyConfig.allDependencies               .groupBy(a => a.group + ":" + a.name)
+    yield
+      ((hmrcDependencies ++ nonHmrcDependenciesWithBobbyRules).groupBy(a => a.group + ":" + a.name)
+        ++ curatedDependencyConfig.allDependencies            .groupBy(a => a.group + ":" + a.name)
       ).values.flatten.toList
 
   def reloadLatestVersions(): Future[Unit] =
-    for {
-      toAdd <- versionsToUpdate()
-      _     <- toAdd.foldLeftM[Future, Unit](()) {
-                 case (_, config) =>
-                   for {
-                     optVersion <- config.latestVersion
-                                     .fold(
-                                       artifactoryConnector
-                                         .findLatestVersion(config.group, config.name)
-                                         .map(vs => Max.maxOf(vs.values))
-                                     )(v => Future.successful(Some(v)))
-                     _           <- optVersion.traverse { version =>
-                                     val dbVersion =
-                                       LatestVersion(name = config.name, group = config.group, version = version, now())
-                                     latestVersionRepository
-                                       .update(dbVersion)
-                                       .map(_ => dbVersion)
-                                   }
-                   } yield ()
-               }
+    for
+      toAdd      <- versionsToUpdate()
+      _          <- toAdd.foldLeftM[Future, Unit](()):
+                      case (_, config) =>
+                        for
+                          optVersion <- config.latestVersion
+                                          .fold(
+                                            artifactoryConnector
+                                              .findLatestVersion(config.group, config.name)
+                                              .map(vs => Max.maxOf(vs.values))
+                                          )(v => Future.successful(Some(v)))
+                          _           <- optVersion.traverse: version =>
+                                          val dbVersion =
+                                            LatestVersion(name = config.name, group = config.group, version = version, now())
+                                          latestVersionRepository
+                                            .update(dbVersion)
+                                            .map(_ => dbVersion)
+                        yield ()
       allEntries <- latestVersionRepository.getAllEntries()
       _          <- latestVersionRepository.remove(allEntries.filterNot(lv => toAdd.exists(lv2 => lv.name == lv2.name && lv.group == lv2.group)))
-    } yield ()
+    yield ()
 
   private def hmrcDependencies(): Future[Seq[DependencyConfig]] =
     derivedGroupArtefactRepository.findGroupsArtefacts()
-      .map(groupsArtefacts =>
+      .map: groupsArtefacts =>
         groupsArtefacts
           .filter(_.group.startsWith("uk.gov.hmrc"))
-          .flatMap(hmrcGA =>
-            hmrcGA.artefacts.map(artefact =>
+          .flatMap: hmrcGA =>
+            hmrcGA.artefacts.map: artefact =>
               DependencyConfig(name = artefact, group = hmrcGA.group, latestVersion = None)
-            )
-          )
-      )
 
   private def nonHmrcDependenciesWithBobbyRules(): Future[Seq[DependencyConfig]] =
     serviceConfigsConnector.getBobbyRules()
-      .map(bobbyRules =>
-        bobbyRules
+      .map:
+        _
           .asMap
           .filterNot(_._1._1.startsWith("uk.gov.hmrc"))
           .map(_._1)
-          .map(bobbyRuleKey =>
+          .map: bobbyRuleKey =>
             DependencyConfig(name = bobbyRuleKey._2, group = bobbyRuleKey._1, latestVersion = None)
-          ).toSeq
-      )
-}
+          .toSeq

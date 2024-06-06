@@ -16,16 +16,19 @@
 
 package uk.gov.hmrc.servicedependencies.service
 
-import org.mockito.scalatest.MockitoSugar
+import org.mockito.ArgumentMatchers.any
+import org.mockito.Mockito.{verify, when}
 import org.scalatest.concurrent.{IntegrationPatience, ScalaFutures}
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
+import org.scalatestplus.mockito.MockitoSugar
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.servicedependencies.connector.{GitHubProxyConnector, ReleasesApiConnector, TeamsAndRepositoriesConnector}
 import uk.gov.hmrc.servicedependencies.connector.model.Repository
 import uk.gov.hmrc.servicedependencies.model._
 import uk.gov.hmrc.servicedependencies.persistence.{DeploymentRepository, MetaArtefactRepository, SlugInfoRepository, SlugVersionRepository}
 import uk.gov.hmrc.servicedependencies.persistence.derived._
+
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
@@ -36,7 +39,7 @@ class DerivedViewsServiceSpec
      with ScalaFutures
      with IntegrationPatience {
 
-  implicit val hc: HeaderCarrier = HeaderCarrier()
+  given HeaderCarrier = HeaderCarrier()
 
   private val mockedTeamsAndRepositoriesConnector         = mock[TeamsAndRepositoriesConnector      ]
   private val mockedGitHubProxyConnector                  = mock[GitHubProxyConnector               ]
@@ -50,7 +53,7 @@ class DerivedViewsServiceSpec
   private val mockedDerivedDeployedDependencyRepository   = mock[DerivedDeployedDependencyRepository]
   private val mockedDerivedLatestDependencyRepository     = mock[DerivedLatestDependencyRepository  ]
 
-  private val underTest = new DerivedViewsService(
+  private val underTest = DerivedViewsService(
     teamsAndRepositoriesConnector       = mockedTeamsAndRepositoriesConnector
   , gitHubProxyConnector                = mockedGitHubProxyConnector
   , releasesApiConnector                = mockedReleasesApiConnector
@@ -71,16 +74,16 @@ class DerivedViewsServiceSpec
       when(mockedSlugInfoRepository.getUniqueSlugNames())
         .thenReturn(Future.successful(Seq.empty))
 
-      when(mockedReleasesApiConnector.getWhatIsRunningWhere)
+      when(mockedReleasesApiConnector.getWhatIsRunningWhere())
         .thenReturn(Future.successful(List.empty))
 
-      when(mockedGitHubProxyConnector.decommissionedServices)
+      when(mockedGitHubProxyConnector.decommissionedServices())
         .thenReturn(Future.successful(decommissionedServices))
 
       when(mockedDeploymentRepository.getNames(SlugInfoFlag.Latest))
         .thenReturn(Future.successful(Seq.empty))
 
-      when(mockedTeamsAndRepositoriesConnector.getAllRepositories(eqTo(Some(false)))(any[HeaderCarrier]))
+      when(mockedTeamsAndRepositoriesConnector.getAllRepositories(Some(false)))
         .thenReturn(Future.successful(Seq.empty))
 
       when(mockedDeploymentRepository.clearFlags(any[List[SlugInfoFlag]], any[List[String]]))
@@ -88,7 +91,7 @@ class DerivedViewsServiceSpec
 
       underTest.updateDeploymentDataForAllServices().futureValue
 
-      verify(mockedDeploymentRepository).clearFlags(SlugInfoFlag.values, decommissionedServices)
+      verify(mockedDeploymentRepository).clearFlags(SlugInfoFlag.values.toList, decommissionedServices)
     }
 
     "clear latest flag for deleted/archived services" in {
@@ -107,16 +110,16 @@ class DerivedViewsServiceSpec
       when(mockedSlugInfoRepository.getUniqueSlugNames())
         .thenReturn(Future.successful(knownSlugs))
 
-      when(mockedReleasesApiConnector.getWhatIsRunningWhere)
+      when(mockedReleasesApiConnector.getWhatIsRunningWhere())
         .thenReturn(Future.successful(List.empty))
 
-      when(mockedGitHubProxyConnector.decommissionedServices)
+      when(mockedGitHubProxyConnector.decommissionedServices())
         .thenReturn(Future.successful(List.empty))
 
       when(mockedDeploymentRepository.getNames(SlugInfoFlag.Latest))
         .thenReturn(Future.successful(knownSlugs))
 
-      when(mockedTeamsAndRepositoriesConnector.getAllRepositories(eqTo(Some(false)))(any[HeaderCarrier]))
+      when(mockedTeamsAndRepositoriesConnector.getAllRepositories(Some(false)))
         .thenReturn(Future.successful(activeServices))
 
       when(mockedDeploymentRepository.clearFlag(any[SlugInfoFlag], any[String]))

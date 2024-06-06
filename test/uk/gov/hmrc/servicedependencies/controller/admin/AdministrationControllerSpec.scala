@@ -16,10 +16,11 @@
 
 package uk.gov.hmrc.servicedependencies.controller.admin
 
-import org.mockito.MockitoSugar
+import org.mockito.Mockito.{verify, when}
 import org.scalatest.concurrent.{IntegrationPatience, ScalaFutures}
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
+import org.scalatestplus.mockito.MockitoSugar
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
 import uk.gov.hmrc.servicedependencies.model.LatestVersion
@@ -42,7 +43,7 @@ class AdministrationControllerSpec
       when(boot.mockLatestVersionService.reloadLatestVersions())
         .thenReturn(Future.successful(List.empty[LatestVersion]))
 
-      boot.controller.reloadLatestVersions().apply(FakeRequest())
+      boot.controller.reloadLatestVersions.apply(FakeRequest())
 
       verify(boot.mockLatestVersionService)
         .reloadLatestVersions()
@@ -58,7 +59,7 @@ class AdministrationControllerSpec
     def init: Boot = {
       val mockLatestVersionService = mock[LatestVersionService]
 
-      val controller = new AdministrationController(
+      val controller = AdministrationController(
           mockLatestVersionService
         , stubControllerComponents()
         )

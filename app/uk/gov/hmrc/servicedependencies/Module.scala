@@ -23,12 +23,12 @@ import play.api.libs.concurrent.MaterializerProvider
 import uk.gov.hmrc.servicedependencies.notification.{DeploymentHandler, MetaArtefactUpdateHandler, MetaArtefactDeadLetterHandler, SlugInfoUpdatedHandler, SlugInfoDeadLetterHandler}
 import uk.gov.hmrc.servicedependencies.scheduler.{BobbyRulesSummaryScheduler, DerivedViewsScheduler, LatestVersionScheduler}
 
-class Module extends play.api.inject.Module {
+class Module extends play.api.inject.Module:
 
   private val logger = Logger(getClass)
 
-  private def ecsDeploymentsBindings(configuration: Configuration): Seq[Binding[_]] = {
-    if (configuration.get[Boolean]("aws.sqs.enabled"))
+  private def ecsDeploymentsBindings(configuration: Configuration): Seq[Binding[?]] =
+    if configuration.get[Boolean]("aws.sqs.enabled") then
       Seq(
         bind[DeploymentHandler            ].toSelf.eagerly()
       , bind[MetaArtefactUpdateHandler    ].toSelf.eagerly()
@@ -36,13 +36,11 @@ class Module extends play.api.inject.Module {
       , bind[SlugInfoUpdatedHandler       ].toSelf.eagerly()
       , bind[SlugInfoDeadLetterHandler    ].toSelf.eagerly()
       )
-    else {
+    else
       logger.warn("SQS handlers are disabled")
       Seq.empty
-    }
-  }
 
-  override def bindings(environment: Environment, configuration: Configuration): Seq[Binding[_]] =
+  override def bindings(environment: Environment, configuration: Configuration): Seq[Binding[?]] =
     Seq(
       bind[BobbyRulesSummaryScheduler].toSelf.eagerly()
     , bind[DerivedViewsScheduler     ].toSelf.eagerly()
@@ -50,4 +48,3 @@ class Module extends play.api.inject.Module {
     , bind[Materializer              ].toProvider(classOf[MaterializerProvider])
     ) ++
     ecsDeploymentsBindings(configuration)
-}

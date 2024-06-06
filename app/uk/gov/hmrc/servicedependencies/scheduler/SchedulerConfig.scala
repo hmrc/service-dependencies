@@ -27,19 +27,17 @@ case class SchedulerConfig(
   initialDelay: FiniteDuration,
 )
 
-object SchedulerConfig {
+object SchedulerConfig:
   def apply(
     configuration   : Configuration,
     schedulerKey    : String,
-    ): SchedulerConfig = {
-      val enabledKey      = s"$schedulerKey.enabled"
-      val intervalKey     = s"$schedulerKey.interval"
-      val initialDelayKey = s"$schedulerKey.initialDelay"
-      SchedulerConfig(
-        enabledKey   = enabledKey,
-        enabled      = configuration.get[Boolean](enabledKey),
-        interval     = configuration.get[FiniteDuration](intervalKey),
-        initialDelay = configuration.get[FiniteDuration](initialDelayKey),
-      )
-    }
-}
+  ): SchedulerConfig =
+    val enabledKey      = s"$schedulerKey.enabled"
+    val intervalKey     = s"$schedulerKey.interval"
+    val initialDelayKey = s"$schedulerKey.initialDelay"
+    SchedulerConfig(
+      enabledKey   = enabledKey,
+      enabled      = configuration.get[Boolean](enabledKey),
+      interval     = configuration.get[FiniteDuration](intervalKey),
+      initialDelay = configuration.get[FiniteDuration](initialDelayKey),
+    )

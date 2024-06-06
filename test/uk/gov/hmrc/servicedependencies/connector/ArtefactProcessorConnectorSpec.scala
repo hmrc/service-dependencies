@@ -19,11 +19,11 @@ package uk.gov.hmrc.servicedependencies.connector
 import java.time.Instant
 
 import com.github.tomakehurst.wiremock.client.WireMock._
-import org.mockito.MockitoSugar
 import org.scalatest.concurrent.{IntegrationPatience, ScalaFutures}
 import org.scalatest.BeforeAndAfterAll
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
+import org.scalatestplus.mockito.MockitoSugar
 import org.scalatestplus.play.guice.GuiceOneAppPerSuite
 import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
@@ -41,10 +41,10 @@ class ArtefactProcessorConnectorSpec
      with MockitoSugar
      with WireMockSupport {
 
-  implicit val hc: HeaderCarrier = HeaderCarrier()
+  given HeaderCarrier = HeaderCarrier()
 
   override def fakeApplication(): Application =
-    new GuiceApplicationBuilder()
+    GuiceApplicationBuilder()
       .configure(
         "microservice.services.artefact-processor.host" -> wireMockHost,
         "microservice.services.artefact-processor.port" -> wireMockPort

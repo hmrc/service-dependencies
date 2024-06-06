@@ -17,6 +17,7 @@
 package uk.gov.hmrc.servicedependencies.persistence
 
 import com.google.inject.{Inject, Singleton}
+import org.mongodb.scala.{ObservableFuture, SingleObservableFuture}
 import org.mongodb.scala.bson.BsonDocument
 import org.mongodb.scala.bson.conversions.Bson
 import org.mongodb.scala.model.Filters.{and, equal}
@@ -31,12 +32,12 @@ import scala.concurrent.{ExecutionContext, Future}
 class SlugInfoRepository @Inject()(
   mongoComponent      : MongoComponent,
   deploymentRepository: DeploymentRepository
-)(implicit
+)(using
   ec: ExecutionContext
 ) extends SlugInfoRepositoryBase[SlugInfo](
   mongoComponent,
   domainFormat   = MongoSlugInfoFormats.slugInfoFormat
-) with Logging {
+) with Logging:
 
   def add(slugInfo: SlugInfo): Future[Unit] =
     collection
@@ -72,7 +73,7 @@ class SlugInfoRepository @Inject()(
     collection.distinct[String]("name")
       .toFuture()
 
- def getSlugInfo(name: String, version: Version): Future[Option[SlugInfo]] =
+  def getSlugInfo(name: String, version: Version): Future[Option[SlugInfo]] =
     collection
       .find(
         filter = and(
@@ -105,4 +106,3 @@ class SlugInfoRepository @Inject()(
       deploymentsFilter = filter,
       domainFilter      = BsonDocument()
     )
-}

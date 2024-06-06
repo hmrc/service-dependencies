@@ -23,33 +23,28 @@ import play.api.libs.json._
 import uk.gov.hmrc.mongo.play.json.formats.MongoJavatimeFormats
 
 case class LatestVersion(
-    name        : String
-  , group       : String
-  , version     : Version
-  , updateDate  : Instant = Instant.now()
-  )
+  name        : String
+, group       : String
+, version     : Version
+, updateDate  : Instant = Instant.now()
+)
 
-object LatestVersion {
-  private def ignore[A] = OWrites[A](_ => Json.obj())
-
-  val apiWrites: Writes[LatestVersion] = {
-    implicit val vf = Version.format
+object LatestVersion:
+  val apiWrites: Writes[LatestVersion] =
+    given Writes[Version] = Version.format
     ( (__ \ "artefact").write[String]
     ~ (__ \ "group"   ).write[String]
     ~ (__ \ "version" ).write[Version]
-    ~ ignore[Instant]
-    )(unlift(LatestVersion.unapply))
-  }
+    )(lv => (lv.name, lv.group, lv.version))
 
-  val mongoFormat = {
-    implicit val iF  = MongoJavatimeFormats.instantFormat
-    implicit val vf  = Version.format
-    ( (__ \ "name"        ).format[String]
-    ~ (__ \ "group"       ).format[String]
-    ~ (__ \ "version"     ).format[Version]
-    ~ (__ \ "updateDate"  ).format[Instant]
-    )(LatestVersion.apply, unlift(LatestVersion.unapply))
-  }
+  val mongoFormat =
+    given Format[Instant] = MongoJavatimeFormats.instantFormat
+    given Format[Version] = Version.format
+    ( (__ \ "name"      ).format[String]
+    ~ (__ \ "group"     ).format[String]
+    ~ (__ \ "version"   ).format[Version]
+    ~ (__ \ "updateDate").format[Instant]
+    )(LatestVersion.apply, lv => Tuple.fromProductTyped(lv))
 
   val schema =
     """
@@ -63,10 +58,9 @@ object LatestVersion {
       }
     }
     """
-}
 
 case class DependencyVersion(
-    name   : String
-  , group  : String
-  , version: Option[Version]
-  )
+  name   : String
+, group  : String
+, version: Option[Version]
+)

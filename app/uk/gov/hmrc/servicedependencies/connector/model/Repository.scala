@@ -16,12 +16,22 @@
 
 package uk.gov.hmrc.servicedependencies.connector.model
 
-import play.api.libs.json._
+import play.api.libs.functional.syntax._
+import play.api.libs.json.{Format, Writes, __}
 import uk.gov.hmrc.servicedependencies.model.RepoType
 
-case class Repository(name: String, teamNames: Seq[String], repoType: RepoType, isArchived: Boolean)
+case class Repository(
+  name      : String,
+  teamNames : Seq[String],
+  repoType  : RepoType,
+  isArchived: Boolean
+)
 
-object Repository extends EnvReads with EnvWrites {
+object Repository:
 
-  implicit val format: OFormat[Repository] = Json.format[Repository]
-}
+  given Format[Repository] =
+    ( ( __ \ "name"     ).format[String]
+    ~ (__ \ "teamNames" ).format[Seq[String]]
+    ~ (__ \ "repoType"  ).format[RepoType]
+    ~ (__ \ "isArchived").format[Boolean]
+    )(apply, r => Tuple.fromProductTyped(r))

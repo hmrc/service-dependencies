@@ -35,11 +35,11 @@ class LatestVersionScheduler @Inject()(
 , latestVersionService: LatestVersionService
 , mongoLockRepository : MongoLockRepository
 , timestampSupport    : TimestampSupport
-)(implicit
+)(using
   actorSystem         : ActorSystem
 , applicationLifecycle: ApplicationLifecycle
 , ec                  : ExecutionContext
-) extends SchedulerUtils {
+) extends SchedulerUtils:
 
   private val schedulerConfigs =
     SchedulerConfig(configuration, "scheduler.latestVersion")
@@ -52,13 +52,11 @@ class LatestVersionScheduler @Inject()(
     , schedulerInterval = schedulerConfigs.interval
     )
 
-  implicit val hc: HeaderCarrier = HeaderCarrier()
+  given HeaderCarrier = HeaderCarrier()
 
-  scheduleWithLock("Latest Version", schedulerConfigs, lock){
+  scheduleWithLock("Latest Version", schedulerConfigs, lock):
     logger.info("Updating latest versions")
-    for {
+    for
       _ <- latestVersionService.reloadLatestVersions()
       _ =  logger.info("Finished updating latest versions")
-    } yield ()
-  }
-}
+    yield ()

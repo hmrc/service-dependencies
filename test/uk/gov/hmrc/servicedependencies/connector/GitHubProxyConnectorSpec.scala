@@ -17,10 +17,10 @@
 package uk.gov.hmrc.servicedependencies.connector
 
 import com.github.tomakehurst.wiremock.client.WireMock._
-import org.mockito.MockitoSugar
 import org.scalatest.concurrent.{IntegrationPatience, ScalaFutures}
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
+import org.scalatestplus.mockito.MockitoSugar
 import play.api.Configuration
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.http.test.{HttpClientV2Support, WireMockSupport}
@@ -39,6 +39,7 @@ class GitHubProxyConnectorSpec
      with HttpClientV2Support {
 
   import ExecutionContext.Implicits.global
+  given HeaderCarrier = HeaderCarrier()
 
   "GitHubProxyConnector" should {
     "parse decommissioned services" in {
@@ -58,7 +59,7 @@ class GitHubProxyConnectorSpec
           .willReturn(aResponse().withBody(body))
       )
 
-      boot.gitHubProxyConnector.decommissionedServices(HeaderCarrier()).futureValue shouldBe
+      boot.gitHubProxyConnector.decommissionedServices().futureValue shouldBe
         List(
           "cds-stub"
         , "journey-backend-transport"
@@ -72,15 +73,15 @@ class GitHubProxyConnectorSpec
 
   object Boot {
     def init(): Boot = {
-      val serviceDependenciesConfig = new ServiceDependenciesConfig(
+      val serviceDependenciesConfig = ServiceDependenciesConfig(
         Configuration(),
-        new ServicesConfig(Configuration(
+        ServicesConfig(Configuration(
           "microservice.services.platops-github-proxy.port" -> wireMockPort,
           "microservice.services.platops-github-proxy.host" -> wireMockHost
         ))
       )
 
-      val gitHubProxyConnector = new GitHubProxyConnector(
+      val gitHubProxyConnector = GitHubProxyConnector(
           httpClientV2,
           serviceDependenciesConfig
         )

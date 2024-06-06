@@ -29,12 +29,12 @@ import scala.concurrent.{ExecutionContext, Future}
 class SbtVersionRepository @Inject()(
   mongoComponent      : MongoComponent,
   deploymentRepository: DeploymentRepository
-)(implicit
+)(using
   ec: ExecutionContext
 ) extends SlugInfoRepositoryBase[SBTVersion](
   mongoComponent,
   domainFormat = SBTVersionFormats.sbtVersionFormat
-) {
+):
   def findSBTUsage(flag: SlugInfoFlag): Future[Seq[SBTVersion]] =
     deploymentRepository.lookupAgainstDeployments(
       collectionName   = "slugInfos",
@@ -53,4 +53,3 @@ class SbtVersionRepository @Inject()(
                             )
                           )
     )
-}

@@ -18,7 +18,7 @@ package uk.gov.hmrc.servicedependencies.config
 
 import com.google.inject.{Inject, Singleton}
 import play.api.Configuration
-import play.api.libs.json.Json
+import play.api.libs.json.{Json, Reads}
 import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
 import uk.gov.hmrc.servicedependencies.config.model.CuratedDependencyConfig
 
@@ -28,7 +28,7 @@ import scala.concurrent.duration.Duration
 class ServiceDependenciesConfig @Inject()(
   configuration: Configuration,
   serviceConfig: ServicesConfig
-) {
+):
 
   lazy val teamsAndRepositoriesServiceUrl: String =
     serviceConfig.baseUrl("teams-and-repositories")
@@ -45,18 +45,16 @@ class ServiceDependenciesConfig @Inject()(
   lazy val artifactoryBase: String          = configuration.get[String]("artifactory.url")
   lazy val artifactoryToken: Option[String] = configuration.getOptional[String]("artifactory.token")
 
-  lazy val curatedDependencyConfig: CuratedDependencyConfig = {
-    implicit val cdcr = CuratedDependencyConfig.reads
+  lazy val curatedDependencyConfig: CuratedDependencyConfig =
+    given Reads[CuratedDependencyConfig] = CuratedDependencyConfig.reads
     val configFilePath =
       configuration.getOptional[String]("curated.config.path")
         .getOrElse(sys.error("config value not found: curated.config.path"))
 
     val stream = getClass.getResourceAsStream(configFilePath)
-    val json = try {
-      Json.parse(stream)
-    } finally {
-      stream.close()
-    }
+    val json =
+      try
+        Json.parse(stream)
+      finally
+        stream.close()
     json.as[CuratedDependencyConfig]
-  }
-}

@@ -38,12 +38,12 @@ class ReleasesApiConnectorSpec
      with WireMockSupport
      with HttpClientV2Support {
 
-  implicit val hc: HeaderCarrier = HeaderCarrier()
+  given HeaderCarrier = HeaderCarrier()
 
   val config = new ReleasesApiConfig(null) {
     override lazy val serviceUrl: String = wireMockUrl
   }
-  val connector = new ReleasesApiConnector(httpClientV2, config)
+  val connector = ReleasesApiConnector(httpClientV2, config)
 
   override lazy val resetWireMockMappings = false
 
@@ -54,21 +54,21 @@ class ReleasesApiConnectorSpec
 
   "Retrieving whatsrunningwhere" should {
     "download whatsrunning where data" in {
-      val res = connector.getWhatIsRunningWhere.futureValue
+      val res = connector.getWhatIsRunningWhere().futureValue
       res.length shouldBe 5
     }
   }
 
   "Environment" should {
     "correctly parse releases-api environment names" in {
-      implicit val reads = ReleasesApiConnector.Environment.reads
-      Json.fromJson[Option[Environment]](Json.parse("\"production\"")) shouldBe JsSuccess(Some(Environment.Production))
-      Json.fromJson[Option[Environment]](Json.parse("\"development\"")) shouldBe JsSuccess(Some(Environment.Development))
-      Json.fromJson[Option[Environment]](Json.parse("\"integration\"")) shouldBe JsSuccess(Some(Environment.Integration))
-      Json.fromJson[Option[Environment]](Json.parse("\"qa\"")) shouldBe JsSuccess(Some(Environment.QA))
-      Json.fromJson[Option[Environment]](Json.parse("\"staging\"")) shouldBe JsSuccess(Some(Environment.Staging))
+      import ReleasesApiConnector.Environment.given
+      Json.fromJson[Option[Environment]](Json.parse("\"production\""))   shouldBe JsSuccess(Some(Environment.Production))
+      Json.fromJson[Option[Environment]](Json.parse("\"development\""))  shouldBe JsSuccess(Some(Environment.Development))
+      Json.fromJson[Option[Environment]](Json.parse("\"integration\""))  shouldBe JsSuccess(Some(Environment.Integration))
+      Json.fromJson[Option[Environment]](Json.parse("\"qa\""))           shouldBe JsSuccess(Some(Environment.QA))
+      Json.fromJson[Option[Environment]](Json.parse("\"staging\""))      shouldBe JsSuccess(Some(Environment.Staging))
       Json.fromJson[Option[Environment]](Json.parse("\"externaltest\"")) shouldBe JsSuccess(Some(Environment.ExternalTest))
-      Json.fromJson[Option[Environment]](Json.parse("\"foo\"")) shouldBe JsSuccess(None)
+      Json.fromJson[Option[Environment]](Json.parse("\"foo\""))          shouldBe JsSuccess(None)
     }
   }
 

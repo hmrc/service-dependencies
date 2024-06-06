@@ -31,13 +31,14 @@ class ServiceConfigsConnector @Inject()(
   httpClientV2  : HttpClientV2,
   servicesConfig: ServicesConfig,
   cache         : AsyncCacheApi
-)(implicit ec: ExecutionContext
-) {
+)(using
+  ec: ExecutionContext
+):
   import HttpReads.Implicits._
 
-  private implicit val hc: HeaderCarrier = HeaderCarrier()
+  private given HeaderCarrier = HeaderCarrier()
 
-  private implicit val reads: Reads[DeprecatedDependencies] = DeprecatedDependencies.reads
+  private given Reads[DeprecatedDependencies] = DeprecatedDependencies.reads
 
   private val serviceUrl: String = servicesConfig.baseUrl("service-configs")
   private val cacheExpiration: Duration =
@@ -45,15 +46,11 @@ class ServiceConfigsConnector @Inject()(
       .getDuration("microservice.services.service-configs.cache.expiration")
 
   def getBobbyRules(): Future[BobbyRules] =
-    cache.getOrElseUpdate("bobby-rules", cacheExpiration) {
+    cache.getOrElseUpdate("bobby-rules", cacheExpiration):
       httpClientV2
         .get(url"$serviceUrl/service-configs/bobby/rules")
         .execute[DeprecatedDependencies]
-        .map(dependencies =>
-           BobbyRules(
+        .map: dependencies =>
+           BobbyRules:
              (dependencies.libraries.toList ++ dependencies.plugins)
                .groupBy(dependency => (dependency.organisation, dependency.name))
-           )
-        )
-    }
-}

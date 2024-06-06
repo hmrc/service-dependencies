@@ -17,7 +17,6 @@
 package uk.gov.hmrc.servicedependencies.model
 
 import play.api.libs.functional.syntax._
-import play.api.libs.json.Format.GenericFormat
 import play.api.libs.json._
 
 import uk.gov.hmrc.servicedependencies.util.DependencyGraphParser
@@ -37,33 +36,40 @@ case class MetaArtefactDependency(
   buildFlag   : Boolean
 )
 
-object MetaArtefactDependency {
+object MetaArtefactDependency:
 
-  def apply(metaArtefact: MetaArtefact, repoType: RepoType, node: DependencyGraphParser.Node, scopes: Set[DependencyScope]): MetaArtefactDependency = MetaArtefactDependency(
-    repoName     = metaArtefact.name,
-    repoVersion  = metaArtefact.version,
-    repoType     = repoType,
-    teams        = List.empty,
-    depGroup     = node.group,
-    depArtefact  = node.artefact,
-    depVersion   = Version(node.version),
-    compileFlag  = scopes.contains(DependencyScope.Compile),
-    providedFlag = scopes.contains(DependencyScope.Provided),
-    testFlag     = scopes.contains(DependencyScope.Test),
-    itFlag       = scopes.contains(DependencyScope.It),
-    buildFlag    = scopes.contains(DependencyScope.Build)
-  )
+  def apply(
+    metaArtefact: MetaArtefact,
+    repoType    : RepoType,
+    node        : DependencyGraphParser.Node,
+    scopes      : Set[DependencyScope]
+  ): MetaArtefactDependency =
+    MetaArtefactDependency(
+      repoName     = metaArtefact.name,
+      repoVersion  = metaArtefact.version,
+      repoType     = repoType,
+      teams        = List.empty,
+      depGroup     = node.group,
+      depArtefact  = node.artefact,
+      depVersion   = Version(node.version),
+      compileFlag  = scopes.contains(DependencyScope.Compile),
+      providedFlag = scopes.contains(DependencyScope.Provided),
+      testFlag     = scopes.contains(DependencyScope.Test),
+      itFlag       = scopes.contains(DependencyScope.It),
+      buildFlag    = scopes.contains(DependencyScope.Build)
+    )
 
-  private def ignore[A] = OWrites[A](_ => Json.obj())
+  private def ignore[A]: OWrites[A] =
+    _ => Json.obj()
 
-  val mongoFormat: OFormat[MetaArtefactDependency] =
+  val mongoFormat: Format[MetaArtefactDependency] =
     ( (__ \ "repoName"      ).format[String]
     ~ (__ \ "repoVersion"   ).format[Version](Version.format)
     ~ (__ \ "repoType"      ).format[RepoType]
     ~ OFormat(
-      Reads.pure(List.empty[String])
-    , ignore[List[String]]
-    )
+        Reads.pure(List.empty[String])
+      , ignore[List[String]]
+      )
     ~ (__ \ "group"         ).format[String]
     ~ (__ \ "artefact"      ).format[String]
     ~ (__ \ "version"       ).format[Version](Version.format)
@@ -72,10 +78,10 @@ object MetaArtefactDependency {
     ~ (__ \ "scope_test"    ).format[Boolean]
     ~ (__ \ "scope_it"      ).format[Boolean]
     ~ (__ \ "scope_build"   ).format[Boolean]
-    )(MetaArtefactDependency.apply, unlift(MetaArtefactDependency.unapply))
+    )(MetaArtefactDependency.apply, mad => Tuple.fromProductTyped(mad))
 
-  val apiWrites: OWrites[MetaArtefactDependency] = {
-    implicit val scopeFormat = DependencyScope.dependencyScopeFormat
+  val apiWrites: Writes[MetaArtefactDependency] =
+    given Writes[DependencyScope] = DependencyScope.dependencyScopeFormat
     ( (__ \ "repoName"   ).write[String]
     ~ (__ \ "repoVersion").write[String]
     ~ (__ \ "repoType"   ).write[RepoType]
@@ -84,7 +90,7 @@ object MetaArtefactDependency {
     ~ (__ \ "depArtefact").write[String]
     ~ (__ \ "depVersion" ).write[String]
     ~ (__ \ "scopes"     ).write[Set[DependencyScope]]
-    ) (mad => (
+    )(mad => (
       mad.repoName,
       mad.repoVersion.original,
       mad.repoType,
@@ -95,14 +101,10 @@ object MetaArtefactDependency {
       DependencyScope
         .values
         .toSet
-        .filter {
+        .filter:
           case DependencyScope.Compile  => mad.compileFlag
           case DependencyScope.Provided => mad.providedFlag
           case DependencyScope.Test     => mad.testFlag
           case DependencyScope.It       => mad.itFlag
           case DependencyScope.Build    => mad.buildFlag
-        }
     ))
-  }
-}
-

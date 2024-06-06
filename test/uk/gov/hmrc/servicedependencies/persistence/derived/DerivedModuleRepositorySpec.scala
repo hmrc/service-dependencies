@@ -16,23 +16,24 @@
 
 package uk.gov.hmrc.servicedependencies.persistence.derived
 
-import org.mockito.MockitoSugar
 import org.scalatest.OptionValues
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpec
+import org.scalatestplus.mockito.MockitoSugar
 import uk.gov.hmrc.mongo.test.DefaultPlayMongoRepositorySupport
 import uk.gov.hmrc.servicedependencies.model.{MetaArtefact, MetaArtefactModule, Version}
 
 import scala.concurrent.ExecutionContext.Implicits.global
-import org.scalatest.matchers.should.Matchers
-import org.scalatest.wordspec.AnyWordSpecLike
 
 class DerivedModuleSpec
-  extends AnyWordSpecLike
+  extends AnyWordSpec
      with Matchers
      with OptionValues
      with MockitoSugar
      with DefaultPlayMongoRepositorySupport[DerivedModule] {
 
-  override lazy val repository = new DerivedModuleRepository(mongoComponent)
+  override val repository: DerivedModuleRepository =
+    DerivedModuleRepository(mongoComponent)
 
   val metaArtefactModule =
     MetaArtefactModule(

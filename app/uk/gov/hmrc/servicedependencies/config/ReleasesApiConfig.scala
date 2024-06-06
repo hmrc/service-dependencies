@@ -19,9 +19,7 @@ package uk.gov.hmrc.servicedependencies.config
 import javax.inject.Inject
 import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
 
-class ReleasesApiConfig @Inject() (serviceConfig: ServicesConfig) {
+class ReleasesApiConfig @Inject() (serviceConfig: ServicesConfig):
 
   lazy val serviceUrl: String =
     serviceConfig.baseUrl("releases-api")
-
-}

@@ -35,37 +35,36 @@ class TeamDependencyService @Inject()(
 , curatedLibrariesService: CuratedLibrariesService
 , latestVersionRepository: LatestVersionRepository
 , metaArtefactRepository : MetaArtefactRepository
-)(implicit ec: ExecutionContext
-) {
+)(using ec: ExecutionContext
+):
 
-  def findAllDepsForTeam(teamName: String)(implicit hc: HeaderCarrier): Future[Seq[Dependencies]] =
-    for {
+  def findAllDepsForTeam(teamName: String)(using hc: HeaderCarrier): Future[Seq[Dependencies]] =
+    for
       bobbyRules     <- serviceConfigsConnector.getBobbyRules()
       latestVersions <- latestVersionRepository.getAllEntries()
       team           <- teamsAndReposConnector.getTeam(teamName)
-      libsAndTests   <- (team.libraries ++ team.tests).toList.traverse { repoName =>
-                          metaArtefactRepository.find(repoName)
-                            .map(_.map(dependenciesFromMetaArtefact(_, bobbyRules, latestVersions)))
-                        }.map(_.flatten)
-      services       <- team.services.toList.traverse { repoName =>
-                            metaArtefactRepository.find(repoName).map {
+      libsAndTests   <- (team.libraries ++ team.tests).toList
+                          .traverse: repoName =>
+                            metaArtefactRepository.find(repoName)
+                              .map(_.map(dependenciesFromMetaArtefact(_, bobbyRules, latestVersions)))
+                          .map(_.flatten)
+      services       <- team.services.toList.traverse: repoName =>
+                            metaArtefactRepository.find(repoName).map:
                               case None               => Dependencies(repositoryName = repoName, libraryDependencies = Nil, sbtPluginsDependencies = Nil, otherDependencies = Nil)
                               case Some(metaArtefact) => dependenciesFromMetaArtefact(metaArtefact, bobbyRules, latestVersions)
-                          }
-                        }
-    } yield libsAndTests ++ services
+    yield libsAndTests ++ services
 
   def teamServiceDependenciesMap(
     teamName: String
   , flag    : SlugInfoFlag
-  )(implicit hc: HeaderCarrier
+  )(using hc: HeaderCarrier
   ): Future[Map[String, Seq[Dependency]]] =
-    for {
+    for
       bobbyRules     <- serviceConfigsConnector.getBobbyRules()
       latestVersions <- latestVersionRepository.getAllEntries()
       team           <- teamsAndReposConnector.getTeam(teamName)
-      res            <- team.services.toList.traverse { serviceName =>
-                          for {
+      res            <- team.services.toList.traverse: serviceName =>
+                          for
                             optMetaArtefact <- OptionT(slugInfoRepository.getSlugInfo(serviceName, flag))
                                                  .flatMap(slugInfo => OptionT(metaArtefactRepository.find(serviceName, slugInfo.version)))
                                                  .value
@@ -73,15 +72,14 @@ class TeamDependencyService @Inject()(
                                                  val x = dependenciesFromMetaArtefact(metaArtefact, bobbyRules, latestVersions)
                                                  x.sbtPluginsDependencies ++ x.libraryDependencies
                                                }
-                          } yield optDeps.map(serviceName -> _)
-                        }
-    } yield res.collect { case Some(kv) => kv }.toMap
+                          yield optDeps.map(serviceName -> _)
+    yield res.collect { case Some(kv) => kv }.toMap
 
   private def dependenciesFromMetaArtefact(
     metaArtefact  : MetaArtefact,
     bobbyRules    : BobbyRules,
     latestVersions: Seq[LatestVersion]
-  ): Dependencies = {
+  ): Dependencies =
     def toDependencies(name: String, scope: DependencyScope, dotFile: String) =
       curatedLibrariesService.fromGraph(
         dotFile        = dotFile,
@@ -100,5 +98,3 @@ class TeamDependencyService @Inject()(
       sbtPluginsDependencies = metaArtefact.dependencyDotBuild.fold(Seq.empty[Dependency])(s => toDependencies(metaArtefact.name, DependencyScope.Build, s)),
       otherDependencies      = Seq.empty
     )
-  }
-}
