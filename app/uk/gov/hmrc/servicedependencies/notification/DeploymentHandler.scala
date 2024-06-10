@@ -31,6 +31,7 @@ import uk.gov.hmrc.servicedependencies.model.{SlugInfoFlag, Version}
 import uk.gov.hmrc.servicedependencies.persistence.DeploymentRepository
 import uk.gov.hmrc.servicedependencies.service.DerivedViewsService
 
+import java.time.Instant
 import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -79,6 +80,7 @@ object DeploymentHandler:
   , serviceName : String
   , version     : Version
   , deploymentId: String
+  , time        : Instant
   )
 
   import play.api.libs.functional.syntax._
@@ -99,4 +101,13 @@ object DeploymentHandler:
     ~ (__ \ "microservice"        ).read[String]
     ~ (__ \ "microservice_version").read[Version](Version.format)
     ~ (__ \ "stack_id"            ).read[String]
-    )(DeploymentEvent.apply)
+    ~ (__ \ "event_date_time"     ).read[Instant]
+    ){
+      (eventType, environment, serviceName, version, deploymentId, time) =>
+        val uniqueDeploymentId = if (deploymentId.startsWith("arn")) {
+            s"${serviceName}-${environment.asString}-${version}-${time.toEpochMilli}"
+          } else {
+            deploymentId
+          }
+        DeploymentEvent(eventType, environment, serviceName, version, uniqueDeploymentId, time)
+    }
