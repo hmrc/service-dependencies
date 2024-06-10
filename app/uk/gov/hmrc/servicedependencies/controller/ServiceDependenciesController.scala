@@ -217,25 +217,41 @@ class ServiceDependenciesController @Inject()(
     def when[T](b: Boolean)(seq: => Seq[T]): Seq[T] =
       if b then seq else Nil
 
-    def dependencyIfMissing(
+    def directDependencyIfMissing(
       dependencies: Seq[Dependency],
       group       : String,
       artefact    : String,
-      versions    : Seq[Version],
+      version     : Version,
       scope       : DependencyScope
     ): Seq[Dependency] =
-      for
-        v <- versions
-        if dependencies.find(dep => dep.group == group && dep.name == artefact).isEmpty
-      yield
-        Dependency(
+      if dependencies.find(dep => dep.group == group && dep.name == artefact && dep.importBy.isEmpty).isEmpty
+      then
+        Seq(Dependency(
           name                = artefact,
           group               = group,
-          currentVersion      = v,
+          currentVersion      = version,
           latestVersion       = latestVersions.find(d => d.name == artefact && d.group == group).map(_.version),
           bobbyRuleViolations = List.empty,
           importBy            = None,
           scope               = scope
+        ))
+      else
+        Seq.empty
+
+    // Note, for Scala 3, scala3-libary will be in the graph, but it's not necessarily a direct dependency.
+    // We want a direct dependency so it will be present in the curated results.
+    def addScalaDependencies(
+      dependencies: Seq[Dependency],
+      versions    : Seq[Version],
+      scope       : DependencyScope
+    ): Seq[Dependency] =
+      versions.flatMap: v =>
+        directDependencyIfMissing(
+          dependencies,
+          group    = "org.scala-lang",
+          artefact = if v < Version("3.0.0") then "scala-library" else "scala3-library",
+          version  = v,
+          scope    = DependencyScope.Compile
         )
 
     val buildDependencies = meta.dependencyDotBuild.fold(Seq.empty[Dependency])(s => toDependencies(meta.name, DependencyScope.Build, s))
@@ -244,13 +260,14 @@ class ServiceDependenciesController @Inject()(
       name              = meta.name,
       version           = Some(meta.version),
       dependenciesBuild = buildDependencies ++
-                            dependencyIfMissing(
-                              buildDependencies,
-                              group    = "org.scala-sbt",
-                              artefact = "sbt",
-                              versions = sbtVersion.toSeq,
-                              scope    = DependencyScope.Build
-                            ),
+                            sbtVersion.toSeq.flatMap: v =>
+                              directDependencyIfMissing(
+                                buildDependencies,
+                                group    = "org.scala-sbt",
+                                artefact = "sbt",
+                                version  = v,
+                                scope    = DependencyScope.Build
+                              ),
       modules           = meta.modules
                               .filter(_.publishSkip.fold(true)(!_))
                               .map: m =>
@@ -270,33 +287,27 @@ class ServiceDependenciesController @Inject()(
                                   group                = m.group,
                                   dependenciesCompile  = compileDependencies ++
                                                            when(compileDependencies.nonEmpty)(
-                                                             dependencyIfMissing(
-                                                               dependencies = compileDependencies,
-                                                               group        = "org.scala-lang",
-                                                               artefact     = "scala-library",
-                                                               versions     = scalaVersions.filter(_ < Version("3.0.0")),  // Scala 3 uses artefact `scala3-language` but it should already be in the Graph
-                                                               scope        = DependencyScope.Compile
+                                                             addScalaDependencies(
+                                                               compileDependencies,
+                                                               scalaVersions,
+                                                               scope = DependencyScope.Compile
                                                              )
                                                            ),
                                   dependenciesProvided = providedDependencies,
                                   dependenciesTest     = testDependencies ++
                                                            when(testDependencies.nonEmpty)(
-                                                             dependencyIfMissing(
-                                                               dependencies = testDependencies,
-                                                               group        = "org.scala-lang",
-                                                               artefact     = "scala-library",
-                                                               versions     = scalaVersions.filter(_ < Version("3.0.0")),
-                                                               scope        = DependencyScope.Test
+                                                             addScalaDependencies(
+                                                               testDependencies,
+                                                               scalaVersions,
+                                                               scope = DependencyScope.Compile
                                                              )
                                                            ),
                                   dependenciesIt       = itDependencies ++
                                                            when(itDependencies.nonEmpty)(
-                                                             dependencyIfMissing(
-                                                               dependencies = itDependencies,
-                                                               group        = "org.scala-lang",
-                                                               artefact     = "scala-library",
-                                                               versions     = scalaVersions.filter(_ < Version("3.0.0")),
-                                                               scope        = DependencyScope.It
+                                                             addScalaDependencies(
+                                                               itDependencies,
+                                                               scalaVersions,
+                                                               scope = DependencyScope.Compile
                                                              )
                                                            ),
                                   crossScalaVersions   = m.crossScalaVersions,
