@@ -88,7 +88,7 @@ class ServiceDependenciesController @Inject()(
   ): Action[AnyContent] =
     Action.async { implicit request =>
       given Writes[MetaArtefactDependency] = MetaArtefactDependency.apiWrites
-      (for {
+      (for
          f   <- EitherT.fromOption[Future](SlugInfoFlag.parse(flag), BadRequest(s"invalid flag '$flag'"))
          sc  <- scope.fold(EitherT.pure[Future, Result](Option.empty[List[DependencyScope]])):
                   _.traverse(s => EitherT.fromEither[Future](DependencyScope.parse(s)).leftMap(BadRequest(_)))
@@ -97,7 +97,7 @@ class ServiceDependenciesController @Inject()(
          res <- EitherT.right[Result]:
                   slugInfoService
                     .findServicesWithDependency(f, group, artefact, vr, sc)
-       } yield Ok(Json.toJson(res))
+       yield Ok(Json.toJson(res))
       ).merge
     }
 

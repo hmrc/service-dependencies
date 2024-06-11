@@ -68,7 +68,7 @@ class DerivedModuleSpec
 
   "DerivedModuleSpec.findRepoNameByModule" should {
     "find repo name" in {
-      (for {
+      (for
          _      <- repository.update(metaArtefact)
          name   <- repository.findNameByModule(
                      group    = "uk.gov.hmrc",
@@ -76,12 +76,12 @@ class DerivedModuleSpec
                      version  = Version("1.0.0")
                    )
          _      =  name shouldBe Some("library")
-       } yield ()
+       yield ()
       ).futureValue
     }
 
     "return data for any version if no match" in {
-      (for {
+      (for
          _      <- repository.update(metaArtefact)
          name   <- repository.findNameByModule(
                      group    = "uk.gov.hmrc",
@@ -89,19 +89,19 @@ class DerivedModuleSpec
                      version  = Version("0.0.1") // no match for this
                    )
          _      =  name shouldBe Some("library")
-       } yield ()
+       yield ()
       ).futureValue
     }
 
     "return none if no match" in {
-      (for {
+      (for
          name   <- repository.findNameByModule(
                      group    = "uk.gov.hmrc",
                      artefact = "sub-module",
                      version  = Version("0.0.1") // no match for this
                    )
          _      =  name shouldBe None
-       } yield ()
+       yield ()
       ).futureValue
     }
   }

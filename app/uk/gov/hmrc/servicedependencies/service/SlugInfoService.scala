@@ -41,7 +41,7 @@ class SlugInfoService @Inject()(
 ) extends Logging:
 
   def addSlugInfo(slug: SlugInfo): Future[Unit] =
-    for {
+    for
       // Determine which slug is latest from the existing collection
       _        <- slugInfoRepository.add(slug)
       isLatest <- slugVersionRepository.getMaxVersion(name = slug.name)
@@ -51,7 +51,7 @@ class SlugInfoService @Inject()(
                                                logger.info(s"Slug ${slug.name} ${slug.version} isLatest=$isLatest (latest is: ${maxVersion})")
                                                isLatest
       _        <- if isLatest then deploymentRepository.markLatest(slug.name, slug.version) else Future.unit
-    } yield ()
+    yield ()
 
   def deleteSlugInfo(name: String, version: Version): Future[Unit] =
     for

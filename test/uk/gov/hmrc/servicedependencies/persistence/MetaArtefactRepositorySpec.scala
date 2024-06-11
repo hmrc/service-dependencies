@@ -69,19 +69,19 @@ class MetaArtefactRepositorySpec
 
   "add" should {
     "add correctly" in {
-      (for {
+      (for
          before <- repository.find(metaArtefact.name)
          _      =  before shouldBe None
          _      <- repository.put(metaArtefact)
          after  <- repository.find(metaArtefact.name)
          all    <- repository.findAllVersions(metaArtefact.name)
          _      =  after shouldBe Some(metaArtefact.copy(latest = true))
-       } yield ()
+       yield ()
       ).futureValue
     }
 
     "upsert correctly" in {
-      (for {
+      (for
          before  <- repository.find(metaArtefact.name)
          _       =  before shouldBe None
          _       <- repository.put(metaArtefact)
@@ -90,31 +90,31 @@ class MetaArtefactRepositorySpec
          _       <- repository.put(updatedMetaArtefact)
          updated <- repository.find(metaArtefact.name)
          _       =  updated shouldBe Some(updatedMetaArtefact.copy(latest = true))
-       } yield ()
+       yield ()
      ).futureValue
     }
   }
 
   "find" should {
     "return the latest" in {
-      (for {
+      (for
          _      <- repository.put(metaArtefact.copy(version = Version("2.0.0")))
          _      <- repository.put(metaArtefact)
          found  <- repository.find(metaArtefact.name)
          _      =  found shouldBe Some(metaArtefact.copy(version = Version("2.0.0"), latest = true))
-       } yield ()
+       yield ()
       ).futureValue
     }
   }
 
   "findAllVersions" should {
     "return all versions" in {
-      (for {
+      (for
         _     <- repository.put(metaArtefact.copy(version = Version("2.0.0")))
         _     <- repository.put(metaArtefact)
         found <- repository.findAllVersions(metaArtefact.name)
         _     =  found should contain theSameElementsAs Seq(metaArtefact, metaArtefact.copy(version = Version("2.0.0"), latest = true))
-      } yield ()
+      yield ()
       ).futureValue
     }
   }

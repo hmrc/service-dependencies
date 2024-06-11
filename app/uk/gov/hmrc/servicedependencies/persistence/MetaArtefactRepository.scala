@@ -53,8 +53,8 @@ class MetaArtefactRepository @Inject()(
     TransactionConfiguration.strict
 
   def put(meta: MetaArtefact): Future[Unit] =
-    withSessionAndTransaction { session =>
-      for {
+    withSessionAndTransaction: session =>
+      for
         _    <- collection
                   .replaceOne(
                     clientSession = session
@@ -68,12 +68,11 @@ class MetaArtefactRepository @Inject()(
                   .toFuture()
         oMax <- maxVersion(meta.name, session)
         _    <- oMax.fold(Future.unit)(v => markLatest(meta.name, v, session))
-      } yield ()
-    }
+      yield ()
 
   def delete(repositoryName: String, version: Version): Future[Unit] =
-    withSessionAndTransaction { session =>
-      for {
+    withSessionAndTransaction: session =>
+      for
         _    <- collection
                   .deleteOne(
                     clientSession = session
@@ -85,8 +84,7 @@ class MetaArtefactRepository @Inject()(
                   .toFuture()
         oMax <- maxVersion(repositoryName, session)
         _    <- oMax.fold(Future.unit)(v => markLatest(repositoryName, v, session))
-      } yield ()
-    }
+      yield ()
 
   private def maxVersion(repositoryName: String, session: ClientSession): Future[Option[Version]] =
     collection
@@ -112,7 +110,7 @@ class MetaArtefactRepository @Inject()(
       .map(_ => ())
 
   private def markLatest(name: String, version: Version, session: ClientSession): Future[Unit] =
-    for {
+    for
       _ <- clearLatest(name, session)
       _ <- collection
              .updateOne(
@@ -125,7 +123,7 @@ class MetaArtefactRepository @Inject()(
              , options       = UpdateOptions().upsert(true)
              )
              .toFuture()
-    } yield ()
+    yield ()
 
   def find(repositoryName: String): Future[Option[MetaArtefact]] =
     collection
