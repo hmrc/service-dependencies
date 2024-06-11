@@ -177,7 +177,7 @@ class DerivedViewsService @Inject()(
                    _  <- (ds.isEmpty, ms.headOption) match
                            case (true, Some(meta)) => val deps = toDependencies(meta, RepoType.Service)
                                                       logger.info(s"DerivedDeployedDependencyRepository repoName: ${meta.name}, repoVersion: ${meta.version} - storing ${deps.size} dependencies")
-                                                      derivedDeployedDependencyRepository.insert(deps)
+                                                      derivedDeployedDependencyRepository.update(meta.name, meta.version, deps)
                            case __                 => Future.unit
                  yield ()
       _ <- deployments
