@@ -104,10 +104,10 @@ object DeploymentHandler:
     ~ (__ \ "event_date_time"     ).read[Instant]
     ){
       (eventType, environment, serviceName, version, deploymentId, time) =>
-        val uniqueDeploymentId = if (deploymentId.startsWith("arn")) {
-            s"${serviceName}-${environment.asString}-${version}-${time.toEpochMilli}"
-          } else {
+        val uniqueDeploymentId =
+          if deploymentId.startsWith("arn") then
+            s"gen-${serviceName}-${environment.asString}-${time.toEpochMilli}"
+          else
             deploymentId
-          }
         DeploymentEvent(eventType, environment, serviceName, version, uniqueDeploymentId, time)
     }
