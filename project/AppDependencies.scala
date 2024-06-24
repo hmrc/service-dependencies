@@ -15,7 +15,6 @@ private object AppDependencies {
     "org.typelevel"          %% "cats-core"                 % "2.10.0",
     "org.apache.commons"     %  "commons-compress"          % "1.20",
     "software.amazon.awssdk" %  "sqs"                       % "2.20.155",
-    "org.yaml"               %  "snakeyaml"                 % "2.1"
   )
 
   val test = Seq(

@@ -23,8 +23,7 @@ import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 import org.scalatestplus.mockito.MockitoSugar
 import uk.gov.hmrc.http.HeaderCarrier
-import uk.gov.hmrc.servicedependencies.connector.{GitHubProxyConnector, ReleasesApiConnector, TeamsAndRepositoriesConnector}
-import uk.gov.hmrc.servicedependencies.connector.model.Repository
+import uk.gov.hmrc.servicedependencies.connector.{ReleasesApiConnector, TeamsAndRepositoriesConnector}
 import uk.gov.hmrc.servicedependencies.model._
 import uk.gov.hmrc.servicedependencies.persistence.{DeploymentRepository, MetaArtefactRepository, SlugInfoRepository, SlugVersionRepository}
 import uk.gov.hmrc.servicedependencies.persistence.derived._
@@ -42,7 +41,6 @@ class DerivedViewsServiceSpec
   given HeaderCarrier = HeaderCarrier()
 
   private val mockedTeamsAndRepositoriesConnector         = mock[TeamsAndRepositoriesConnector      ]
-  private val mockedGitHubProxyConnector                  = mock[GitHubProxyConnector               ]
   private val mockedReleasesApiConnector                  = mock[ReleasesApiConnector               ]
   private val mockedMetaArtefactRepository                = mock[MetaArtefactRepository             ]
   private val mockedSlugInfoRepository                    = mock[SlugInfoRepository                 ]
@@ -55,7 +53,6 @@ class DerivedViewsServiceSpec
 
   private val underTest = DerivedViewsService(
     teamsAndRepositoriesConnector       = mockedTeamsAndRepositoriesConnector
-  , gitHubProxyConnector                = mockedGitHubProxyConnector
   , releasesApiConnector                = mockedReleasesApiConnector
   , metaArtefactRepository              = mockedMetaArtefactRepository
   , slugInfoRepository                  = mockedSlugInfoRepository
@@ -69,7 +66,7 @@ class DerivedViewsServiceSpec
 
   "DerivedViewsService.updateDeploymentData" should {
     "clear latest flag for decommissioned services" in {
-      val decommissionedServices = List("service1")
+      val decommissionedServices = List(TeamsAndRepositoriesConnector.DeletedRepository("service1"))
 
       when(mockedSlugInfoRepository.getUniqueSlugNames())
         .thenReturn(Future.successful(Seq.empty))
@@ -77,7 +74,7 @@ class DerivedViewsServiceSpec
       when(mockedReleasesApiConnector.getWhatIsRunningWhere())
         .thenReturn(Future.successful(List.empty))
 
-      when(mockedGitHubProxyConnector.decommissionedServices())
+      when(mockedTeamsAndRepositoriesConnector.getDecommissionedServices())
         .thenReturn(Future.successful(decommissionedServices))
 
       when(mockedDeploymentRepository.getNames(SlugInfoFlag.Latest))
@@ -91,12 +88,12 @@ class DerivedViewsServiceSpec
 
       underTest.updateDeploymentDataForAllServices().futureValue
 
-      verify(mockedDeploymentRepository).clearFlags(SlugInfoFlag.values.toList, decommissionedServices)
+      verify(mockedDeploymentRepository).clearFlags(SlugInfoFlag.values.toList, List("service1"))
     }
 
     "clear latest flag for deleted/archived services" in {
       def toRepositoryInfo(name: String) =
-        Repository(
+        TeamsAndRepositoriesConnector.Repository(
           name       = name
         , teamNames  = Seq("PlatOps", "Webops")
         , repoType   = RepoType.Service
@@ -113,7 +110,7 @@ class DerivedViewsServiceSpec
       when(mockedReleasesApiConnector.getWhatIsRunningWhere())
         .thenReturn(Future.successful(List.empty))
 
-      when(mockedGitHubProxyConnector.decommissionedServices())
+      when(mockedTeamsAndRepositoriesConnector.getDecommissionedServices())
         .thenReturn(Future.successful(List.empty))
 
       when(mockedDeploymentRepository.getNames(SlugInfoFlag.Latest))

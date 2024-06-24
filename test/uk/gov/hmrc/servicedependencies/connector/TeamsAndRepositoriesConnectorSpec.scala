@@ -26,7 +26,6 @@ import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.http.test.WireMockSupport
-import uk.gov.hmrc.servicedependencies.connector.model.Repository
 import uk.gov.hmrc.servicedependencies.model.RepoType
 
 class TeamsAndRepositoriesConnectorSpec
@@ -37,6 +36,8 @@ class TeamsAndRepositoriesConnectorSpec
      with IntegrationPatience
      with GuiceOneAppPerSuite
      with WireMockSupport {
+
+  import TeamsAndRepositoriesConnector.{Repository, TeamsForServices}
 
   given HeaderCarrier = HeaderCarrier()
 

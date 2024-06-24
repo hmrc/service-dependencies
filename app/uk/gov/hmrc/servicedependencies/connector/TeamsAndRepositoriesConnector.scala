@@ -18,20 +18,48 @@ package uk.gov.hmrc.servicedependencies.connector
 
 import com.google.inject.{Inject, Singleton}
 import play.api.cache.AsyncCacheApi
-import play.api.libs.json.Reads
+import play.api.libs.json.{Reads, __}
 import uk.gov.hmrc.http.{HeaderCarrier, HttpReads, StringContextOps}
 import uk.gov.hmrc.http.client.HttpClientV2
 import uk.gov.hmrc.servicedependencies.config.ServiceDependenciesConfig
-import uk.gov.hmrc.servicedependencies.connector.model.Repository
 import uk.gov.hmrc.servicedependencies.model.Team
 
 import scala.concurrent.{ExecutionContext, Future}
 
-case class TeamsForServices(
-  toMap: Map[String, Seq[String]]
-):
-  def getTeams(service: String): Seq[String] =
-    toMap.getOrElse(service, Seq.empty)
+
+object TeamsAndRepositoriesConnector:
+  import play.api.libs.functional.syntax.*
+  import uk.gov.hmrc.servicedependencies.model.RepoType
+
+  case class TeamsForServices(
+    toMap: Map[String, Seq[String]]
+  ):
+    def getTeams(service: String): Seq[String] =
+      toMap.getOrElse(service, Seq.empty)
+
+  case class Repository(
+    name      : String,
+    teamNames : Seq[String],
+    repoType  : RepoType,
+    isArchived: Boolean
+  )
+
+  object Repository:
+    val reads: Reads[Repository] =
+      ( (__ \ "name"      ).format[String]
+      ~ (__ \ "teamNames" ).format[Seq[String]]
+      ~ (__ \ "repoType"  ).format[RepoType]
+      ~ (__ \ "isArchived").format[Boolean]
+      )(apply, r => Tuple.fromProductTyped(r))
+
+  case class DeletedRepository(name: String)
+
+  object DeletedRepository:
+    val reads: Reads[DeletedRepository] =
+      (__ \ "repoName")
+        .read[String]
+        .map:
+          DeletedRepository.apply
 
 @Singleton
 class TeamsAndRepositoriesConnector @Inject()(
@@ -41,12 +69,12 @@ class TeamsAndRepositoriesConnector @Inject()(
 )(using
   ec: ExecutionContext
 ):
-  import HttpReads.Implicits._
+  import TeamsAndRepositoriesConnector.*
+  import HttpReads.Implicits.*
 
-  val teamsAndRepositoriesApiBase = serviceConfiguration.teamsAndRepositoriesServiceUrl
-
-  import Repository.given
-  private given Reads[Team] = Team.format
+  private val teamsAndRepositoriesApiBase = serviceConfiguration.teamsAndRepositoriesServiceUrl
+  private given Reads[Repository]         = Repository.reads
+  private given Reads[DeletedRepository]  = DeletedRepository.reads
 
   def getRepository(repositoryName: String)(using hc: HeaderCarrier): Future[Option[Repository]] =
     httpClientV2
@@ -58,6 +86,11 @@ class TeamsAndRepositoriesConnector @Inject()(
       .get(url"$teamsAndRepositoriesApiBase/api/v2/repositories?archived=$archived")
       .execute[Seq[Repository]]
 
+  def getDecommissionedServices()(using hc: HeaderCarrier): Future[Seq[DeletedRepository]] =
+    httpClientV2
+      .get(url"$teamsAndRepositoriesApiBase/api/v2/decommissioned-repositories?repoType=service")
+      .execute[Seq[DeletedRepository]]
+
   def getTeamsForServices()(using hc: HeaderCarrier): Future[TeamsForServices] =
     cache.getOrElseUpdate("teams-for-services", serviceConfiguration.teamsAndRepositoriesCacheExpiration):
       httpClientV2
@@ -66,6 +99,7 @@ class TeamsAndRepositoriesConnector @Inject()(
         .map(TeamsForServices.apply)
 
   def getTeam(team: String)(using hc: HeaderCarrier): Future[Team] =
+    given Reads[Team] = Team.format
     httpClientV2
       .get(url"$teamsAndRepositoriesApiBase/api/teams/$team?includeRepos=true")
       .execute[Team]

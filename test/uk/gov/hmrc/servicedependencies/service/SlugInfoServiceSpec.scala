@@ -23,7 +23,7 @@ import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 import org.scalatestplus.mockito.MockitoSugar
 import uk.gov.hmrc.http.HeaderCarrier
-import uk.gov.hmrc.servicedependencies.connector.{TeamsAndRepositoriesConnector, TeamsForServices}
+import uk.gov.hmrc.servicedependencies.connector.TeamsAndRepositoriesConnector
 import uk.gov.hmrc.servicedependencies.model._
 import uk.gov.hmrc.servicedependencies.persistence.{DeploymentRepository, JdkVersionRepository, SbtVersionRepository, SlugInfoRepository, SlugVersionRepository}
 import uk.gov.hmrc.servicedependencies.persistence.derived.{DerivedGroupArtefactRepository, DerivedDeployedDependencyRepository}
@@ -72,7 +72,7 @@ class SlugInfoServiceSpec
         .thenReturn(Future(Seq(v100, v200, v205)))
 
       when(boot.mockedTeamsAndRepositoriesConnector.getTeamsForServices())
-        .thenReturn(Future(TeamsForServices(Map.empty)))
+        .thenReturn(Future(TeamsAndRepositoriesConnector.TeamsForServices(Map.empty)))
 
       boot.service.findServicesWithDependency(SlugInfoFlag.QA, group, artefact, BobbyVersionRange("[1.0.1,)"), Some(List(scope)))
         .futureValue shouldBe Seq(v200, v205)
@@ -91,7 +91,7 @@ class SlugInfoServiceSpec
         .thenReturn(Future(Seq(v100, v200, v205, bad)))
 
       when(boot.mockedTeamsAndRepositoriesConnector.getTeamsForServices())
-        .thenReturn(Future(TeamsForServices(Map.empty)))
+        .thenReturn(Future(TeamsAndRepositoriesConnector.TeamsForServices(Map.empty)))
 
       boot.service.findServicesWithDependency(SlugInfoFlag.QA, group, artefact, BobbyVersionRange("[1.0.1,)"), Some(List(scope)))
         .futureValue shouldBe Seq(v200, v205)

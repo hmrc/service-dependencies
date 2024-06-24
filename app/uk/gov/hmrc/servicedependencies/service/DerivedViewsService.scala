@@ -21,8 +21,7 @@ import cats.syntax.all._
 import com.google.inject.{Inject, Singleton}
 import play.api.Logging
 import uk.gov.hmrc.http.HeaderCarrier
-import uk.gov.hmrc.servicedependencies.connector.{GitHubProxyConnector, ReleasesApiConnector, TeamsAndRepositoriesConnector}
-import uk.gov.hmrc.servicedependencies.connector.model.Repository
+import uk.gov.hmrc.servicedependencies.connector.{ReleasesApiConnector, TeamsAndRepositoriesConnector}
 import uk.gov.hmrc.servicedependencies.model.{MetaArtefactDependency, RepoType, SlugInfoFlag}
 import uk.gov.hmrc.servicedependencies.persistence.{Deployment, DeploymentRepository, MetaArtefactRepository, SlugInfoRepository, SlugVersionRepository}
 import uk.gov.hmrc.servicedependencies.persistence.derived.{DerivedDeployedDependencyRepository, DerivedGroupArtefactRepository, DerivedLatestDependencyRepository, DerivedModuleRepository}
@@ -34,7 +33,6 @@ import uk.gov.hmrc.servicedependencies.model.MetaArtefact
 @Singleton
 class DerivedViewsService @Inject()(
   teamsAndRepositoriesConnector       : TeamsAndRepositoriesConnector
-, gitHubProxyConnector                : GitHubProxyConnector
 , releasesApiConnector                : ReleasesApiConnector
 , metaArtefactRepository              : MetaArtefactRepository
 , slugInfoRepository                  : SlugInfoRepository
@@ -68,11 +66,14 @@ class DerivedViewsService @Inject()(
                                                                      .map(_.version)
                                                               )
                                   (serviceName, deploymentsByFlag)
-      _                      <- allServiceDeployments.toList.traverse: (serviceName, deployments) =>
-                                  deployments.traverse:
-                                    case (flag, None         ) => deploymentRepository.clearFlag(flag, serviceName)
-                                    case (flag, Some(version)) => deploymentRepository.setFlag(flag, serviceName, version)
-      activeRepos            <- teamsAndRepositoriesConnector.getAllRepositories(archived = Some(false))
+      _                      <- allServiceDeployments
+                                  .flatMap:
+                                    case (serviceName, deployments) => deployments.map((flag, optVersion) => (serviceName, flag, optVersion))
+                                  .foldLeftM(()):
+                                    case (_, (serviceName, flag, None         )) => deploymentRepository.clearFlag(flag, serviceName)
+                                    case (_, (serviceName, flag, Some(version))) => deploymentRepository.setFlag(flag, serviceName, version)
+      activeRepos            <- teamsAndRepositoriesConnector
+                                  .getAllRepositories(archived = Some(false))
                                   .map(_.map(_.name))
       latestServices         <- deploymentRepository.getNames(SlugInfoFlag.Latest)
       inactiveServices       =  latestServices.diff(activeRepos) // This will not work for slugs with different name to the repo (e.g. sa-filing-2223-helpdesk)
@@ -82,9 +83,10 @@ class DerivedViewsService @Inject()(
                                   // we have found some "archived" projects which are still deployed, we will only remove the latest flag for them
                                   deploymentRepository.clearFlags(List(SlugInfoFlag.Latest), inactiveServices.toList)
                                 else Future.unit
-
-      decommissionedServices <- gitHubProxyConnector.decommissionedServices()
-      _                      <- deploymentRepository.clearFlags(SlugInfoFlag.values.toList, decommissionedServices)
+      decommissionedServices <- teamsAndRepositoriesConnector
+                                  .getDecommissionedServices()
+                                  .map(_.map(_.name))
+      _                      <- deploymentRepository.clearFlags(SlugInfoFlag.values.toList, decommissionedServices.toList)
 
       missingLatestFlag      =  slugNames.intersect(activeRepos).diff(decommissionedServices).diff(latestServices)
       _                      <-
@@ -130,7 +132,7 @@ class DerivedViewsService @Inject()(
     yield ()
 
   private def updateDerivedDependencyViews(
-    activeRepos: Seq[Repository],
+    activeRepos: Seq[TeamsAndRepositoriesConnector.Repository],
     latestMeta : Seq[MetaArtefact],
     deployments: Seq[Deployment]
   ): Future[Unit] =
