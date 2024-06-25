@@ -27,7 +27,7 @@ import play.api.libs.json.{Json, Writes}
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
 import uk.gov.hmrc.http.HeaderCarrier
-import uk.gov.hmrc.servicedependencies.connector.{ServiceConfigsConnector, TeamsAndRepositoriesConnector, TeamsForServices}
+import uk.gov.hmrc.servicedependencies.connector.{ServiceConfigsConnector, TeamsAndRepositoriesConnector}
 import uk.gov.hmrc.servicedependencies.model.RepoType.Service
 import uk.gov.hmrc.servicedependencies.model.SlugInfoFlag.{Development, Latest}
 import uk.gov.hmrc.servicedependencies.model._
@@ -116,7 +116,7 @@ class ServiceDependenciesControllerSpec
 
       when(boot.mockTeamsAndRepositories.getTeamsForServices()(using any[HeaderCarrier]))
         .thenReturn(
-          Future.successful(TeamsForServices(Map("repo-name" -> Seq("team-name"))))
+          Future.successful(TeamsAndRepositoriesConnector.TeamsForServices(Map("repo-name" -> Seq("team-name"))))
         )
 
       when(boot.mockDerivedDeployedDependencyRepository.findWithDeploymentLookup(any(), any(), any(), any(), any(), any()))
@@ -153,7 +153,7 @@ class ServiceDependenciesControllerSpec
 
       when(boot.mockTeamsAndRepositories.getTeamsForServices()(using any[HeaderCarrier]))
         .thenReturn(
-          Future.successful(TeamsForServices(Map("repo-name" -> Seq("team-name"))))
+          Future.successful(TeamsAndRepositoriesConnector.TeamsForServices(Map("repo-name" -> Seq("team-name"))))
         )
 
       when(boot.mockDerivedDeployedDependencyRepository.findWithDeploymentLookup(any(), any(), any(), any(), any(), any()))
@@ -189,7 +189,7 @@ class ServiceDependenciesControllerSpec
 
       when(boot.mockTeamsAndRepositories.getTeamsForServices()(using any[HeaderCarrier]))
         .thenReturn(
-          Future.successful(TeamsForServices(Map("repo-name" -> Seq("team-name"))))
+          Future.successful(TeamsAndRepositoriesConnector.TeamsForServices(Map("repo-name" -> Seq("team-name"))))
         )
 
       when(boot.mockDerivedLatestDependencyRepository.find(any(), any(), any(), any(), any(), any()))
@@ -226,7 +226,7 @@ class ServiceDependenciesControllerSpec
 
       when(boot.mockTeamsAndRepositories.getTeamsForServices()(using any[HeaderCarrier]))
         .thenReturn(
-          Future.successful(TeamsForServices(Map("repo-name" -> Seq("team-name"))))
+          Future.successful(TeamsAndRepositoriesConnector.TeamsForServices(Map("repo-name" -> Seq("team-name"))))
         )
 
       when(boot.mockDerivedLatestDependencyRepository.find(any(), any(), any(), any(), any(), any()))
