@@ -25,13 +25,13 @@ import play.api.mvc.QueryStringBindable
 import uk.gov.hmrc.mongo.play.json.formats.MongoJavatimeFormats
 
 enum SlugInfoFlag(val asString: String):
-  case Latest          extends SlugInfoFlag("latest"       )
-  case Production      extends SlugInfoFlag("production"   )
-  case ExternalTest    extends SlugInfoFlag("external test")
-  case Staging         extends SlugInfoFlag("staging"      )
-  case QA              extends SlugInfoFlag("qa"           )
-  case Integration     extends SlugInfoFlag("integration"  )
-  case Development     extends SlugInfoFlag("development"  )
+  case Latest          extends SlugInfoFlag("latest"      )
+  case Production      extends SlugInfoFlag("production"  )
+  case ExternalTest    extends SlugInfoFlag("externaltest")
+  case Staging         extends SlugInfoFlag("staging"     )
+  case QA              extends SlugInfoFlag("qa"          )
+  case Integration     extends SlugInfoFlag("integration" )
+  case Development     extends SlugInfoFlag("development" )
 
 object SlugInfoFlag:
 

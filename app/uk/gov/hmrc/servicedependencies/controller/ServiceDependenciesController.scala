@@ -144,7 +144,8 @@ class ServiceDependenciesController @Inject()(
       ).merge
 
   def dependenciesOfSlugForTeam(team: String, flag: String): Action[AnyContent] =
-    Action.async { implicit request =>
+    Action.async: request =>
+      given Request[AnyContent] = request
       (for
          f    <- EitherT.fromOption[Future](SlugInfoFlag.parse(flag), BadRequest(s"invalid flag '$flag'"))
          deps <- EitherT.liftF[Future, Result, Map[String, Seq[Dependency]]]:
@@ -153,10 +154,10 @@ class ServiceDependenciesController @Inject()(
          implicit val dw = Dependency.writes
          Ok(Json.toJson(deps))
       ).merge
-    }
 
   def findJDKForEnvironment(team: Option[String], flag: String): Action[AnyContent] =
-    Action.async { implicit request =>
+    Action.async: request =>
+      given Request[AnyContent] = request
       (for
          f   <- EitherT.fromOption[Future](SlugInfoFlag.parse(flag), BadRequest(s"invalid flag '$flag'"))
          res <- EitherT.liftF[Future, Result, Seq[JDKVersion]]:
@@ -165,7 +166,6 @@ class ServiceDependenciesController @Inject()(
          given Writes[JDKVersion] = JDKVersionFormats.jdkVersionFormat
          Ok(Json.toJson(res))
       ).merge
-    }
 
   def findSBTForEnvironment(team: Option[String], flag: String): Action[AnyContent] =
     Action.async { implicit request =>
