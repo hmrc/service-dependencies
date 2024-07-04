@@ -1,4 +1,25 @@
+# Migration to 2.157.0
+
+Remove space in `externaltest` field:
+
+```javascript
+db.getCollection("deployments").aggregate([{$match: {}}, {$out: "deployments-bak"}])
+db.getCollection("bobbyRulesSummary").aggregate([{$match: {}}, {$out: "bobbyRulesSummary-bak"}])
+
+db.deployments.updateMany({}, { "$rename": { "external test": "externaltest" }})
+
+db.bobbyRulesSummary.find({}).forEach(function(item) {
+  for (i = 0; i != item.summary.length; ++i) {
+    item.summary[i][1].externaltest = item.summary[i][1]["external test"];
+    delete item.summary[i][1]["external test"];
+  }
+
+  db.bobbyRulesSummary.replaceOne({_id: item._id}, item);
+});
+```
+
 # Migration to 2.104.0
+
 ```javascript
 db.getCollection('DERIVED-slug-dependencies').updateMany(
   { "scope_provided": {$exists: false }},

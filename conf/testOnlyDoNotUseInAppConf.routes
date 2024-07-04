@@ -11,15 +11,8 @@
 
 # Add all the application routes to the prod.routes file
 
-POST       /test-only/latestVersions            uk.gov.hmrc.servicedependencies.testonly.IntegrationTestController.addLatestVersions
 POST       /test-only/sluginfos                 uk.gov.hmrc.servicedependencies.testonly.IntegrationTestController.addSluginfos
-POST       /test-only/bobbyrulesummmary         uk.gov.hmrc.servicedependencies.testonly.IntegrationTestController.addBobbyRulesSummaries
-POST       /test-only/meta-artefacts            uk.gov.hmrc.servicedependencies.testonly.IntegrationTestController.addMetaArtefacts
-POST       /test-only/meta-dependencies         uk.gov.hmrc.servicedependencies.testonly.IntegrationTestController.addMetaArtefactDependencies
-DELETE     /test-only/latestVersions            uk.gov.hmrc.servicedependencies.testonly.IntegrationTestController.deleteLatestVersions
+POST       /test-only/:dataType                 uk.gov.hmrc.servicedependencies.testonly.IntegrationTestController.post(dataType)
 DELETE     /test-only/sluginfos                 uk.gov.hmrc.servicedependencies.testonly.IntegrationTestController.deleteSluginfos
-DELETE     /test-only/bobbyrulesummmary         uk.gov.hmrc.servicedependencies.testonly.IntegrationTestController.deleteBobbyRulesSummaries
-DELETE     /test-only/meta-artefacts            uk.gov.hmrc.servicedependencies.testonly.IntegrationTestController.deleteMetaArtefacts
-DELETE     /test-only/meta-dependencies         uk.gov.hmrc.servicedependencies.testonly.IntegrationTestController.deleteMetaArtefactDependencies
-DELETE     /test-only/all                       uk.gov.hmrc.servicedependencies.testonly.IntegrationTestController.deleteAll
+DELETE     /test-only/:dataType                 uk.gov.hmrc.servicedependencies.testonly.IntegrationTestController.delete(dataType)
 ->         /                                    prod.Routes

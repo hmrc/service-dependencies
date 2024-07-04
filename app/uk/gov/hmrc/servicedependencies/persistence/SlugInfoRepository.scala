@@ -64,11 +64,6 @@ class SlugInfoRepository @Inject()(
     collection.find()
       .toFuture()
 
-  def clearAllData(): Future[Unit] =
-    collection.deleteMany(BsonDocument())
-      .toFuture()
-      .map(_ => ())
-
   def getUniqueSlugNames(): Future[Seq[String]] =
     collection.distinct[String]("name")
       .toFuture()

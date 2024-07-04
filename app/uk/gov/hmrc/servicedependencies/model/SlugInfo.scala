@@ -36,10 +36,7 @@ enum SlugInfoFlag(val asString: String):
 object SlugInfoFlag:
 
   def parse(s: String): Option[SlugInfoFlag] =
-    if s.equalsIgnoreCase("externaltest") then
-      Some(ExternalTest)
-    else
-      values.find(_.asString.equalsIgnoreCase(s))
+    values.find(_.asString.equalsIgnoreCase(s))
 
   given slugInfoFlagBindable(using stringBinder: QueryStringBindable[String]): QueryStringBindable[SlugInfoFlag] with
     override def bind(key: String, params: Map[String, Seq[String]]): Option[Either[String, SlugInfoFlag]] =

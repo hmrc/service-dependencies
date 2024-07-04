@@ -155,9 +155,3 @@ class MetaArtefactRepository @Inject()(
       .find(Filters.equal("latest", true))
       .sort(Sorts.ascending("name"))
       .toFuture()
-
-  def clearAllData(): Future[Unit] =
-    collection
-      .deleteMany(Filters.empty())
-      .toFuture()
-      .map(_ => ())

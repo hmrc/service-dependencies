@@ -82,9 +82,3 @@ class LatestVersionRepository @Inject()(
       .find(and(equal("group", group), equal("name", artefact)))
       .toFuture()
       .map(_.headOption)
-
-  def clearAllData(): Future[Unit] =
-    collection
-      .deleteMany(BsonDocument())
-      .toFuture()
-      .map(_ => ())
