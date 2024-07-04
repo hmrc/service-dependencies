@@ -61,14 +61,4 @@ class LatestVersionRepositorySpec
       repository.find(group = "uk.gov.hmrc", artefact = "some-library").futureValue shouldBe Some(newLibraryVersion)
     }
   }
-
-  "clearAllDependencyEntries" should {
-    "delete everything" in {
-      repository.update(latestVersion).futureValue
-      repository.getAllEntries().futureValue should have size 1
-      repository.clearAllData().futureValue
-      repository.getAllEntries().futureValue shouldBe Nil
-      repository.find(group = "uk.gov.hmrc", artefact = "some-library").futureValue shouldBe None
-    }
-  }
 }

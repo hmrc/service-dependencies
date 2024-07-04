@@ -52,16 +52,6 @@ class SlugInfoRepositorySpec
     }
   }
 
-  "SlugInfoRepository.clearAllData" should {
-    "delete everything" in {
-      repository.add(TestSlugInfos.slugInfo).futureValue
-      repository.getAllEntries().futureValue should have size 1
-
-      repository.clearAllData().futureValue
-      repository.getAllEntries().futureValue shouldBe Nil
-    }
-  }
-
   "SlugInfoRepository.getUniqueSlugNames" should {
     "filter out duplicate names" in {
       repository.add(TestSlugInfos.slugInfo).futureValue

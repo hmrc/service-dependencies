@@ -180,11 +180,6 @@ class DeploymentRepository @Inject()(
       .toFuture()
       .map(_ => ())
 
-  def clearAllData(): Future[Unit] =
-    collection.deleteMany(BsonDocument())
-      .toFuture()
-      .map(_ => ())
-
 
 case class Deployment(
   slugName     : String,
@@ -212,13 +207,13 @@ case class Deployment(
 object Deployment:
   val mongoFormat: Format[Deployment] =
     given Format[Version] = Version.format
-    ( (__ \ "name"          ).format[String]
-    ~ (__ \ "version"       ).format[Version]
-    ~ (__ \ "latest"        ).formatWithDefault[Boolean](false)
-    ~ (__ \ "production"    ).formatWithDefault[Boolean](false)
-    ~ (__ \ "qa"            ).formatWithDefault[Boolean](false)
-    ~ (__ \ "staging"       ).formatWithDefault[Boolean](false)
-    ~ (__ \ "development"   ).formatWithDefault[Boolean](false)
-    ~ (__ \ "external test" ).formatWithDefault[Boolean](false)
-    ~ (__ \ "integration"   ).formatWithDefault[Boolean](false)
+    ( (__ \ "name"        ).format[String]
+    ~ (__ \ "version"     ).format[Version]
+    ~ (__ \ "latest"      ).formatWithDefault[Boolean](false)
+    ~ (__ \ "production"  ).formatWithDefault[Boolean](false)
+    ~ (__ \ "qa"          ).formatWithDefault[Boolean](false)
+    ~ (__ \ "staging"     ).formatWithDefault[Boolean](false)
+    ~ (__ \ "development" ).formatWithDefault[Boolean](false)
+    ~ (__ \ "externaltest").formatWithDefault[Boolean](false)
+    ~ (__ \ "integration" ).formatWithDefault[Boolean](false)
     )(Deployment.apply, d => Tuple.fromProductTyped(d))

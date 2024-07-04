@@ -22,7 +22,7 @@ import javax.inject.Inject
 import org.mongodb.scala.SingleObservableFuture
 import org.mongodb.scala.bson.BsonDocument
 import play.api.libs.json._
-import play.api.mvc.{Action, ControllerComponents}
+import play.api.mvc.{Action, AnyContent, ControllerComponents}
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 import uk.gov.hmrc.servicedependencies.model._
 import uk.gov.hmrc.servicedependencies.persistence._
@@ -45,57 +45,55 @@ class IntegrationTestController @Inject()(
 )(using ec: ExecutionContext
 ) extends BackendController(cc):
 
-  private def validateJson[A : Reads] =
+  private def parseJson[A : Reads] =
     parse.json.validate:
       _.validate[A].asEither.left.map(e => BadRequest(JsError.toJson(e)))
 
-  val addLatestVersions =
+  private def validateJson[A: Reads](json: JsValue): Either[JsObject, A] =
+    json.validate[A].asEither.left.map(JsError.toJson)
+
+  def post(dataType: String): Action[JsValue] =
+    Action.async(parse.json): request =>
+      val json = request.body
+      (dataType match
+        case "latestVersions"        => addLatestVersions(json)
+        case "bobbyrulesummmary"     => addBobbyRulesSummaries(json)
+        case "meta-artefacts"        => addMetaArtefacts(json)
+        case "meta-dependencies"     => addMetaArtefactDependencies(json)
+      ).map(_.fold(e => BadRequest(e), _ => NoContent))
+
+
+  private def addLatestVersions(json: JsValue): Future[Either[JsObject, Unit]] =
     given Reads[LatestVersion] =
       given Format[Version] = Version.format
       Json.using[Json.WithDefaultValues].reads[LatestVersion]
 
-    Action.async(validateJson[List[LatestVersion]]) { implicit request =>
-      request.body.traverse(latestVersionRepository.update)
-        .map(_ => NoContent)
-    }
+    validateJson[Seq[LatestVersion]](json)
+      .traverse(_.traverse_(latestVersionRepository.update))
 
-  val deleteLatestVersions =
-    Action.async {
-      latestVersionRepository.clearAllData()
-        .map(_ => NoContent)
-    }
+  private def addBobbyRulesSummaries(json: JsValue): Future[Either[JsObject, Unit]] =
+    given Format[BobbyRulesSummary] = BobbyRulesSummary.apiFormat
+    validateJson[Seq[BobbyRulesSummary]](json)
+      .traverse(_.traverse_(bobbyRulesSummaryRepo.add))
 
-  val addMetaArtefacts =
+  private def addMetaArtefacts(json: JsValue): Future[Either[JsObject, Unit]] =
     given Format[MetaArtefact] = MetaArtefact.apiFormat
-    Action.async(validateJson[List[MetaArtefact]]) { implicit request =>
-      request.body.traverse(metaArtefactRepository.put)
-        .map(_ => NoContent)
-    }
+    validateJson[List[MetaArtefact]](json)
+      .traverse(_.traverse_(metaArtefactRepository.put))
 
-  val addMetaArtefactDependencies: Action[List[MetaArtefactDependency]] =
+  private def addMetaArtefactDependencies(json: JsValue): Future[Either[JsObject, Unit]] =
     given Format[MetaArtefactDependency] = MetaArtefactDependency.mongoFormat
-    Action.async(validateJson[List[MetaArtefactDependency]]) { implicit request =>
-      derivedLatestDependencyRepository
-        .collection
-        .insertMany(request.body).toFuture()
-        .map(_ => NoContent)
-    }
-
-  val deleteMetaArtefactDependencies =
-    Action.async:
-      derivedLatestDependencyRepository
-        .collection
-        .deleteMany(BsonDocument()).toFuture()
-        .map(_ => NoContent)
-
-  val deleteMetaArtefacts =
-    Action.async:
-      metaArtefactRepository.clearAllData()
-        .map(_ => NoContent)
+    validateJson[List[MetaArtefactDependency]](json)
+      .traverse: deps =>
+        derivedLatestDependencyRepository
+          .collection
+          .insertMany(deps)
+          .toFuture()
+          .map(_ => ())
 
   def addSluginfos =
     given Reads[SlugInfoWithFlags] = SlugInfoWithFlags.reads
-    Action.async(validateJson[List[SlugInfoWithFlags]]) { implicit request =>
+    Action.async(parseJson[List[SlugInfoWithFlags]]) { implicit request =>
       request.body
         .traverse: slugInfoWithFlag =>
           def updateFlag(slugInfoWithFlag: SlugInfoWithFlags, flag: SlugInfoFlag, toSet: SlugInfoWithFlags => Boolean): Future[Unit] =
@@ -121,34 +119,20 @@ class IntegrationTestController @Inject()(
   val deleteSluginfos =
     Action.async:
       for
-        _ <- slugInfoRepo.clearAllData()
+        _ <- slugInfoRepo.collection.deleteMany(BsonDocument()).toFuture()
         _ <- derivedDeployedDependencyRepository.collection.deleteMany(BsonDocument()).toFuture()
       yield NoContent
 
-  val addBobbyRulesSummaries =
-    given Format[BobbyRulesSummary] = BobbyRulesSummary.apiFormat
-    Action.async(validateJson[List[BobbyRulesSummary]]) { implicit request =>
-      request.body.traverse(bobbyRulesSummaryRepo.add)
-        .map(_ => NoContent)
-    }
-
-  val deleteBobbyRulesSummaries =
-    Action.async {
-      bobbyRulesSummaryRepo.clearAllData()
-        .map(_ => NoContent)
-    }
-
-  val deleteAll =
+  def delete(dataType: String): Action[AnyContent] =
     Action.async:
-      List(
-          latestVersionRepository.clearAllData()
-        , slugInfoRepo.clearAllData()
-        , bobbyRulesSummaryRepo.clearAllData()
-        , deploymentsRepo.clearAllData()
-        , derivedDeployedDependencyRepository.collection.deleteMany(BsonDocument()).toFuture()
-        , metaArtefactRepository.clearAllData()
-        ).sequence
-         .map(_ => NoContent)
+      (dataType match
+        case "latestVersions"        => latestVersionRepository
+        case "meta-dependencies"     => derivedLatestDependencyRepository
+        case "meta-artefacts"        => metaArtefactRepository
+        case "bobbyrulesummmary"     => bobbyRulesSummaryRepo
+      )
+      .collection.deleteMany(BsonDocument()).toFuture()
+      .map(_ => NoContent)
 
   case class SlugInfoWithFlags(
     slugInfo    : SlugInfo,
@@ -173,6 +157,6 @@ class IntegrationTestController @Inject()(
       ~ (__ \ "qa"          ).read[Boolean]
       ~ (__ \ "staging"     ).read[Boolean]
       ~ (__ \ "development" ).read[Boolean]
-      ~ (__ \ "externalTest").read[Boolean]
+      ~ (__ \ "externaltest").read[Boolean]
       ~ (__ \ "integration" ).read[Boolean]
       )(SlugInfoWithFlags.apply)
