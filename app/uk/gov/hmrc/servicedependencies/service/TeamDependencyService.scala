@@ -26,6 +26,7 @@ import uk.gov.hmrc.servicedependencies.model.{BobbyRules, DependencyScope, Lates
 import uk.gov.hmrc.servicedependencies.persistence.{LatestVersionRepository, MetaArtefactRepository, SlugInfoRepository}
 
 import scala.concurrent.{ExecutionContext, Future}
+import uk.gov.hmrc.servicedependencies.model.RepoType
 
 @Singleton
 class TeamDependencyService @Inject()(
@@ -42,17 +43,20 @@ class TeamDependencyService @Inject()(
     for
       bobbyRules     <- serviceConfigsConnector.getBobbyRules()
       latestVersions <- latestVersionRepository.getAllEntries()
-      team           <- teamsAndReposConnector.getTeam(teamName)
-      libsAndTests   <- (team.libraries ++ team.tests).toList
-                          .traverse: repoName =>
-                            metaArtefactRepository.find(repoName)
-                              .map(_.map(dependenciesFromMetaArtefact(_, bobbyRules, latestVersions)))
-                          .map(_.flatten)
-      services       <- team.services.toList.traverse: repoName =>
-                            metaArtefactRepository.find(repoName).map:
-                              case None               => Dependencies(repositoryName = repoName, libraryDependencies = Nil, sbtPluginsDependencies = Nil, otherDependencies = Nil)
-                              case Some(metaArtefact) => dependenciesFromMetaArtefact(metaArtefact, bobbyRules, latestVersions)
-    yield libsAndTests ++ services
+      _              <- teamsAndReposConnector.checkTeamExists(teamName)
+      repos          <- teamsAndReposConnector.getAllRepositories(archived = Some(false), teamName = Some(teamName))
+      results        <- repos.foldLeftM(Seq.empty[Dependencies]):
+                          case (acc, repo) if repo.repoType == RepoType.Library || repo.repoType == RepoType.Test =>
+                            metaArtefactRepository.find(repo.name).map:
+                              case None       => acc
+                              case Some(meta) => acc :+ dependenciesFromMetaArtefact(meta, bobbyRules, latestVersions)
+                          case (acc, repo) if repo.repoType == RepoType.Service =>
+                            metaArtefactRepository.find(repo.name).map:
+                              case None       => acc :+ Dependencies(repositoryName = repo.name, libraryDependencies = Nil, sbtPluginsDependencies = Nil, otherDependencies = Nil)
+                              case Some(meta) => acc :+ dependenciesFromMetaArtefact(meta, bobbyRules, latestVersions)
+                          case (acc, repo)  =>
+                            Future.successful(acc)
+    yield results
 
   def teamServiceDependenciesMap(
     teamName: String
@@ -62,18 +66,18 @@ class TeamDependencyService @Inject()(
     for
       bobbyRules     <- serviceConfigsConnector.getBobbyRules()
       latestVersions <- latestVersionRepository.getAllEntries()
-      team           <- teamsAndReposConnector.getTeam(teamName)
-      res            <- team.services.toList.traverse: serviceName =>
+      _              <- teamsAndReposConnector.checkTeamExists(teamName)
+      repos          <- teamsAndReposConnector.getAllRepositories(archived = Some(false), teamName = Some(teamName), repoType = Some(RepoType.Service))
+      res            <- repos.foldLeftM(Seq.empty[(String, Seq[Dependency])]): (acc, repo) =>
                           for
-                            optMetaArtefact <- OptionT(slugInfoRepository.getSlugInfo(serviceName, flag))
-                                                 .flatMap(slugInfo => OptionT(metaArtefactRepository.find(serviceName, slugInfo.version)))
-                                                 .value
-                            optDeps         =  optMetaArtefact.map { metaArtefact =>
-                                                 val x = dependenciesFromMetaArtefact(metaArtefact, bobbyRules, latestVersions)
-                                                 x.sbtPluginsDependencies ++ x.libraryDependencies
-                                               }
-                          yield optDeps.map(serviceName -> _)
-    yield res.collect { case Some(kv) => kv }.toMap
+                            optMeta <- OptionT(slugInfoRepository.getSlugInfo(repo.name, flag))
+                                         .flatMap(slugInfo => OptionT(metaArtefactRepository.find(repo.name, slugInfo.version)))
+                                         .value
+                            optDeps =  optMeta.map: meta =>
+                                         val x = dependenciesFromMetaArtefact(meta, bobbyRules, latestVersions)
+                                         x.sbtPluginsDependencies ++ x.libraryDependencies
+                          yield acc :+ (repo.name, optDeps.getOrElse(Nil))
+    yield res.toMap
 
   private def dependenciesFromMetaArtefact(
     metaArtefact  : MetaArtefact,

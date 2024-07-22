@@ -1,6 +1,5 @@
 GET     /api/sluginfo                                      @uk.gov.hmrc.servicedependencies.controller.ServiceDependenciesController.slugInfo(name: String, version: Option[String])
 GET     /api/teams/:team/dependencies                      @uk.gov.hmrc.servicedependencies.controller.ServiceDependenciesController.dependenciesForTeam(team)
-GET     /api/serviceDeps                                   @uk.gov.hmrc.servicedependencies.controller.ServiceDependenciesController.getServicesWithDependency(flag: String ?= "latest", group: String, artefact: String, versionRange: String, scope: Option[List[String]] ?= None)
 GET     /api/groupArtefacts                                @uk.gov.hmrc.servicedependencies.controller.ServiceDependenciesController.getGroupArtefacts
 GET     /api/jdkVersions                                   @uk.gov.hmrc.servicedependencies.controller.ServiceDependenciesController.findJDKForEnvironment(team: Option[String], flag: String ?= "latest")
 GET     /api/sbtVersions                                   @uk.gov.hmrc.servicedependencies.controller.ServiceDependenciesController.findSBTForEnvironment(team: Option[String], flag: String ?= "latest")

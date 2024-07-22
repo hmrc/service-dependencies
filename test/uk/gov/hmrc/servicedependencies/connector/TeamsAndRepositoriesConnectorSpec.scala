@@ -37,7 +37,7 @@ class TeamsAndRepositoriesConnectorSpec
      with GuiceOneAppPerSuite
      with WireMockSupport {
 
-  import TeamsAndRepositoriesConnector.{Repository, TeamsForServices}
+  import TeamsAndRepositoriesConnector.Repository
 
   given HeaderCarrier = HeaderCarrier()
 
@@ -70,18 +70,6 @@ class TeamsAndRepositoriesConnectorSpec
 
       val repository = connector.getRepository("non-existing-test-repo").futureValue
       repository shouldBe None
-    }
-  }
-
-  "TeamsAndRepositoriesConnector.getTeamsForService" should {
-    "correctly parse json response" in {
-      stubFor(
-        get(urlEqualTo("/api/repository_teams"))
-          .willReturn(aResponse().withBodyFile("teams-and-repositories/service-teams.json"))
-      )
-
-      val teams = connector.getTeamsForServices().futureValue
-      teams shouldBe TeamsForServices(Map("test-repo" -> Seq("PlatOps", "WebOps"), "another-repo" -> Seq("PlatOps")))
     }
   }
 

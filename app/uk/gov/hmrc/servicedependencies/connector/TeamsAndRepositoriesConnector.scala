@@ -19,38 +19,30 @@ package uk.gov.hmrc.servicedependencies.connector
 import com.google.inject.{Inject, Singleton}
 import play.api.cache.AsyncCacheApi
 import play.api.libs.json.{Reads, __}
-import uk.gov.hmrc.http.{HeaderCarrier, HttpReads, StringContextOps}
+import uk.gov.hmrc.http.{HeaderCarrier, HttpReads, UpstreamErrorResponse, StringContextOps}
 import uk.gov.hmrc.http.client.HttpClientV2
 import uk.gov.hmrc.servicedependencies.config.ServiceDependenciesConfig
-import uk.gov.hmrc.servicedependencies.model.Team
+import uk.gov.hmrc.servicedependencies.model.RepoType
 
 import scala.concurrent.{ExecutionContext, Future}
 
-
 object TeamsAndRepositoriesConnector:
   import play.api.libs.functional.syntax.*
-  import uk.gov.hmrc.servicedependencies.model.RepoType
-
-  case class TeamsForServices(
-    toMap: Map[String, Seq[String]]
-  ):
-    def getTeams(service: String): Seq[String] =
-      toMap.getOrElse(service, Seq.empty)
 
   case class Repository(
-    name      : String,
-    teamNames : Seq[String],
-    repoType  : RepoType,
-    isArchived: Boolean
+    name      : String
+  , teamNames : Seq[String]
+  , repoType  : RepoType
+  , isArchived: Boolean
   )
 
   object Repository:
     val reads: Reads[Repository] =
-      ( (__ \ "name"      ).format[String]
-      ~ (__ \ "teamNames" ).format[Seq[String]]
-      ~ (__ \ "repoType"  ).format[RepoType]
-      ~ (__ \ "isArchived").format[Boolean]
-      )(apply, r => Tuple.fromProductTyped(r))
+      ( (__ \ "name"      ).read[String]
+      ~ (__ \ "teamNames" ).read[Seq[String]]
+      ~ (__ \ "repoType"  ).read[RepoType]
+      ~ (__ \ "isArchived").read[Boolean]
+      )(apply)
 
   case class DeletedRepository(name: String)
 
@@ -60,6 +52,16 @@ object TeamsAndRepositoriesConnector:
         .read[String]
         .map:
           DeletedRepository.apply
+
+  case class Team(
+    name: String
+  )
+
+  object Team:
+    val reads: Reads[Team] =
+      (__ \ "name")
+        .read[String]
+        .map(Team.apply)
 
 @Singleton
 class TeamsAndRepositoriesConnector @Inject()(
@@ -73,17 +75,28 @@ class TeamsAndRepositoriesConnector @Inject()(
   import HttpReads.Implicits.*
 
   private val teamsAndRepositoriesApiBase = serviceConfiguration.teamsAndRepositoriesServiceUrl
+  private given Reads[Team]               = Team.reads
   private given Reads[Repository]         = Repository.reads
   private given Reads[DeletedRepository]  = DeletedRepository.reads
+
+  def checkTeamExists(teamName: String)(using hc: HeaderCarrier): Future[Team] =
+    httpClientV2
+      .get(url"$teamsAndRepositoriesApiBase/api/v2/teams")
+      .execute[List[Team]]
+      .flatMap(_.find(_.name == teamName).fold(Future.failed(UpstreamErrorResponse(s"Team: $teamName not found", 404)))(Future.successful))
 
   def getRepository(repositoryName: String)(using hc: HeaderCarrier): Future[Option[Repository]] =
     httpClientV2
       .get(url"$teamsAndRepositoriesApiBase/api/v2/repositories/$repositoryName")
       .execute[Option[Repository]]
 
-  def getAllRepositories(archived: Option[Boolean])(using hc: HeaderCarrier): Future[Seq[Repository]] =
+  def getAllRepositories(
+    archived: Option[Boolean]
+  , teamName: Option[String]   = None
+  , repoType: Option[RepoType] = None
+  )(using hc: HeaderCarrier): Future[Seq[Repository]] =
     httpClientV2
-      .get(url"$teamsAndRepositoriesApiBase/api/v2/repositories?archived=$archived")
+      .get(url"$teamsAndRepositoriesApiBase/api/v2/repositories?archived=$archived&team=$teamName&repoType=${repoType.map(_.asString)}")
       .execute[Seq[Repository]]
 
   def getDecommissionedServices()(using hc: HeaderCarrier): Future[Seq[DeletedRepository]] =
@@ -91,15 +104,7 @@ class TeamsAndRepositoriesConnector @Inject()(
       .get(url"$teamsAndRepositoriesApiBase/api/v2/decommissioned-repositories?repoType=service")
       .execute[Seq[DeletedRepository]]
 
-  def getTeamsForServices()(using hc: HeaderCarrier): Future[TeamsForServices] =
+  def cachedTeamToReposMap()(using hc: HeaderCarrier): Future[Map[String, Seq[String]]] =
     cache.getOrElseUpdate("teams-for-services", serviceConfiguration.teamsAndRepositoriesCacheExpiration):
-      httpClientV2
-        .get(url"$teamsAndRepositoriesApiBase/api/repository_teams")
-        .execute[Map[String, Seq[String]]]
-        .map(TeamsForServices.apply)
-
-  def getTeam(team: String)(using hc: HeaderCarrier): Future[Team] =
-    given Reads[Team] = Team.format
-    httpClientV2
-      .get(url"$teamsAndRepositoriesApiBase/api/teams/$team?includeRepos=true")
-      .execute[Team]
+      getAllRepositories(archived = Some(false))
+        .map(_.map(x => (x.name, x.teamNames)).toMap)
