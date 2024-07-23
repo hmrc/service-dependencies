@@ -3,18 +3,17 @@
 Remove space in `externaltest` field:
 
 ```javascript
-db.getCollection("deployments").aggregate([{$match: {}}, {$out: "deployments-bak"}])
-db.getCollection("bobbyRulesSummary").aggregate([{$match: {}}, {$out: "bobbyRulesSummary-bak"}])
-
 db.deployments.updateMany({}, { "$rename": { "external test": "externaltest" }})
 
 db.bobbyRulesSummary.find({}).forEach(function(item) {
-  for (i = 0; i != item.summary.length; ++i) {
-    item.summary[i][1].externaltest = item.summary[i][1]["external test"];
-    delete item.summary[i][1]["external test"];
-  }
+  if (item.summary[0][1]["external test"] != undefined) {
+    for (i = 0; i != item.summary.length; ++i) {
+      item.summary[i][1].externaltest = item.summary[i][1]["external test"];
+      delete item.summary[i][1]["external test"];
+    }
 
-  db.bobbyRulesSummary.replaceOne({_id: item._id}, item);
+    db.bobbyRulesSummary.replaceOne({_id: item._id}, item);
+  }
 });
 ```
 
