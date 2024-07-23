@@ -43,7 +43,6 @@ class TeamDependencyService @Inject()(
     for
       bobbyRules     <- serviceConfigsConnector.getBobbyRules()
       latestVersions <- latestVersionRepository.getAllEntries()
-      _              <- teamsAndReposConnector.checkTeamExists(teamName)
       repos          <- teamsAndReposConnector.getAllRepositories(archived = Some(false), teamName = Some(teamName))
       results        <- repos.foldLeftM(Seq.empty[Dependencies]):
                           case (acc, repo) if repo.repoType == RepoType.Library || repo.repoType == RepoType.Test =>
@@ -66,7 +65,6 @@ class TeamDependencyService @Inject()(
     for
       bobbyRules     <- serviceConfigsConnector.getBobbyRules()
       latestVersions <- latestVersionRepository.getAllEntries()
-      _              <- teamsAndReposConnector.checkTeamExists(teamName)
       repos          <- teamsAndReposConnector.getAllRepositories(archived = Some(false), teamName = Some(teamName), repoType = Some(RepoType.Service))
       res            <- repos.foldLeftM(Seq.empty[(String, Seq[Dependency])]): (acc, repo) =>
                           for

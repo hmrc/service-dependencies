@@ -59,9 +59,6 @@ class TeamDependencyServiceSpec
     "return dependencies for all projects belonging to team" in {
       given HeaderCarrier = HeaderCarrier()
 
-      when(mockTeamsAndReposConnector.checkTeamExists(teamName = "foo"))
-        .thenReturn(Future.successful(TeamsAndRepositoriesConnector.Team("foo")))
-
       when(mockTeamsAndReposConnector.getAllRepositories(archived = Some(false), teamName = Some("foo")))
         .thenReturn(Future.successful(Seq(TeamsAndRepositoriesConnector.Repository(
           name       = "my-slug"

@@ -19,7 +19,7 @@ package uk.gov.hmrc.servicedependencies.connector
 import com.google.inject.{Inject, Singleton}
 import play.api.cache.AsyncCacheApi
 import play.api.libs.json.{Reads, __}
-import uk.gov.hmrc.http.{HeaderCarrier, HttpReads, UpstreamErrorResponse, StringContextOps}
+import uk.gov.hmrc.http.{HeaderCarrier, HttpReads, StringContextOps}
 import uk.gov.hmrc.http.client.HttpClientV2
 import uk.gov.hmrc.servicedependencies.config.ServiceDependenciesConfig
 import uk.gov.hmrc.servicedependencies.model.RepoType
@@ -53,16 +53,6 @@ object TeamsAndRepositoriesConnector:
         .map:
           DeletedRepository.apply
 
-  case class Team(
-    name: String
-  )
-
-  object Team:
-    val reads: Reads[Team] =
-      (__ \ "name")
-        .read[String]
-        .map(Team.apply)
-
 @Singleton
 class TeamsAndRepositoriesConnector @Inject()(
   httpClientV2        : HttpClientV2,
@@ -75,15 +65,8 @@ class TeamsAndRepositoriesConnector @Inject()(
   import HttpReads.Implicits.*
 
   private val teamsAndRepositoriesApiBase = serviceConfiguration.teamsAndRepositoriesServiceUrl
-  private given Reads[Team]               = Team.reads
   private given Reads[Repository]         = Repository.reads
   private given Reads[DeletedRepository]  = DeletedRepository.reads
-
-  def checkTeamExists(teamName: String)(using hc: HeaderCarrier): Future[Team] =
-    httpClientV2
-      .get(url"$teamsAndRepositoriesApiBase/api/v2/teams")
-      .execute[List[Team]]
-      .flatMap(_.find(_.name == teamName).fold(Future.failed(UpstreamErrorResponse(s"Team: $teamName not found", 404)))(Future.successful))
 
   def getRepository(repositoryName: String)(using hc: HeaderCarrier): Future[Option[Repository]] =
     httpClientV2
