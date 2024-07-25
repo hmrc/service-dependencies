@@ -16,27 +16,25 @@
 
 package uk.gov.hmrc.servicedependencies.service
 
-import com.google.inject.{Inject, Singleton}
 import play.api.Logging
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.servicedependencies.connector.TeamsAndRepositoriesConnector
 import uk.gov.hmrc.servicedependencies.model._
 import uk.gov.hmrc.servicedependencies.persistence.{DeploymentRepository, JdkVersionRepository, SbtVersionRepository, SlugInfoRepository, SlugVersionRepository}
-import uk.gov.hmrc.servicedependencies.persistence.derived.{DerivedDeployedDependencyRepository, DerivedGroupArtefactRepository, DerivedLatestDependencyRepository}
+import uk.gov.hmrc.servicedependencies.persistence.derived.DerivedGroupArtefactRepository
 
+import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
 class SlugInfoService @Inject()(
-  slugInfoRepository                 : SlugInfoRepository,
-  slugVersionRepository              : SlugVersionRepository,
-  jdkVersionRepository               : JdkVersionRepository,
-  sbtVersionRepository               : SbtVersionRepository,
-  deploymentRepository               : DeploymentRepository,
-  teamsAndRepositoriesConnector      : TeamsAndRepositoriesConnector,
-  derivedDeployedDependencyRepository: DerivedDeployedDependencyRepository,
-  derivedLatestDependencyRepository  : DerivedLatestDependencyRepository,
-  derivedGroupArtefactRepository     : DerivedGroupArtefactRepository,
+  slugInfoRepository            : SlugInfoRepository,
+  slugVersionRepository         : SlugVersionRepository,
+  jdkVersionRepository          : JdkVersionRepository,
+  sbtVersionRepository          : SbtVersionRepository,
+  deploymentRepository          : DeploymentRepository,
+  teamsAndRepositoriesConnector : TeamsAndRepositoriesConnector,
+  derivedGroupArtefactRepository: DerivedGroupArtefactRepository,
 )(using ec: ExecutionContext
 ) extends Logging:
 
@@ -65,40 +63,23 @@ class SlugInfoService @Inject()(
   def getSlugInfo(name: String, version: Version): Future[Option[SlugInfo]] =
     slugInfoRepository.getSlugInfo(name, version)
 
-  def findServicesWithDependency(
-      flag        : SlugInfoFlag
-    , group       : String
-    , artefact    : String
-    , versionRange: BobbyVersionRange
-    , scopes      : Option[List[DependencyScope]]
-    )(using hc: HeaderCarrier): Future[Seq[MetaArtefactDependency]] =
-      for
-        allTeams <- teamsAndRepositoriesConnector.getTeamsForServices()
-        services <- flag match
-                      case SlugInfoFlag.Latest => derivedLatestDependencyRepository.find(group = Some(group), artefact = Some(artefact), scopes = scopes, repoType = Some(List(RepoType.Service)))
-                      case _                   => derivedDeployedDependencyRepository.findWithDeploymentLookup(group = Some(group), artefact = Some(artefact), scopes = scopes, flag     = flag)
-        results  =  services
-                      .filter(s => versionRange.includes(s.depVersion))
-                      .map(r => r.copy(teams = allTeams.getTeams(r.repoName).toList.sorted))
-      yield results
-
   def findGroupsArtefacts(): Future[Seq[GroupArtefacts]] =
     derivedGroupArtefactRepository.findGroupsArtefacts()
 
   def findJDKVersions(teamName: Option[String], flag: SlugInfoFlag)(using hc: HeaderCarrier): Future[Seq[JDKVersion]] =
     teamName match
-      case Some(n) =>
+      case Some(_) =>
                       for
-                        team <- teamsAndRepositoriesConnector.getTeam(n)
-                        xs   <- jdkVersionRepository.findJDKUsage(flag)
-                      yield xs.filter(x => team.services.contains(x.name))
+                        repos <- teamsAndRepositoriesConnector.getAllRepositories(archived = Some(false), teamName = teamName)
+                        xs    <- jdkVersionRepository.findJDKUsage(flag)
+                      yield xs.filter(x => repos.exists(_.name == x.name))
       case None    => jdkVersionRepository.findJDKUsage(flag)
 
   def findSBTVersions(teamName: Option[String], flag: SlugInfoFlag)(using hc: HeaderCarrier): Future[Seq[SBTVersion]] =
     teamName match
       case Some(n) =>
                       for
-                        team <- teamsAndRepositoriesConnector.getTeam(n)
-                        xs   <- sbtVersionRepository.findSBTUsage(flag)
-                      yield xs.filter(x => team.services.contains(x.serviceName))
+                        repos <- teamsAndRepositoriesConnector.getAllRepositories(archived = Some(false), teamName = teamName)
+                        xs    <- sbtVersionRepository.findSBTUsage(flag)
+                      yield xs.filter(x => repos.exists(_.name == x.serviceName))
       case None    => sbtVersionRepository.findSBTUsage(flag)

@@ -66,39 +66,18 @@ class ServiceDependenciesController @Inject()(
     repoType    : Option[List[RepoType]],
     versionRange: Option[BobbyVersionRange],
     scope       : Option[List[DependencyScope]]
-  ): Action[AnyContent] = Action.async { implicit request =>
-    given Writes[MetaArtefactDependency] = MetaArtefactDependency.apiWrites
-    for
-      allTeams     <- teamsAndRepositoriesConnector.getTeamsForServices()
-      dependencies <- flag match
-                        case SlugInfoFlag.Latest => derivedLatestDependencyRepository.find(group = Some(group), artefact = Some(artefact), scopes = scope, repoType = repoType)
-                        case _                   => derivedDeployedDependencyRepository.findWithDeploymentLookup(group = Some(group), artefact = Some(artefact), scopes = scope, flag = flag)
-      result       =  versionRange
-                        .map(range => dependencies.filter(s => range.includes(s.depVersion))).getOrElse(dependencies)
-                        .map(repo => repo.copy(teams = allTeams.getTeams(repo.repoName).toList.sorted))
-    yield Ok(Json.toJson(result))
-  }
-
-  def getServicesWithDependency(
-    flag        : String,
-    group       : String,
-    artefact    : String,
-    versionRange: String,
-    scope       : Option[List[String]]
   ): Action[AnyContent] =
     Action.async { implicit request =>
       given Writes[MetaArtefactDependency] = MetaArtefactDependency.apiWrites
-      (for
-         f   <- EitherT.fromOption[Future](SlugInfoFlag.parse(flag), BadRequest(s"invalid flag '$flag'"))
-         sc  <- scope.fold(EitherT.pure[Future, Result](Option.empty[List[DependencyScope]])):
-                  _.traverse(s => EitherT.fromEither[Future](DependencyScope.parse(s)).leftMap(BadRequest(_)))
-                    .map(Some.apply)
-         vr  <- EitherT.fromOption[Future](BobbyVersionRange.parse(versionRange), BadRequest(s"invalid versionRange '$versionRange'"))
-         res <- EitherT.right[Result]:
-                  slugInfoService
-                    .findServicesWithDependency(f, group, artefact, vr, sc)
-       yield Ok(Json.toJson(res))
-      ).merge
+      for
+        teamReposMap <- teamsAndRepositoriesConnector.cachedTeamToReposMap()
+        dependencies <- flag match
+                          case SlugInfoFlag.Latest => derivedLatestDependencyRepository.find(group = Some(group), artefact = Some(artefact), scopes = scope, repoType = repoType)
+                          case _                   => derivedDeployedDependencyRepository.findWithDeploymentLookup(group = Some(group), artefact = Some(artefact), scopes = scope, flag = flag)
+        results      =  versionRange
+                          .map(range => dependencies.filter(s => range.includes(s.depVersion))).getOrElse(dependencies)
+                          .map(repo => repo.copy(teams = teamReposMap.get(repo.repoName).toList.flatten.sorted))
+      yield Ok(Json.toJson(results))
     }
 
   def getGroupArtefacts: Action[AnyContent] =
@@ -168,17 +147,16 @@ class ServiceDependenciesController @Inject()(
       ).merge
 
   def findSBTForEnvironment(team: Option[String], flag: String): Action[AnyContent] =
-    Action.async { implicit request =>
+    Action.async: request =>
+      given Request[AnyContent] = request
       (for
          f   <- EitherT.fromOption[Future](SlugInfoFlag.parse(flag), BadRequest(s"invalid flag '$flag'"))
-         res <- EitherT.liftF[Future, Result, Seq[SBTVersion]](
+         res <- EitherT.liftF[Future, Result, Seq[SBTVersion]]:
                   slugInfoService.findSBTVersions(team, f)
-                )
        yield
          given Writes[SBTVersion] = SBTVersionFormats.sbtVersionFormat
          Ok(Json.toJson(res))
       ).merge
-    }
 
   def repositoryName(group: String, artefact: String, version: String): Action[AnyContent] =
     Action.async:

@@ -26,7 +26,7 @@ import uk.gov.hmrc.servicedependencies.config.ServiceDependenciesConfig
 import uk.gov.hmrc.servicedependencies.config.model.{DependencyConfig, CuratedDependencyConfig}
 import uk.gov.hmrc.servicedependencies.connector.{ServiceConfigsConnector, TeamsAndRepositoriesConnector}
 import uk.gov.hmrc.servicedependencies.controller.model.Dependency
-import uk.gov.hmrc.servicedependencies.model.{BobbyRules, DependencyScope, Team, Version}
+import uk.gov.hmrc.servicedependencies.model.{BobbyRules, DependencyScope, RepoType, Version}
 import uk.gov.hmrc.servicedependencies.persistence.{LatestVersionRepository, MetaArtefactRepository, SlugInfoRepository, TestSlugInfos}
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -59,19 +59,19 @@ class TeamDependencyServiceSpec
     "return dependencies for all projects belonging to team" in {
       given HeaderCarrier = HeaderCarrier()
 
-      val team = Team("foo", Map("Service" -> Seq("my-slug")))
-
-      when(mockTeamsAndReposConnector.getTeam("foo"))
-        .thenReturn(Future.successful(team))
+      when(mockTeamsAndReposConnector.getAllRepositories(archived = Some(false), teamName = Some("foo")))
+        .thenReturn(Future.successful(Seq(TeamsAndRepositoriesConnector.Repository(
+          name       = "my-slug"
+        , teamNames  = Seq("foo")
+        , repoType   = RepoType.Service
+        , isArchived = false
+        ))))
 
       when(mockServiceConfigsConnector.getBobbyRules())
         .thenReturn(Future.successful(BobbyRules(Map.empty)))
 
       when(mockLatestVersionRepository.getAllEntries())
         .thenReturn(Future.successful(Seq()))
-
-      when(mockMetaArtefactRepository.find("my-slug"))
-        .thenReturn(Future.successful(None))
 
       val metaArtefact = TestSlugInfos.metaArtefact.copy(modules = TestSlugInfos.metaArtefact.modules.map(_.copy(dependencyDotCompile = Some(scala.io.Source.fromResource("graphs/dependencies-compile.dot").mkString))))
 

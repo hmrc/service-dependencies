@@ -26,8 +26,7 @@ import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.servicedependencies.connector.TeamsAndRepositoriesConnector
 import uk.gov.hmrc.servicedependencies.model._
 import uk.gov.hmrc.servicedependencies.persistence.{DeploymentRepository, JdkVersionRepository, SbtVersionRepository, SlugInfoRepository, SlugVersionRepository}
-import uk.gov.hmrc.servicedependencies.persistence.derived.{DerivedGroupArtefactRepository, DerivedDeployedDependencyRepository}
-import uk.gov.hmrc.servicedependencies.persistence.derived.DerivedLatestDependencyRepository
+import uk.gov.hmrc.servicedependencies.persistence.derived.DerivedGroupArtefactRepository
 
 import java.time.Instant
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -63,42 +62,6 @@ class SlugInfoServiceSpec
 
   val v200 = v100.copy(depVersion = Version("2.0.0"))
   val v205 = v100.copy(depVersion = Version("2.0.5"))
-
-  "SlugInfoService.findServicesWithDependency" should {
-    "filter results by version" in {
-      val boot = Boot.init
-
-      when(boot.mockedDerivedDeployedDependencyRepository.findWithDeploymentLookup(SlugInfoFlag.QA, group = Some(group), artefact = Some(artefact), scopes = Some(List(scope))))
-        .thenReturn(Future(Seq(v100, v200, v205)))
-
-      when(boot.mockedTeamsAndRepositoriesConnector.getTeamsForServices())
-        .thenReturn(Future(TeamsAndRepositoriesConnector.TeamsForServices(Map.empty)))
-
-      boot.service.findServicesWithDependency(SlugInfoFlag.QA, group, artefact, BobbyVersionRange("[1.0.1,)"), Some(List(scope)))
-        .futureValue shouldBe Seq(v200, v205)
-      boot.service.findServicesWithDependency(SlugInfoFlag.QA, group, artefact, BobbyVersionRange("(,1.0.1]"), Some(List(scope)))
-        .futureValue shouldBe Seq(v100)
-      boot.service.findServicesWithDependency(SlugInfoFlag.QA, group, artefact, BobbyVersionRange("[2.0.0]"), Some(List(scope)))
-        .futureValue shouldBe Seq(v200)
-    }
-
-    "treat non-parseable versions as 0.0.0" in {
-      val boot = Boot.init
-
-      val bad = v100.copy(depVersion = Version("r938"))
-
-      when(boot.mockedDerivedDeployedDependencyRepository.findWithDeploymentLookup(SlugInfoFlag.QA, group = Some(group), artefact = Some(artefact), scopes = Some(List(scope))))
-        .thenReturn(Future(Seq(v100, v200, v205, bad)))
-
-      when(boot.mockedTeamsAndRepositoriesConnector.getTeamsForServices())
-        .thenReturn(Future(TeamsAndRepositoriesConnector.TeamsForServices(Map.empty)))
-
-      boot.service.findServicesWithDependency(SlugInfoFlag.QA, group, artefact, BobbyVersionRange("[1.0.1,)"), Some(List(scope)))
-        .futureValue shouldBe Seq(v200, v205)
-      boot.service.findServicesWithDependency(SlugInfoFlag.QA, group, artefact, BobbyVersionRange("(,1.0.1]"), Some(List(scope)))
-        .futureValue shouldBe Seq(v100, bad)
-    }
-  }
 
   "SlugInfoService.getSlugInfo" should {
     "support retrieval of a SlugInfo by flag" in new GetSlugInfoFixture {
@@ -199,21 +162,18 @@ class SlugInfoServiceSpec
   , mockedDeploymentRepository               : DeploymentRepository
   , mockedTeamsAndRepositoriesConnector      : TeamsAndRepositoriesConnector
   , service                                  : SlugInfoService
-  , mockedDerivedDeployedDependencyRepository: DerivedDeployedDependencyRepository
   , mockedDerivedGroupArtefactRepository     : DerivedGroupArtefactRepository
   )
 
   object Boot {
     def init: Boot = {
-      val mockedSlugInfoRepository                  = mock[SlugInfoRepository]
-      val mockedSlugVersionRepository               = mock[SlugVersionRepository]
-      val mockedJdkVersionRepository                = mock[JdkVersionRepository]
-      val mockedSbtVersionRepository                = mock[SbtVersionRepository]
-      val mockedDeploymentRepository                = mock[DeploymentRepository]
-      val mockedTeamsAndRepositoriesConnector       = mock[TeamsAndRepositoriesConnector]
-      val mockedDerivedDeployedDependencyRepository = mock[DerivedDeployedDependencyRepository]
-      val mockedDerivedLatestDependencyRepository   = mock[DerivedLatestDependencyRepository]
-      val mockedDerivedGroupArtefactRepository      = mock[DerivedGroupArtefactRepository]
+      val mockedSlugInfoRepository             = mock[SlugInfoRepository]
+      val mockedSlugVersionRepository          = mock[SlugVersionRepository]
+      val mockedJdkVersionRepository           = mock[JdkVersionRepository]
+      val mockedSbtVersionRepository           = mock[SbtVersionRepository]
+      val mockedDeploymentRepository           = mock[DeploymentRepository]
+      val mockedTeamsAndRepositoriesConnector  = mock[TeamsAndRepositoriesConnector]
+      val mockedDerivedGroupArtefactRepository = mock[DerivedGroupArtefactRepository]
 
       val service = SlugInfoService(
             mockedSlugInfoRepository
@@ -222,8 +182,6 @@ class SlugInfoServiceSpec
           , mockedSbtVersionRepository
           , mockedDeploymentRepository
           , mockedTeamsAndRepositoriesConnector
-          , mockedDerivedDeployedDependencyRepository
-          , mockedDerivedLatestDependencyRepository
           , mockedDerivedGroupArtefactRepository
           )
       Boot(
@@ -234,7 +192,6 @@ class SlugInfoServiceSpec
         , mockedDeploymentRepository
         , mockedTeamsAndRepositoriesConnector
         , service
-        , mockedDerivedDeployedDependencyRepository
         , mockedDerivedGroupArtefactRepository
         )
     }

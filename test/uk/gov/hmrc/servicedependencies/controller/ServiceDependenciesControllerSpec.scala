@@ -114,9 +114,9 @@ class ServiceDependenciesControllerSpec
     "get slug info for services when flag is not Latest and set teams" in {
       val boot = Boot.init
 
-      when(boot.mockTeamsAndRepositories.getTeamsForServices()(using any[HeaderCarrier]))
+      when(boot.mockTeamsAndRepositories.cachedTeamToReposMap()(using any[HeaderCarrier]))
         .thenReturn(
-          Future.successful(TeamsAndRepositoriesConnector.TeamsForServices(Map("repo-name" -> Seq("team-name"))))
+          Future.successful(Map("repo-name" -> Seq("team-name")))
         )
 
       when(boot.mockDerivedDeployedDependencyRepository.findWithDeploymentLookup(any(), any(), any(), any(), any(), any()))
@@ -151,9 +151,9 @@ class ServiceDependenciesControllerSpec
     "get slug info for services when flag is not Latest, filter by range and set teams" in {
       val boot = Boot.init
 
-      when(boot.mockTeamsAndRepositories.getTeamsForServices()(using any[HeaderCarrier]))
+      when(boot.mockTeamsAndRepositories.cachedTeamToReposMap()(using any[HeaderCarrier]))
         .thenReturn(
-          Future.successful(TeamsAndRepositoriesConnector.TeamsForServices(Map("repo-name" -> Seq("team-name"))))
+          Future.successful(Map("repo-name" -> Seq("team-name")))
         )
 
       when(boot.mockDerivedDeployedDependencyRepository.findWithDeploymentLookup(any(), any(), any(), any(), any(), any()))
@@ -187,9 +187,9 @@ class ServiceDependenciesControllerSpec
     "get artefact dependencies when flag is Latest and set teams" in {
       val boot = Boot.init
 
-      when(boot.mockTeamsAndRepositories.getTeamsForServices()(using any[HeaderCarrier]))
+      when(boot.mockTeamsAndRepositories.cachedTeamToReposMap()(using any[HeaderCarrier]))
         .thenReturn(
-          Future.successful(TeamsAndRepositoriesConnector.TeamsForServices(Map("repo-name" -> Seq("team-name"))))
+          Future.successful(Map("repo-name" -> Seq("team-name")))
         )
 
       when(boot.mockDerivedLatestDependencyRepository.find(any(), any(), any(), any(), any(), any()))
@@ -224,9 +224,9 @@ class ServiceDependenciesControllerSpec
     "get artefact dependencies when flag is Latest, filter by range and set teams" in {
       val boot = Boot.init
 
-      when(boot.mockTeamsAndRepositories.getTeamsForServices()(using any[HeaderCarrier]))
+      when(boot.mockTeamsAndRepositories.cachedTeamToReposMap()(using any[HeaderCarrier]))
         .thenReturn(
-          Future.successful(TeamsAndRepositoriesConnector.TeamsForServices(Map("repo-name" -> Seq("team-name"))))
+          Future.successful(Map("repo-name" -> Seq("team-name")))
         )
 
       when(boot.mockDerivedLatestDependencyRepository.find(any(), any(), any(), any(), any(), any()))
