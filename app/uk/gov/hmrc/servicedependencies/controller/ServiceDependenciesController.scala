@@ -97,7 +97,10 @@ class ServiceDependenciesController @Inject()(
                             , NotFound("")
                             )
          optMetaArtefact <- EitherT.right[Result](metaArtefactRepository.find(name, slugInfo.version))
-         optModule       =  optMetaArtefact.flatMap(_.modules.headOption)
+         optModule       =  optMetaArtefact.flatMap: meta =>
+                              meta
+                                .modules.find(_.name == name)     // Selecting the first one could be the 'it' module
+                                .orElse(meta.modules.headOption)  // Fallback to encase module does not match service name (Java)
          slugInfoExtra   =  SlugInfoExtra(
            uri                   = slugInfo.uri
          , created               = slugInfo.created
