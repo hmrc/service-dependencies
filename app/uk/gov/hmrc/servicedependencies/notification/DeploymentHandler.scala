@@ -100,14 +100,6 @@ object DeploymentHandler:
     ~ (__ \ "environment"         ).read[SlugInfoFlag](readsSlugInfo)
     ~ (__ \ "microservice"        ).read[String]
     ~ (__ \ "microservice_version").read[Version](Version.format)
-    ~ (__ \ "stack_id"            ).read[String]
+    ~ (__ \ "deployment_id"       ).read[String]
     ~ (__ \ "event_date_time"     ).read[Instant]
-    ){
-      (eventType, environment, serviceName, version, deploymentId, time) =>
-        val uniqueDeploymentId =
-          if deploymentId.startsWith("arn") then
-            s"gen-${serviceName}-${environment.asString}-${time.toEpochMilli}"
-          else
-            deploymentId
-        DeploymentEvent(eventType, environment, serviceName, version, uniqueDeploymentId, time)
-    }
+    )(DeploymentEvent.apply)
