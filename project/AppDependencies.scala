@@ -12,7 +12,7 @@ private object AppDependencies {
     caffeine,
     "uk.gov.hmrc"            %% "bootstrap-backend-play-30" % bootstrapPlayVersion,
     "uk.gov.hmrc.mongo"      %% "hmrc-mongo-play-30"        % hmrcMongoVersion,
-    "org.typelevel"          %% "cats-core"                 % "2.10.0",
+    "org.typelevel"          %% "cats-core"                 % "2.12.0",
     "org.apache.commons"     %  "commons-compress"          % "1.20",
     "software.amazon.awssdk" %  "sqs"                       % "2.27.3"
   )
