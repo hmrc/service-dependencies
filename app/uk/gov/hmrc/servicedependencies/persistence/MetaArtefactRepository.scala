@@ -40,6 +40,7 @@ class MetaArtefactRepository @Inject()(
   indexes        = Seq(
                      IndexModel(Indexes.ascending("name", "version"), IndexOptions().unique(true)),
                      IndexModel(Indexes.compoundIndex(Indexes.ascending("name"), Indexes.hashed("latest"))),
+                     IndexModel(Indexes.ascending("name"), IndexOptions().unique(true).partialFilterExpression(Filters.equal("latest", true))),
                      IndexModel(Indexes.hashed("latest"))
                    ),
   replaceIndexes = true
@@ -62,7 +63,7 @@ class MetaArtefactRepository @Inject()(
                                       Filters.equal("name"   , meta.name)
                                     , Filters.equal("version", meta.version.toString)
                                     )
-                  , replacement   = meta
+                  , replacement   = meta.copy(latest = false) // this will be set appropriately next
                   , options       = ReplaceOptions().upsert(true)
                   )
                   .toFuture()
