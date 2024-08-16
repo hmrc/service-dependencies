@@ -25,15 +25,15 @@ import org.scalatest.wordspec.AnyWordSpec
 import org.scalatestplus.mockito.MockitoSugar
 import play.api.libs.json.{Json, Writes}
 import play.api.test.FakeRequest
-import play.api.test.Helpers._
+import play.api.test.Helpers.*
 import uk.gov.hmrc.http.HeaderCarrier
-import uk.gov.hmrc.servicedependencies.connector.{ServiceConfigsConnector, TeamsAndRepositoriesConnector}
+import uk.gov.hmrc.servicedependencies.connector.{ServiceConfigsConnector, TeamsAndRepositoriesConnector, VulnerabilitiesConnector}
 import uk.gov.hmrc.servicedependencies.model.RepoType.Service
 import uk.gov.hmrc.servicedependencies.model.SlugInfoFlag.{Development, Latest}
-import uk.gov.hmrc.servicedependencies.model._
-import uk.gov.hmrc.servicedependencies.persistence.derived.{DerivedDeployedDependencyRepository, DerivedModuleRepository, DerivedLatestDependencyRepository}
+import uk.gov.hmrc.servicedependencies.model.*
+import uk.gov.hmrc.servicedependencies.persistence.derived.{DerivedDeployedDependencyRepository, DerivedLatestDependencyRepository, DerivedModuleRepository}
 import uk.gov.hmrc.servicedependencies.persistence.{LatestVersionRepository, MetaArtefactRepository}
-import uk.gov.hmrc.servicedependencies.service._
+import uk.gov.hmrc.servicedependencies.service.*
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
@@ -285,6 +285,7 @@ class ServiceDependenciesControllerSpec
       val mockDerivedDeployedDependencyRepository = mock[DerivedDeployedDependencyRepository]
       val mockDerivedLatestDependencyRepository   = mock[DerivedLatestDependencyRepository]
       val mockTeamsAndRepositoryConnector         = mock[TeamsAndRepositoriesConnector]
+      val mockVulnerabilitiesConnector            = mock[VulnerabilitiesConnector]
       val controller = ServiceDependenciesController(
         mockSlugInfoService,
         mockCuratedLibrariesService,
@@ -296,6 +297,7 @@ class ServiceDependenciesControllerSpec
         mockDerivedLatestDependencyRepository,
         mockDerivedModuleRepository,
         mockTeamsAndRepositoryConnector,
+        mockVulnerabilitiesConnector,
         stubControllerComponents()
       )
       Boot(

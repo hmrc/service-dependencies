@@ -18,9 +18,10 @@ package uk.gov.hmrc.servicedependencies.service
 
 import uk.gov.hmrc.servicedependencies.config.ServiceDependenciesConfig
 import uk.gov.hmrc.servicedependencies.config.model.CuratedDependencyConfig
+import uk.gov.hmrc.servicedependencies.connector.DistinctVulnerability
 import uk.gov.hmrc.servicedependencies.controller.model.{Dependency, ImportedBy}
 import uk.gov.hmrc.servicedependencies.util.DependencyGraphParser
-import uk.gov.hmrc.servicedependencies.model._
+import uk.gov.hmrc.servicedependencies.model.*
 
 import javax.inject.{Inject, Singleton}
 
@@ -33,12 +34,13 @@ class CuratedLibrariesService @Inject()(
     serviceDependenciesConfig.curatedDependencyConfig
 
   def fromGraph(
-    dotFile       : String,
-    rootName      : String,
-    latestVersions: Seq[LatestVersion],
-    bobbyRules    : BobbyRules,
-    scope         : DependencyScope,
-    subModuleNames: Seq[String]
+    dotFile        : String,
+    rootName       : String,
+    latestVersions : Seq[LatestVersion],
+    bobbyRules     : BobbyRules,
+    scope          : DependencyScope,
+    subModuleNames : Seq[String],
+    vulnerabilities: Seq[DistinctVulnerability]
   ): List[Dependency] =
     val graph = DependencyGraphParser.parse(dotFile)
     val dependencies = graph
@@ -60,7 +62,11 @@ class CuratedLibrariesService @Inject()(
                                   , version = Version(graphDependency.version)
                                   ).filterNot(
                                     _.exemptProjects.contains(rootName)
-                                  )
+                                  ),
+          vulnerabilities       = vulnerabilities.filter { v =>
+                                    (v.strippedVulnerableComponentName == (graphDependency.group + ":" + graphDependency.artefact))
+                                      && v.vulnerableComponentVersion == graphDependency.version
+                                  }.map(_.id)
           , importBy            = graph.anyPathToRoot(graphDependency)
                                     .dropRight(if (scope == DependencyScope.It && subModuleNames.nonEmpty) 2 else 1) // drop root node as its just the service jar itself
                                     .lastOption.map(n => ImportedBy(n.artefact, n.group, Version(n.version))) // the top level dep that imported it
@@ -69,12 +75,39 @@ class CuratedLibrariesService @Inject()(
         )
       }.toList
 
-    val parentDepsOfViolations  = dependencies.filter(d => d.importBy.nonEmpty && d.bobbyRuleViolations.nonEmpty).flatMap(_.importBy).toSet
+    val parentDepsOfViolations  = dependencies.filter:d =>
+        d.importBy.nonEmpty
+        && d.bobbyRuleViolations.nonEmpty
+        && vulnerabilities.exists { v =>
+          (v.strippedVulnerableComponentName == (d.group + ":" + d.name))
+            && v.vulnerableComponentVersion == d.currentVersion.original
+        }
+      .flatMap(_.importBy).toSet
 
-    dependencies.filter: dependency =>
+    val dependenciesToReturn = dependencies.filter: dependency =>
       (dependency.importBy.isEmpty && (
         dependency.group.startsWith("uk.gov.hmrc") ||
         curatedDependencyConfig.allDependencies.exists(d => d.group == dependency.group && d.name == dependency.name)
       ))                                                                                                           // any directly imported HMRC or curated dependency
         || dependency.bobbyRuleViolations.nonEmpty                                                                   // or any dependency with a bobby rule violation
         || parentDepsOfViolations.contains(ImportedBy(dependency.name, dependency.group, dependency.currentVersion)) // or the parent that imported the violation
+        || vulnerabilities.exists { v =>
+             (v.strippedVulnerableComponentName == (dependency.group + ":" + dependency.name))
+             && v.vulnerableComponentVersion == dependency.currentVersion.original
+            }
+
+    val unreferencedVulnerableDependencies = vulnerabilities.filterNot(v => v.dependencyType == "gav" || dependenciesToReturn.exists(d => (d.group + ":" + d.name) == v.strippedVulnerableComponentName))
+      .map(v=>
+        Dependency(
+          name                = v.strippedVulnerableComponentName.split(":").head
+        , group               = v.dependencyType + "://" + v.strippedVulnerableComponentName.split(":").last
+        , currentVersion      = Version(v.vulnerableComponentVersion)
+        , latestVersion       = None
+        , bobbyRuleViolations = List.empty
+        , vulnerabilities     = Seq(v.id)
+        , importBy            = None
+        , scope               = scope
+        )
+      )
+
+      {dependenciesToReturn ++ unreferencedVulnerableDependencies}.sortBy(d => (d.group.contains("://"), d.scope.asString + d.group + d.name))
