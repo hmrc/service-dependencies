@@ -1,0 +1,16 @@
+[
+  {
+    "distinctVulnerability": {
+      "vulnerableComponentName": "A",
+      "vulnerableComponentVersion": "1.0",
+      "id": "CVE-1"
+    }
+  },
+  {
+    "distinctVulnerability": {
+      "vulnerableComponentName": "A",
+      "vulnerableComponentVersion": "1.0",
+      "id": "CVE-2"
+    }
+  }
+]

@@ -84,12 +84,13 @@ class TeamDependencyService @Inject()(
   ): Dependencies =
     def toDependencies(name: String, scope: DependencyScope, dotFile: String) =
       curatedLibrariesService.fromGraph(
-        dotFile        = dotFile,
-        rootName       = name,
-        latestVersions = latestVersions,
-        bobbyRules     = bobbyRules,
-        scope          = scope,
-        subModuleNames = metaArtefact.subModuleNames
+        dotFile         = dotFile,
+        rootName        = name,
+        latestVersions  = latestVersions,
+        bobbyRules      = bobbyRules,
+        scope           = scope,
+        subModuleNames  = metaArtefact.subModuleNames,
+        vulnerabilities = Seq.empty
       )
     Dependencies(
       repositoryName         = metaArtefact.name,

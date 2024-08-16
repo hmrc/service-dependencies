@@ -16,8 +16,9 @@
 
 package uk.gov.hmrc.servicedependencies.controller.model
 
-import play.api.libs.functional.syntax._
-import play.api.libs.json.{Writes, __}
+import play.api.libs.functional.syntax.*
+import play.api.libs.json.{Format, Writes, __}
+import uk.gov.hmrc.servicedependencies.connector.DistinctVulnerability
 import uk.gov.hmrc.servicedependencies.model.{DependencyScope, Version}
 
 
@@ -27,18 +28,19 @@ case class Dependency(
 , currentVersion     : Version
 , latestVersion      : Option[Version]
 , bobbyRuleViolations: List[DependencyBobbyRule]
+, vulnerabilities    : Seq[String]
 , importBy           : Option[ImportedBy]      = None
 , scope              : DependencyScope
 )
 
 object Dependency:
-
   val writes: Writes[Dependency] =
     ( (__ \ "name"               ).write[String]
     ~ (__ \ "group"              ).write[String]
     ~ (__ \ "currentVersion"     ).write[Version](Version.legacyApiWrites)
     ~ (__ \ "latestVersion"      ).writeNullable[Version](Version.legacyApiWrites)
     ~ (__ \ "bobbyRuleViolations").lazyWrite(Writes.seq[DependencyBobbyRule](DependencyBobbyRule.writes))
+    ~ (__ \ "vulnerabilities"    ).lazyWrite(Writes.seq[String])
     ~ (__ \ "importBy"           ).writeNullable[ImportedBy](ImportedBy.writes)
     ~ (__ \ "scope"              ).write[DependencyScope](DependencyScope.dependencyScopeFormat)
     )(d => Tuple.fromProductTyped(d))

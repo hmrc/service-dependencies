@@ -17,21 +17,23 @@
 package uk.gov.hmrc.servicedependencies.controller
 
 import cats.data.EitherT
-import cats.implicits._
+import cats.implicits.*
 import com.google.inject.{Inject, Singleton}
-import play.api.libs.functional.syntax._
-import play.api.libs.json._
-import play.api.mvc._
+import play.api.libs.functional.syntax.*
+import play.api.libs.json.*
+import play.api.mvc.*
+import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
-import uk.gov.hmrc.servicedependencies.connector.{ServiceConfigsConnector, TeamsAndRepositoriesConnector}
+import uk.gov.hmrc.servicedependencies.connector.{DistinctVulnerability, ServiceConfigsConnector, TeamsAndRepositoriesConnector, VulnerabilitiesConnector}
 import uk.gov.hmrc.servicedependencies.controller.model.{Dependencies, Dependency, DependencyBobbyRule}
-import uk.gov.hmrc.servicedependencies.model._
+import uk.gov.hmrc.servicedependencies.model.*
 import uk.gov.hmrc.servicedependencies.persistence.derived.{DerivedDeployedDependencyRepository, DerivedLatestDependencyRepository, DerivedModuleRepository}
 import uk.gov.hmrc.servicedependencies.persistence.{LatestVersionRepository, MetaArtefactRepository}
 import uk.gov.hmrc.servicedependencies.service.{CuratedLibrariesService, SlugInfoService, TeamDependencyService}
 
 import java.time.LocalDate
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.{Await, ExecutionContext, Future}
+import scala.concurrent.duration.*
 
 @Singleton
 class ServiceDependenciesController @Inject()(
@@ -45,9 +47,10 @@ class ServiceDependenciesController @Inject()(
 , derivedLatestDependencyRepository  : DerivedLatestDependencyRepository
 , derivedModuleRepository            : DerivedModuleRepository
 , teamsAndRepositoriesConnector      : TeamsAndRepositoriesConnector
+, vulnerabilitiesConnector           : VulnerabilitiesConnector
 , cc                                 : ControllerComponents
 )(using
-  ec                     : ExecutionContext
+  ec : ExecutionContext
 ) extends BackendController(cc):
 
   given Writes[Dependencies] = Dependencies.writes
@@ -169,26 +172,28 @@ class ServiceDependenciesController @Inject()(
   def moduleDependencies(repositoryName: String, versionOption: Option[String]): Action[AnyContent] =
     Action.async:
       for
-        latestVersions <- latestVersionRepository.getAllEntries()
-        bobbyRules     <- serviceConfigsConnector.getBobbyRules()
-        metaArtefacts  <- versionOption match
-                            case Some(version) if version == "latest" => metaArtefactRepository.find(repositoryName).map(_.toSeq)
-                            case Some(version)                        => metaArtefactRepository.find(repositoryName, Version(version)).map(_.toSeq)
-                            case None                                 => metaArtefactRepository.findAllVersions(repositoryName)
-        repositories   =  metaArtefacts.map(toRepository(_, latestVersions, bobbyRules))
+        latestVersions  <- latestVersionRepository.getAllEntries()
+        bobbyRules      <- serviceConfigsConnector.getBobbyRules()
+        vulnerabilities <- vulnerabilitiesConnector.vulnerabilitySummaries(serviceName = Some(repositoryName)) //TODO lookup reponame for serviceName
+        metaArtefacts   <- versionOption match
+                             case Some(version) if version == "latest" => metaArtefactRepository.find(repositoryName).map(_.toSeq)
+                             case Some(version)                        => metaArtefactRepository.find(repositoryName, Version(version)).map(_.toSeq)
+                             case None                                 => metaArtefactRepository.findAllVersions(repositoryName)
+        repositories    =  metaArtefacts.map(toRepository(_, latestVersions, bobbyRules, vulnerabilities))
       yield
         given Writes[Repository] = Repository.writes
         Ok(Json.toJson(repositories))
 
-  private def toRepository(meta: MetaArtefact, latestVersions: Seq[LatestVersion], bobbyRules: BobbyRules) =
+  private def toRepository(meta: MetaArtefact, latestVersions: Seq[LatestVersion], bobbyRules: BobbyRules, vulnerabilities: Seq[DistinctVulnerability]) =
     def toDependencies(name: String, scope: DependencyScope, dotFile: String) =
       curatedLibrariesService.fromGraph(
-        dotFile        = dotFile,
-        rootName       = name,
-        latestVersions = latestVersions,
-        bobbyRules     = bobbyRules,
-        scope          = scope,
-        subModuleNames = meta.subModuleNames
+        dotFile         = dotFile,
+        rootName        = name,
+        latestVersions  = latestVersions,
+        bobbyRules      = bobbyRules,
+        scope           = scope,
+        subModuleNames  = meta.subModuleNames,
+        vulnerabilities = vulnerabilities
       )
 
     val sbtVersion =
@@ -205,7 +210,7 @@ class ServiceDependenciesController @Inject()(
       version     : Version,
       scope       : DependencyScope
     ): Seq[Dependency] =
-      if dependencies.find(dep => dep.group == group && dep.name == artefact && dep.importBy.isEmpty).isEmpty
+      if !dependencies.exists(dep => dep.group == group && dep.name == artefact && dep.importBy.isEmpty)
       then
         Seq(Dependency(
           name                = artefact,
@@ -213,6 +218,7 @@ class ServiceDependenciesController @Inject()(
           currentVersion      = version,
           latestVersion       = latestVersions.find(d => d.name == artefact && d.group == group).map(_.version),
           bobbyRuleViolations = List.empty,
+          vulnerabilities     = Seq.empty,
           importBy            = None,
           scope               = scope
         ))
