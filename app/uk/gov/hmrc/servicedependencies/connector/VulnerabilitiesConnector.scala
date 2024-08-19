@@ -23,8 +23,8 @@ import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
 import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
 import play.api.libs.json.{JsResult, Reads, Writes, __}
-import uk.gov.hmrc.servicedependencies.model.Version
 import play.api.libs.functional.syntax.*
+import uk.gov.hmrc.servicedependencies.model.SlugInfoFlag
 
 @Singleton
 class VulnerabilitiesConnector @Inject()(
@@ -37,6 +37,8 @@ class VulnerabilitiesConnector @Inject()(
 
   def vulnerabilitySummaries(
     serviceName: Option[String] = None
+  , version    : Option[String] = None
+  , flag       : Option[String] = None
   )(using
     ec: ExecutionContext
   ): Future[Seq[DistinctVulnerability]] =
@@ -44,7 +46,7 @@ class VulnerabilitiesConnector @Inject()(
     given Reads[DistinctVulnerability] = DistinctVulnerability.reads
 
     httpClientV2
-      .get(url"$url/vulnerabilities/api/summaries?service=$serviceName&curationStatus=ACTION_REQUIRED")
+      .get(url"$url/vulnerabilities/api/summaries?service=$serviceName&version=$version&flag=$flag&curationStatus=ACTION_REQUIRED")
       .execute[Seq[DistinctVulnerability]]
       .map(_.filterNot(_.id.contains("VulnDB"))) //TODO investigate vulnDB and remove filter
 
