@@ -174,7 +174,10 @@ class ServiceDependenciesController @Inject()(
       for
         latestVersions  <- latestVersionRepository.getAllEntries()
         bobbyRules      <- serviceConfigsConnector.getBobbyRules()
-        vulnerabilities <- vulnerabilitiesConnector.vulnerabilitySummaries(serviceName = Some(repositoryName)) //TODO lookup reponame for serviceName
+        vulnerabilities <- versionOption match
+                             case Some(version) if version == "latest" => vulnerabilitiesConnector.vulnerabilitySummaries(serviceName = Some(repositoryName), flag = Some(SlugInfoFlag.Latest.asString))  //TODO lookup reponame for serviceName
+                             case Some(version)                        => vulnerabilitiesConnector.vulnerabilitySummaries(serviceName = Some(repositoryName), version = Some(version))
+                             case None                                 => Future.successful(Nil) // no vulnerabilities for libraries - services always pass in version
         metaArtefacts   <- versionOption match
                              case Some(version) if version == "latest" => metaArtefactRepository.find(repositoryName).map(_.toSeq)
                              case Some(version)                        => metaArtefactRepository.find(repositoryName, Version(version)).map(_.toSeq)

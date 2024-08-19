@@ -56,12 +56,14 @@ class VulnerabilitiesConnectorSpec
 
   "VulnerabilitiesConnector.getRepository" should {
     "correctly parse json response" in {
-      val serviceQuery = Some("Service_A")
+      val service = Some("Service_A")
+      val version = Some("1.0.0")
+      val flag = Some("latest")
       stubFor(
-        get(urlEqualTo(s"/vulnerabilities/api/summaries?service=${serviceQuery.getOrElse("")}&curationStatus=ACTION_REQUIRED"))
+        get(urlEqualTo(s"/vulnerabilities/api/summaries?service=${service.getOrElse("")}&version=${version.getOrElse("")}&flag=${flag.getOrElse("")}&curationStatus=ACTION_REQUIRED"))
           .willReturn(aResponse().withBodyFile("vulnerabilities/summaries.json"))
       )
-      val repository = connector.vulnerabilitySummaries(serviceQuery).futureValue shouldBe Seq(
+      val repository = connector.vulnerabilitySummaries(service, version, flag).futureValue shouldBe Seq(
         DistinctVulnerability(
           vulnerableComponentName = "A"
         , vulnerableComponentVersion = "1.0"
