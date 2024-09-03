@@ -22,7 +22,6 @@ import com.google.inject.{Inject, Singleton}
 import play.api.libs.functional.syntax.*
 import play.api.libs.json.*
 import play.api.mvc.*
-import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 import uk.gov.hmrc.servicedependencies.connector.{DistinctVulnerability, ServiceConfigsConnector, TeamsAndRepositoriesConnector, VulnerabilitiesConnector}
 import uk.gov.hmrc.servicedependencies.controller.model.{Dependencies, Dependency, DependencyBobbyRule}
@@ -32,8 +31,7 @@ import uk.gov.hmrc.servicedependencies.persistence.{LatestVersionRepository, Met
 import uk.gov.hmrc.servicedependencies.service.{CuratedLibrariesService, SlugInfoService, TeamDependencyService}
 
 import java.time.LocalDate
-import scala.concurrent.{Await, ExecutionContext, Future}
-import scala.concurrent.duration.*
+import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
 class ServiceDependenciesController @Inject()(

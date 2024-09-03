@@ -17,8 +17,7 @@
 package uk.gov.hmrc.servicedependencies.controller.model
 
 import play.api.libs.functional.syntax.*
-import play.api.libs.json.{Format, Writes, __}
-import uk.gov.hmrc.servicedependencies.connector.DistinctVulnerability
+import play.api.libs.json.{Writes, __}
 import uk.gov.hmrc.servicedependencies.model.{DependencyScope, Version}
 
 
