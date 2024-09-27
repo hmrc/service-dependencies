@@ -75,14 +75,18 @@ class CuratedLibrariesService @Inject()(
         )
       }.toList
 
-    val parentDepsOfViolations  = dependencies.filter:d =>
-        d.importBy.nonEmpty
-        && d.bobbyRuleViolations.nonEmpty
-        && vulnerabilities.exists { v =>
-          (v.strippedVulnerableComponentName == (d.group + ":" + d.name))
-            && v.vulnerableComponentVersion == d.currentVersion.original
-        }
-      .flatMap(_.importBy).toSet
+    val parentDepsOfViolations =
+      dependencies
+        .filter: d =>
+          d.importBy.nonEmpty
+            && (
+              d.bobbyRuleViolations.nonEmpty
+                || vulnerabilities.exists: v =>
+                  v.strippedVulnerableComponentName == (d.group + ":" + d.name)
+                    && v.vulnerableComponentVersion == d.currentVersion.original
+            )
+        .flatMap(_.importBy)
+        .toSet
 
     val dependenciesToReturn = dependencies.filter: dependency =>
       (dependency.importBy.isEmpty && (
