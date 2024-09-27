@@ -46,68 +46,74 @@ class CuratedLibrariesService @Inject()(
     val dependencies = graph
       .dependencies
       .filterNot(x => x.artefact == rootName || scope == DependencyScope.It && subModuleNames.contains(x.artefact)) // remove root or any submodules (for integration tests)
-      .map { graphDependency =>
-        val latestVersion = latestVersions
+      .map: graphDependency =>
+        val latestVersion =
+          latestVersions
             .find(v => v.group == graphDependency.group && v.name == graphDependency.artefact)
             .map(_.version)
 
         Dependency(
-            name                = graphDependency.artefact
-          , group               = graphDependency.group
-          , currentVersion      = Version(graphDependency.version)
-          , latestVersion       = latestVersion
-          , bobbyRuleViolations = bobbyRules.violationsFor(
-                                    group   = graphDependency.group
-                                  , name    = graphDependency.artefact
-                                  , version = Version(graphDependency.version)
-                                  ).filterNot(
-                                    _.exemptProjects.contains(rootName)
-                                  ),
-          vulnerabilities       = vulnerabilities.filter { v =>
-                                    (v.strippedVulnerableComponentName == (graphDependency.group + ":" + graphDependency.artefact))
+          name                = graphDependency.artefact
+        , group               = graphDependency.group
+        , currentVersion      = Version(graphDependency.version)
+        , latestVersion       = latestVersion
+        , bobbyRuleViolations = bobbyRules.violationsFor(
+                                  group   = graphDependency.group
+                                , name    = graphDependency.artefact
+                                , version = Version(graphDependency.version)
+                                ).filterNot:
+                                  _.exemptProjects.contains(rootName)
+        , vulnerabilities     = vulnerabilities
+                                  .filter: v =>
+                                    v.strippedVulnerableComponentName == (graphDependency.group + ":" + graphDependency.artefact)
                                       && v.vulnerableComponentVersion == graphDependency.version
-                                  }.map(_.id)
-          , importBy            = graph.anyPathToRoot(graphDependency)
-                                    .dropRight(if (scope == DependencyScope.It && subModuleNames.nonEmpty) 2 else 1) // drop root node as its just the service jar itself
-                                    .lastOption.map(n => ImportedBy(n.artefact, n.group, Version(n.version))) // the top level dep that imported it
-                                    .filterNot(d => d.name == graphDependency.artefact && d.group == graphDependency.group) // filter out non-transient deps
-          , scope               = scope
-        )
-      }.toList
-
-    val parentDepsOfViolations  = dependencies.filter:d =>
-        d.importBy.nonEmpty
-        && d.bobbyRuleViolations.nonEmpty
-        && vulnerabilities.exists { v =>
-          (v.strippedVulnerableComponentName == (d.group + ":" + d.name))
-            && v.vulnerableComponentVersion == d.currentVersion.original
-        }
-      .flatMap(_.importBy).toSet
-
-    val dependenciesToReturn = dependencies.filter: dependency =>
-      (dependency.importBy.isEmpty && (
-        dependency.group.startsWith("uk.gov.hmrc") ||
-        curatedDependencyConfig.allDependencies.exists(d => d.group == dependency.group && d.name == dependency.name)
-      ))                                                                                                           // any directly imported HMRC or curated dependency
-        || dependency.bobbyRuleViolations.nonEmpty                                                                   // or any dependency with a bobby rule violation
-        || parentDepsOfViolations.contains(ImportedBy(dependency.name, dependency.group, dependency.currentVersion)) // or the parent that imported the violation
-        || vulnerabilities.exists { v =>
-             (v.strippedVulnerableComponentName == (dependency.group + ":" + dependency.name))
-             && v.vulnerableComponentVersion == dependency.currentVersion.original
-            }
-
-    val unreferencedVulnerableDependencies = vulnerabilities.filterNot(v => v.dependencyType == "gav" || dependenciesToReturn.exists(d => (d.group + ":" + d.name) == v.strippedVulnerableComponentName))
-      .map(v=>
-        Dependency(
-          name                = v.strippedVulnerableComponentName.split(":").head
-        , group               = v.dependencyType + "://" + v.strippedVulnerableComponentName.split(":").last
-        , currentVersion      = Version(v.vulnerableComponentVersion)
-        , latestVersion       = None
-        , bobbyRuleViolations = List.empty
-        , vulnerabilities     = Seq(v.id)
-        , importBy            = None
+                                  .map(_.id)
+        , importBy            = graph.anyPathToRoot(graphDependency)
+                                  .dropRight(if scope == DependencyScope.It && subModuleNames.nonEmpty then 2 else 1) // drop root node as its just the service jar itself
+                                  .lastOption.map(n => ImportedBy(n.artefact, n.group, Version(n.version))) // the top level dep that imported it
+                                  .filterNot(d => d.name == graphDependency.artefact && d.group == graphDependency.group) // filter out non-transient deps
         , scope               = scope
         )
-      )
+      .toList
 
-      {dependenciesToReturn ++ unreferencedVulnerableDependencies}.sortBy(d => (d.group.contains("://"), d.scope.asString + d.group + d.name))
+    val parentDepsOfViolations =
+      dependencies
+        .filter: d =>
+          d.importBy.nonEmpty
+            && (
+              d.bobbyRuleViolations.nonEmpty
+                || vulnerabilities.exists: v =>
+                  v.strippedVulnerableComponentName == (d.group + ":" + d.name)
+                    && v.vulnerableComponentVersion == d.currentVersion.original
+            )
+        .flatMap(_.importBy)
+        .toSet
+
+    val dependenciesToReturn =
+      dependencies.filter: dependency =>
+        (dependency.importBy.isEmpty && (
+          dependency.group.startsWith("uk.gov.hmrc") ||
+          curatedDependencyConfig.allDependencies.exists(d => d.group == dependency.group && d.name == dependency.name)
+        ))                                                                                                           // any directly imported HMRC or curated dependency
+          || dependency.bobbyRuleViolations.nonEmpty                                                                   // or any dependency with a bobby rule violation
+          || parentDepsOfViolations.contains(ImportedBy(dependency.name, dependency.group, dependency.currentVersion)) // or the parent that imported the violation
+          || vulnerabilities.exists: v =>
+               v.strippedVulnerableComponentName == (dependency.group + ":" + dependency.name)
+                 && v.vulnerableComponentVersion == dependency.currentVersion.original
+
+    val unreferencedVulnerableDependencies =
+      vulnerabilities.filterNot(v => v.dependencyType == "gav" || dependenciesToReturn.exists(d => (d.group + ":" + d.name) == v.strippedVulnerableComponentName))
+        .map: v =>
+          Dependency(
+            name                = v.strippedVulnerableComponentName.split(":").head
+          , group               = v.dependencyType + "://" + v.strippedVulnerableComponentName.split(":").last
+          , currentVersion      = Version(v.vulnerableComponentVersion)
+          , latestVersion       = None
+          , bobbyRuleViolations = List.empty
+          , vulnerabilities     = Seq(v.id)
+          , importBy            = None
+          , scope               = scope
+          )
+
+    (dependenciesToReturn ++ unreferencedVulnerableDependencies)
+      .sortBy(d => (d.group.contains("://"), d.scope.asString + d.group + d.name))
