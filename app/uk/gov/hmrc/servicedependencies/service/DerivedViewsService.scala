@@ -76,7 +76,10 @@ class DerivedViewsService @Inject()(
                                   .getAllRepositories(archived = Some(false))
                                   .map(_.map(_.name))
       latestServices         <- deploymentRepository.getNames(SlugInfoFlag.Latest)
-      inactiveServices       =  latestServices.diff(activeRepos) // This will not work for slugs with different name to the repo (e.g. sa-filing-2223-helpdesk)
+      inactiveServices       =  latestServices // check if deployed too since repo name may not match service name
+                                  .diff(activeRepos)
+                                  .filterNot: serviceName =>
+                                    serviceDeploymentInfos.exists(x => x.serviceName == serviceName && x.deployments.nonEmpty)
       _                      <-
                                 if inactiveServices.nonEmpty then
                                   logger.info(s"Removing latest flag from the following inactive services: ${inactiveServices.mkString(", ")}")
