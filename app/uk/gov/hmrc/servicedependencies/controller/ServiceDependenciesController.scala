@@ -168,7 +168,8 @@ class ServiceDependenciesController @Inject()(
         .map(_.fold(NotFound(""))(res => Ok(Json.toJson(res))))
 
   def moduleDependencies(repositoryName: String, versionOption: Option[String]): Action[AnyContent] =
-    Action.async:
+    Action.async: request =>
+      given Request[AnyContent] = request
       for
         latestVersions  <- latestVersionRepository.getAllEntries()
         bobbyRules      <- serviceConfigsConnector.getBobbyRules()
