@@ -1,16 +1,30 @@
 [
   {
     "distinctVulnerability": {
-      "vulnerableComponentName": "A",
+      "vulnerableComponentName": "gav://g:a",
       "vulnerableComponentVersion": "1.0",
       "id": "CVE-1"
-    }
+    },
+    "occurrences": [
+      {
+        "componentPathInSlug": "Service_A-1.0.0/lib/g.a-1.0.jar",
+        "vulnerableComponentName": "gav://g:a",
+        "vulnerableComponentVersion": "1.0"
+      }
+    ]
   },
   {
     "distinctVulnerability": {
-      "vulnerableComponentName": "A",
+      "vulnerableComponentName": "gav://g:a",
       "vulnerableComponentVersion": "1.0",
       "id": "CVE-2"
-    }
+    },
+    "occurrences": [
+      {
+        "componentPathInSlug": "Service_A-1.0.0/lib/g.a-1.0.jar",
+        "vulnerableComponentName": "gav://g:a",
+        "vulnerableComponentVersion": "1.0"
+      }
+    ]
   }
 ]

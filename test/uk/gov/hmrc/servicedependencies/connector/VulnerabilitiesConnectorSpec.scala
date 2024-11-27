@@ -16,46 +16,42 @@
 
 package uk.gov.hmrc.servicedependencies.connector
 
-import uk.gov.hmrc.http.HeaderCarrier
-import uk.gov.hmrc.http.test.WireMockSupport
 import com.github.tomakehurst.wiremock.client.WireMock.*
 import com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig
 import org.scalatest.OptionValues
 import org.scalatest.concurrent.{IntegrationPatience, ScalaFutures}
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
-import org.scalatestplus.play.guice.GuiceOneAppPerSuite
-import play.api.Application
-import play.api.inject.guice.GuiceApplicationBuilder
+import play.api.Configuration
+import uk.gov.hmrc.http.HeaderCarrier
+import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
+import uk.gov.hmrc.http.test.{HttpClientV2Support, WireMockSupport}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
 class VulnerabilitiesConnectorSpec
   extends AnyWordSpec
-    with Matchers
-    with OptionValues
-    with ScalaFutures
-    with IntegrationPatience
-    with GuiceOneAppPerSuite
-    with WireMockSupport {
+     with Matchers
+     with OptionValues
+     with ScalaFutures
+     with IntegrationPatience
+     with WireMockSupport
+     with HttpClientV2Support:
 
   given HeaderCarrier = HeaderCarrier()
 
-  override lazy val resetWireMockMappings = false
-
-  override def fakeApplication(): Application =
-    GuiceApplicationBuilder()
-      .configure(
-        "microservice.services.vulnerabilities.host" -> wireMockHost,
-        "microservice.services.vulnerabilities.port" -> wireMockPort
-      ).build()
+  val servicesConfig =
+    ServicesConfig(Configuration(
+      "microservice.services.vulnerabilities.host" -> wireMockHost,
+      "microservice.services.vulnerabilities.port" -> wireMockPort
+    ))
 
   wireMockConfig().withRootDirectory("test/resources")
 
-  private val connector = app.injector.instanceOf[VulnerabilitiesConnector]
+  private val connector = VulnerabilitiesConnector(httpClientV2, servicesConfig)
 
-  "VulnerabilitiesConnector.getRepository" should {
-    "correctly parse json response" in {
+  "VulnerabilitiesConnector.getRepository" should:
+    "correctly parse json response" in:
       val service = "Service_A"
       val version = "1.0.0"
       val flag    = "latest"
@@ -63,18 +59,65 @@ class VulnerabilitiesConnectorSpec
         get(urlEqualTo(s"/vulnerabilities/api/summaries?service=%22$service%22&version=$version&flag=$flag&curationStatus=ACTION_REQUIRED"))
           .willReturn(aResponse().withBodyFile("vulnerabilities/summaries.json"))
       )
+
       connector.vulnerabilitySummaries(Some(service), Some(version), Some(flag)).futureValue shouldBe Seq(
         DistinctVulnerability(
-          vulnerableComponentName = "A"
+          vulnerableComponentName    = "gav://g:a"
         , vulnerableComponentVersion = "1.0"
-        , id = "CVE-1"
+        , id                         = "CVE-1"
+        , occurrences                = List(
+            VulnerableComponent(
+              "gav://g:a",
+              "1.0",
+              "Service_A-1.0.0/lib/g.a-1.0.jar"
+            )
+          )
         ),
         DistinctVulnerability(
-          vulnerableComponentName = "A"
+          vulnerableComponentName    = "gav://g:a"
         , vulnerableComponentVersion = "1.0"
-        , id = "CVE-2"
+        , id                         = "CVE-2"
+        , occurrences                = List(
+            VulnerableComponent(
+              "gav://g:a",
+              "1.0",
+              "Service_A-1.0.0/lib/g.a-1.0.jar"
+            )
+          )
         )
       )
-    }
-  }
-}
+
+  "DistinctVulnerability.matchesGav" should:
+    "match gav" in:
+      val vulnerability =
+        DistinctVulnerability(
+          vulnerableComponentName    = "gav://g:a"
+        , vulnerableComponentVersion = "1.0"
+        , id                         = "CVE-1"
+        , occurrences                = List(
+            VulnerableComponent(
+              "gav://g:a",
+              "1.0",
+              "Service_A-1.0.0/lib/g.a-1.0.jar"
+            )
+          )
+        )
+
+      vulnerability.matchesGav(group = "g", artefact = "a", version = "1.0") shouldBe true
+
+    "match component in path" in:
+      val vulnerability =
+        DistinctVulnerability(
+          vulnerableComponentName    = "gav://g:a"
+        , vulnerableComponentVersion = "1.0"
+        , id                         = "CVE-1"
+        , occurrences                = List(
+            VulnerableComponent(
+              "gav://g:a",
+              "1.0",
+              "Service_A-1.0.0/lib/g2.a2-1.0.jar/META-INF/maven/g/a/pom.xml"
+            )
+          )
+        )
+
+      vulnerability.matchesGav(group = "g2", artefact = "a2", version = "1.0") shouldBe true
