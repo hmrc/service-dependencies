@@ -90,7 +90,8 @@ class TeamDependencyService @Inject()(
         bobbyRules      = bobbyRules,
         scope           = scope,
         subModuleNames  = metaArtefact.subModuleNames,
-        vulnerabilities = Seq.empty
+        vulnerabilities = Seq.empty,
+        buildInfo       = metaArtefact.buildInfo
       )
     Dependencies(
       repositoryName         = metaArtefact.name,

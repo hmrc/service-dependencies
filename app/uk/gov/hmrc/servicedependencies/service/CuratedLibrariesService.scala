@@ -40,7 +40,8 @@ class CuratedLibrariesService @Inject()(
     bobbyRules     : BobbyRules,
     scope          : DependencyScope,
     subModuleNames : Seq[String],
-    vulnerabilities: Seq[DistinctVulnerability]
+    vulnerabilities: Seq[DistinctVulnerability],
+    buildInfo      : Map[String, String]
   ): List[Dependency] =
     val graph = DependencyGraphParser.parse(dotFile)
     val dependencies = graph
@@ -67,8 +68,8 @@ class CuratedLibrariesService @Inject()(
                                   .filter(_.matchesGav(graphDependency.group, graphDependency.artefact, graphDependency.version))
                                   .map(_.id)
         , importBy            = graph.anyPathToRoot(graphDependency)
-                                  .dropRight(if scope == DependencyScope.It && subModuleNames.nonEmpty then 2 else 1) // drop root node as its just the service jar itself
-                                  .lastOption.map(n => ImportedBy(n.artefact, n.group, Version(n.version))) // the top level dep that imported it
+                                  .dropRight(if scope == DependencyScope.It && subModuleNames.nonEmpty then 2 else 1)     // drop root node as its just the service jar itself
+                                  .lastOption.map(n => ImportedBy(n.artefact, n.group, Version(n.version)))               // the top level dep that imported it
                                   .filterNot(d => d.name == graphDependency.artefact && d.group == graphDependency.group) // filter out non-transient deps
         , scope               = scope
         )
@@ -117,5 +118,32 @@ class CuratedLibrariesService @Inject()(
       else
         Seq.empty
 
-    (dependenciesToReturn ++ unreferencedVulnerableDependencies)
+    val otherBuildDependencies =
+      if scope == DependencyScope.Build
+      then
+        buildInfo.get("JAVA_VERSION").map: currentVersion =>
+          Dependency(
+            name                = "java"
+          , group               = "com.java"
+          , currentVersion      = Version(Version(currentVersion).major.toString)
+          , latestVersion       = latestVersions.find(v => v.group == "com.java" && v.name == "java").map(x => Version(x.version.major.toString))
+          , bobbyRuleViolations = List.empty
+          , vulnerabilities     = Nil
+          , importBy            = None
+          , scope               = scope
+          )
+        ++ buildInfo.get("NODEJS_VERSION").map: currentVersion =>
+          Dependency(
+            name                = "nodejs"
+          , group               = "org.nodejs"
+          , currentVersion      = Version(currentVersion.stripPrefix("v") )
+          , latestVersion       = latestVersions.find(v => v.group == "org.nodejs" && v.name == "nodejs").map(_.version)
+          , bobbyRuleViolations = List.empty
+          , vulnerabilities     = Nil
+          , importBy            = None
+          , scope               = scope
+          )
+      else Nil
+
+    (dependenciesToReturn ++ unreferencedVulnerableDependencies ++ otherBuildDependencies)
       .sortBy(d => (d.group.contains("://"), d.scope.asString + d.group + d.name))

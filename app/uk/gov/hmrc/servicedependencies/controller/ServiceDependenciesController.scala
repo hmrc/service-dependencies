@@ -195,7 +195,8 @@ class ServiceDependenciesController @Inject()(
         bobbyRules      = bobbyRules,
         scope           = scope,
         subModuleNames  = meta.subModuleNames,
-        vulnerabilities = vulnerabilities
+        vulnerabilities = vulnerabilities,
+        buildInfo       = meta.buildInfo
       )
 
     val sbtVersion =
