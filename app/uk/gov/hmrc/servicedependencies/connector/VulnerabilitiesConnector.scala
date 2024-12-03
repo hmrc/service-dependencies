@@ -19,7 +19,7 @@ package uk.gov.hmrc.servicedependencies.connector
 import uk.gov.hmrc.http.client.HttpClientV2
 import uk.gov.hmrc.http.{HeaderCarrier, StringContextOps}
 import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
-import play.api.libs.json.{JsValue, JsResult, Reads, __}
+import play.api.libs.json.{JsResult, Reads, __}
 import play.api.libs.functional.syntax.*
 
 import javax.inject.{Inject, Singleton}
@@ -59,9 +59,15 @@ case class DistinctVulnerability(
   occurrences               : Seq[VulnerableComponent]
 ):
   def matchesGav(group: String, artefact: String, version: String): Boolean =
-    occurrences.exists(_.matchesGav(group, artefact, version))
+    vulnerableComponentName match
+      case DistinctVulnerability.componentNameRegex(t, g, a)
+        if t == "gav" && g == group && a == artefact
+             => true
+      case _ => occurrences.exists(_.matchesGav(group, artefact, version))
 
 object DistinctVulnerability:
+
+  private val componentNameRegex = raw"(.*):\/\/(.*):(.*?)(?:_\d+(?:\.\d+)?)?".r // format is  gav://example:example
 
   val reads: Reads[DistinctVulnerability] =
     given Reads[VulnerableComponent] = VulnerableComponent.reads
