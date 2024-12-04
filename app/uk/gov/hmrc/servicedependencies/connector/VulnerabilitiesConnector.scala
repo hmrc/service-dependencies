@@ -19,7 +19,7 @@ package uk.gov.hmrc.servicedependencies.connector
 import uk.gov.hmrc.http.client.HttpClientV2
 import uk.gov.hmrc.http.{HeaderCarrier, StringContextOps}
 import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
-import play.api.libs.json.{JsValue, JsResult, Reads, __}
+import play.api.libs.json.{JsResult, Reads, __}
 import play.api.libs.functional.syntax.*
 
 import javax.inject.{Inject, Singleton}
@@ -53,15 +53,21 @@ class VulnerabilitiesConnector @Inject()(
 end VulnerabilitiesConnector
 
 case class DistinctVulnerability(
-  vulnerableComponentName   : String, // format is  gav://example:example
+  vulnerableComponentName   : String, // format is  gav://group:artefact
   vulnerableComponentVersion: String,
   id                        : String,
   occurrences               : Seq[VulnerableComponent]
 ):
-  def matchesGav(group: String, artefact: String, version: String): Boolean =
-    occurrences.exists(_.matchesGav(group, artefact, version))
+
+  def matchesGav(group: String, artefact: String, version: String, scalaVersion: Option[String]): Boolean =
+    occurrences.exists(_.matchesGav(group, artefact, version, scalaVersion))
+
+  val (tpe, group, artefact, scalaVersion): (String, String, String, Option[String]) =
+    vulnerableComponentName match
+      case DistinctVulnerability.componentNameRegex(t, g, a, sv) => (t, g, a, Option(sv))
 
 object DistinctVulnerability:
+  private val componentNameRegex = raw"(.*):\/\/(.*):(.*?)(?:_(\d+(?:\.\d+))?)?".r // format is  gav://group:artefact with optional scala version
 
   val reads: Reads[DistinctVulnerability] =
     given Reads[VulnerableComponent] = VulnerableComponent.reads
@@ -76,18 +82,22 @@ case class VulnerableComponent(
   version : String,
   path    : String
 ):
-  private val jarRegex = raw".*\/([^\/]+)\.jar.*".r
 
-  def matchesGav(group: String, artefact: String, version: String): Boolean =
-    if this.name == s"gav://$group:$artefact" && this.version == version
+  def matchesGav(group: String, artefact: String, version: String, scalaVersion: Option[String]): Boolean =
+    if this.name == s"gav://$group:$artefact${scalaVersion.fold("")("_" + _)}" && this.version == version
     then
       true
     else
-      this.path match
-        case jarRegex(jar) => jar == s"$group.$artefact-$version"
-        case _             => false
+      path match
+        case VulnerableComponent.jarRegex(jar) =>
+          jar == s"$group.$artefact${scalaVersion.fold("")("_" + _)}-$version"
+            // java wars have jars without the group in the name
+            || jar == s"$artefact${scalaVersion.fold("")("_" + _)}-$version"
+        case _ => false
 
 object VulnerableComponent:
+  private val jarRegex = raw".*\/([^\/]+)\.jar.*".r
+
   val reads: Reads[VulnerableComponent] =
     ( (__ \ "vulnerableComponentName"   ).read[String]
     ~ (__ \ "vulnerableComponentVersion").read[String]

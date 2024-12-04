@@ -55,10 +55,9 @@ class VulnerabilitiesConnectorSpec
       val service = "Service_A"
       val version = "1.0.0"
       val flag    = "latest"
-      stubFor(
+      stubFor:
         get(urlEqualTo(s"/vulnerabilities/api/summaries?service=%22$service%22&version=$version&flag=$flag&curationStatus=ACTION_REQUIRED"))
           .willReturn(aResponse().withBodyFile("vulnerabilities/summaries.json"))
-      )
 
       connector.vulnerabilitySummaries(Some(service), Some(version), Some(flag)).futureValue shouldBe Seq(
         DistinctVulnerability(
@@ -103,7 +102,7 @@ class VulnerabilitiesConnectorSpec
           )
         )
 
-      vulnerability.matchesGav(group = "g", artefact = "a", version = "1.0") shouldBe true
+      vulnerability.matchesGav(group = "g", artefact = "a", version = "1.0", scalaVersion = None) shouldBe true
 
     "match component in path" in:
       val vulnerability =
@@ -120,4 +119,72 @@ class VulnerabilitiesConnectorSpec
           )
         )
 
-      vulnerability.matchesGav(group = "g2", artefact = "a2", version = "1.0") shouldBe true
+      vulnerability.matchesGav(group = "g2", artefact = "a2", version = "1.0", scalaVersion = None) shouldBe true
+
+    "match component in path (java WAR)" in:
+      val vulnerability =
+        DistinctVulnerability(
+          vulnerableComponentName    = "gav://g:a"
+        , vulnerableComponentVersion = "1.0"
+        , id                         = "CVE-1"
+        , occurrences                = List(
+            VulnerableComponent(
+              "gav://g:a",
+              "1.0",
+              "Service_A-1.0.0/lib/a2-1.0.jar/META-INF/maven/g/a/pom.xml"
+            )
+          )
+        )
+
+      vulnerability.matchesGav(group = "g2", artefact = "a2", version = "1.0", scalaVersion = None) shouldBe true
+
+    "match scala version in name" in:
+      val vulnerability =
+        DistinctVulnerability(
+          vulnerableComponentName    = "gav://g:a_2.13"
+        , vulnerableComponentVersion = "1.0"
+        , id                         = "CVE-1"
+        , occurrences                = List(
+            VulnerableComponent(
+              "gav://g:a_2.13",
+              "1.0",
+              "Service_A-1.0.0/lib/g2.a2-1.0.jar/META-INF/maven/g/a_2.13/pom.xml"
+            )
+          )
+        )
+
+      vulnerability.matchesGav(group = "g", artefact = "a", version = "1.0", scalaVersion = Some("2.13")) shouldBe true
+
+    "match scala version in path" in:
+      val vulnerability =
+        DistinctVulnerability(
+          vulnerableComponentName    = "gav://g:a"
+        , vulnerableComponentVersion = "1.0"
+        , id                         = "CVE-1"
+        , occurrences                = List(
+            VulnerableComponent(
+              "gav://g:a",
+              "1.0",
+              "Service_A-1.0.0/lib/g2.a2_2.13-1.0.jar/META-INF/maven/g/a/pom.xml"
+            )
+          )
+        )
+
+      vulnerability.matchesGav(group = "g2", artefact = "a2", version = "1.0", scalaVersion = Some("2.13")) shouldBe true
+
+    "match scala version in path (java WAR)" in:
+      val vulnerability =
+        DistinctVulnerability(
+          vulnerableComponentName    = "gav://g:a"
+        , vulnerableComponentVersion = "1.0"
+        , id                         = "CVE-1"
+        , occurrences                = List(
+            VulnerableComponent(
+              "gav://g:a",
+              "1.0",
+              ".extract/webapps/Service_A.war/WEB-INF/lib/a2_2.13-1.0.jar"
+            )
+          )
+        )
+
+      vulnerability.matchesGav(group = "g2", artefact = "a2", version = "1.0", scalaVersion = Some("2.13")) shouldBe true
