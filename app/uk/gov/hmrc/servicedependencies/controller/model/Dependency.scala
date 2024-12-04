@@ -24,6 +24,7 @@ import uk.gov.hmrc.servicedependencies.model.{DependencyScope, Version}
 case class Dependency(
   name               : String
 , group              : String
+, scalaVersion       : Option[String]
 , currentVersion     : Version
 , latestVersion      : Option[Version]
 , bobbyRuleViolations: List[DependencyBobbyRule]
@@ -36,6 +37,7 @@ object Dependency:
   val writes: Writes[Dependency] =
     ( (__ \ "name"               ).write[String]
     ~ (__ \ "group"              ).write[String]
+    ~ (__ \ "scalaVersion"       ).writeNullable[String]
     ~ (__ \ "currentVersion"     ).write[Version](Version.legacyApiWrites)
     ~ (__ \ "latestVersion"      ).writeNullable[Version](Version.legacyApiWrites)
     ~ (__ \ "bobbyRuleViolations").lazyWrite(Writes.seq[DependencyBobbyRule](DependencyBobbyRule.writes))

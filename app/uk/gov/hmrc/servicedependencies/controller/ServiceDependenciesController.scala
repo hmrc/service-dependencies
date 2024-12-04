@@ -209,14 +209,16 @@ class ServiceDependenciesController @Inject()(
       dependencies: Seq[Dependency],
       group       : String,
       artefact    : String,
+      scalaVersion: Option[String],
       version     : Version,
       scope       : DependencyScope
     ): Seq[Dependency] =
-      if !dependencies.exists(dep => dep.group == group && dep.name == artefact && dep.importBy.isEmpty)
+      if !dependencies.exists(dep => dep.group == group && dep.name == artefact && dep.scalaVersion == scalaVersion && dep.importBy.isEmpty)
       then
         Seq(Dependency(
           name                = artefact,
           group               = group,
+          scalaVersion        = scalaVersion,
           currentVersion      = version,
           latestVersion       = latestVersions.find(d => d.name == artefact && d.group == group).map(_.version),
           bobbyRuleViolations = List.empty,
@@ -237,10 +239,11 @@ class ServiceDependenciesController @Inject()(
       versions.flatMap: v =>
         directDependencyIfMissing(
           dependencies,
-          group    = "org.scala-lang",
-          artefact = if v < Version("3.0.0") then "scala-library" else "scala3-library",
-          version  = v,
-          scope    = DependencyScope.Compile
+          group        = "org.scala-lang",
+          artefact     = if v < Version("3.0.0") then "scala-library" else "scala3-library",
+          scalaVersion = None,
+          version      = v,
+          scope        = DependencyScope.Compile
         )
 
     val buildDependencies = meta.dependencyDotBuild.fold(Seq.empty[Dependency])(s => toDependencies(meta.name, DependencyScope.Build, s))
@@ -252,10 +255,11 @@ class ServiceDependenciesController @Inject()(
                             sbtVersion.toSeq.flatMap: v =>
                               directDependencyIfMissing(
                                 buildDependencies,
-                                group    = "org.scala-sbt",
-                                artefact = "sbt",
-                                version  = v,
-                                scope    = DependencyScope.Build
+                                group        = "org.scala-sbt",
+                                artefact     = "sbt",
+                                scalaVersion = None,
+                                version      = v,
+                                scope        = DependencyScope.Build
                               ),
       modules           = meta.modules
                               .filter(_.publishSkip.fold(true)(!_))
