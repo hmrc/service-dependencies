@@ -42,11 +42,13 @@ class CuratedLibrariesService @Inject()(
     subModuleNames : Seq[String],
     vulnerabilities: Seq[DistinctVulnerability]
   ): List[Dependency] =
+    //if scope == DependencyScope.Compile then println(s">>>>>> From Graph: $scope, $vulnerabilities")
     val graph = DependencyGraphParser.parse(dotFile)
     val dependencies = graph
       .dependencies
       .filterNot(x => x.artefact == rootName || scope == DependencyScope.It && subModuleNames.contains(x.artefact)) // remove root or any submodules (for integration tests)
       .map: graphDependency =>
+        //if scope == DependencyScope.Compile then println(s">>>>>> graphDependency: $graphDependency")
         val latestVersion =
           latestVersions
             .find(v => v.group == graphDependency.group && v.name == graphDependency.artefact)
@@ -64,7 +66,10 @@ class CuratedLibrariesService @Inject()(
                                 ).filterNot:
                                   _.exemptProjects.contains(rootName)
         , vulnerabilities     = vulnerabilities
-                                  .filter(_.matchesGav(graphDependency.group, graphDependency.artefact, graphDependency.version))
+                                  .filter: a =>
+                                    //if graphDependency.group.contains("com.typesafe.play") && graphDependency.artefact.contains("play") && a.vulnerableComponentName.contains("play")
+                                    //then println(s">>>>>> IS ${graphDependency} in $a ?  " + a.matchesGav(graphDependency.group, graphDependency.artefact, graphDependency.version))
+                                    a.matchesGav(graphDependency.group, graphDependency.artefact, graphDependency.version)
                                   .map(_.id)
         , importBy            = graph.anyPathToRoot(graphDependency)
                                   .dropRight(if scope == DependencyScope.It && subModuleNames.nonEmpty then 2 else 1) // drop root node as its just the service jar itself
@@ -104,6 +109,7 @@ class CuratedLibrariesService @Inject()(
             dependenciesToReturn.exists: d =>
               v.matchesGav(d.group, d.name, d.currentVersion.original)
           .map: v =>
+            println(s"Unreferenced: $v")
             Dependency(
               name                = v.vulnerableComponentName.split(":").last
             , group               = v.vulnerableComponentName.split(":").dropRight(1).mkString(":")
