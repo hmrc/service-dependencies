@@ -127,6 +127,7 @@ class CuratedLibrariesService @Inject()(
           Dependency(
             name                = "java"
           , group               = "com.java"
+          , scalaVersion        = None
           , currentVersion      = Version(Version(currentVersion).major.toString)
           , latestVersion       = latestVersions.find(v => v.group == "com.java" && v.name == "java").map(x => Version(x.version.major.toString))
           , bobbyRuleViolations = List.empty
@@ -138,6 +139,7 @@ class CuratedLibrariesService @Inject()(
           Dependency(
             name                = "nodejs"
           , group               = "org.nodejs"
+          , scalaVersion        = None
           , currentVersion      = Version(currentVersion.stripPrefix("v") )
           , latestVersion       = latestVersions.find(v => v.group == "org.nodejs" && v.name == "nodejs").map(_.version)
           , bobbyRuleViolations = List.empty
