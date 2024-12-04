@@ -48,7 +48,6 @@ class VulnerabilitiesConnector @Inject()(
     httpClientV2
       .get(url"$url/vulnerabilities/api/summaries?service=${serviceName.map(sn => s"\"$sn\"")}&version=$version&flag=$flag&curationStatus=ACTION_REQUIRED")
       .execute[Seq[DistinctVulnerability]]
-      .map(_.filterNot(_.id.contains("VulnDB"))) //TODO investigate vulnDB and remove filter
 
 end VulnerabilitiesConnector
 
