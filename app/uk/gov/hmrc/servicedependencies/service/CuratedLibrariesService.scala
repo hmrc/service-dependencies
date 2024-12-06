@@ -107,9 +107,9 @@ class CuratedLibrariesService @Inject()(
               v.matchesGav(d.group, d.name, d.currentVersion.original, d.scalaVersion)
           .map: v =>
             Dependency(
-              name                = v.artefact
-            , group               = s"${v.tpe}://${v.group}"
-            , scalaVersion        = v.scalaVersion
+              name                = v.vulnerableComponentName
+            , group               = ""
+            , scalaVersion        = None
             , currentVersion      = Version(v.vulnerableComponentVersion)
             , latestVersion       = None
             , bobbyRuleViolations = List.empty
@@ -150,4 +150,4 @@ class CuratedLibrariesService @Inject()(
       else Nil
 
     (dependenciesToReturn ++ unreferencedVulnerableDependencies ++ otherBuildDependencies)
-      .sortBy(d => (d.group.contains("://"), d.scope.asString + d.group + d.name))
+      .sortBy(d => (d.name.contains("://"), d.scope.asString + d.group + d.name))
