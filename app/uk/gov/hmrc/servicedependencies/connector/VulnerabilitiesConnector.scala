@@ -52,7 +52,7 @@ class VulnerabilitiesConnector @Inject()(
 end VulnerabilitiesConnector
 
 case class DistinctVulnerability(
-  vulnerableComponentName   : String, // format is  gav://group:artefact
+  vulnerableComponentName   : String,
   vulnerableComponentVersion: String,
   id                        : String,
   occurrences               : Seq[VulnerableComponent]
@@ -61,13 +61,7 @@ case class DistinctVulnerability(
   def matchesGav(group: String, artefact: String, version: String, scalaVersion: Option[String]): Boolean =
     occurrences.exists(_.matchesGav(group, artefact, version, scalaVersion))
 
-  val (tpe, group, artefact, scalaVersion): (String, String, String, Option[String]) =
-    vulnerableComponentName match
-      case DistinctVulnerability.componentNameRegex(t, g, a, sv) => (t, g, a, Option(sv))
-
 object DistinctVulnerability:
-  private val componentNameRegex = raw"(.*):\/\/(.*):(.*?)(?:_(\d+(?:\.\d+))?)?".r // format is  gav://group:artefact with optional scala version
-
   val reads: Reads[DistinctVulnerability] =
     given Reads[VulnerableComponent] = VulnerableComponent.reads
     ( (__ \ "distinctVulnerability" \ "vulnerableComponentName"   ).read[String]
