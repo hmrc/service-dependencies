@@ -41,6 +41,7 @@ case class SqsConfig(
   lazy val queueUrl           : URL = URL(configuration.get[String](s"$keyPrefix.queueUrl"))
   lazy val maxNumberOfMessages: Int = configuration.get[Int](s"$keyPrefix.maxNumberOfMessages")
   lazy val waitTimeSeconds    : Int = configuration.get[Int](s"$keyPrefix.waitTimeSeconds")
+  lazy val watchdogTimeout    : FiniteDuration = configuration.get[FiniteDuration]("aws.sqs.watchdogTimeout")
 
 abstract class SqsConsumer(
   name       : String
@@ -57,9 +58,8 @@ abstract class SqsConsumer(
 
   private val watchdog = new AtomicReference[Option[Cancellable]](None)
 
-  private def resetWatchdog(): Unit =
-    val timeout = 10.minutes
-    watchdog.getAndSet(Some(scheduleWatchdog(timeout))).foreach(_.cancel())
+  protected def resetWatchdog(): Unit =
+    watchdog.getAndSet(Some(scheduleWatchdog(config.watchdogTimeout))).foreach(_.cancel())
 
   private def scheduleWatchdog(timeout: FiniteDuration): Cancellable =
     actorSystem.scheduler.scheduleOnce(timeout):
