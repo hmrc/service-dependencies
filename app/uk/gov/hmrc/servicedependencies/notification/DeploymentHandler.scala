@@ -54,10 +54,6 @@ class DeploymentHandler @Inject()(
     s"Deployment (${payload.eventType}) ${payload.serviceName} ${payload.version.original} ${payload.environment.asString}"
 
   override protected def processMessage(message: Message): Future[MessageAction] =
-    val shouldHang = scala.util.Random().nextBoolean()
-    if(shouldHang) then
-      logger.info("Hanging for 30 secs")
-      Thread.sleep(30000)
     logger.info(s"Starting processing Deployment message with ID '${message.messageId()}'")
     (for
        payload <- EitherT
