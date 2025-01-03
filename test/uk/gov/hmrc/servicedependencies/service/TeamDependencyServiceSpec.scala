@@ -67,7 +67,7 @@ class TeamDependencyServiceSpec
         , isArchived = false
         ))))
 
-      when(mockServiceConfigsConnector.getBobbyRules())
+      when(mockServiceConfigsConnector.cachedBobbyRules())
         .thenReturn(Future.successful(BobbyRules(Map.empty)))
 
       when(mockLatestVersionRepository.getAllEntries())

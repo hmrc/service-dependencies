@@ -28,8 +28,8 @@ import software.amazon.awssdk.services.sqs.model.Message
 
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.servicedependencies.model.{SlugInfoFlag, Version}
-import uk.gov.hmrc.servicedependencies.persistence.DeploymentRepository
 import uk.gov.hmrc.servicedependencies.service.DerivedViewsService
+import uk.gov.hmrc.servicedependencies.persistence.DeploymentRepository
 
 import java.time.Instant
 import javax.inject.{Inject, Singleton}
@@ -59,11 +59,10 @@ class DeploymentHandler @Inject()(
        payload <- EitherT
                     .fromEither[Future](Json.parse(message.body).validate(DeploymentHandler.mdtpEventReads).asEither)
                     .leftMap(error => s"Could not parse Deployment message with ID '${message.messageId()}'. Reason: $error")
-       _       <- payload.eventType match {
+       _       <- payload.eventType match
                     case "deployment-complete"   => EitherT.right[String](deploymentRepository.setFlag  (payload.environment, payload.serviceName, payload.version))
                     case "undeployment-complete" => EitherT.right[String](deploymentRepository.clearFlag(payload.environment, payload.serviceName                 ))
                     case _                       => EitherT.right[String](Future.unit)
-                  }
        _       <- EitherT.right[String](derivedViewsService.updateDerivedViews(repoName = payload.serviceName))
        _       =  logger.info(s"${prefix(payload)} with ID '${message.messageId()}' successfully processed.")
      yield

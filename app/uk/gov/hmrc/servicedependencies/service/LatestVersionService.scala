@@ -88,7 +88,7 @@ class LatestVersionService @Inject()(
               DependencyConfig(name = artefact, group = hmrcGA.group, latestVersion = None)
 
   private def nonHmrcDependenciesWithBobbyRules(): Future[Seq[DependencyConfig]] =
-    serviceConfigsConnector.getBobbyRules()
+    serviceConfigsConnector.cachedBobbyRules()
       .map:
         _
           .asMap

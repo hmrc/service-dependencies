@@ -106,7 +106,7 @@ class LatestVersionServiceSpec
     "include any non HMRC dependencies with bobby rules" in {
       val boot = Boot(CuratedDependencyConfig(sbtPlugins = Nil, libraries  = Nil, others     = Nil))
 
-      when(boot.mockServiceConfigsConnector.getBobbyRules())
+      when(boot.mockServiceConfigsConnector.cachedBobbyRules())
         .thenReturn(
           Future.successful(BobbyRules(Map(
             ("com.other", "lib4") -> List(BobbyRule(
@@ -133,7 +133,7 @@ class LatestVersionServiceSpec
         others = Nil
       ))
 
-      when(boot.mockServiceConfigsConnector.getBobbyRules())
+      when(boot.mockServiceConfigsConnector.cachedBobbyRules())
         .thenReturn(
           Future.successful(BobbyRules(Map(
             ("com.other", "lib4") -> List(BobbyRule(
@@ -165,7 +165,7 @@ class LatestVersionServiceSpec
     when(mockDerivedGroupArtefactRepository.findGroupsArtefacts())
       .thenReturn(Future.successful(Seq.empty))
 
-    when(mockServiceConfigsConnector.getBobbyRules())
+    when(mockServiceConfigsConnector.cachedBobbyRules())
       .thenReturn(Future.successful(BobbyRules(Map.empty)))
 
     val latestVersionService = new LatestVersionService(

@@ -90,7 +90,7 @@ class DependencyLookupServiceSpec
 
   "getLatestBobbyRuleViolations" should {
     "return the number of repositories violating a bobby rule for latest" in {
-      when(mockedConfigService.getBobbyRules())
+      when(mockedConfigService.cachedBobbyRules())
         .thenReturn(Future(BobbyRules(Map(("uk.gov.hmrc", "libs") -> List(bobbyRule)))))
       when(mockedDerivedDeployedDependencyRepository.findWithDeploymentLookup(flag = any[SlugInfoFlag], group = any[Option[String]], artefact = any[Option[String]], scopes = any[Option[List[DependencyScope]]], slugName = any[Option[String]], slugVersion = any[Option[Version]]))
         .thenReturn(Future.successful(Seq.empty))
@@ -125,7 +125,7 @@ class DependencyLookupServiceSpec
     }
 
     "return the number of repositories violating a bobby rule for environments" in {
-      when(mockedConfigService.getBobbyRules())
+      when(mockedConfigService.cachedBobbyRules())
         .thenReturn(Future(BobbyRules(Map(("uk.gov.hmrc", "libs") -> List(bobbyRule)))))
       when(mockedDerivedLatestDependencyRepository.find(group = any[Option[String]], artefact = any[Option[String]], repoType = any[Option[List[RepoType]]], scopes = any[Option[List[DependencyScope]]], repoName = any[Option[String]], repoVersion = any[Option[Version]]))
         .thenReturn(Future.successful(Seq.empty))

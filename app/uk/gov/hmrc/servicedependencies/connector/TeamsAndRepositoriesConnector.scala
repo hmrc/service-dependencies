@@ -74,12 +74,13 @@ class TeamsAndRepositoriesConnector @Inject()(
       .execute[Option[Repository]]
 
   def getAllRepositories(
-    archived: Option[Boolean]
-  , teamName: Option[String]   = None
-  , repoType: Option[RepoType] = None
+    archived      : Option[Boolean]
+  , teamName      : Option[String]   = None
+  , digitalService: Option[String]   = None
+  , repoType      : Option[RepoType] = None
   )(using hc: HeaderCarrier): Future[Seq[Repository]] =
     httpClientV2
-      .get(url"$teamsAndRepositoriesApiBase/api/v2/repositories?archived=$archived&team=$teamName&repoType=${repoType.map(_.asString)}")
+      .get(url"$teamsAndRepositoriesApiBase/api/v2/repositories?archived=$archived&team=$teamName&digitalServiceName=$digitalService&repoType=${repoType.map(_.asString)}")
       .execute[Seq[Repository]]
 
   def getDecommissionedServices()(using hc: HeaderCarrier): Future[Seq[DeletedRepository]] =
