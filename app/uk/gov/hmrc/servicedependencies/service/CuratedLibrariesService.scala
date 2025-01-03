@@ -19,7 +19,7 @@ package uk.gov.hmrc.servicedependencies.service
 import uk.gov.hmrc.servicedependencies.config.ServiceDependenciesConfig
 import uk.gov.hmrc.servicedependencies.config.model.CuratedDependencyConfig
 import uk.gov.hmrc.servicedependencies.connector.DistinctVulnerability
-import uk.gov.hmrc.servicedependencies.controller.model.{Dependency, ImportedBy}
+import uk.gov.hmrc.servicedependencies.controller.model.{Dependency, ImportedBy, DependencyBobbyRule}
 import uk.gov.hmrc.servicedependencies.util.DependencyGraphParser
 import uk.gov.hmrc.servicedependencies.model.*
 
@@ -32,6 +32,136 @@ class CuratedLibrariesService @Inject()(
 
   private lazy val curatedDependencyConfig: CuratedDependencyConfig =
     serviceDependenciesConfig.curatedDependencyConfig
+
+  def toRepository(
+    meta           : MetaArtefact
+  , latestVersions : Seq[LatestVersion]
+  , bobbyRules     : BobbyRules
+  , vulnerabilities: Seq[DistinctVulnerability]
+  ) =
+
+    def toDependencies(name: String, scope: DependencyScope, dotFile: String) =
+      fromGraph(
+        dotFile         = dotFile,
+        rootName        = name,
+        latestVersions  = latestVersions,
+        bobbyRules      = bobbyRules,
+        scope           = scope,
+        subModuleNames  = meta.subModuleNames,
+        vulnerabilities = vulnerabilities,
+        buildInfo       = meta.buildInfo
+      )
+
+    val sbtVersion =
+      // sbt-versions will be the same for all modules,
+      meta.modules.flatMap(_.sbtVersion.toSeq).headOption
+
+    def when[T](b: Boolean)(seq: => Seq[T]): Seq[T] =
+      if b then seq else Nil
+
+    def directDependencyIfMissing(
+      dependencies: Seq[Dependency],
+      group       : String,
+      artefact    : String,
+      scalaVersion: Option[String],
+      version     : Version,
+      scope       : DependencyScope
+    ): Seq[Dependency] =
+      if !dependencies.exists(dep => dep.group == group && dep.name == artefact && dep.scalaVersion == scalaVersion && dep.importBy.isEmpty)
+      then
+        Seq(Dependency(
+          name                = artefact,
+          group               = group,
+          scalaVersion        = scalaVersion,
+          currentVersion      = version,
+          latestVersion       = latestVersions.find(d => d.name == artefact && d.group == group).map(_.version),
+          bobbyRuleViolations = List.empty,
+          vulnerabilities     = Seq.empty,
+          importBy            = None,
+          scope               = scope
+        ))
+      else
+        Seq.empty
+
+    // Note, for Scala 3, scala3-libary will be in the graph, but it's not necessarily a direct dependency.
+    // We want a direct dependency so it will be present in the curated results.
+    def addScalaDependencies(
+      dependencies: Seq[Dependency],
+      versions    : Seq[Version],
+      scope       : DependencyScope
+    ): Seq[Dependency] =
+      versions.flatMap: v =>
+        directDependencyIfMissing(
+          dependencies,
+          group        = "org.scala-lang",
+          artefact     = if v < Version("3.0.0") then "scala-library" else "scala3-library",
+          scalaVersion = None,
+          version      = v,
+          scope        = DependencyScope.Compile
+        )
+
+    val buildDependencies = meta.dependencyDotBuild.fold(Seq.empty[Dependency])(s => toDependencies(meta.name, DependencyScope.Build, s))
+
+    CuratedLibrariesService.Repository(
+      name              = meta.name,
+      version           = meta.version,
+      dependenciesBuild = buildDependencies ++
+                            sbtVersion.toSeq.flatMap: v =>
+                              directDependencyIfMissing(
+                                buildDependencies,
+                                group        = "org.scala-sbt",
+                                artefact     = "sbt",
+                                scalaVersion = None,
+                                version      = v,
+                                scope        = DependencyScope.Build
+                              ),
+      modules           = meta.modules
+                              .filter(_.publishSkip.fold(true)(!_))
+                              .map: m =>
+                                val compileDependencies  = m.dependencyDotCompile .fold(Seq.empty[Dependency])(s => toDependencies(m.name, DependencyScope.Compile , s))
+                                val providedDependencies = m.dependencyDotProvided.fold(Seq.empty[Dependency])(s => toDependencies(m.name, DependencyScope.Provided, s))
+                                val testDependencies     = m.dependencyDotTest    .fold(Seq.empty[Dependency])(s => toDependencies(m.name, DependencyScope.Test    , s))
+                                val itDependencies       = m.dependencyDotIt      .fold(Seq.empty[Dependency])(s => toDependencies(m.name, DependencyScope.It      , s))
+                                val scalaVersions        = m.crossScalaVersions.toSeq.flatten
+                                val (activeBobbyRuleViolations, pendingBobbyRuleViolations) =
+                                  bobbyRules.violationsFor(
+                                    group   = m.group,
+                                    name    = m.name,
+                                    version = meta.version
+                                  ).partition(rule => java.time.LocalDate.now().isAfter(rule.from))
+                                CuratedLibrariesService.RepositoryModule(
+                                  name                 = m.name,
+                                  group                = m.group,
+                                  dependenciesCompile  = compileDependencies ++
+                                                           when(compileDependencies.nonEmpty)(
+                                                             addScalaDependencies(
+                                                               compileDependencies,
+                                                               scalaVersions,
+                                                               scope = DependencyScope.Compile
+                                                             )
+                                                           ),
+                                  dependenciesProvided = providedDependencies,
+                                  dependenciesTest     = testDependencies ++
+                                                           when(testDependencies.nonEmpty)(
+                                                             addScalaDependencies(
+                                                               testDependencies,
+                                                               scalaVersions,
+                                                               scope = DependencyScope.Compile
+                                                             )
+                                                           ),
+                                  dependenciesIt       = itDependencies ++
+                                                           when(itDependencies.nonEmpty)(
+                                                             addScalaDependencies(
+                                                               itDependencies,
+                                                               scalaVersions,
+                                                               scope = DependencyScope.Compile
+                                                             )
+                                                           ),
+                                  crossScalaVersions   = m.crossScalaVersions,
+                                  activeBobbyRuleViolations,
+                                  pendingBobbyRuleViolations
+                                )
+    )
 
   def fromGraph(
     dotFile        : String,
@@ -151,3 +281,53 @@ class CuratedLibrariesService @Inject()(
 
     (dependenciesToReturn ++ unreferencedVulnerableDependencies ++ otherBuildDependencies)
       .sortBy(d => (d.name.contains("://"), d.scope.asString + d.group + d.name))
+
+object CuratedLibrariesService:
+  import play.api.libs.functional.syntax._
+  import play.api.libs.json._
+
+  case class Repository(
+    name             : String,
+    version          : Version,
+    dependenciesBuild: Seq[Dependency],
+    modules          : Seq[RepositoryModule]
+  )
+
+  object Repository:
+    val writes: Writes[Repository] =
+      given Writes[Dependency]       = Dependency.writes
+      given Writes[RepositoryModule] = RepositoryModule.writes
+      given Writes[Version]          = Version.format
+      ( (__ \ "name"             ).write[String]
+      ~ (__ \ "version"          ).write[Version]
+      ~ (__ \ "dependenciesBuild").write[Seq[Dependency]]
+      ~ (__ \ "modules"          ).write[Seq[RepositoryModule]]
+      )(r => Tuple.fromProductTyped(r))
+
+  case class RepositoryModule(
+    name                : String,
+    group               : String,
+    dependenciesCompile : Seq[Dependency],
+    dependenciesProvided: Seq[Dependency],
+    dependenciesTest    : Seq[Dependency],
+    dependenciesIt      : Seq[Dependency],
+    crossScalaVersions  : Option[List[Version]],
+    activeBobbyRules    : Seq[DependencyBobbyRule] = Seq(),
+    pendingBobbyRules   : Seq[DependencyBobbyRule] = Seq()
+  )
+
+  object RepositoryModule:
+    val writes: Writes[RepositoryModule] =
+      given Writes[DependencyBobbyRule] = DependencyBobbyRule.writes
+      given Writes[Dependency]          = Dependency.writes
+      given Writes[Version]             = Version.format
+      ( (__ \ "name"                ).write[String]
+      ~ (__ \ "group"               ).write[String]
+      ~ (__ \ "dependenciesCompile" ).write[Seq[Dependency]]
+      ~ (__ \ "dependenciesProvided").write[Seq[Dependency]]
+      ~ (__ \ "dependenciesTest"    ).write[Seq[Dependency]]
+      ~ (__ \ "dependenciesIt"      ).write[Seq[Dependency]]
+      ~ (__ \ "crossScalaVersions"  ).write[Seq[Version]].contramap[Option[Seq[Version]]](_.getOrElse(Seq.empty))
+      ~ (__ \ "activeBobbyRules"    ).write[Seq[DependencyBobbyRule]]
+      ~ (__ \ "pendingBobbyRules"   ).write[Seq[DependencyBobbyRule]]
+      )(rm => Tuple.fromProductTyped(rm))

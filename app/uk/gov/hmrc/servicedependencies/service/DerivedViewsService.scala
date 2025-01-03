@@ -21,10 +21,10 @@ import cats.syntax.all._
 import com.google.inject.{Inject, Singleton}
 import play.api.Logging
 import uk.gov.hmrc.http.HeaderCarrier
-import uk.gov.hmrc.servicedependencies.connector.{ReleasesApiConnector, TeamsAndRepositoriesConnector}
-import uk.gov.hmrc.servicedependencies.model.{MetaArtefactDependency, RepoType, SlugInfoFlag}
+import uk.gov.hmrc.servicedependencies.connector.{ReleasesApiConnector, TeamsAndRepositoriesConnector, ServiceConfigsConnector}
+import uk.gov.hmrc.servicedependencies.model.{BobbyReport, BobbyRule, MetaArtefactDependency, RepoType, SlugInfoFlag}
 import uk.gov.hmrc.servicedependencies.persistence.{Deployment, DeploymentRepository, MetaArtefactRepository, SlugInfoRepository, SlugVersionRepository}
-import uk.gov.hmrc.servicedependencies.persistence.derived.{DerivedDeployedDependencyRepository, DerivedGroupArtefactRepository, DerivedLatestDependencyRepository, DerivedModuleRepository}
+import uk.gov.hmrc.servicedependencies.persistence.derived.{DerivedBobbyReportRepository, DerivedDeployedDependencyRepository, DerivedGroupArtefactRepository, DerivedLatestDependencyRepository, DerivedModuleRepository}
 import uk.gov.hmrc.servicedependencies.util.DependencyGraphParser
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -32,16 +32,18 @@ import uk.gov.hmrc.servicedependencies.model.MetaArtefact
 
 @Singleton
 class DerivedViewsService @Inject()(
-  teamsAndRepositoriesConnector       : TeamsAndRepositoriesConnector
-, releasesApiConnector                : ReleasesApiConnector
-, metaArtefactRepository              : MetaArtefactRepository
-, slugInfoRepository                  : SlugInfoRepository
-, slugVersionRepository               : SlugVersionRepository
-, deploymentRepository                : DeploymentRepository
-, derivedGroupArtefactRepository      : DerivedGroupArtefactRepository
-, derivedModuleRepository             : DerivedModuleRepository
-, derivedDeployedDependencyRepository : DerivedDeployedDependencyRepository
-, derivedLatestDependencyRepository   : DerivedLatestDependencyRepository
+  teamsAndRepositoriesConnector      : TeamsAndRepositoriesConnector
+, serviceConfigsConnector            : ServiceConfigsConnector
+, releasesApiConnector               : ReleasesApiConnector
+, metaArtefactRepository             : MetaArtefactRepository
+, slugInfoRepository                 : SlugInfoRepository
+, slugVersionRepository              : SlugVersionRepository
+, deploymentRepository               : DeploymentRepository
+, derivedGroupArtefactRepository     : DerivedGroupArtefactRepository
+, derivedModuleRepository            : DerivedModuleRepository
+, derivedDeployedDependencyRepository: DerivedDeployedDependencyRepository
+, derivedLatestDependencyRepository  : DerivedLatestDependencyRepository
+, derivedBobbyReportRepository       : DerivedBobbyReportRepository
 )(using ec: ExecutionContext
 ) extends Logging:
 
@@ -111,6 +113,8 @@ class DerivedViewsService @Inject()(
       oLatestMeta <- metaArtefactRepository.find(repoName)
       deployments <- deploymentRepository.findDeployed(Some(repoName))
       _           <- updateDerivedDependencyViews(oActiveRepo.toSeq, oLatestMeta.toSeq, deployments)
+      bobbyRules  <- serviceConfigsConnector.getBobbyRules().map(_.asMap.values.flatten.toSeq)
+      _           <- updateRepoBobbyRules(bobbyRules, oActiveRepo.toSeq, oLatestMeta.toSeq, deployments)
       _           =  logger.info(s"Running DerivedModuleRepository.update")
       _           <- oLatestMeta.fold(Future.unit)(meta => derivedModuleRepository.update(meta))
       _           =  logger.info(s"Finished running DerivedModuleRepository.update")
@@ -122,6 +126,8 @@ class DerivedViewsService @Inject()(
       latestMeta  <- metaArtefactRepository.findLatest()
       deployments <- deploymentRepository.findDeployed()
       _           <- updateDerivedDependencyViews(activeRepos, latestMeta, deployments)
+      bobbyRules  <- serviceConfigsConnector.getBobbyRules().map(_.asMap.values.flatten.toSeq)
+      _           <- updateRepoBobbyRules(bobbyRules, activeRepos, latestMeta, deployments)
       _           =  logger.info(s"Running DerivedModuleRepository.populateAll")
       _           <- derivedModuleRepository
                        .populateAll()
@@ -199,3 +205,58 @@ class DerivedViewsService @Inject()(
       .flatMap { case (_, xs) => xs.headOption.map(x => (x._1 -> xs.flatMap(_._2).toSet)) } // Merge scopes with the same node minus scala version
       .map { case (node, scopes) => MetaArtefactDependency.apply(meta, repoType, node, scopes) }
       .toList
+
+  private def updateRepoBobbyRules(
+    bobbyRules : Seq[BobbyRule],
+    activeRepos: Seq[TeamsAndRepositoriesConnector.Repository],
+    latestMeta : Seq[MetaArtefact],
+    deployments: Seq[Deployment]
+  ): Future[Unit] =
+    (  latestMeta.map(m =>  (m.name    , m.version    ))
+    ++ deployments.map(d => (d.slugName, d.slugVersion))
+    )
+    .distinct
+    .map:
+      case (repoName, repoVersion) =>
+        (repoName, repoVersion, activeRepos.find(_.name == repoName).map(_.repoType))
+    .foldLeftM(()):
+      case (_, (repoName, repoVersion, None)) =>
+        derivedBobbyReportRepository.delete(repoName)
+      case (_, (repoName, repoVersion, Some(repoType))) =>
+        derivedLatestDependencyRepository
+          .find(repoName = Some(repoName), repoVersion = Some(repoVersion))
+          .flatMap: xs =>
+            if   xs.isEmpty
+            then derivedDeployedDependencyRepository.find(slugName = repoName, slugVersion = repoVersion)
+            else Future.successful(xs)
+          .flatMap: deps =>
+            derivedBobbyReportRepository.update(BobbyReport(
+              repoName    = repoName
+            , repoVersion = repoVersion
+            , repoType    = repoType
+            , violations  = bobbyRules
+                              .flatMap: bobby =>
+                                deps.collect:
+                                  case d
+                                    if bobby.organisation == d.depGroup
+                                    && bobby.name         == d.depArtefact
+                                    && bobby.range.includes(d.depVersion) =>
+                                      BobbyReport.Violation(
+                                        depGroup    = d.depGroup
+                                      , depArtefact = d.depArtefact
+                                      , depVersion  = d.depVersion
+                                      , depScopes   = d.depScopes
+                                      , range       = bobby.range
+                                      , reason      = bobby.reason
+                                      , from        = bobby.from
+                                      , exempt      = bobby.exemptProjects.contains(d.repoName)
+                                      )
+            , lastUpdated  = java.time.Instant.now()
+            , latest       = latestMeta .exists(lm => lm.name    == repoName && lm.version    == repoVersion)
+            , production   = deployments.exists(d  => d.slugName == repoName && d.slugVersion == repoVersion && d.production)
+            , qa           = deployments.exists(d  => d.slugName == repoName && d.slugVersion == repoVersion && d.qa)
+            , staging      = deployments.exists(d  => d.slugName == repoName && d.slugVersion == repoVersion && d.staging)
+            , development  = deployments.exists(d  => d.slugName == repoName && d.slugVersion == repoVersion && d.development)
+            , externalTest = deployments.exists(d  => d.slugName == repoName && d.slugVersion == repoVersion && d.externalTest)
+            , integration  = deployments.exists(d  => d.slugName == repoName && d.slugVersion == repoVersion && d.integration)
+            ))

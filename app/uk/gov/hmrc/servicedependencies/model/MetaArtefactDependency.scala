@@ -34,7 +34,17 @@ case class MetaArtefactDependency(
   testFlag    : Boolean,
   itFlag      : Boolean,
   buildFlag   : Boolean
-)
+):
+  val depScopes: Set[DependencyScope] =
+    DependencyScope
+      .values
+      .toSet
+      .filter:
+        case DependencyScope.Compile  => compileFlag
+        case DependencyScope.Provided => providedFlag
+        case DependencyScope.Test     => testFlag
+        case DependencyScope.It       => itFlag
+        case DependencyScope.Build    => buildFlag
 
 object MetaArtefactDependency:
 
@@ -98,13 +108,5 @@ object MetaArtefactDependency:
       mad.depGroup,
       mad.depArtefact,
       mad.depVersion.original,
-      DependencyScope
-        .values
-        .toSet
-        .filter:
-          case DependencyScope.Compile  => mad.compileFlag
-          case DependencyScope.Provided => mad.providedFlag
-          case DependencyScope.Test     => mad.testFlag
-          case DependencyScope.It       => mad.itFlag
-          case DependencyScope.Build    => mad.buildFlag
+      mad.depScopes
     ))

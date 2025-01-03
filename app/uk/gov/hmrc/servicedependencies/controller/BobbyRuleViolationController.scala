@@ -19,16 +19,20 @@ package uk.gov.hmrc.servicedependencies.controller
 import play.api.libs.json.{Json, Writes}
 import play.api.mvc._
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
-import uk.gov.hmrc.servicedependencies.model.{BobbyRuleQuery, BobbyRulesSummary, HistoricBobbyRulesSummary}
+import uk.gov.hmrc.servicedependencies.connector.TeamsAndRepositoriesConnector
+import uk.gov.hmrc.servicedependencies.model.{BobbyReport, BobbyRuleQuery, BobbyRulesSummary, HistoricBobbyRulesSummary, RepoType, SlugInfoFlag}
+import uk.gov.hmrc.servicedependencies.persistence.derived.DerivedBobbyReportRepository
 import uk.gov.hmrc.servicedependencies.service.DependencyLookupService
 
 import java.time.LocalDate
 import javax.inject.Inject
-import scala.concurrent.ExecutionContext
+import scala.concurrent.{ExecutionContext, Future}
 
 class BobbyRuleViolationController @Inject() (
-  dependencyLookup: DependencyLookupService,
-  cc              : ControllerComponents
+  teamsAndRepositoriesConnector: TeamsAndRepositoriesConnector,
+  dependencyLookup             : DependencyLookupService,
+  derivedBobbyReportRepository : DerivedBobbyReportRepository,
+  cc                           : ControllerComponents
 )(using
   ec: ExecutionContext
 ) extends BackendController(cc):
@@ -36,11 +40,26 @@ class BobbyRuleViolationController @Inject() (
   def findBobbyRuleViolations: Action[AnyContent] =
     given Writes[BobbyRulesSummary] = BobbyRulesSummary.apiFormat
     Action.async:
-      dependencyLookup.getLatestBobbyRuleViolations()
+      dependencyLookup
+        .getLatestBobbyRuleViolations()
         .map(v => Ok(Json.toJson(v)))
 
   def findHistoricBobbyRuleViolations(query: List[BobbyRuleQuery], from: LocalDate, to: LocalDate): Action[AnyContent] =
     given Writes[HistoricBobbyRulesSummary] = HistoricBobbyRulesSummary.apiFormat
     Action.async:
-      dependencyLookup.getHistoricBobbyRuleViolations(query, from, to)
+      dependencyLookup
+        .getHistoricBobbyRuleViolations(query, from, to)
         .map(v => Ok(Json.toJson(v)))
+
+  def bobbyReports(team: Option[String], digitalService: Option[String], repoType: Option[RepoType],  flag: SlugInfoFlag): Action[AnyContent] =
+    given Writes[BobbyReport] = BobbyReport.apiFormat
+    Action.async: request =>
+      given RequestHeader = request
+      for
+        oRepos  <- if   team.isDefined || digitalService.isDefined || repoType.isDefined
+                   then teamsAndRepositoriesConnector
+                          .getAllRepositories(teamName = team, digitalService = digitalService, repoType = repoType, archived = Some(false))
+                          .map(xs => Some(xs.map(_.name)))
+                   else Future.successful(None)
+        results <- derivedBobbyReportRepository.find(flag, oRepos)
+      yield Ok(Json.toJson(results))
