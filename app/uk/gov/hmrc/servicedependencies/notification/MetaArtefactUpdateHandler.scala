@@ -65,7 +65,7 @@ class MetaArtefactUpdateHandler @Inject()(
                                   metaArtefactRepository.put(meta)
                                 , errorMessage = s"Could not store MetaArtefact for message with ID '${message.messageId()}' (${meta.name} ${meta.version})"
                                 )
-                        _    <- EitherT.right[String](derivedViewsService.updateDerivedViews(available.name))
+                        _    <- EitherT.right[String](derivedViewsService.updateDerivedViews(meta.name))
                       yield
                         logger.info(s"MetaArtefact available message with ID '${message.messageId()}' (${meta.name} ${meta.version}) successfully processed.")
                         MessageAction.Delete(message)

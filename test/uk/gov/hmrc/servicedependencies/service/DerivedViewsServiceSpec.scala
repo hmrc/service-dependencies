@@ -23,7 +23,7 @@ import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 import org.scalatestplus.mockito.MockitoSugar
 import uk.gov.hmrc.http.HeaderCarrier
-import uk.gov.hmrc.servicedependencies.connector.{ReleasesApiConnector, TeamsAndRepositoriesConnector}
+import uk.gov.hmrc.servicedependencies.connector.{ReleasesApiConnector, ServiceConfigsConnector, TeamsAndRepositoriesConnector}
 import uk.gov.hmrc.servicedependencies.model._
 import uk.gov.hmrc.servicedependencies.persistence.{DeploymentRepository, MetaArtefactRepository, SlugInfoRepository, SlugVersionRepository}
 import uk.gov.hmrc.servicedependencies.persistence.derived._
@@ -41,6 +41,7 @@ class DerivedViewsServiceSpec
   given HeaderCarrier = HeaderCarrier()
 
   private val mockedTeamsAndRepositoriesConnector         = mock[TeamsAndRepositoriesConnector      ]
+  private val mockedServiceConfigsConnector               = mock[ServiceConfigsConnector            ]
   private val mockedReleasesApiConnector                  = mock[ReleasesApiConnector               ]
   private val mockedMetaArtefactRepository                = mock[MetaArtefactRepository             ]
   private val mockedSlugInfoRepository                    = mock[SlugInfoRepository                 ]
@@ -50,9 +51,11 @@ class DerivedViewsServiceSpec
   private val mockedDerivedModuleRepository               = mock[DerivedModuleRepository            ]
   private val mockedDerivedDeployedDependencyRepository   = mock[DerivedDeployedDependencyRepository]
   private val mockedDerivedLatestDependencyRepository     = mock[DerivedLatestDependencyRepository  ]
+  private val mockedDerivedBobbyReportRepository          = mock[DerivedBobbyReportRepository       ]
 
   private val underTest = DerivedViewsService(
     teamsAndRepositoriesConnector       = mockedTeamsAndRepositoriesConnector
+  , serviceConfigsConnector             = mockedServiceConfigsConnector
   , releasesApiConnector                = mockedReleasesApiConnector
   , metaArtefactRepository              = mockedMetaArtefactRepository
   , slugInfoRepository                  = mockedSlugInfoRepository
@@ -62,6 +65,7 @@ class DerivedViewsServiceSpec
   , derivedModuleRepository             = mockedDerivedModuleRepository
   , derivedDeployedDependencyRepository = mockedDerivedDeployedDependencyRepository
   , derivedLatestDependencyRepository   = mockedDerivedLatestDependencyRepository
+  , derivedBobbyReportRepository        = mockedDerivedBobbyReportRepository
   )
 
   "DerivedViewsService.updateDeploymentData" should {

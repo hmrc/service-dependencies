@@ -22,7 +22,7 @@ import javax.inject.{Inject, Singleton}
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.servicedependencies.connector.{ServiceConfigsConnector, TeamsAndRepositoriesConnector}
 import uk.gov.hmrc.servicedependencies.controller.model.{Dependencies, Dependency}
-import uk.gov.hmrc.servicedependencies.model.{BobbyRules, DependencyScope, LatestVersion, MetaArtefact, SlugInfoFlag}
+import uk.gov.hmrc.servicedependencies.model.{MetaArtefact, SlugInfoFlag}
 import uk.gov.hmrc.servicedependencies.persistence.{LatestVersionRepository, MetaArtefactRepository, SlugInfoRepository}
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -48,11 +48,11 @@ class TeamDependencyService @Inject()(
                           case (acc, repo) if repo.repoType == RepoType.Library || repo.repoType == RepoType.Test =>
                             metaArtefactRepository.find(repo.name).map:
                               case None       => acc
-                              case Some(meta) => acc :+ dependenciesFromMetaArtefact(meta, bobbyRules, latestVersions)
+                              case Some(meta) => acc :+ toDependencies(curatedLibrariesService.toRepository(meta, latestVersions, bobbyRules, Nil))
                           case (acc, repo) if repo.repoType == RepoType.Service =>
                             metaArtefactRepository.find(repo.name).map:
                               case None       => acc :+ Dependencies(repositoryName = repo.name, libraryDependencies = Nil, sbtPluginsDependencies = Nil, otherDependencies = Nil)
-                              case Some(meta) => acc :+ dependenciesFromMetaArtefact(meta, bobbyRules, latestVersions)
+                              case Some(meta) => acc :+ toDependencies(curatedLibrariesService.toRepository(meta, latestVersions, bobbyRules, Nil))
                           case (acc, repo)  =>
                             Future.successful(acc)
     yield results
@@ -72,33 +72,18 @@ class TeamDependencyService @Inject()(
                                          .flatMap(slugInfo => OptionT(metaArtefactRepository.find(repo.name, slugInfo.version)))
                                          .value
                             optDeps =  optMeta.map: meta =>
-                                         val x = dependenciesFromMetaArtefact(meta, bobbyRules, latestVersions)
+                                         val x = toDependencies(curatedLibrariesService.toRepository(meta, latestVersions, bobbyRules, Nil))
                                          x.sbtPluginsDependencies ++ x.libraryDependencies
                           yield acc :+ (repo.name, optDeps.getOrElse(Nil))
     yield res.toMap
 
-  private def dependenciesFromMetaArtefact(
-    metaArtefact  : MetaArtefact,
-    bobbyRules    : BobbyRules,
-    latestVersions: Seq[LatestVersion]
-  ): Dependencies =
-    def toDependencies(name: String, scope: DependencyScope, dotFile: String) =
-      curatedLibrariesService.fromGraph(
-        dotFile         = dotFile,
-        rootName        = name,
-        latestVersions  = latestVersions,
-        bobbyRules      = bobbyRules,
-        scope           = scope,
-        subModuleNames  = metaArtefact.subModuleNames,
-        vulnerabilities = Seq.empty,
-        buildInfo       = metaArtefact.buildInfo
-      )
+  private def toDependencies(curatedRepo:CuratedLibrariesService.Repository): Dependencies =
     Dependencies(
-      repositoryName         = metaArtefact.name,
-      libraryDependencies    = metaArtefact.modules.flatMap(m => m.dependencyDotCompile .fold(Seq.empty[Dependency])(s => toDependencies(m.name, DependencyScope.Compile , s))) ++
-                               metaArtefact.modules.flatMap(m => m.dependencyDotProvided.fold(Seq.empty[Dependency])(s => toDependencies(m.name, DependencyScope.Provided, s))) ++
-                               metaArtefact.modules.flatMap(m => m.dependencyDotTest    .fold(Seq.empty[Dependency])(s => toDependencies(m.name, DependencyScope.Test    , s))) ++
-                               metaArtefact.modules.flatMap(m => m.dependencyDotIt      .fold(Seq.empty[Dependency])(s => toDependencies(m.name, DependencyScope.It      , s))),
-      sbtPluginsDependencies = metaArtefact.dependencyDotBuild.fold(Seq.empty[Dependency])(s => toDependencies(metaArtefact.name, DependencyScope.Build, s)),
-      otherDependencies      = Seq.empty
+      repositoryName         = curatedRepo.name
+    , libraryDependencies    = curatedRepo.modules.flatMap(m => m.dependenciesCompile ) ++
+                               curatedRepo.modules.flatMap(m => m.dependenciesProvided) ++
+                               curatedRepo.modules.flatMap(m => m.dependenciesTest    ) ++
+                               curatedRepo.modules.flatMap(m => m.dependenciesIt      )
+    , sbtPluginsDependencies = curatedRepo.dependenciesBuild
+    , otherDependencies      = Nil
     )

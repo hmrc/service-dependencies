@@ -40,15 +40,16 @@ class DependencyLookupService @Inject() (
   import DependencyLookupService._
 
   def getLatestBobbyRuleViolations(): Future[BobbyRulesSummary] =
-    bobbyRulesSummaryRepo.getLatest()
+    bobbyRulesSummaryRepo
+      .getLatest()
       .map(_.getOrElse(BobbyRulesSummary(LocalDate.now(), Map.empty)))
 
   def updateBobbyRulesSummary(): Future[Unit] = {
-    def calculateCounts(rules: Seq[BobbyRule])(env: SlugInfoFlag): Future[Seq[((BobbyRule, SlugInfoFlag), Int)]] =
+    def calculateCounts(rules: Seq[BobbyRule])(slugInfoFlag: SlugInfoFlag): Future[Seq[((BobbyRule, SlugInfoFlag), Int)]] =
       for
-        dependencies <- env match
+        dependencies <- slugInfoFlag match
                           case SlugInfoFlag.Latest => derivedLatestDependencyRepository.find(scopes = Some(DependencyScope.values.toSeq))
-                          case _                   => derivedDeployedDependencyRepository.findWithDeploymentLookup(scopes = Some(List(DependencyScope.Compile)), flag = env)
+                          case _                   => derivedDeployedDependencyRepository.findWithDeploymentLookup(scopes = Some(List(DependencyScope.Compile)), flag = slugInfoFlag)
         lookup       =  dependencies
                           .groupBy(d => s"${d.depGroup}:${d.depArtefact}")
                           .view
@@ -59,7 +60,7 @@ class DependencyLookupService @Inject() (
                               .toMap
                           .toMap
         violations    = rules.map: rule =>
-                          ((rule, env), findSlugsUsing(lookup, rule.organisation, rule.name, rule.range).length)
+                          ((rule, slugInfoFlag), findSlugsUsing(lookup, rule.organisation, rule.name, rule.range).length)
       yield violations
 
     for
@@ -67,8 +68,8 @@ class DependencyLookupService @Inject() (
       _       =  logger.debug(s"Found ${rules.size} rules")
       counts  <- SlugInfoFlag
                    .values.toList  // traverse (in parallel) uses more memory and adds contention on data source - fold through it instead
-                   .foldLeftM(Seq[((BobbyRule, SlugInfoFlag), Int)]()): (acc, env) =>
-                     calculateCounts(rules)(env).map(acc ++ _)
+                   .foldLeftM(Seq[((BobbyRule, SlugInfoFlag), Int)]()): (acc, slugInfoFlag) =>
+                     calculateCounts(rules)(slugInfoFlag).map(acc ++ _)
       _       <- bobbyRulesSummaryRepo.add(BobbyRulesSummary(LocalDate.now(), counts.toMap))
     yield ()
   }
@@ -77,8 +78,8 @@ class DependencyLookupService @Inject() (
     bobbyRulesSummaryRepo.getHistoric(query, from, to)
       .map(combineBobbyRulesSummaries)
 
-
 object DependencyLookupService:
+
 
   def findSlugsUsing(
       lookup  : Map[String, Map[Version, Set[String]]]

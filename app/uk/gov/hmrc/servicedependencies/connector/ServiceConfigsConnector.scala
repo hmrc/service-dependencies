@@ -18,12 +18,13 @@ package uk.gov.hmrc.servicedependencies.connector
 
 import javax.inject.Inject
 import play.api.cache.AsyncCacheApi
-import play.api.libs.json.Reads
+import play.api.libs.json.{Reads, __}
+import play.api.libs.functional.syntax.*
 import uk.gov.hmrc.http.{HeaderCarrier, HttpReads, StringContextOps}
 import uk.gov.hmrc.http.client.HttpClientV2
 import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
-import uk.gov.hmrc.servicedependencies.connector.model.DeprecatedDependencies
-import uk.gov.hmrc.servicedependencies.model.BobbyRules
+import uk.gov.hmrc.servicedependencies.model.{BobbyRule, BobbyRules}
+
 import scala.concurrent.duration.Duration
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -38,12 +39,21 @@ class ServiceConfigsConnector @Inject()(
 
   private given HeaderCarrier = HeaderCarrier()
 
-  private given Reads[DeprecatedDependencies] = DeprecatedDependencies.reads
-
   private val serviceUrl: String = servicesConfig.baseUrl("service-configs")
+
   private val cacheExpiration: Duration =
     servicesConfig
       .getDuration("microservice.services.service-configs.cache.expiration")
+
+  private case class DeprecatedDependencies(
+    libraries: Seq[BobbyRule]
+  , plugins  : Seq[BobbyRule]
+  )
+
+  private given Reads[DeprecatedDependencies] =
+    ( (__ \ "libraries").lazyRead(Reads.seq[BobbyRule](BobbyRule.format))
+    ~ (__ \ "plugins"  ).lazyRead(Reads.seq[BobbyRule](BobbyRule.format))
+    )(DeprecatedDependencies.apply)
 
   def getBobbyRules(): Future[BobbyRules] =
     cache.getOrElseUpdate("bobby-rules", cacheExpiration):
@@ -51,6 +61,6 @@ class ServiceConfigsConnector @Inject()(
         .get(url"$serviceUrl/service-configs/bobby/rules")
         .execute[DeprecatedDependencies]
         .map: dependencies =>
-           BobbyRules:
-             (dependencies.libraries.toList ++ dependencies.plugins)
-               .groupBy(dependency => (dependency.organisation, dependency.name))
+          BobbyRules:
+            (dependencies.libraries.toList ++ dependencies.plugins)
+              .groupBy(dependency => (dependency.organisation, dependency.name))
