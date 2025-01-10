@@ -79,7 +79,11 @@ class IntegrationTestController @Inject()(
   private def addMetaArtefacts(json: JsValue): Future[Either[JsObject, Unit]] =
     given Format[MetaArtefact] = MetaArtefact.apiFormat
     validateJson[List[MetaArtefact]](json)
-      .traverse(_.traverse_(metaArtefactRepository.put))
+      .traverse:
+        // storing is not atomic (with respect to latest flag), process one at a time
+        _.foldLeftM(()): (_, artefact) =>
+            metaArtefactRepository.put(artefact)
+          .map(_ => Right(()))
 
   private def addMetaArtefactDependencies(json: JsValue): Future[Either[JsObject, Unit]] =
     given Format[MetaArtefactDependency] = MetaArtefactDependency.mongoFormat
