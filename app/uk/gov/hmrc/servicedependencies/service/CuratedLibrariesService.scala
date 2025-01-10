@@ -40,10 +40,11 @@ class CuratedLibrariesService @Inject()(
   , vulnerabilities: Seq[DistinctVulnerability]
   ) =
 
-    def toDependencies(name: String, scope: DependencyScope, dotFile: String) =
+    def toDependencies(moduleName: String, scope: DependencyScope, dotFile: String) =
       fromGraph(
+        repoName        = meta.name,
         dotFile         = dotFile,
-        rootName        = name,
+        moduleName      = moduleName,
         latestVersions  = latestVersions,
         bobbyRules      = bobbyRules,
         scope           = scope,
@@ -163,9 +164,10 @@ class CuratedLibrariesService @Inject()(
                                 )
     )
 
-  def fromGraph(
+  private def fromGraph(
+    repoName       : String,
     dotFile        : String,
-    rootName       : String,
+    moduleName     : String,
     latestVersions : Seq[LatestVersion],
     bobbyRules     : BobbyRules,
     scope          : DependencyScope,
@@ -176,7 +178,7 @@ class CuratedLibrariesService @Inject()(
     val graph = DependencyGraphParser.parse(dotFile)
     val dependencies = graph
       .dependencies
-      .filterNot(x => x.artefact == rootName || scope == DependencyScope.It && subModuleNames.contains(x.artefact)) // remove root or any submodules (for integration tests)
+      .filterNot(x => x.artefact == moduleName || scope == DependencyScope.It && subModuleNames.contains(x.artefact)) // remove root or any submodules (for integration tests)
       .map: graphDependency =>
         val latestVersion =
           latestVersions
@@ -194,7 +196,7 @@ class CuratedLibrariesService @Inject()(
                                 , name    = graphDependency.artefact
                                 , version = Version(graphDependency.version)
                                 ).filterNot:
-                                  _.exemptProjects.contains(rootName)
+                                  _.exemptProjects.contains(repoName)
         , vulnerabilities     = vulnerabilities
                                   .filter(_.matchesGav(graphDependency.group, graphDependency.artefact, graphDependency.version, graphDependency.scalaVersion))
                                   .map(_.id)
