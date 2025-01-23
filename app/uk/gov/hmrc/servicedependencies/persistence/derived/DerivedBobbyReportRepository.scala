@@ -22,6 +22,7 @@ import play.api.Logging
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.play.json.PlayMongoRepository
 import uk.gov.hmrc.mongo.transaction.{TransactionConfiguration, Transactions}
+import uk.gov.hmrc.servicedependencies.connector.TeamsAndRepositoriesConnector.DecommissionedRepository
 import uk.gov.hmrc.servicedependencies.model.{BobbyReport, SlugInfoFlag}
 
 import javax.inject.{Inject, Singleton}
@@ -66,8 +67,8 @@ class DerivedBobbyReportRepository @Inject()(
         _ <- collection.insertOne(session, repoBobbyRules).toFuture()
       yield ()
 
-  def delete(repoName: String): Future[Unit] =
+  def deleteMany(repos: Seq[DecommissionedRepository]): Future[Unit] =
     collection
-      .deleteMany(Filters.equal("repoName", repoName))
+      .deleteMany(Filters.in("repoName", repos.map(_.name)*))
       .toFuture()
       .map(_ => ())

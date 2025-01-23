@@ -89,7 +89,7 @@ class DerivedViewsService @Inject()(
                                   deploymentRepository.clearFlags(List(SlugInfoFlag.Latest), inactiveServices.toList)
                                 else Future.unit
       decommissionedServices <- teamsAndRepositoriesConnector
-                                  .getDecommissionedServices()
+                                  .getDecommissionedRepositories(Some(RepoType.Service))
                                   .map(_.map(_.name))
       _                      <- deploymentRepository.clearFlags(SlugInfoFlag.values.toList, decommissionedServices.toList)
 
@@ -109,41 +109,44 @@ class DerivedViewsService @Inject()(
 
   def updateDerivedViews(repoName: String)(using hc: HeaderCarrier): Future[Unit] =
     for
-      oActiveRepo <- teamsAndRepositoriesConnector.getRepository(repoName).map(_.filterNot(_.isArchived).toSeq)
-      oLatestMeta <- metaArtefactRepository.find(repoName)
-      deployments <- deploymentRepository.findDeployed(Some(repoName))
-      _           <- updateDerivedDependencyViews(oActiveRepo.toSeq, oLatestMeta.toSeq, deployments)
-      bobbyRules  <- serviceConfigsConnector.getBobbyRules().map(_.asMap.values.flatten.toSeq)
-      _           <- updateRepoBobbyRules(bobbyRules, oActiveRepo.toSeq, oLatestMeta.toSeq, deployments)
-      _           =  logger.info(s"Running DerivedModuleRepository.update")
-      _           <- oLatestMeta.fold(Future.unit)(meta => derivedModuleRepository.update(meta))
-      _           =  logger.info(s"Finished running DerivedModuleRepository.update")
+      oActiveRepo     <- teamsAndRepositoriesConnector.getRepository(repoName).map(_.filterNot(_.isArchived))
+      oDecommissioned <- teamsAndRepositoriesConnector.getDecommissionedRepositories().map(_.find(_.name == repoName))
+      oLatestMeta     <- metaArtefactRepository.find(repoName)
+      deployments     <- deploymentRepository.findDeployed(Some(repoName))
+      _               <- updateDerivedDependencyViews(oActiveRepo.toSeq, oDecommissioned.toSeq, oLatestMeta.toSeq, deployments)
+      bobbyRules      <- serviceConfigsConnector.getBobbyRules().map(_.asMap.values.flatten.toSeq)
+      _               <- updateRepoBobbyRules(bobbyRules, oActiveRepo.toSeq, oDecommissioned.toSeq, oLatestMeta.toSeq, deployments)
+      _               =  logger.info(s"Running DerivedModuleRepository.update")
+      _               <- oLatestMeta.fold(Future.unit)(meta => derivedModuleRepository.update(meta))
+      _               =  logger.info(s"Finished running DerivedModuleRepository.update")
     yield ()
 
   def updateDerivedViewsForAllRepos()(using hc: HeaderCarrier): Future[Unit] =
     for
-      activeRepos <- teamsAndRepositoriesConnector.getAllRepositories(archived = Some(false))
-      latestMeta  <- metaArtefactRepository.findLatest()
-      deployments <- deploymentRepository.findDeployed()
-      _           <- updateDerivedDependencyViews(activeRepos, latestMeta, deployments)
-      bobbyRules  <- serviceConfigsConnector.getBobbyRules().map(_.asMap.values.flatten.toSeq)
-      _           <- updateRepoBobbyRules(bobbyRules, activeRepos, latestMeta, deployments)
-      _           =  logger.info(s"Running DerivedModuleRepository.populateAll")
-      _           <- derivedModuleRepository
-                       .populateAll()
-                       .recover { e => logger.error("Failed to update DerivedModuleRepository", e) }
-      _           =  logger.info(s"Finished running DerivedModuleRepository.populateAll")
-      _           =  logger.info(s"Running DerivedGroupArtefactRepository.populateAll")
-      _           <- derivedGroupArtefactRepository
-                       .populateAll()
-                       .recover { e => logger.error("Failed to update DerivedGroupArtefactRepository", e) }
-      _           =  logger.info(s"Finished running DerivedGroupArtefactRepository.populateAll")
+      activeRepos    <- teamsAndRepositoriesConnector.getAllRepositories(archived = Some(false))
+      decommissioned <- teamsAndRepositoriesConnector.getDecommissionedRepositories()
+      latestMeta     <- metaArtefactRepository.findLatest()
+      deployments    <- deploymentRepository.findDeployed()
+      _              <- updateDerivedDependencyViews(activeRepos, decommissioned, latestMeta, deployments)
+      bobbyRules     <- serviceConfigsConnector.getBobbyRules().map(_.asMap.values.flatten.toSeq)
+      _              <- updateRepoBobbyRules(bobbyRules, activeRepos, decommissioned, latestMeta, deployments)
+      _              =  logger.info(s"Running DerivedModuleRepository.populateAll")
+      _              <- derivedModuleRepository
+                          .populateAll()
+                          .recover { e => logger.error("Failed to update DerivedModuleRepository", e) }
+      _              =  logger.info(s"Finished running DerivedModuleRepository.populateAll")
+      _              =  logger.info(s"Running DerivedGroupArtefactRepository.populateAll")
+      _              <- derivedGroupArtefactRepository
+                          .populateAll()
+                          .recover { e => logger.error("Failed to update DerivedGroupArtefactRepository", e) }
+      _              =  logger.info(s"Finished running DerivedGroupArtefactRepository.populateAll")
     yield ()
 
   private def updateDerivedDependencyViews(
-    activeRepos: Seq[TeamsAndRepositoriesConnector.Repository],
-    latestMeta : Seq[MetaArtefact],
-    deployments: Seq[Deployment]
+    activeRepos   : Seq[TeamsAndRepositoriesConnector.Repository],
+    decommissioned: Seq[TeamsAndRepositoriesConnector.DecommissionedRepository],
+    latestMeta    : Seq[MetaArtefact],
+    deployments   : Seq[Deployment]
   ): Future[Unit] =
     for
       _ <- Future.unit
@@ -163,10 +166,7 @@ class DerivedViewsService @Inject()(
                          else
                            Future.unit
                  yield ()
-      _ <- latestMeta
-             .filterNot(m => activeRepos.exists(_.name == m.name))
-             .foldLeftM(()): (_, meta) =>
-               derivedLatestDependencyRepository.delete(meta.name)
+      _ <- derivedLatestDependencyRepository.deleteMany(decommissioned)
       _ =  logger.info(s"Finished running DerivedLatestDependencyRepository changes")
       _ =  logger.info(s"Running DerivedDeployedDependencyRepository changes")
       _ <- deployments
@@ -191,10 +191,7 @@ class DerivedViewsService @Inject()(
                                                       derivedDeployedDependencyRepository.update(meta.name, meta.version, deps)
                            case __                 => Future.unit
                  yield ()
-      _ <- deployments
-             .filterNot(d => activeRepos.exists(_.name == d.slugName))
-             .foldLeftM(()): (_, deployment) =>
-               derivedDeployedDependencyRepository.delete(deployment.slugName)
+      _ <- derivedDeployedDependencyRepository.deleteMany(decommissioned)
       _ =  logger.info(s"Finished running DerivedDeployedDependencyRepository changes")
     yield ()
 
@@ -207,56 +204,58 @@ class DerivedViewsService @Inject()(
       .toList
 
   private def updateRepoBobbyRules(
-    bobbyRules : Seq[BobbyRule],
-    activeRepos: Seq[TeamsAndRepositoriesConnector.Repository],
-    latestMeta : Seq[MetaArtefact],
-    deployments: Seq[Deployment]
+    bobbyRules    : Seq[BobbyRule],
+    activeRepos   : Seq[TeamsAndRepositoriesConnector.Repository],
+    decommissioned: Seq[TeamsAndRepositoriesConnector.DecommissionedRepository],
+    latestMeta    : Seq[MetaArtefact],
+    deployments   : Seq[Deployment]
   ): Future[Unit] =
-    (  latestMeta.map(m =>  (m.name    , m.version    ))
-    ++ deployments.map(d => (d.slugName, d.slugVersion))
-    )
-    .distinct
-    .map:
-      case (repoName, repoVersion) =>
-        (repoName, repoVersion, activeRepos.find(_.name == repoName).map(_.repoType))
-    .foldLeftM(()):
-      case (_, (repoName, repoVersion, None)) =>
-        derivedBobbyReportRepository.delete(repoName)
-      case (_, (repoName, repoVersion, Some(repoType))) =>
-        derivedLatestDependencyRepository
-          .find(repoName = Some(repoName), repoVersion = Some(repoVersion))
-          .flatMap: xs =>
-            if   xs.isEmpty
-            then derivedDeployedDependencyRepository.find(slugName = repoName, slugVersion = repoVersion)
-            else Future.successful(xs)
-          .flatMap: deps =>
-            derivedBobbyReportRepository.update(BobbyReport(
-              repoName    = repoName
-            , repoVersion = repoVersion
-            , repoType    = repoType
-            , violations  = bobbyRules
-                              .flatMap: bobby =>
-                                deps.collect:
-                                  case d
-                                    if bobby.organisation == d.depGroup
-                                    && bobby.name         == d.depArtefact
-                                    && bobby.range.includes(d.depVersion) =>
-                                      BobbyReport.Violation(
-                                        depGroup    = d.depGroup
-                                      , depArtefact = d.depArtefact
-                                      , depVersion  = d.depVersion
-                                      , depScopes   = d.depScopes
-                                      , range       = bobby.range
-                                      , reason      = bobby.reason
-                                      , from        = bobby.from
-                                      , exempt      = bobby.exemptProjects.contains(d.repoName)
-                                      )
-            , lastUpdated  = java.time.Instant.now()
-            , latest       = latestMeta .exists(lm => lm.name    == repoName && lm.version    == repoVersion)
-            , production   = deployments.exists(d  => d.slugName == repoName && d.slugVersion == repoVersion && d.production)
-            , qa           = deployments.exists(d  => d.slugName == repoName && d.slugVersion == repoVersion && d.qa)
-            , staging      = deployments.exists(d  => d.slugName == repoName && d.slugVersion == repoVersion && d.staging)
-            , development  = deployments.exists(d  => d.slugName == repoName && d.slugVersion == repoVersion && d.development)
-            , externalTest = deployments.exists(d  => d.slugName == repoName && d.slugVersion == repoVersion && d.externalTest)
-            , integration  = deployments.exists(d  => d.slugName == repoName && d.slugVersion == repoVersion && d.integration)
-            ))
+    for
+      _ <- (  latestMeta.map(m =>  (m.name    , m.version    ))
+           ++ deployments.map(d => (d.slugName, d.slugVersion))
+           )
+           .distinct
+           .flatMap: (repoName, repoVersion) =>
+             activeRepos.collect:
+               case x if x.name == repoName => (repoName, repoVersion, x.repoType)
+           .foldLeftM(()):
+             case (_, (repoName, repoVersion, repoType)) =>
+               derivedLatestDependencyRepository
+                 .find(repoName = Some(repoName), repoVersion = Some(repoVersion))
+                 .flatMap: xs =>
+                   if   xs.isEmpty
+                   then derivedDeployedDependencyRepository.find(slugName = repoName, slugVersion = repoVersion)
+                   else Future.successful(xs)
+                 .flatMap: deps =>
+                   derivedBobbyReportRepository.update(BobbyReport(
+                     repoName    = repoName
+                   , repoVersion = repoVersion
+                   , repoType    = repoType
+                   , violations  = bobbyRules
+                                     .flatMap: bobby =>
+                                       deps.collect:
+                                         case d
+                                           if bobby.organisation == d.depGroup
+                                           && bobby.name         == d.depArtefact
+                                           && bobby.range.includes(d.depVersion) =>
+                                             BobbyReport.Violation(
+                                               depGroup    = d.depGroup
+                                             , depArtefact = d.depArtefact
+                                             , depVersion  = d.depVersion
+                                             , depScopes   = d.depScopes
+                                             , range       = bobby.range
+                                             , reason      = bobby.reason
+                                             , from        = bobby.from
+                                             , exempt      = bobby.exemptProjects.contains(d.repoName)
+                                             )
+                   , lastUpdated  = java.time.Instant.now()
+                   , latest       = latestMeta .exists(lm => lm.name    == repoName && lm.version    == repoVersion)
+                   , production   = deployments.exists(d  => d.slugName == repoName && d.slugVersion == repoVersion && d.production)
+                   , qa           = deployments.exists(d  => d.slugName == repoName && d.slugVersion == repoVersion && d.qa)
+                   , staging      = deployments.exists(d  => d.slugName == repoName && d.slugVersion == repoVersion && d.staging)
+                   , development  = deployments.exists(d  => d.slugName == repoName && d.slugVersion == repoVersion && d.development)
+                   , externalTest = deployments.exists(d  => d.slugName == repoName && d.slugVersion == repoVersion && d.externalTest)
+                   , integration  = deployments.exists(d  => d.slugName == repoName && d.slugVersion == repoVersion && d.integration)
+                   ))
+      _ <- derivedBobbyReportRepository.deleteMany(decommissioned)
+    yield ()

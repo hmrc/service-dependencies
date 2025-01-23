@@ -44,14 +44,14 @@ object TeamsAndRepositoriesConnector:
       ~ (__ \ "isArchived").read[Boolean]
       )(apply)
 
-  case class DeletedRepository(name: String)
+  case class DecommissionedRepository(name: String)
 
-  object DeletedRepository:
-    val reads: Reads[DeletedRepository] =
+  object DecommissionedRepository:
+    val reads: Reads[DecommissionedRepository] =
       (__ \ "repoName")
         .read[String]
         .map:
-          DeletedRepository.apply
+          DecommissionedRepository.apply
 
 @Singleton
 class TeamsAndRepositoriesConnector @Inject()(
@@ -65,8 +65,8 @@ class TeamsAndRepositoriesConnector @Inject()(
   import HttpReads.Implicits.*
 
   private val teamsAndRepositoriesApiBase = serviceConfiguration.teamsAndRepositoriesServiceUrl
-  private given Reads[Repository]         = Repository.reads
-  private given Reads[DeletedRepository]  = DeletedRepository.reads
+  private given Reads[Repository]               = Repository.reads
+  private given Reads[DecommissionedRepository] = DecommissionedRepository.reads
 
   def getRepository(repositoryName: String)(using hc: HeaderCarrier): Future[Option[Repository]] =
     httpClientV2
@@ -83,10 +83,12 @@ class TeamsAndRepositoriesConnector @Inject()(
       .get(url"$teamsAndRepositoriesApiBase/api/v2/repositories?archived=$archived&team=$teamName&digitalServiceName=$digitalService&repoType=${repoType.map(_.asString)}")
       .execute[Seq[Repository]]
 
-  def getDecommissionedServices()(using hc: HeaderCarrier): Future[Seq[DeletedRepository]] =
+  def getDecommissionedRepositories(
+    repoType: Option[RepoType] = None
+  )(using hc: HeaderCarrier): Future[Seq[DecommissionedRepository]] =
     httpClientV2
-      .get(url"$teamsAndRepositoriesApiBase/api/v2/decommissioned-repositories?repoType=service")
-      .execute[Seq[DeletedRepository]]
+      .get(url"$teamsAndRepositoriesApiBase/api/v2/decommissioned-repositories?repoType=${repoType.map(_.asString)}")
+      .execute[Seq[DecommissionedRepository]]
 
   def cachedTeamToReposMap()(using hc: HeaderCarrier): Future[Map[String, Seq[String]]] =
     cache.getOrElseUpdate("teams-for-services", serviceConfiguration.teamsAndRepositoriesCacheExpiration):

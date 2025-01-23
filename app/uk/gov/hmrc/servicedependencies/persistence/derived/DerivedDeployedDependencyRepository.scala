@@ -23,6 +23,7 @@ import play.api.Logging
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.play.json.PlayMongoRepository
 import uk.gov.hmrc.mongo.transaction.{TransactionConfiguration, Transactions}
+import uk.gov.hmrc.servicedependencies.connector.TeamsAndRepositoriesConnector.DecommissionedRepository
 import uk.gov.hmrc.servicedependencies.model._
 import uk.gov.hmrc.servicedependencies.persistence.DeploymentRepository
 
@@ -123,5 +124,11 @@ class DerivedDeployedDependencyRepository @Inject()(
         , Filters.nin("repoVersion", ignoreVersions.map(_.original)*)
         )
       )
+      .toFuture()
+      .map(_ => ())
+
+  def deleteMany(repos: Seq[DecommissionedRepository]): Future[Unit] =
+    collection
+      .deleteMany(Filters.in("repoName", repos.map(_.name)*))
       .toFuture()
       .map(_ => ())
