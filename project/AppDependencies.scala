@@ -4,8 +4,8 @@ private object AppDependencies {
   import play.core.PlayVersion
   import play.sbt.PlayImport.{caffeine, ws}
 
-  val bootstrapPlayVersion = "9.5.0"
-  val hmrcMongoVersion     = "2.3.0"
+  val bootstrapPlayVersion = "9.7.0"
+  val hmrcMongoVersion     = "2.4.0"
 
   val compile = Seq(
     ws,

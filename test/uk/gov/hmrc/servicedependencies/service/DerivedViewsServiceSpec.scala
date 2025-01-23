@@ -70,7 +70,7 @@ class DerivedViewsServiceSpec
 
   "DerivedViewsService.updateDeploymentData" should {
     "clear latest flag for decommissioned services" in {
-      val decommissionedServices = List(TeamsAndRepositoriesConnector.DeletedRepository("service1"))
+      val decommissionedServices = List(TeamsAndRepositoriesConnector.DecommissionedRepository("service1"))
 
       when(mockedSlugInfoRepository.getUniqueSlugNames())
         .thenReturn(Future.successful(Seq.empty))
@@ -78,7 +78,7 @@ class DerivedViewsServiceSpec
       when(mockedReleasesApiConnector.getWhatIsRunningWhere())
         .thenReturn(Future.successful(List.empty))
 
-      when(mockedTeamsAndRepositoriesConnector.getDecommissionedServices())
+      when(mockedTeamsAndRepositoriesConnector.getDecommissionedRepositories(Some(RepoType.Service)))
         .thenReturn(Future.successful(decommissionedServices))
 
       when(mockedDeploymentRepository.getNames(SlugInfoFlag.Latest))
@@ -114,7 +114,7 @@ class DerivedViewsServiceSpec
       when(mockedReleasesApiConnector.getWhatIsRunningWhere())
         .thenReturn(Future.successful(List.empty))
 
-      when(mockedTeamsAndRepositoriesConnector.getDecommissionedServices())
+      when(mockedTeamsAndRepositoriesConnector.getDecommissionedRepositories(Some(RepoType.Service)))
         .thenReturn(Future.successful(List.empty))
 
       when(mockedDeploymentRepository.getNames(SlugInfoFlag.Latest))
