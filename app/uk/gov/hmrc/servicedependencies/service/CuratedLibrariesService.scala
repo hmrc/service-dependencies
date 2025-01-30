@@ -126,9 +126,10 @@ class CuratedLibrariesService @Inject()(
                                 val scalaVersions        = m.crossScalaVersions.toSeq.flatten
                                 val (activeBobbyRuleViolations, pendingBobbyRuleViolations) =
                                   bobbyRules.violationsFor(
-                                    group   = m.group,
-                                    name    = m.name,
-                                    version = meta.version
+                                    group    = m.group,
+                                    name     = m.name,
+                                    version  = meta.version,
+                                    repoName = meta.name
                                   ).partition(rule => java.time.LocalDate.now().isAfter(rule.from))
                                 CuratedLibrariesService.RepositoryModule(
                                   name                 = m.name,
@@ -192,11 +193,11 @@ class CuratedLibrariesService @Inject()(
         , currentVersion      = Version(graphDependency.version)
         , latestVersion       = latestVersion
         , bobbyRuleViolations = bobbyRules.violationsFor(
-                                  group   = graphDependency.group
-                                , name    = graphDependency.artefact
-                                , version = Version(graphDependency.version)
-                                ).filterNot:
-                                  _.exemptProjects.contains(repoName)
+                                  group    = graphDependency.group
+                                , name     = graphDependency.artefact
+                                , version  = Version(graphDependency.version)
+                                , repoName = repoName
+                                )
         , vulnerabilities     = vulnerabilities
                                   .filter(_.matchesGav(graphDependency.group, graphDependency.artefact, graphDependency.version, graphDependency.scalaVersion))
                                   .map(_.id)

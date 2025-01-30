@@ -59,11 +59,12 @@ object BobbyRule:
 case class BobbyRules(
   asMap: Map[(String, String), List[BobbyRule]]
 ):
-  def violationsFor(dependency: Dependency): List[DependencyBobbyRule] =
-    violationsFor(dependency.group, dependency.name, dependency.currentVersion)
+  def violationsFor(dependency: Dependency, repoName: String): List[DependencyBobbyRule] =
+    violationsFor(dependency.group, dependency.name, dependency.currentVersion, repoName)
 
-  def violationsFor(group: String, name: String, version: Version): List[DependencyBobbyRule] =
+  def violationsFor(group: String, name: String, version: Version, repoName: String): List[DependencyBobbyRule] =
     asMap
       .getOrElse((group, name), Nil)
       .filter(_.range.includes(version))
+      .filterNot(_.exemptProjects.contains(repoName))
       .map(_.asDependencyBobbyRule)
