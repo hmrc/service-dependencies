@@ -209,18 +209,6 @@ class CuratedLibrariesService @Inject()(
         )
       .toList
 
-    val parentDepsOfViolations =
-      dependencies
-        .filter: d =>
-          d.importBy.nonEmpty
-            && (
-              d.bobbyRuleViolations.nonEmpty
-                || vulnerabilities.exists: v =>
-                  v.matchesGav(d.group, d.name, d.currentVersion.original, d.scalaVersion)
-            )
-        .flatMap(_.importBy)
-        .toSet
-
     val dependenciesToReturn =
       dependencies.filter: dependency =>
         (dependency.importBy.isEmpty && (
@@ -228,16 +216,14 @@ class CuratedLibrariesService @Inject()(
           curatedDependencyConfig.allDependencies.exists(d => d.group == dependency.group && d.name == dependency.name)
         ))                                                                                                             // any directly imported HMRC or curated dependency
           || dependency.bobbyRuleViolations.nonEmpty                                                                   // or any dependency with a bobby rule violation
-          || parentDepsOfViolations.contains(ImportedBy(dependency.name, dependency.group, dependency.currentVersion)) // or the parent that imported the violation
-          || vulnerabilities.exists: v =>
-              v.matchesGav(dependency.group, dependency.name, dependency.currentVersion.original, dependency.scalaVersion)
+          || dependency.vulnerabilities.nonEmpty                                                                       // or any dependency with a vulnerability
 
     val unreferencedVulnerableDependencies =
       if scope == DependencyScope.Compile then
         vulnerabilities
           .filterNot: v =>
             dependenciesToReturn.exists: d =>
-              v.matchesGav(d.group, d.name, d.currentVersion.original, d.scalaVersion)
+              d.vulnerabilities.contains(v.id)
           .map: v =>
             Dependency(
               name                = v.vulnerableComponentName
@@ -250,6 +236,9 @@ class CuratedLibrariesService @Inject()(
             , importBy            = None
             , scope               = scope
             )
+          .groupBy(x => (x.name, x.scope))
+          .flatMap:(_, deps) =>
+            deps.headOption.map(_.copy(vulnerabilities = deps.flatMap(_.vulnerabilities)))
       else
         Seq.empty
 
