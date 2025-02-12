@@ -65,10 +65,12 @@ class VulnerabilitiesConnectorSpec
         , vulnerableComponentVersion = "1.0"
         , id                         = "CVE-1"
         , occurrences                = List(
-            VulnerableComponent(
+            VulnerabilityOccurrence(
               "gav://g:a",
               "1.0",
-              "Service_A-1.0.0/lib/g.a-1.0.jar"
+              "Service_A-1.0.0/lib/g.a-1.0.jar",
+              Seq("team"),
+              "service"
             )
           )
         ),
@@ -77,10 +79,12 @@ class VulnerabilitiesConnectorSpec
         , vulnerableComponentVersion = "1.0"
         , id                         = "CVE-2"
         , occurrences                = List(
-            VulnerableComponent(
+            VulnerabilityOccurrence(
               "gav://g:a",
               "1.0",
-              "Service_A-1.0.0/lib/g.a-1.0.jar"
+              "Service_A-1.0.0/lib/g.a-1.0.jar",
+              Seq("team"),
+              "service"
             )
           )
         )
@@ -94,10 +98,12 @@ class VulnerabilitiesConnectorSpec
         , vulnerableComponentVersion = "1.0"
         , id                         = "CVE-1"
         , occurrences                = List(
-            VulnerableComponent(
+            VulnerabilityOccurrence(
               "gav://g:a",
               "1.0",
-              "Service_A-1.0.0/lib/g.a-1.0.jar"
+              "Service_A-1.0.0/lib/g.a-1.0.jar",
+              Seq("team"),
+              "service"
             )
           )
         )
@@ -111,10 +117,12 @@ class VulnerabilitiesConnectorSpec
         , vulnerableComponentVersion = "1.0"
         , id                         = "CVE-1"
         , occurrences                = List(
-            VulnerableComponent(
+            VulnerabilityOccurrence(
               "gav://g:a",
               "1.0",
-              "Service_A-1.0.0/lib/g2.a2-1.0.jar/META-INF/maven/g/a/pom.xml"
+              "Service_A-1.0.0/lib/g2.a2-1.0.jar/META-INF/maven/g/a/pom.xml",
+              Seq("team"),
+              "service"
             )
           )
         )
@@ -128,10 +136,12 @@ class VulnerabilitiesConnectorSpec
         , vulnerableComponentVersion = "1.0"
         , id                         = "CVE-1"
         , occurrences                = List(
-            VulnerableComponent(
+            VulnerabilityOccurrence(
               "gav://g:a",
               "1.0",
-              "Service_A-1.0.0/lib/a2-1.0.jar/META-INF/maven/g/a/pom.xml"
+              "Service_A-1.0.0/lib/a2-1.0.jar/META-INF/maven/g/a/pom.xml",
+              Seq("team"),
+              "service"
             )
           )
         )
@@ -145,10 +155,12 @@ class VulnerabilitiesConnectorSpec
         , vulnerableComponentVersion = "1.0"
         , id                         = "CVE-1"
         , occurrences                = List(
-            VulnerableComponent(
+            VulnerabilityOccurrence(
               "gav://g:a_2.13",
               "1.0",
-              "Service_A-1.0.0/lib/g2.a2-1.0.jar/META-INF/maven/g/a_2.13/pom.xml"
+              "Service_A-1.0.0/lib/g2.a2-1.0.jar/META-INF/maven/g/a_2.13/pom.xml",
+              Seq("team"),
+              "service"
             )
           )
         )
@@ -162,10 +174,12 @@ class VulnerabilitiesConnectorSpec
         , vulnerableComponentVersion = "1.0"
         , id                         = "CVE-1"
         , occurrences                = List(
-            VulnerableComponent(
+            VulnerabilityOccurrence(
               "gav://g:a",
               "1.0",
-              "Service_A-1.0.0/lib/g2.a2_2.13-1.0.jar/META-INF/maven/g/a/pom.xml"
+              "Service_A-1.0.0/lib/g2.a2_2.13-1.0.jar/META-INF/maven/g/a/pom.xml",
+              Seq("team"),
+              "service"
             )
           )
         )
@@ -179,10 +193,12 @@ class VulnerabilitiesConnectorSpec
         , vulnerableComponentVersion = "1.0"
         , id                         = "CVE-1"
         , occurrences                = List(
-            VulnerableComponent(
+            VulnerabilityOccurrence(
               "gav://g:a",
               "1.0",
-              ".extract/webapps/Service_A.war/WEB-INF/lib/a2_2.13-1.0.jar"
+              ".extract/webapps/Service_A.war/WEB-INF/lib/a2_2.13-1.0.jar",
+              Seq("team"),
+              "service"
             )
           )
         )
