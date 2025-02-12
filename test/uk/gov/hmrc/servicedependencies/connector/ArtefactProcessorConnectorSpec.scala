@@ -47,7 +47,8 @@ class ArtefactProcessorConnectorSpec
     GuiceApplicationBuilder()
       .configure(
         "microservice.services.artefact-processor.host" -> wireMockHost,
-        "microservice.services.artefact-processor.port" -> wireMockPort
+        "microservice.services.artefact-processor.port" -> wireMockPort,
+        "internal-auth.token" -> "token"
       )
       .build()
 

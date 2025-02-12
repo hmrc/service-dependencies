@@ -21,7 +21,7 @@ import play.api.{Configuration, Environment, Logger}
 import play.api.inject.Binding
 import play.api.libs.concurrent.MaterializerProvider
 import uk.gov.hmrc.servicedependencies.notification.{DeploymentHandler, MetaArtefactUpdateHandler, MetaArtefactDeadLetterHandler, SlugInfoUpdatedHandler, SlugInfoDeadLetterHandler}
-import uk.gov.hmrc.servicedependencies.scheduler.{BobbyRulesSummaryScheduler, DerivedViewsScheduler, LatestVersionScheduler}
+import uk.gov.hmrc.servicedependencies.scheduler.*
 
 class Module extends play.api.inject.Module:
 
@@ -42,9 +42,10 @@ class Module extends play.api.inject.Module:
 
   override def bindings(environment: Environment, configuration: Configuration): Seq[Binding[?]] =
     Seq(
-      bind[BobbyRulesSummaryScheduler].toSelf.eagerly()
-    , bind[DerivedViewsScheduler     ].toSelf.eagerly()
-    , bind[LatestVersionScheduler    ].toSelf.eagerly()
-    , bind[Materializer              ].toProvider(classOf[MaterializerProvider])
+      bind[BobbyRulesSummaryScheduler     ].toSelf.eagerly()
+    , bind[DerivedViewsScheduler          ].toSelf.eagerly()
+    , bind[LatestVersionScheduler         ].toSelf.eagerly()
+    , bind[ProductionNotificationScheduler].toSelf.eagerly()
+    , bind[Materializer                   ].toProvider(classOf[MaterializerProvider])
     ) ++
     ecsDeploymentsBindings(configuration)
