@@ -55,7 +55,7 @@ case class DistinctVulnerability(
   vulnerableComponentName   : String,
   vulnerableComponentVersion: String,
   id                        : String,
-  occurrences               : Seq[VulnerableComponent]
+  occurrences               : Seq[VulnerabilityOccurrence]
 ):
 
   def matchesGav(group: String, artefact: String, version: String, scalaVersion: Option[String]): Boolean =
@@ -63,17 +63,18 @@ case class DistinctVulnerability(
 
 object DistinctVulnerability:
   val reads: Reads[DistinctVulnerability] =
-    given Reads[VulnerableComponent] = VulnerableComponent.reads
+    given Reads[VulnerabilityOccurrence] = VulnerabilityOccurrence.reads
     ( (__ \ "distinctVulnerability" \ "vulnerableComponentName"   ).read[String]
     ~ (__ \ "distinctVulnerability" \ "vulnerableComponentVersion").read[String]
     ~ (__ \ "distinctVulnerability" \ "id"                        ).read[String]
-    ~ (__ \ "occurrences"                                         ).read[Seq[VulnerableComponent]]
+    ~ (__ \ "occurrences"                                         ).read[Seq[VulnerabilityOccurrence]]
     )(apply)
 
-case class VulnerableComponent(
+case class VulnerabilityOccurrence(
   name    : String,
   version : String,
-  path    : String
+  path    : String,
+  teams   : Seq[String]
 ):
 
   def matchesGav(group: String, artefact: String, version: String, scalaVersion: Option[String]): Boolean =
@@ -82,17 +83,18 @@ case class VulnerableComponent(
       true
     else
       path match
-        case VulnerableComponent.jarRegex(jar) =>
+        case VulnerabilityOccurrence.jarRegex(jar) =>
           jar == s"$group.$artefact${scalaVersion.fold("")("_" + _)}-$version"
             // java wars have jars without the group in the name
             || jar == s"$artefact${scalaVersion.fold("")("_" + _)}-$version"
         case _ => false
 
-object VulnerableComponent:
+object VulnerabilityOccurrence:
   private val jarRegex = raw".*\/([^\/]+)\.jar.*".r
 
-  val reads: Reads[VulnerableComponent] =
+  val reads: Reads[VulnerabilityOccurrence] =
     ( (__ \ "vulnerableComponentName"   ).read[String]
     ~ (__ \ "vulnerableComponentVersion").read[String]
     ~ (__ \ "componentPathInSlug"       ).read[String]
+    ~ (__ \ "teams"                     ).read[Seq[String]]
     )(apply)
