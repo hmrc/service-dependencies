@@ -74,7 +74,8 @@ case class VulnerabilityOccurrence(
   name    : String,
   version : String,
   path    : String,
-  teams   : Seq[String]
+  teams   : Seq[String],
+  service : String
 ):
 
   def matchesGav(group: String, artefact: String, version: String, scalaVersion: Option[String]): Boolean =
@@ -97,4 +98,5 @@ object VulnerabilityOccurrence:
     ~ (__ \ "vulnerableComponentVersion").read[String]
     ~ (__ \ "componentPathInSlug"       ).read[String]
     ~ (__ \ "teams"                     ).read[Seq[String]]
+    ~ (__ \ "service"                   ).read[String]
     )(apply)

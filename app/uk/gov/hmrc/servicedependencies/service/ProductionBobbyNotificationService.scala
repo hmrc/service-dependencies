@@ -46,7 +46,7 @@ class ProductionBobbyNotificationService @Inject()(
       groupedByTeam   =  teamToRepoMap.flatMap:
                            case (repoName, teams) =>
                              filteredReports.find(_.repoName == repoName).map(report => teams.map(_ -> report))
-                         .flatten.groupBy(_._1).view.mapValues(_.map(_._2)).toMap
+                         .flatten.groupMap(_._1)(_._2).toMap
       responses       <- groupedByTeam.toList.foldLeftM(List.empty[(String, SlackNotificationsConnector.Response)]):
                            (acc, teamReports) =>
                              val (team, reports) = teamReports
@@ -67,12 +67,13 @@ class ProductionBobbyNotificationService @Inject()(
       s"Hello $team, the following services are deployed in Production and are in violation of one or more Bobby Rule:"
     )
 
-    val warnings = SlackNotificationsConnector.mrkdwnBlock(
-      reports.map(r => s"`${r.repoName}`").distinct.mkString("\n")
-    )
+    val warnings = reports.map: report =>
+      SlackNotificationsConnector.mrkdwnBlock(
+        s"<https://catalogue.tax.service.gov.uk/service/${report.repoName}#environmentTabs|${report.repoName}>"
+      )
 
     val link = SlackNotificationsConnector.mrkdwnBlock(
-      s"See <https://catalogue.tax.service.gov.uk/bobby-violations?teamName=$team&flag=production&isActive=true|Catalogue> for more information."
+      s"To stay informed on upcoming Bobby Rules that affect your services, visit your <https://catalogue.tax.service.gov.uk/teams/$team|Team Page> in the Catalogue."
     )
 
     SlackNotificationsConnector.Request(
@@ -80,7 +81,7 @@ class ProductionBobbyNotificationService @Inject()(
       displayName     = "MDTP Catalogue",
       emoji           = ":tudor-crown:",
       text            = "There are Bobby Rules being violated by your service(s) deployed in Production",
-      blocks          = Seq(heading, msg, warnings, link),
+      blocks          = Seq(heading, msg) ++ warnings :+ link,
       callbackChannel = Some("team-platops-alerts")
     )
 
