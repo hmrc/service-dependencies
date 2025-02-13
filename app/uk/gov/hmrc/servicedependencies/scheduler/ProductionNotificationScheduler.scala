@@ -57,10 +57,12 @@ class ProductionNotificationScheduler @Inject() (
     schedulerConfig = schedulerConfigs,
     lock = ScheduledLockService(mongoLockRepository, "production-notification-scheduler", timestampSupport, schedulerConfigs.interval)
   ):
-    run(Instant.now()):
+    val now = Instant.now()
+    run(now):
       for 
         _ <- bobbyNotificationService.notifyBobbyErrorsInProduction()
         _ <- vulnerabilitiesNotificationService.notifyProductionVulnerabilities()
+        _ <- productionNotificationRepository.setLastRunTime(now)
       yield ()
 
 
