@@ -71,19 +71,19 @@ object DistinctVulnerability:
     )(apply)
 
 case class VulnerabilityOccurrence(
-  name    : String,
-  version : String,
-  path    : String,
-  teams   : Seq[String],
-  service : String
+  vulnerableComponentName   : String,
+  vulnerableComponentVersion: String,
+  componentPathInSlug       : String,
+  teams                     : Seq[String],
+  service                   : String
 ):
 
   def matchesGav(group: String, artefact: String, version: String, scalaVersion: Option[String]): Boolean =
-    if this.name == s"gav://$group:$artefact${scalaVersion.fold("")("_" + _)}" && this.version == version
+    if this.vulnerableComponentName == s"gav://$group:$artefact${scalaVersion.fold("")("_" + _)}" && this.vulnerableComponentVersion == version
     then
       true
     else
-      path match
+      componentPathInSlug match
         case VulnerabilityOccurrence.jarRegex(jar) =>
           jar == s"$group.$artefact${scalaVersion.fold("")("_" + _)}-$version"
             // java wars have jars without the group in the name
