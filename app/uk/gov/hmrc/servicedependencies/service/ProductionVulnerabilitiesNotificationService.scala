@@ -60,10 +60,18 @@ class ProductionVulnerabilitiesNotificationService @Inject()(
       s"Hello $team, the following services are deployed in Production and have vulnerabilities marked as `Action Required`"
     )
 
-    val warnings = services.map: service =>
-      SlackNotificationsConnector.mrkdwnBlock(
-        s"<https://catalogue.tax.service.gov.uk/service/$service#environmentTabs|$service>"
-      )
+    val warnings =
+      services
+        .toList
+        .sorted
+        .grouped(10)
+        .map { batch =>
+          val batchMsg = batch
+            .map(service => s"• <https://catalogue.tax.service.gov.uk/service/$service#environmentTabs|$service>")
+            .mkString("\\n")
+          SlackNotificationsConnector.mrkdwnBlock(batchMsg)
+        }
+        .toSeq
 
     val link = SlackNotificationsConnector.mrkdwnBlock(
       s"To stay informed on vulnerabilities that are affecting your services, visit your <https://catalogue.tax.service.gov.uk/teams/$team|Team Page> in the Catalogue."
