@@ -90,11 +90,26 @@ class ProductionBobbyNotificationServiceSpec
         development  = false,
         externalTest = false,
         integration  = false
+      ),
+      BobbyReport(
+        repoName     = "repo1",
+        repoVersion  = Version("0.1.0"),
+        repoType     = RepoType.Service,
+        violations   = violations,
+        lastUpdated  = java.time.Instant.now(),
+        latest       = false,
+        production   = true,
+        qa           = false,
+        staging      = false,
+        development  = false,
+        externalTest = false,
+        integration  = false
       )
     )
 
     val teamToReposMap = Map(
-      "repo" -> Seq("team1", "team2"),
+      "repo"  -> Seq("team1", "team2"),
+      "repo1" -> Seq("team1")
     )
 
     val derivedBobbyReportRepository = mock[DerivedBobbyReportRepository]

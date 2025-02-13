@@ -25,7 +25,6 @@ import uk.gov.hmrc.servicedependencies.persistence.derived.DerivedBobbyReportRep
 import scala.concurrent.{ExecutionContext, Future}
 import uk.gov.hmrc.servicedependencies.model.SlugInfoFlag
 import uk.gov.hmrc.http.HeaderCarrier
-import uk.gov.hmrc.servicedependencies.model.BobbyReport
 import uk.gov.hmrc.servicedependencies.connector.SlackNotificationsConnector
 
 @Singleton
@@ -45,20 +44,20 @@ class ProductionBobbyNotificationService @Inject()(
       filteredReports =  reports.filter(_.violations.exists(v => !v.exempt && now.isAfter(v.from)))
       groupedByTeam   =  teamToRepoMap.flatMap:
                            case (repoName, teams) =>
-                             filteredReports.find(_.repoName == repoName).map(report => teams.map(_ -> report))
+                             filteredReports.find(_.repoName == repoName).map(report => teams.map(_ -> report.repoName))
                          .flatten.groupMap(_._1)(_._2).toMap
       responses       <- groupedByTeam.toList.foldLeftM(List.empty[(String, SlackNotificationsConnector.Response)]):
                            (acc, teamReports) =>
-                             val (team, reports) = teamReports
+                             val (team, services) = teamReports
                              slackNotificationsConnector
-                               .sendMessage(errorNotification(team, reports.toSeq))
+                               .sendMessage(errorNotification(team, services.toSet))
                                .map(resp => acc :+ (team, resp))
       _               =  responses.map:
                             case (team, rsp) if rsp.errors.nonEmpty => logger.warn(s"Sending Bobby Error message to $team had errors ${rsp.errors.mkString(" : ")}")
                             case (team, _)                          => logger.info(s"Successfully sent Bobby Error message to $team")
     yield ()
 
-  private def errorNotification(team: String, reports: Seq[BobbyReport]): SlackNotificationsConnector.Request =
+  private def errorNotification(team: String, services: Set[String]): SlackNotificationsConnector.Request =
     val heading = SlackNotificationsConnector.mrkdwnBlock(
       ":alarm: ACTION REQUIRED! :platops-bobby:"
     )
@@ -67,10 +66,18 @@ class ProductionBobbyNotificationService @Inject()(
       s"Hello $team, the following services are deployed in Production and are in violation of one or more Bobby Rule:"
     )
 
-    val warnings = reports.map: report =>
-      SlackNotificationsConnector.mrkdwnBlock(
-        s"<https://catalogue.tax.service.gov.uk/service/${report.repoName}#environmentTabs|${report.repoName}>"
-      )
+    val warnings =
+      services
+        .toList
+        .sorted
+        .grouped(10)
+        .map { batch =>
+          val batchMsg = batch
+            .map(service => s"• <https://catalogue.tax.service.gov.uk/service/$service#environmentTabs|$service>")
+            .mkString("\\n")
+          SlackNotificationsConnector.mrkdwnBlock(batchMsg)
+        }
+        .toSeq
 
     val link = SlackNotificationsConnector.mrkdwnBlock(
       s"To stay informed on upcoming Bobby Rules that affect your services, visit your <https://catalogue.tax.service.gov.uk/teams/$team|Team Page> in the Catalogue."
