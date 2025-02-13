@@ -63,11 +63,11 @@ class ProductionVulnerabilitiesNotificationServiceSpec
         id = "CVE-7357",
         occurrences = Seq(
           VulnerabilityOccurrence(
-            name    = "occ",
-            version = "0.1.0",
-            path    = "/test/path",
-            teams   = Seq("team1"),
-            service = "service"
+            vulnerableComponentName    = "occ",
+            vulnerableComponentVersion = "0.1.0",
+            componentPathInSlug        = "/test/path",
+            teams                      = Seq("team1"),
+            service                    = "service"
           )
         )
       ),
@@ -77,11 +77,11 @@ class ProductionVulnerabilitiesNotificationServiceSpec
         id = "CVE-1337",
         occurrences = Seq(
           VulnerabilityOccurrence(
-            name    = "lib",
-            version = "1.0.0",
-            path    = "/a/b/c",
-            teams   = Seq("team1", "team2"),
-            service = "service1"
+            vulnerableComponentName    = "lib",
+            vulnerableComponentVersion = "1.0.0",
+            componentPathInSlug        = "/a/b/c",
+            teams                      = Seq("team1", "team2"),
+            service                    = "service1"
           )
         )
       )
@@ -91,4 +91,4 @@ class ProductionVulnerabilitiesNotificationServiceSpec
     val slackNotificationsConnector = mock[SlackNotificationsConnector]
 
     val service = new ProductionVulnerabilitiesNotificationService(vulnerabilitiesConnector, slackNotificationsConnector)
-      
+
