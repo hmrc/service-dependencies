@@ -60,12 +60,17 @@ class DerivedBobbyReportRepository @Inject()(
     , repoNames.fold(Filters.empty)(names => Filters.in("repoName", names*))
     )).toFuture()
 
-  def update(repoBobbyRules: BobbyReport): Future[Unit] =
-    withSessionAndTransaction: session =>
-      for
-        _ <- collection.deleteMany(session, Filters.and(Filters.equal("repoName", repoBobbyRules.repoName), Filters.equal("repoVersion", repoBobbyRules.repoVersion.original))).toFuture()
-        _ <- collection.insertOne(session, repoBobbyRules).toFuture()
-      yield ()
+  def update(repoName: String, bobbyReports: Seq[BobbyReport]): Future[Unit] =
+    if bobbyReports.exists(x => x.repoName != repoName) then
+      Future.failed(sys.error(s"$repoName does not match bobby reports ${bobbyReports.collect { case x if x.repoName != repoName => s"${x.repoName}:${x.repoVersion.original}"}.mkString(",")}"))
+    else
+      withSessionAndTransaction: session =>
+        for
+          _ <- collection.deleteMany(session, Filters.equal("repoName", repoName)).toFuture()
+          _ <- if  bobbyReports.isEmpty
+              then Future.unit
+              else collection.insertMany(session, bobbyReports).toFuture()
+        yield ()
 
   def deleteMany(repos: Seq[DecommissionedRepository]): Future[Unit] =
     collection
