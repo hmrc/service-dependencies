@@ -46,18 +46,19 @@ class SlugInfoServiceSpec
   val scope    = DependencyScope.Compile
 
   val v100 = MetaArtefactDependency(
-    repoName      = "service1"
-  , repoVersion   = Version("v1")
-  , repoType      = RepoType.Service
-  , teams         = List.empty
-  , depGroup      = group
-  , depArtefact   = artefact
-  , depVersion    = Version("1.0.0")
-  , compileFlag   = false
-  , providedFlag  = true
-  , testFlag      = true
-  , itFlag        = true
-  , buildFlag     = true
+    repoName       = "service1"
+  , repoVersion    = Version("v1")
+  , repoType       = RepoType.Service
+  , teams          = List.empty
+  , digitalService = None
+  , depGroup       = group
+  , depArtefact    = artefact
+  , depVersion     = Version("1.0.0")
+  , compileFlag    = false
+  , providedFlag   = true
+  , testFlag       = true
+  , itFlag         = true
+  , buildFlag      = true
   )
 
   val v200 = v100.copy(depVersion = Version("2.0.0"))

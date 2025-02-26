@@ -70,13 +70,18 @@ class ServiceDependenciesController @Inject()(
     Action.async { implicit request =>
       given Writes[MetaArtefactDependency] = MetaArtefactDependency.apiWrites
       for
-        teamReposMap <- teamsAndRepositoriesConnector.cachedTeamToReposMap()
+        repoMap      <- teamsAndRepositoriesConnector.cachedRepoMap()
         dependencies <- flag match
                           case SlugInfoFlag.Latest => derivedLatestDependencyRepository.find(group = Some(group), artefact = Some(artefact), scopes = scope, repoType = repoType)
                           case _                   => derivedDeployedDependencyRepository.findWithDeploymentLookup(group = Some(group), artefact = Some(artefact), scopes = scope, flag = flag)
         results      =  versionRange
-                          .map(range => dependencies.filter(s => range.includes(s.depVersion))).getOrElse(dependencies)
-                          .map(repo => repo.copy(teams = teamReposMap.get(repo.repoName).toList.flatten.sorted))
+                          .map(range => dependencies.filter(s => range.includes(s.depVersion)))
+                          .getOrElse(dependencies)
+                          .map: repo =>
+                            repoMap.get(repo.repoName) match
+                              case Some((teams, digitalService)) => repo.copy(teams = teams, digitalService = digitalService)
+                              case _                             => repo
+
       yield Ok(Json.toJson(results))
     }
 
@@ -137,25 +142,25 @@ class ServiceDependenciesController @Inject()(
          Ok(Json.toJson(deps))
       ).merge
 
-  def findJDKForEnvironment(team: Option[String], flag: String): Action[AnyContent] =
+  def findJDKForEnvironment(team: Option[String], digitalService: Option[String], flag: String): Action[AnyContent] =
     Action.async: request =>
       given Request[AnyContent] = request
       (for
          f   <- EitherT.fromOption[Future](SlugInfoFlag.parse(flag), BadRequest(s"invalid flag '$flag'"))
          res <- EitherT.liftF[Future, Result, Seq[JDKVersion]]:
-                  slugInfoService.findJDKVersions(team, f)
+                  slugInfoService.findJDKVersions(team, digitalService, f)
        yield
          given Writes[JDKVersion] = JDKVersionFormats.jdkVersionFormat
          Ok(Json.toJson(res))
       ).merge
 
-  def findSBTForEnvironment(team: Option[String], flag: String): Action[AnyContent] =
+  def findSBTForEnvironment(team: Option[String], digitalService: Option[String], flag: String): Action[AnyContent] =
     Action.async: request =>
       given Request[AnyContent] = request
       (for
          f   <- EitherT.fromOption[Future](SlugInfoFlag.parse(flag), BadRequest(s"invalid flag '$flag'"))
          res <- EitherT.liftF[Future, Result, Seq[SBTVersion]]:
-                  slugInfoService.findSBTVersions(team, f)
+                  slugInfoService.findSBTVersions(team, digitalService, f)
        yield
          given Writes[SBTVersion] = SBTVersionFormats.sbtVersionFormat
          Ok(Json.toJson(res))

@@ -43,48 +43,51 @@ class DerivedDeployedDependencyRepositorySpec
   override def checkIndexedQueries = false
 
   private val metaArtefactDependency1 = MetaArtefactDependency(
-    repoName     = "name-1",
-    repoVersion  = Version("2.0.0"),
-    repoType     = Service,
-    depGroup     = "group-1",
-    depArtefact  = "artifact-1",
-    depVersion   = Version("1.0.0"),
-    compileFlag  = true,
-    providedFlag = false,
-    testFlag     = false,
-    itFlag       = false,
-    buildFlag    = false,
-    teams        = List.empty
+    repoName       = "name-1",
+    repoVersion    = Version("2.0.0"),
+    repoType       = Service,
+    depGroup       = "group-1",
+    depArtefact    = "artifact-1",
+    depVersion     = Version("1.0.0"),
+    compileFlag    = true,
+    providedFlag   = false,
+    testFlag       = false,
+    itFlag         = false,
+    buildFlag      = false,
+    teams          = List.empty,
+    digitalService = None
   )
 
   private val metaArtefactDependency2 = MetaArtefactDependency(
-    repoName     = "name-2",
-    repoVersion  = Version("2.0.0"),
-    repoType     = Service,
-    depGroup     = "group-1",
-    depArtefact  = "artifact-1",
-    depVersion   = Version("1.0.0"),
-    compileFlag  = false,
-    providedFlag = true,
-    testFlag     = false,
-    itFlag       = false,
-    buildFlag    = false,
-    teams        = List.empty
+    repoName       = "name-2",
+    repoVersion    = Version("2.0.0"),
+    repoType       = Service,
+    depGroup       = "group-1",
+    depArtefact    = "artifact-1",
+    depVersion     = Version("1.0.0"),
+    compileFlag    = false,
+    providedFlag   = true,
+    testFlag       = false,
+    itFlag         = false,
+    buildFlag      = false,
+    teams          = List.empty,
+    digitalService = None
   )
 
   private val metaArtefactDependency3 = MetaArtefactDependency(
-    repoName     = "name-3",
-    repoVersion  = Version("2.0.0"),
-    repoType     = Service,
-    depGroup     = "group-3",
-    depArtefact  = "artifact-3",
-    depVersion   = Version("1.0.0"),
-    compileFlag  = false,
-    providedFlag = false,
-    testFlag     = true,
-    itFlag       = false,
-    buildFlag    = false,
-    teams        = List.empty
+    repoName       = "name-3",
+    repoVersion    = Version("2.0.0"),
+    repoType       = Service,
+    depGroup       = "group-3",
+    depArtefact    = "artifact-3",
+    depVersion     = Version("1.0.0"),
+    compileFlag    = false,
+    providedFlag   = false,
+    testFlag       = true,
+    itFlag         = false,
+    buildFlag      = false,
+    teams          = List.empty,
+    digitalService = None
   )
 
   override def beforeEach(): Unit = {

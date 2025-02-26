@@ -37,18 +37,19 @@ class DerivedLatestDependencyRepositorySpec
     DerivedLatestDependencyRepository(mongoComponent)
 
   private val metaArtefactDependency1 = MetaArtefactDependency(
-    repoName     = "name-1"
-  , depGroup     = "group-1"
-  , depArtefact  = "artefact-1"
-  , depVersion   = Version("1.0.0")
-  , compileFlag  = true
-  , providedFlag = false
-  , testFlag     = false
-  , itFlag       = false
-  , buildFlag    = false
-  , teams        = List.empty
-  , repoVersion  = Version("2.0.0")
-  , repoType     = Service
+    repoName       = "name-1"
+  , depGroup       = "group-1"
+  , depArtefact    = "artefact-1"
+  , depVersion     = Version("1.0.0")
+  , compileFlag    = true
+  , providedFlag   = false
+  , testFlag       = false
+  , itFlag         = false
+  , buildFlag      = false
+  , teams          = List.empty
+  , digitalService = None
+  , repoVersion    = Version("2.0.0")
+  , repoType       = Service
   )
 
   private val metaArtefactDependency2 = metaArtefactDependency1.copy(

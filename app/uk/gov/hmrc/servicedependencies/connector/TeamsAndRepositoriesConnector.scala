@@ -30,18 +30,20 @@ object TeamsAndRepositoriesConnector:
   import play.api.libs.functional.syntax.*
 
   case class Repository(
-    name      : String
-  , teamNames : Seq[String]
-  , repoType  : RepoType
-  , isArchived: Boolean
+    name          : String
+  , teamNames     : Seq[String]
+  , digitalService: Option[String]
+  , repoType      : RepoType
+  , isArchived    : Boolean
   )
 
   object Repository:
     val reads: Reads[Repository] =
-      ( (__ \ "name"      ).read[String]
-      ~ (__ \ "teamNames" ).read[Seq[String]]
-      ~ (__ \ "repoType"  ).read[RepoType]
-      ~ (__ \ "isArchived").read[Boolean]
+      ( (__ \ "name"          ).read[String]
+      ~ (__ \ "teamNames"     ).read[Seq[String]]
+      ~ (__ \ "digitalService").readNullable[String]
+      ~ (__ \ "repoType"      ).read[RepoType]
+      ~ (__ \ "isArchived"    ).read[Boolean]
       )(apply)
 
   case class DecommissionedRepository(name: String)
@@ -90,7 +92,7 @@ class TeamsAndRepositoriesConnector @Inject()(
       .get(url"$teamsAndRepositoriesApiBase/api/v2/decommissioned-repositories?repoType=${repoType.map(_.asString)}")
       .execute[Seq[DecommissionedRepository]]
 
-  def cachedTeamToReposMap()(using hc: HeaderCarrier): Future[Map[String, Seq[String]]] =
+  def cachedRepoMap()(using hc: HeaderCarrier): Future[Map[String, (List[String], Option[String])]] =
     cache.getOrElseUpdate("teams-for-services", serviceConfiguration.teamsAndRepositoriesCacheExpiration):
       getAllRepositories(archived = Some(false))
-        .map(_.map(x => (x.name, x.teamNames)).toMap)
+        .map(_.map(x => (x.name, (x.teamNames.sorted.toList, x.digitalService))).toMap)

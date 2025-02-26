@@ -84,16 +84,18 @@ class TeamsAndRepositoriesConnectorSpec
       val repositories = connector.getAllRepositories(archived = None).futureValue
       repositories shouldBe List(
         Repository(
-          name       = "test-repo"
-        , teamNames  = Seq("PlatOps", "Webops")
-        , repoType   = RepoType.Prototype
-        , isArchived = false
+          name           = "test-repo"
+        , teamNames      = Seq("PlatOps", "Webops")
+        , digitalService = None
+        , repoType       = RepoType.Prototype
+        , isArchived     = false
         )
         , Repository(
-          name       = "another-repo"
-        , teamNames  = Seq("PlatOps", "Webops")
-        , repoType   = RepoType.Prototype
-        , isArchived = false
+          name           = "another-repo"
+        , teamNames      = Seq("PlatOps", "Webops")
+        , digitalService = None
+        , repoType       = RepoType.Prototype
+        , isArchived     = false
         )
       )
 

@@ -48,7 +48,7 @@ class ProductionBobbyNotificationServiceSpec
       when(derivedBobbyReportRepository.find(SlugInfoFlag.Production))
         .thenReturn(Future.successful(bobbyReports))
 
-      when(teamsAndReposConnector.cachedTeamToReposMap()(using any[HeaderCarrier]))
+      when(teamsAndReposConnector.cachedRepoMap()(using any[HeaderCarrier]))
         .thenReturn(Future.successful(teamToReposMap))
 
       when(slackNotificationsConnector.sendMessage(any[SlackNotificationsConnector.Request])(using any[HeaderCarrier]))
@@ -108,8 +108,8 @@ class ProductionBobbyNotificationServiceSpec
     )
 
     val teamToReposMap = Map(
-      "repo"  -> Seq("team1", "team2"),
-      "repo1" -> Seq("team1")
+      "repo"  -> (Seq("team1", "team2"), None),
+      "repo1" -> (Seq("team1")         , None)
     )
 
     val derivedBobbyReportRepository = mock[DerivedBobbyReportRepository]
