@@ -61,10 +61,11 @@ class TeamDependencyServiceSpec
 
       when(mockTeamsAndReposConnector.getAllRepositories(archived = Some(false), teamName = Some("foo")))
         .thenReturn(Future.successful(Seq(TeamsAndRepositoriesConnector.Repository(
-          name       = "my-slug"
-        , teamNames  = Seq("foo")
-        , repoType   = RepoType.Service
-        , isArchived = false
+          name           = "my-slug"
+        , teamNames      = Seq("foo")
+        , digitalService = None
+        , repoType       = RepoType.Service
+        , isArchived     = false
         ))))
 
       when(mockServiceConfigsConnector.getBobbyRules())

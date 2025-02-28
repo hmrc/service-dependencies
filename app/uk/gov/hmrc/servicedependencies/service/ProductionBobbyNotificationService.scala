@@ -40,10 +40,10 @@ class ProductionBobbyNotificationService @Inject()(
     val now = java.time.LocalDate.now()
     for
       reports         <- derivedBobbyReportRepository.find(SlugInfoFlag.Production)
-      teamToRepoMap   <- teamsAndReposConnector.cachedTeamToReposMap()
+      repoMap         <- teamsAndReposConnector.cachedRepoMap()
       filteredReports =  reports.filter(_.violations.exists(v => !v.exempt && now.isAfter(v.from)))
-      groupedByTeam   =  teamToRepoMap.flatMap:
-                           case (repoName, teams) =>
+      groupedByTeam   =  repoMap.flatMap:
+                           case (repoName, (teams, _)) =>
                              filteredReports.find(_.repoName == repoName).map(report => teams.map(_ -> report.repoName))
                          .flatten.groupMap(_._1)(_._2).toMap
       responses       <- groupedByTeam.toList.foldLeftM(List.empty[(String, SlackNotificationsConnector.Response)]):

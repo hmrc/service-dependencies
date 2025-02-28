@@ -98,10 +98,11 @@ class DerivedViewsServiceSpec
     "clear latest flag for deleted/archived services" in {
       def toRepositoryInfo(name: String) =
         TeamsAndRepositoriesConnector.Repository(
-          name       = name
-        , teamNames  = Seq("PlatOps", "Webops")
-        , repoType   = RepoType.Service
-        , isArchived = false
+          name           = name
+        , teamNames      = Seq("PlatOps", "Webops")
+        , digitalService = None
+        , repoType       = RepoType.Service
+        , isArchived     = false
         )
 
       val knownSlugs          = List("service1", "service2", "service3")

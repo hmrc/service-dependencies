@@ -48,10 +48,10 @@ class DerivedGroupArtefactRepositorySpec
     "return a map of artefact group to list of found artefacts" in {
       derivedLatestDependencyRepository.collection.insertMany(
         List(
-          MetaArtefactDependency("repo1", Version("1.0.0"), Service, List.empty, "test.group.1", "test.artefact.1", Version("1.1.0"), compileFlag = true, providedFlag = true, testFlag = true, itFlag = true, buildFlag = true),
-          MetaArtefactDependency("repo2", Version("1.0.0"), Service, List.empty, "test.group.1", "test.artefact.2", Version("1.1.0"), compileFlag = true, providedFlag = true, testFlag = true, itFlag = true, buildFlag = true),
-          MetaArtefactDependency("repo3", Version("1.0.0"), Service, List.empty, "test.group.1", "test.artefact.1", Version("1.1.0"), compileFlag = true, providedFlag = true, testFlag = true, itFlag = true, buildFlag = true),
-          MetaArtefactDependency("repo4", Version("1.0.0"), Service, List.empty, "test.group.2", "test.artefact.1", Version("1.1.0"), compileFlag = true, providedFlag = true, testFlag = true, itFlag = true, buildFlag = true)
+          MetaArtefactDependency("repo1", Version("1.0.0"), Service, List.empty, None, "test.group.1", "test.artefact.1", Version("1.1.0"), compileFlag = true, providedFlag = true, testFlag = true, itFlag = true, buildFlag = true),
+          MetaArtefactDependency("repo2", Version("1.0.0"), Service, List.empty, None, "test.group.1", "test.artefact.2", Version("1.1.0"), compileFlag = true, providedFlag = true, testFlag = true, itFlag = true, buildFlag = true),
+          MetaArtefactDependency("repo3", Version("1.0.0"), Service, List.empty, None, "test.group.1", "test.artefact.1", Version("1.1.0"), compileFlag = true, providedFlag = true, testFlag = true, itFlag = true, buildFlag = true),
+          MetaArtefactDependency("repo4", Version("1.0.0"), Service, List.empty, None, "test.group.2", "test.artefact.1", Version("1.1.0"), compileFlag = true, providedFlag = true, testFlag = true, itFlag = true, buildFlag = true)
         )
       ).toFuture().futureValue
 
@@ -59,8 +59,8 @@ class DerivedGroupArtefactRepositorySpec
 
       derivedLatestDependencyRepository.collection.insertMany(
         List(
-          MetaArtefactDependency("repo5", Version("1.0.0"), Service, List.empty, "test.group.1", "test.artefact.3", Version("1.1.0"), compileFlag = true, providedFlag = true, testFlag = true, itFlag = true, buildFlag = true),
-          MetaArtefactDependency("repo5", Version("1.0.0"), Service, List.empty, "test.group.3", "test.artefact.1", Version("1.1.0"), compileFlag = true, providedFlag = true, testFlag = true, itFlag = true, buildFlag = true),
+          MetaArtefactDependency("repo5", Version("1.0.0"), Service, List.empty, None, "test.group.1", "test.artefact.3", Version("1.1.0"), compileFlag = true, providedFlag = true, testFlag = true, itFlag = true, buildFlag = true),
+          MetaArtefactDependency("repo5", Version("1.0.0"), Service, List.empty, None, "test.group.3", "test.artefact.1", Version("1.1.0"), compileFlag = true, providedFlag = true, testFlag = true, itFlag = true, buildFlag = true),
         )
       ).toFuture().futureValue
 

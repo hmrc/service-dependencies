@@ -190,33 +190,35 @@ class DependencyLookupServiceSpec
 
 object DependencyLookupServiceTestData {
   val dep1 = MetaArtefactDependency(
-    repoName      = "test-1"
-  , repoVersion   = Version("1.0.0")
-  , repoType      = RepoType.Service
-  , teams         = List.empty
-  , depGroup      = "org.libs"
-  , depArtefact   = "mylib"
-  , depVersion    = Version("5.11.0")
-  , compileFlag   = false
-  , providedFlag  = true
-  , testFlag      = true
-  , itFlag        = true
-  , buildFlag     = true
+    repoName       = "test-1"
+  , repoVersion    = Version("1.0.0")
+  , repoType       = RepoType.Service
+  , teams          = List.empty
+  , digitalService = None
+  , depGroup       = "org.libs"
+  , depArtefact    = "mylib"
+  , depVersion     = Version("5.11.0")
+  , compileFlag    = false
+  , providedFlag   = true
+  , testFlag       = true
+  , itFlag         = true
+  , buildFlag      = true
   )
 
   val dep2 = MetaArtefactDependency(
-    repoName      = "test-2"
-  , repoVersion   = Version("1.0.0")
-  , repoType      = RepoType.Service
-  , teams         = List.empty
-  , depGroup      = "org.libs"
-  , depArtefact   = "mylib"
-  , depVersion    = Version("5.12.0")
-  , compileFlag   = false
-  , providedFlag  = true
-  , testFlag      = true
-  , itFlag        = true
-  , buildFlag     = true
+    repoName       = "test-2"
+  , repoVersion    = Version("1.0.0")
+  , repoType       = RepoType.Service
+  , teams          = List.empty
+  , digitalService = None
+  , depGroup       = "org.libs"
+  , depArtefact    = "mylib"
+  , depVersion     = Version("5.12.0")
+  , compileFlag    = false
+  , providedFlag   = true
+  , testFlag       = true
+  , itFlag         = true
+  , buildFlag      = true
   )
 
   val bobbyRule = BobbyRule(

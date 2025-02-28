@@ -22,18 +22,19 @@ import play.api.libs.json._
 import uk.gov.hmrc.servicedependencies.util.DependencyGraphParser
 
 case class MetaArtefactDependency(
-  repoName    : String,
-  repoVersion : Version,
-  repoType    : RepoType,
-  teams       : List[String], // Override on write
-  depGroup    : String,
-  depArtefact : String,
-  depVersion  : Version,
-  compileFlag : Boolean,
-  providedFlag: Boolean,
-  testFlag    : Boolean,
-  itFlag      : Boolean,
-  buildFlag   : Boolean
+  repoName      : String,
+  repoVersion   : Version,
+  repoType      : RepoType,
+  teams         : List[String],   // Added on write
+  digitalService: Option[String], // Added on write
+  depGroup      : String,
+  depArtefact   : String,
+  depVersion    : Version,
+  compileFlag   : Boolean,
+  providedFlag  : Boolean,
+  testFlag      : Boolean,
+  itFlag        : Boolean,
+  buildFlag     : Boolean
 ):
   val depScopes: Set[DependencyScope] =
     DependencyScope
@@ -55,18 +56,19 @@ object MetaArtefactDependency:
     scopes      : Set[DependencyScope]
   ): MetaArtefactDependency =
     MetaArtefactDependency(
-      repoName     = metaArtefact.name,
-      repoVersion  = metaArtefact.version,
-      repoType     = repoType,
-      teams        = List.empty,
-      depGroup     = node.group,
-      depArtefact  = node.artefact,
-      depVersion   = Version(node.version),
-      compileFlag  = scopes.contains(DependencyScope.Compile),
-      providedFlag = scopes.contains(DependencyScope.Provided),
-      testFlag     = scopes.contains(DependencyScope.Test),
-      itFlag       = scopes.contains(DependencyScope.It),
-      buildFlag    = scopes.contains(DependencyScope.Build)
+      repoName       = metaArtefact.name,
+      repoVersion    = metaArtefact.version,
+      repoType       = repoType,
+      teams          = List.empty,
+      digitalService = None,
+      depGroup       = node.group,
+      depArtefact    = node.artefact,
+      depVersion     = Version(node.version),
+      compileFlag    = scopes.contains(DependencyScope.Compile),
+      providedFlag   = scopes.contains(DependencyScope.Provided),
+      testFlag       = scopes.contains(DependencyScope.Test),
+      itFlag         = scopes.contains(DependencyScope.It),
+      buildFlag      = scopes.contains(DependencyScope.Build)
     )
 
   private def ignore[A]: OWrites[A] =
@@ -80,6 +82,10 @@ object MetaArtefactDependency:
         Reads.pure(List.empty[String])
       , ignore[List[String]]
       )
+    ~ OFormat(
+        Reads.pure(Option.empty[String])
+      , ignore[Option[String]]
+      )
     ~ (__ \ "group"         ).format[String]
     ~ (__ \ "artefact"      ).format[String]
     ~ (__ \ "version"       ).format[Version](Version.format)
@@ -92,21 +98,24 @@ object MetaArtefactDependency:
 
   val apiWrites: Writes[MetaArtefactDependency] =
     given Writes[DependencyScope] = DependencyScope.dependencyScopeFormat
-    ( (__ \ "repoName"   ).write[String]
-    ~ (__ \ "repoVersion").write[String]
-    ~ (__ \ "repoType"   ).write[RepoType]
-    ~ (__ \ "teams"      ).write[List[String]]
-    ~ (__ \ "depGroup"   ).write[String]
-    ~ (__ \ "depArtefact").write[String]
-    ~ (__ \ "depVersion" ).write[String]
-    ~ (__ \ "scopes"     ).write[Set[DependencyScope]]
+    ( (__ \ "repoName"      ).write[String]
+    ~ (__ \ "repoVersion"   ).write[String]
+    ~ (__ \ "repoType"      ).write[RepoType]
+    ~ (__ \ "teams"         ).write[List[String]]
+    ~ (__ \ "digitalService").writeNullable[String]
+    ~ (__ \ "depGroup"      ).write[String]
+    ~ (__ \ "depArtefact"   ).write[String]
+    ~ (__ \ "depVersion"    ).write[String]
+    ~ (__ \ "scopes"        ).write[Set[DependencyScope]]
     )(mad => (
       mad.repoName,
       mad.repoVersion.original,
       mad.repoType,
       mad.teams,
+      mad.digitalService,
       mad.depGroup,
       mad.depArtefact,
       mad.depVersion.original,
       mad.depScopes
     ))
+

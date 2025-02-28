@@ -1,8 +1,8 @@
 GET     /api/sluginfo                                      @uk.gov.hmrc.servicedependencies.controller.ServiceDependenciesController.slugInfo(name: String, version: Option[String])
 GET     /api/teams/:team/dependencies                      @uk.gov.hmrc.servicedependencies.controller.ServiceDependenciesController.dependenciesForTeam(team)
 GET     /api/groupArtefacts                                @uk.gov.hmrc.servicedependencies.controller.ServiceDependenciesController.getGroupArtefacts
-GET     /api/jdkVersions                                   @uk.gov.hmrc.servicedependencies.controller.ServiceDependenciesController.findJDKForEnvironment(team: Option[String], flag: String ?= "latest")
-GET     /api/sbtVersions                                   @uk.gov.hmrc.servicedependencies.controller.ServiceDependenciesController.findSBTForEnvironment(team: Option[String], flag: String ?= "latest")
+GET     /api/jdkVersions                                   @uk.gov.hmrc.servicedependencies.controller.ServiceDependenciesController.findJDKForEnvironment(team: Option[String], digitalService: Option[String], flag: String ?= "latest")
+GET     /api/sbtVersions                                   @uk.gov.hmrc.servicedependencies.controller.ServiceDependenciesController.findSBTForEnvironment(team: Option[String], digitalService: Option[String], flag: String ?= "latest")
 GET     /api/bobbyViolations                               @uk.gov.hmrc.servicedependencies.controller.BobbyRuleViolationController.findBobbyRuleViolations
 GET     /api/bobbyReports                                  @uk.gov.hmrc.servicedependencies.controller.BobbyRuleViolationController.bobbyReports(team: Option[String], digitalService: Option[String], repoType: Option[RepoType], flag: SlugInfoFlag ?= SlugInfoFlag.Latest)
 GET     /api/historicBobbyViolations                       @uk.gov.hmrc.servicedependencies.controller.BobbyRuleViolationController.findHistoricBobbyRuleViolations(query: List[BobbyRuleQuery], from: java.time.LocalDate, to: java.time.LocalDate)

@@ -66,20 +66,20 @@ class SlugInfoService @Inject()(
   def findGroupsArtefacts(): Future[Seq[GroupArtefacts]] =
     derivedGroupArtefactRepository.findGroupsArtefacts()
 
-  def findJDKVersions(teamName: Option[String], flag: SlugInfoFlag)(using hc: HeaderCarrier): Future[Seq[JDKVersion]] =
-    teamName match
-      case Some(_) =>
-                      for
-                        repos <- teamsAndRepositoriesConnector.getAllRepositories(archived = Some(false), teamName = teamName)
-                        xs    <- jdkVersionRepository.findJDKUsage(flag)
-                      yield xs.filter(x => repos.exists(_.name == x.name))
-      case None    => jdkVersionRepository.findJDKUsage(flag)
+  def findJDKVersions(teamName: Option[String], digitalService: Option[String], flag: SlugInfoFlag)(using hc: HeaderCarrier): Future[Seq[JDKVersion]] =
+    (teamName, digitalService) match
+      case (None, None) => jdkVersionRepository.findJDKUsage(flag)
+      case _            =>
+                           for
+                             repos <- teamsAndRepositoriesConnector.getAllRepositories(archived = Some(false), teamName = teamName, digitalService = digitalService)
+                             xs    <- jdkVersionRepository.findJDKUsage(flag)
+                           yield xs.filter(x => repos.exists(_.name == x.name))
 
-  def findSBTVersions(teamName: Option[String], flag: SlugInfoFlag)(using hc: HeaderCarrier): Future[Seq[SBTVersion]] =
-    teamName match
-      case Some(n) =>
-                      for
-                        repos <- teamsAndRepositoriesConnector.getAllRepositories(archived = Some(false), teamName = teamName)
-                        xs    <- sbtVersionRepository.findSBTUsage(flag)
-                      yield xs.filter(x => repos.exists(_.name == x.serviceName))
-      case None    => sbtVersionRepository.findSBTUsage(flag)
+  def findSBTVersions(teamName: Option[String], digitalService: Option[String], flag: SlugInfoFlag)(using hc: HeaderCarrier): Future[Seq[SBTVersion]] =
+    (teamName, digitalService) match
+      case (None, None) => sbtVersionRepository.findSBTUsage(flag)
+      case _            =>
+                           for
+                             repos <- teamsAndRepositoriesConnector.getAllRepositories(archived = Some(false), teamName = teamName, digitalService = digitalService)
+                             xs    <- sbtVersionRepository.findSBTUsage(flag)
+                           yield xs.filter(x => repos.exists(_.name == x.serviceName))
