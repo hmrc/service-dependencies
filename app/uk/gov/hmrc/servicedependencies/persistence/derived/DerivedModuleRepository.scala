@@ -51,6 +51,9 @@ class DerivedModuleRepository @Inject()(
       .orElse(OptionT(findNameByModule2(group, artefact, None))) // in-case the version predates collecting meta-data, just ignore Version
       .value
 
+  def findNameByModule(group: String, artefact: String): Future[Option[String]] =
+    findNameByModule2(group, artefact, None)
+
   private def findNameByModule2(group: String, module: String, version: Option[Version]): Future[Option[String]] =
     collection
       .find(

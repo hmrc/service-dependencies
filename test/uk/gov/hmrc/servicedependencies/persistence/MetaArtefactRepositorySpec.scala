@@ -118,4 +118,18 @@ class MetaArtefactRepositorySpec
       ).futureValue
     }
   }
+
+  "findLatestVersionAtDate" should {
+    "return the latest versionat a given date" in {
+      (for
+        _ <- repository.put(metaArtefact)
+        _ <- repository.put(metaArtefact.copy(version = Version("1.1.0"), created = Instant.parse("2022-02-04T17:46:18.588Z")))
+        _ <- repository.put(metaArtefact.copy(version = Version("1.2.0"), created = Instant.parse("2022-03-04T17:46:18.588Z")))
+        _ <- repository.put(metaArtefact.copy(version = Version("1.3.0"), created = Instant.parse("2022-04-04T17:46:18.588Z")))
+        found <- repository.findLatestVersionAtDate(metaArtefact.name, Instant.parse("2022-03-10T17:46:18.588Z"))
+        _ = found shouldBe Some(metaArtefact.copy(version = Version("1.2.0"), created = Instant.parse("2022-03-04T17:46:18.588Z")))
+      yield ()
+        ).futureValue
+    }
+  }
 }

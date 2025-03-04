@@ -18,7 +18,7 @@ package uk.gov.hmrc.servicedependencies.binders
 
 import play.api.mvc.QueryStringBindable
 
-import java.time.LocalDate
+import java.time.{Instant, LocalDate}
 import scala.util.Try
 
 object Binders:
@@ -36,3 +36,19 @@ object Binders:
 
     override def unbind(key: String, value: LocalDate): String =
       strBinder.unbind(key, value.toString)
+
+  given instantBindable(using strBinder: QueryStringBindable[String]): QueryStringBindable[Instant] with
+    override def bind(key: String, params: Map[String, Seq[String]]): Option[Either[String, Instant]] =
+      strBinder
+        .bind(key, params)
+        .map:
+          _.flatMap: s =>
+            Try(Instant.parse(s))
+              .toEither
+              .left
+              .map:
+                _.getMessage
+  
+    override def unbind(key: String, value: Instant): String =
+      strBinder.unbind(key, value.toString)
+  

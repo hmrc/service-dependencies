@@ -35,6 +35,7 @@ import uk.gov.hmrc.servicedependencies.persistence.derived.{DerivedDeployedDepen
 import uk.gov.hmrc.servicedependencies.persistence.{LatestVersionRepository, MetaArtefactRepository}
 import uk.gov.hmrc.servicedependencies.service.*
 
+import java.time.Instant
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
@@ -106,6 +107,52 @@ class ServiceDependenciesControllerSpec
         .thenReturn(Future.successful(None))
 
       val result = boot.controller.latestVersion(group, artefact).apply(FakeRequest())
+
+      status(result) shouldBe NOT_FOUND
+    }
+  }
+
+  "latestVersionAtDate" should {
+    "find a dependency by group and artefact and return the latest version for a given date" in {
+      val boot = Boot.init
+      val metaArtefact =
+        MetaArtefact(
+          name = "hmrc-mongo",
+          version = Version("1.0.0"),
+          uri = "https://store/meta/my-meta/hmrc-mongo-v1.0.0.meta.tgz",
+          gitUrl = Some("https://github.com/hmrc/hmrc-mongo.git"),
+          dependencyDotBuild = Some("dependencyDotBuild"),
+          buildInfo = Map("k" -> "v"),
+          modules = Seq(MetaArtefactModule(
+            name = artefact,
+            group = group,
+            sbtVersion = Some(Version("1.4.9")),
+            crossScalaVersions = Some(List(Version("2.12.14"))),
+            publishSkip = Some(false),
+            dependencyDotCompile = Some("dependencyDotCompile"),
+            dependencyDotProvided = Some("dependencyDotProvided"),
+            dependencyDotTest = Some("dependencyDotTest"),
+            dependencyDotIt = Some("dependencyDotIt")
+          )),
+          created = Instant.parse("2022-01-04T17:46:18.588Z")
+      )
+      when(boot.mockDerivedModuleRepository.findNameByModule(group, artefact))
+        .thenReturn(Future.successful(Some("hmrc-mongo")))
+
+      when(boot.mockMetaArtefactRepository.findLatestVersionAtDate("hmrc-mongo", Instant.parse("2022-01-10T17:46:18.588Z")))
+        .thenReturn(Future.successful(Some(metaArtefact)))
+
+      val result = boot.controller.latestVersionAtDate(group, artefact, Instant.parse("2022-01-10T17:46:18.588Z")).apply(FakeRequest())
+
+      contentAsJson(result) shouldBe Json.parse(s"""{"group":"$group","artefact":"$artefact","version":"1.0.0"}""")
+    }
+
+    "return Not Found when no repo is found for the given module" in {
+      val boot = Boot.init
+      when(boot.mockDerivedModuleRepository.findNameByModule(group, artefact))
+        .thenReturn(Future.successful(None))
+
+      val result = boot.controller.latestVersionAtDate(group, artefact, Instant.parse("2022-03-10T17:46:18.588Z")).apply(FakeRequest())
 
       status(result) shouldBe NOT_FOUND
     }
