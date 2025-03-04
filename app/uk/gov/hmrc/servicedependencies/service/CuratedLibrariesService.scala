@@ -209,10 +209,11 @@ class CuratedLibrariesService @Inject()(
         )
       .toList
 
-    val parentDepsOfViolations =
+    val parentDeps =
       dependencies
         .filter: d =>
-          d.importBy.nonEmpty
+             d.bobbyRuleViolations.nonEmpty
+          || d.importBy.nonEmpty
           && vulnerabilities.exists(v => d.vulnerabilities.contains(v.id))
         .flatMap(_.importBy)
         .toSet
@@ -223,9 +224,9 @@ class CuratedLibrariesService @Inject()(
           dependency.group.startsWith("uk.gov.hmrc") ||
           curatedDependencyConfig.allDependencies.exists(d => d.group == dependency.group && d.name == dependency.name)
         ))                                                                                                             // any directly imported HMRC or curated dependency
-          || dependency.bobbyRuleViolations.nonEmpty                                                                   // or any dependency with a bobby rule violation
-          || parentDepsOfViolations.contains(ImportedBy(dependency.name, dependency.group, dependency.currentVersion)) // or the parent that imported the violation
-          || dependency.vulnerabilities.nonEmpty
+          || dependency.bobbyRuleViolations.nonEmpty                                                                   // or any dependency with bobby violations
+          || dependency.vulnerabilities.nonEmpty                                                                       // or any dependency with vulnerabilities
+          || parentDeps.contains(ImportedBy(dependency.name, dependency.group, dependency.currentVersion))             // or the parent that imported violations or vulnerabilities
 
     val unreferencedVulnerableDependencies =
       if scope == DependencyScope.Compile then
