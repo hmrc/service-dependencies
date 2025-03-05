@@ -25,6 +25,7 @@ import uk.gov.hmrc.mongo.transaction.{TransactionConfiguration, Transactions}
 import uk.gov.hmrc.mongo.play.json.PlayMongoRepository
 import uk.gov.hmrc.servicedependencies.model.{MetaArtefact, Version}
 
+import java.time.Instant
 import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -150,6 +151,15 @@ class MetaArtefactRepository @Inject()(
     collection
       .find(filter = Filters.equal("name", repositoryName))
       .toFuture()
+
+  def findLatestVersionAtDate(repositoryName: String, date: Instant): Future[Option[MetaArtefact]] =
+    collection
+      .find(filter = Filters.and(
+        Filters.equal("name", repositoryName)
+      , Filters.lt("created", date)
+      ))
+      .sort(Sorts.descending("created"))
+      .headOption()
 
   def findLatest(): Future[Seq[MetaArtefact]] =
     collection

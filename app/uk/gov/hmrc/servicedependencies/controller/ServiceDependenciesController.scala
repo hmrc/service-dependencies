@@ -30,6 +30,7 @@ import uk.gov.hmrc.servicedependencies.persistence.derived.{DerivedDeployedDepen
 import uk.gov.hmrc.servicedependencies.persistence.{LatestVersionRepository, MetaArtefactRepository}
 import uk.gov.hmrc.servicedependencies.service.{CuratedLibrariesService, SlugInfoService, TeamDependencyService}
 
+import java.time.Instant
 import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
@@ -195,13 +196,20 @@ class ServiceDependenciesController @Inject()(
       latestVersionRepository.find(group, artefact)
         .map(_.fold(NotFound(""))(res => Ok(Json.toJson(res)(LatestVersion.apiWrites))))
 
+  def latestVersionAtDate(group: String, artefact: String, date: Instant): Action[AnyContent] =
+    Action.async:
+      derivedModuleRepository.findNameByModule(group, artefact).flatMap:
+        case Some(repository) =>
+          metaArtefactRepository.findLatestVersionAtDate(repository, date).map:
+            _.fold(NotFound(""))( res => Ok(Json.toJson(LatestVersion(artefact, group, res.version))(LatestVersion.apiWrites)))
+        case None =>
+          Future.successful(NotFound(""))
+
   def metaArtefact(repository: String, version: Option[String]): Action[AnyContent] =
     Action.async:
       version
         .fold(metaArtefactRepository.find(repository))(v => metaArtefactRepository.find(repository, Version(v)))
         .map(_.fold(NotFound(""))(res => Ok(Json.toJson(res)(MetaArtefact.apiFormat))))
-
-import java.time.Instant
 
 case class SlugInfoExtra(
   uri                  : String,
