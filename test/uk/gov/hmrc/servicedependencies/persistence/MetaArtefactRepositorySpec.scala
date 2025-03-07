@@ -30,7 +30,7 @@ class MetaArtefactRepositorySpec
   extends AnyWordSpec
      with Matchers
      with MockitoSugar
-     with DefaultPlayMongoRepositorySupport[MetaArtefact] {
+     with DefaultPlayMongoRepositorySupport[MetaArtefact]:
 
   override val repository: MetaArtefactRepository =
     MetaArtefactRepository(mongoComponent)
@@ -67,8 +67,8 @@ class MetaArtefactRepositorySpec
 
   val updatedMetaArtefact = metaArtefact.copy(version = Version("0.2.0"), modules = Seq(metaArtefactModule.copy(name = "sub-module3")))
 
-  "add" should {
-    "add correctly" in {
+  "add" should:
+    "add correctly" in:
       (for
          before <- repository.find(metaArtefact.name)
          _      =  before shouldBe None
@@ -78,9 +78,8 @@ class MetaArtefactRepositorySpec
          _      =  after shouldBe Some(metaArtefact.copy(latest = true))
        yield ()
       ).futureValue
-    }
 
-    "upsert correctly" in {
+    "upsert correctly" in:
       (for
          before  <- repository.find(metaArtefact.name)
          _       =  before shouldBe None
@@ -92,11 +91,9 @@ class MetaArtefactRepositorySpec
          _       =  updated shouldBe Some(updatedMetaArtefact.copy(latest = true))
        yield ()
      ).futureValue
-    }
-  }
 
-  "find" should {
-    "return the latest" in {
+  "find" should:
+    "return the latest" in:
       (for
          _      <- repository.put(metaArtefact.copy(version = Version("2.0.0")))
          _      <- repository.put(metaArtefact)
@@ -104,32 +101,37 @@ class MetaArtefactRepositorySpec
          _      =  found shouldBe Some(metaArtefact.copy(version = Version("2.0.0"), latest = true))
        yield ()
       ).futureValue
-    }
-  }
 
-  "findAllVersions" should {
-    "return all versions" in {
+  "findAllVersions" should:
+    "return all versions" in:
       (for
-        _     <- repository.put(metaArtefact.copy(version = Version("2.0.0")))
-        _     <- repository.put(metaArtefact)
-        found <- repository.findAllVersions(metaArtefact.name)
-        _     =  found should contain theSameElementsAs Seq(metaArtefact, metaArtefact.copy(version = Version("2.0.0"), latest = true))
-      yield ()
+         _     <- repository.put(metaArtefact.copy(version = Version("2.0.0")))
+         _     <- repository.put(metaArtefact)
+         found <- repository.findAllVersions(metaArtefact.name)
+         _     =  found should contain theSameElementsAs Seq(metaArtefact, metaArtefact.copy(version = Version("2.0.0"), latest = true))
+       yield ()
       ).futureValue
-    }
-  }
 
-  "findLatestVersionAtDate" should {
-    "return the latest versionat a given date" in {
+  "findLatestVersionAtDate" should:
+    "return the latest version at a given date" in:
       (for
-        _ <- repository.put(metaArtefact)
-        _ <- repository.put(metaArtefact.copy(version = Version("1.1.0"), created = Instant.parse("2022-02-04T17:46:18.588Z")))
-        _ <- repository.put(metaArtefact.copy(version = Version("1.2.0"), created = Instant.parse("2022-03-04T17:46:18.588Z")))
-        _ <- repository.put(metaArtefact.copy(version = Version("1.3.0"), created = Instant.parse("2022-04-04T17:46:18.588Z")))
-        found <- repository.findLatestVersionAtDate(metaArtefact.name, Instant.parse("2022-03-10T17:46:18.588Z"))
-        _ = found shouldBe Some(metaArtefact.copy(version = Version("1.2.0"), created = Instant.parse("2022-03-04T17:46:18.588Z")))
-      yield ()
-        ).futureValue
-    }
-  }
-}
+         _     <- repository.put(metaArtefact)
+         _     <- repository.put(metaArtefact.copy(version = Version("1.1.0"), created = Instant.parse("2022-02-04T17:46:18.588Z")))
+         _     <- repository.put(metaArtefact.copy(version = Version("1.2.0"), created = Instant.parse("2022-03-04T17:46:18.588Z")))
+         _     <- repository.put(metaArtefact.copy(version = Version("1.3.0"), created = Instant.parse("2022-04-04T17:46:18.588Z")))
+         found <- repository.findLatestVersionAtDate(metaArtefact.name, Instant.parse("2022-03-10T17:46:18.588Z"), majorVersion = None)
+         _     =  found shouldBe Some(metaArtefact.copy(version = Version("1.2.0"), created = Instant.parse("2022-03-04T17:46:18.588Z")))
+       yield ()
+      ).futureValue
+
+    "return the latest version respecting the major version" in:
+      (for
+         _     <- repository.put(metaArtefact)
+         _     <- repository.put(metaArtefact.copy(version = Version("1.1.0"), created = Instant.parse("2022-02-04T17:46:18.588Z")))
+         _     <- repository.put(metaArtefact.copy(version = Version("1.2.0"), created = Instant.parse("2022-03-04T17:46:18.588Z")))
+         _     <- repository.put(metaArtefact.copy(version = Version("1.3.0"), created = Instant.parse("2022-04-04T17:46:18.588Z")))
+         _     <- repository.put(metaArtefact.copy(version = Version("2.0.0"), created = Instant.parse("2022-04-04T17:46:18.588Z")))
+         found <- repository.findLatestVersionAtDate(metaArtefact.name, Instant.parse("2022-04-10T17:46:18.588Z"), majorVersion = Some(1))
+         _     =  found shouldBe Some(metaArtefact.copy(version = Version("1.3.0"), created = Instant.parse("2022-04-04T17:46:18.588Z")))
+       yield ()
+      ).futureValue
