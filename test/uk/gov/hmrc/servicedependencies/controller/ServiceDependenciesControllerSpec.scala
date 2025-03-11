@@ -139,7 +139,7 @@ class ServiceDependenciesControllerSpec
       when(boot.mockDerivedModuleRepository.findNameByModule(group, artefact))
         .thenReturn(Future.successful(Some("hmrc-mongo")))
 
-      when(boot.mockMetaArtefactRepository.findLatestVersionAtDate("hmrc-mongo", Instant.parse("2022-01-10T17:46:18.588Z"), majorVersion = Some(1)))
+      when(boot.mockMetaArtefactRepository.findLatestVersionAtDate("hmrc-mongo", artefact, Instant.parse("2022-01-10T17:46:18.588Z"), majorVersion = Some(1)))
         .thenReturn(Future.successful(Some(metaArtefact)))
 
       val result = boot.controller.latestVersionAtDate(group, artefact, Instant.parse("2022-01-10T17:46:18.588Z"), majorVersion = Some(1)).apply(FakeRequest())

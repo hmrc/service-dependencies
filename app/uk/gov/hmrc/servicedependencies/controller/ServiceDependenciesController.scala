@@ -205,7 +205,7 @@ class ServiceDependenciesController @Inject()(
     Action.async:
       derivedModuleRepository.findNameByModule(group, artefact).flatMap:
         case Some(repository) =>
-          metaArtefactRepository.findLatestVersionAtDate(repository, date, majorVersion).map:
+          metaArtefactRepository.findLatestVersionAtDate(repository, moduleName = artefact, date, majorVersion).map:
             _.fold(NotFound(""))( res => Ok(Json.toJson(LatestVersion(artefact, group, res.version))(LatestVersion.apiWrites)))
         case None =>
           Future.successful(NotFound(""))
