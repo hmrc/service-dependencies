@@ -119,7 +119,7 @@ class MetaArtefactRepositorySpec
          _     <- repository.put(metaArtefact.copy(version = Version("1.1.0"), created = Instant.parse("2022-02-04T17:46:18.588Z")))
          _     <- repository.put(metaArtefact.copy(version = Version("1.2.0"), created = Instant.parse("2022-03-04T17:46:18.588Z")))
          _     <- repository.put(metaArtefact.copy(version = Version("1.3.0"), created = Instant.parse("2022-04-04T17:46:18.588Z")))
-         found <- repository.findLatestVersionAtDate(metaArtefact.name, Instant.parse("2022-03-10T17:46:18.588Z"), majorVersion = None)
+         found <- repository.findLatestVersionAtDate(metaArtefact.name, "sub-module", Instant.parse("2022-03-10T17:46:18.588Z"), majorVersion = None)
          _     =  found shouldBe Some(metaArtefact.copy(version = Version("1.2.0"), created = Instant.parse("2022-03-04T17:46:18.588Z")))
        yield ()
       ).futureValue
@@ -131,7 +131,7 @@ class MetaArtefactRepositorySpec
          _     <- repository.put(metaArtefact.copy(version = Version("1.2.0"), created = Instant.parse("2022-03-04T17:46:18.588Z")))
          _     <- repository.put(metaArtefact.copy(version = Version("1.3.0"), created = Instant.parse("2022-04-04T17:46:18.588Z")))
          _     <- repository.put(metaArtefact.copy(version = Version("2.0.0"), created = Instant.parse("2022-04-04T17:46:18.588Z")))
-         found <- repository.findLatestVersionAtDate(metaArtefact.name, Instant.parse("2022-04-10T17:46:18.588Z"), majorVersion = Some(1))
+         found <- repository.findLatestVersionAtDate(metaArtefact.name, "sub-module", Instant.parse("2022-04-10T17:46:18.588Z"), majorVersion = Some(1))
          _     =  found shouldBe Some(metaArtefact.copy(version = Version("1.3.0"), created = Instant.parse("2022-04-04T17:46:18.588Z")))
        yield ()
       ).futureValue

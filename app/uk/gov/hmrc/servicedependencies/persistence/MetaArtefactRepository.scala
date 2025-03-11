@@ -154,12 +154,14 @@ class MetaArtefactRepository @Inject()(
 
   def findLatestVersionAtDate(
     repositoryName: String,
+    moduleName    : String,
     date          : Instant,
     majorVersion  : Option[Int]
   ): Future[Option[MetaArtefact]] =
     collection
       .find(filter = Filters.and(
         Filters.equal("name", repositoryName)
+      , Filters.equal("modules.name", moduleName)
       , Filters.lt("created", date)
       , majorVersion.fold(Filters.empty())(mjv => Filters.regex("version", raw"^$mjv\..*".r))
       ))
