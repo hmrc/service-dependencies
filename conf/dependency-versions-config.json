@@ -1,17 +1,16 @@
 {
   "sbtPlugins": [
-    { "group": "com.typesafe.play", "name": "sbt-plugin", "latestVersion": "2.9.5" },
+    { "group": "com.typesafe.play", "name": "sbt-plugin", "latestVersion": "2.9.6" },
     { "group": "org.playframework", "name": "sbt-plugin", "latestVersion": "3.0.6" }
   ],
   "libraries": [
-    { "group": "org.reactivemongo", "name": "reactivemongo"  , "latestVersion": "0.20.3"  },
-    { "group": "org.scala-lang"   , "name": "scala-library"  , "latestVersion": "2.13.12" },
-    { "group": "org.scala-lang"   , "name": "scala3-library" , "latestVersion": "3.3.4"   },
-    { "group": "com.typesafe.play", "name": "play"           , "latestVersion": "2.9.5"   },
+    { "group": "org.scala-lang"   , "name": "scala-library"  , "latestVersion": "2.13.16" },
+    { "group": "org.scala-lang"   , "name": "scala3-library" , "latestVersion": "3.3.5"   },
+    { "group": "com.typesafe.play", "name": "play"           , "latestVersion": "2.9.6"   },
     { "group": "org.playframework", "name": "play"           , "latestVersion": "3.0.6"   }
   ],
   "others": [
-    { "group": "org.scala-sbt", "name": "sbt"   , "latestVersion": "1.9.9"   },
+    { "group": "org.scala-sbt", "name": "sbt"   , "latestVersion": "1.10.10" },
     { "group": "com.java"     , "name": "java"  , "latestVersion": "21.0.0"  },
     { "group": "org.nodejs"   , "name": "nodejs", "latestVersion": "18.20.5" }
   ]
