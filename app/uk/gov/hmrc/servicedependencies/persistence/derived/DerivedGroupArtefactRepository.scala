@@ -20,12 +20,11 @@ import cats.implicits._
 import org.mongodb.scala.{ObservableFuture, SingleObservableFuture}
 import org.mongodb.scala.bson.BsonDocument
 import org.mongodb.scala.bson.conversions.Bson
-import org.mongodb.scala.model.Aggregates.`match`
 import org.mongodb.scala.model._
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.play.json.{CollectionFactory, PlayMongoRepository}
 import uk.gov.hmrc.servicedependencies.model.{GroupArtefacts, MongoSlugInfoFormats, SlugInfoFlag}
-import uk.gov.hmrc.servicedependencies.persistence.{DeploymentRepository, SlugDenylist}
+import uk.gov.hmrc.servicedependencies.persistence.DeploymentRepository
 
 import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
@@ -58,20 +57,21 @@ class DerivedGroupArtefactRepository @Inject()(
     Aggregates.project(
       Projections.fields(
         Projections.excludeId()
-        , Projections.include("group", "artefact", "scope_compile", "scope_provided", "scope_test", "scope_it", "scope_build")
+      , Projections.include("group", "artefact", "scope_compile", "scope_provided", "scope_test", "scope_it", "scope_build")
       )
     ) ::
       BsonDocument(
-        "$group" -> BsonDocument(
-            "_id" -> BsonDocument("group" -> "$group")
+        "$group" ->
+          BsonDocument(
+            "_id"       -> BsonDocument("group" -> "$group")
           , "artifacts" -> BsonDocument("$addToSet" -> "$artefact")
           )
       ) ::
       Aggregates.project( // reproject the result so fields are at the root level
         Projections.fields(
           Projections.computed("group", "$_id.group")
-          , Projections.include("artifacts")
-          , Projections.exclude("_id")
+        , Projections.include("artifacts")
+        , Projections.exclude("_id")
         )
       ) ::
       Aggregates.addFields(
@@ -97,7 +97,7 @@ class DerivedGroupArtefactRepository @Inject()(
   private def derivedLatestDependencies(): Future[Seq[GroupArtefacts]] =
     CollectionFactory
       .collection(mongoComponent.database, "DERIVED-latest-dependencies", domainFormat)
-      .aggregate(`match`(Filters.nin("name", SlugDenylist.denylistedSlugs)) :: groupArtefactsTransformationPipeline)
+      .aggregate(groupArtefactsTransformationPipeline)
       .toFuture()
 
   def populateAll(): Future[Unit] =
