@@ -124,9 +124,9 @@ class DeploymentRepository @Inject()(
       yield ()
 
   def lookupAgainstDeployments[A: ClassTag](
-    collectionName: String,
-    domainFormat: Format[A],
-    slugNameField: String,
+    collectionName  : String,
+    domainFormat    : Format[A],
+    slugNameField   : String,
     slugVersionField: String
   )(
     deploymentsFilter: Bson,
@@ -136,12 +136,7 @@ class DeploymentRepository @Inject()(
     CollectionFactory.collection(mongoComponent.database, "deployments", domainFormat)
       .aggregate(
         List(
-          Aggregates.`match`(
-            Filters.and(
-              deploymentsFilter,
-              Filters.nin("name", SlugDenylist.denylistedSlugs)
-            )
-          ),
+          Aggregates.`match`(deploymentsFilter),
           Aggregates.lookup(
             from     = collectionName,
             let      = Seq(
