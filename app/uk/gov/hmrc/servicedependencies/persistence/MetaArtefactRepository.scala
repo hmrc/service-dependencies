@@ -164,6 +164,7 @@ class MetaArtefactRepository @Inject()(
       , Filters.equal("modules.name", moduleName)
       , Filters.lt("created", date)
       , majorVersion.fold(Filters.empty())(mjv => Filters.regex("version", raw"^$mjv\..*".r))
+      , Filters.regex("version", raw".*(?<!-RC\d)$$".r) // ignore release candidates
       ))
       .sort(Sorts.descending("created"))
       .headOption()
