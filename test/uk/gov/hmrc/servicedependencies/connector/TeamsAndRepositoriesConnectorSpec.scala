@@ -77,7 +77,7 @@ class TeamsAndRepositoriesConnectorSpec
   "TeamsAndRepositoriesConnector.getAllRepositories" should {
     "correctly parse json response" in {
       stubFor(
-        get(urlEqualTo("/api/v2/repositories"))
+        get(urlEqualTo("/api/v2/repositories?organisation=mdtp"))
           .willReturn(aResponse().withBodyFile("teams-and-repositories/repositories.json"))
       )
 
@@ -99,18 +99,18 @@ class TeamsAndRepositoriesConnectorSpec
         )
       )
 
-      verify(getRequestedFor(urlEqualTo("/api/v2/repositories")))
+      verify(getRequestedFor(urlEqualTo("/api/v2/repositories?organisation=mdtp")))
     }
 
     "correctly pass query parameter" in {
       stubFor(
-        get(urlEqualTo("/api/v2/repositories?archived=false"))
+        get(urlEqualTo("/api/v2/repositories?organisation=mdtp&archived=false"))
           .willReturn(aResponse().withBodyFile("teams-and-repositories/repositories.json"))
       )
 
       connector.getAllRepositories(archived = Some(false)).futureValue
 
-      verify(getRequestedFor(urlEqualTo("/api/v2/repositories?archived=false")))
+      verify(getRequestedFor(urlEqualTo("/api/v2/repositories?organisation=mdtp&archived=false")))
     }
   }
 }

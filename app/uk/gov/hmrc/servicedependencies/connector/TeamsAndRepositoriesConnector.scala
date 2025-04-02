@@ -82,14 +82,14 @@ class TeamsAndRepositoriesConnector @Inject()(
   , repoType      : Option[RepoType] = None
   )(using hc: HeaderCarrier): Future[Seq[Repository]] =
     httpClientV2
-      .get(url"$teamsAndRepositoriesApiBase/api/v2/repositories?archived=$archived&team=$teamName&digitalServiceName=$digitalService&repoType=${repoType.map(_.asString)}")
+      .get(url"$teamsAndRepositoriesApiBase/api/v2/repositories?organisation=mdtp&archived=$archived&team=$teamName&digitalServiceName=$digitalService&repoType=${repoType.map(_.asString)}")
       .execute[Seq[Repository]]
 
   def getDecommissionedRepositories(
     repoType: Option[RepoType] = None
   )(using hc: HeaderCarrier): Future[Seq[DecommissionedRepository]] =
     httpClientV2
-      .get(url"$teamsAndRepositoriesApiBase/api/v2/decommissioned-repositories?repoType=${repoType.map(_.asString)}")
+      .get(url"$teamsAndRepositoriesApiBase/api/v2/decommissioned-repositories?organisation=mdtp&repoType=${repoType.map(_.asString)}")
       .execute[Seq[DecommissionedRepository]]
 
   def cachedRepoMap()(using hc: HeaderCarrier): Future[Map[String, (List[String], Option[String])]] =
