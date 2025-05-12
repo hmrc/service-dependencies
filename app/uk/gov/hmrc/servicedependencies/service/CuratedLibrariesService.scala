@@ -256,11 +256,12 @@ class CuratedLibrariesService @Inject()(
       if scope == DependencyScope.Build
       then
         buildInfo.get("JAVA_VERSION").map: currentVersion =>
+          val javaVersion = Version(currentVersion)
           Dependency(
             name                = "java"
           , group               = "com.java"
           , scalaVersion        = None
-          , currentVersion      = Version(Version(currentVersion).major.toString)
+          , currentVersion      = Version(if javaVersion.major == 1 then javaVersion.minor.toString else javaVersion.major.toString)
           , latestVersion       = latestVersions.find(v => v.group == "com.java" && v.name == "java").map(x => Version(x.version.major.toString))
           , bobbyRuleViolations = List.empty
           , vulnerabilities     = Nil
