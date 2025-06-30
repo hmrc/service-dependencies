@@ -4,7 +4,7 @@ private object AppDependencies {
   import play.core.PlayVersion
   import play.sbt.PlayImport.caffeine
 
-  val bootstrapPlayVersion = "9.11.0"
+  val bootstrapPlayVersion = "9.13.0"
   val hmrcMongoVersion     = "2.6.0"
 
   val compile = Seq(
@@ -13,7 +13,7 @@ private object AppDependencies {
     "uk.gov.hmrc.mongo"      %% "hmrc-mongo-play-30"        % hmrcMongoVersion,
     "org.typelevel"          %% "cats-core"                 % "2.13.0",
     "org.apache.commons"     %  "commons-compress"          % "1.27.1",
-    "software.amazon.awssdk" %  "sqs"                       % "2.30.33"
+    "software.amazon.awssdk" %  "sqs"                       % "2.31.73"
   )
 
   val test = Seq(
