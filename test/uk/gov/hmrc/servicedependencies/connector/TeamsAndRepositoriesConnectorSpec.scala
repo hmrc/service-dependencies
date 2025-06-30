@@ -35,7 +35,7 @@ class TeamsAndRepositoriesConnectorSpec
      with ScalaFutures
      with IntegrationPatience
      with GuiceOneAppPerSuite
-     with WireMockSupport {
+     with WireMockSupport:
 
   import TeamsAndRepositoriesConnector.Repository
 
@@ -53,40 +53,34 @@ class TeamsAndRepositoriesConnectorSpec
 
   private val connector = app.injector.instanceOf[TeamsAndRepositoriesConnector]
 
-  "TeamsAndRepositoriesConnector.getRepository" should {
-    "correctly parse json response" in {
-      stubFor(
+  "TeamsAndRepositoriesConnector.getRepository" should:
+    "correctly parse json response" in:
+      stubFor:
         get(urlEqualTo(s"/api/v2/repositories/test-repo"))
           .willReturn(aResponse().withBodyFile("teams-and-repositories/repository.json"))
-      )
       val repository = connector.getRepository("test-repo").futureValue
       repository.value.teamNames shouldBe Seq("PlatOps", "Webops")
-    }
 
-    "handle 404 - repository not found" in {
-      stubFor(
+    "handle 404 - repository not found" in:
+      stubFor:
         get(urlEqualTo(s"/api/v2/repositories/non-existing-test-repo"))
           .willReturn(aResponse().withStatus(404))
-      )
 
       val repository = connector.getRepository("non-existing-test-repo").futureValue
       repository shouldBe None
-    }
-  }
 
-  "TeamsAndRepositoriesConnector.getAllRepositories" should {
-    "correctly parse json response" in {
-      stubFor(
+  "TeamsAndRepositoriesConnector.getAllRepositories" should:
+    "correctly parse json response" in:
+      stubFor:
         get(urlEqualTo("/api/v2/repositories?organisation=mdtp"))
           .willReturn(aResponse().withBodyFile("teams-and-repositories/repositories.json"))
-      )
 
       val repositories = connector.getAllRepositories(archived = None).futureValue
       repositories shouldBe List(
         Repository(
           name           = "test-repo"
         , teamNames      = Seq("PlatOps", "Webops")
-        , digitalService = None
+        , digitalService = Some("ds")
         , repoType       = RepoType.Prototype
         , isArchived     = false
         )
@@ -100,17 +94,12 @@ class TeamsAndRepositoriesConnectorSpec
       )
 
       verify(getRequestedFor(urlEqualTo("/api/v2/repositories?organisation=mdtp")))
-    }
 
-    "correctly pass query parameter" in {
-      stubFor(
+    "correctly pass query parameter" in:
+      stubFor:
         get(urlEqualTo("/api/v2/repositories?organisation=mdtp&archived=false"))
           .willReturn(aResponse().withBodyFile("teams-and-repositories/repositories.json"))
-      )
 
       connector.getAllRepositories(archived = Some(false)).futureValue
 
       verify(getRequestedFor(urlEqualTo("/api/v2/repositories?organisation=mdtp&archived=false")))
-    }
-  }
-}

@@ -53,8 +53,8 @@ class JdkVersionRepository @Inject()(
                                 //See: https://github.com/scala/scala/pull/5053/files/275305a3d291cca49163903b5b6fe1d496b507a6#diff-4eab1aad4533a31c10565971e90f73eaR5209
                                 //And: https://stackoverflow.com/questions/39401213/disable-false-warning-possible-missing-interpolator
                                 computed("version", f"$$java.version"),
-                                computed("vendor", f"$$java.vendor"),
-                                computed("kind", f"$$java.kind")
+                                computed("vendor" , f"$$java.vendor"),
+                                computed("kind"   , f"$$java.kind")
                               )
                             )
                           )

@@ -39,11 +39,11 @@ object TeamsAndRepositoriesConnector:
 
   object Repository:
     val reads: Reads[Repository] =
-      ( (__ \ "name"          ).read[String]
-      ~ (__ \ "teamNames"     ).read[Seq[String]]
-      ~ (__ \ "digitalService").readNullable[String]
-      ~ (__ \ "repoType"      ).read[RepoType]
-      ~ (__ \ "isArchived"    ).read[Boolean]
+      ( (__ \ "name"              ).read[String]
+      ~ (__ \ "teamNames"         ).read[Seq[String]]
+      ~ (__ \ "digitalServiceName").readNullable[String]
+      ~ (__ \ "repoType"          ).read[RepoType]
+      ~ (__ \ "isArchived"        ).read[Boolean]
       )(apply)
 
   case class DecommissionedRepository(name: String)
