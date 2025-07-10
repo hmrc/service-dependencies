@@ -90,7 +90,7 @@ class DerivedGroupArtefactRepository @Inject()(
     , slugVersionField = "repoVersion"
     )(
       deploymentsFilter = Filters.or(SlugInfoFlag.values.map(flag => Filters.equal(flag.asString, true))*)
-    , domainFilter      = BsonDocument()
+    , domainFilter      = Filters.empty()
     , pipeline          = groupArtefactsTransformationPipeline
     )
 

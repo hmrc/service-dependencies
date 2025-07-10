@@ -18,8 +18,8 @@ package uk.gov.hmrc.servicedependencies.persistence
 
 import com.google.inject.{Inject, Singleton}
 import org.mongodb.scala.{ObservableFuture, SingleObservableFuture}
-import org.mongodb.scala.bson.BsonDocument
 import org.mongodb.scala.bson.conversions.Bson
+import org.mongodb.scala.model.Filters
 import org.mongodb.scala.model.Filters.{and, equal}
 import org.mongodb.scala.model.ReplaceOptions
 import play.api.Logging
@@ -99,5 +99,5 @@ class SlugInfoRepository @Inject()(
       slugVersionField = "version"
     )(
       deploymentsFilter = filter,
-      domainFilter      = BsonDocument()
+      domainFilter      = Filters.empty()
     )

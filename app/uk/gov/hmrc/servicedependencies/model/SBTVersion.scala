@@ -20,8 +20,8 @@ import play.api.libs.json.{__, Format}
 import play.api.libs.functional.syntax._
 
 case class SBTVersion(
-  serviceName : String,
-  version     : String
+  serviceName: String,
+  version    : String
 )
 
 trait SBTVersionFormats:

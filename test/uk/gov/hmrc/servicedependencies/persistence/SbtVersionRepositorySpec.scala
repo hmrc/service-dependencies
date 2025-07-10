@@ -28,9 +28,9 @@ import scala.concurrent.ExecutionContext.Implicits.global
 
 class SbtVersionRepositorySpec
   extends AnyWordSpec
-    with Matchers
-    with MockitoSugar
-    with DefaultPlayMongoRepositorySupport[SBTVersion] {
+     with Matchers
+     with MockitoSugar
+     with DefaultPlayMongoRepositorySupport[SBTVersion]:
 
   lazy val deploymentRepository =
     DeploymentRepository(mongoComponent)
@@ -47,8 +47,8 @@ class SbtVersionRepositorySpec
       .futureValue
   }
 
-  "SbtVersionRepository.findSBTUsage" should {
-    "find all the sbt versions for a given environment" in {
+  "SbtVersionRepository.findSBTUsage" should:
+    "find all the sbt versions for a given environment" in:
       slugInfoRepo.add(TestSlugInfos.slugInfo).futureValue
       deploymentRepository.markLatest(TestSlugInfos.slugInfo.name, TestSlugInfos.slugInfo.version).futureValue
 
@@ -57,9 +57,8 @@ class SbtVersionRepositorySpec
       result.length           shouldBe 1
       result.head.serviceName shouldBe TestSlugInfos.slugInfo.name
       result.head.version     shouldBe TestSlugInfos.slugInfo.sbtVersion.get
-    }
 
-    "ignore slugs with no sbtVersion" in {
+    "ignore slugs with no sbtVersion" in:
       slugInfoRepo.add(TestSlugInfos.slugInfo).futureValue
       slugInfoRepo.add(TestSlugInfos.nonJavaSlugInfo).futureValue
       deploymentRepository.markLatest(TestSlugInfos.slugInfo.name, TestSlugInfos.slugInfo.version).futureValue
@@ -70,7 +69,3 @@ class SbtVersionRepositorySpec
       result.length           shouldBe 1
       result.head.serviceName shouldBe "my-slug"
       result.head.version     shouldBe "1.4.9"
-    }
-  }
-
-}

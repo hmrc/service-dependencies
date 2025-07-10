@@ -20,7 +20,7 @@ import cats.implicits._
 
 import javax.inject.Inject
 import org.mongodb.scala.SingleObservableFuture
-import org.mongodb.scala.bson.BsonDocument
+import org.mongodb.scala.model.Filters
 import play.api.libs.json._
 import play.api.mvc.{Action, AnyContent, ControllerComponents}
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
@@ -123,8 +123,8 @@ class IntegrationTestController @Inject()(
   val deleteSluginfos =
     Action.async:
       for
-        _ <- slugInfoRepo.collection.deleteMany(BsonDocument()).toFuture()
-        _ <- derivedDeployedDependencyRepository.collection.deleteMany(BsonDocument()).toFuture()
+        _ <- slugInfoRepo.collection.deleteMany(Filters.empty()).toFuture()
+        _ <- derivedDeployedDependencyRepository.collection.deleteMany(Filters.empty()).toFuture()
       yield NoContent
 
   def delete(dataType: String): Action[AnyContent] =
@@ -135,7 +135,7 @@ class IntegrationTestController @Inject()(
         case "meta-artefacts"        => metaArtefactRepository
         case "bobbyrulesummmary"     => bobbyRulesSummaryRepo
       )
-      .collection.deleteMany(BsonDocument()).toFuture()
+      .collection.deleteMany(Filters.empty()).toFuture()
       .map(_ => NoContent)
 
   case class SlugInfoWithFlags(
