@@ -20,14 +20,14 @@ import play.api.libs.json.{__, Format}
 import play.api.libs.functional.syntax._
 
 case class SBTVersion(
-  serviceName : String,
-  version     : String
+  repoName: String,
+  version : String
 )
 
 trait SBTVersionFormats:
 
   val sbtVersionFormat: Format[SBTVersion] =
-    ( (__ \ "serviceName").format[String]
+    ( (__ \ "serviceName").format[String] // TODO change this to repoName
     ~ (__ \ "version"    ).format[String]
     )(SBTVersion.apply, sv => Tuple.fromProductTyped(sv))
 

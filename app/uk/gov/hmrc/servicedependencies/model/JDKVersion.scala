@@ -20,16 +20,16 @@ import play.api.libs.json.{__, Format}
 import play.api.libs.functional.syntax._
 
 case class JDKVersion(
-  name   : String,
-  version: String,
-  vendor : String,
-  kind   : String
+  repoName: String,
+  version : String,
+  vendor  : String,
+  kind    : String
 )
 
 trait JDKVersionFormats:
 
   val jdkVersionFormat: Format[JDKVersion] =
-    ( (__ \ "name"   ).format[String]
+    ( (__ \ "name"   ).format[String] // TODO change this to repoName
     ~ (__ \ "version").format[String]
     ~ (__ \ "vendor" ).format[String]
     ~ (__ \ "kind"   ).format[String]
