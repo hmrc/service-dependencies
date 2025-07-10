@@ -112,7 +112,7 @@ class ServiceDependenciesControllerSpec
     }
   }
 
-  "latestVersionAtDate" should {
+  "hmrcLatestVersionAtDate" should {
     "find a dependency by group and artefact and return the latest version for a given date" in {
       val boot = Boot.init
       val metaArtefact =
@@ -142,9 +142,9 @@ class ServiceDependenciesControllerSpec
       when(boot.mockMetaArtefactRepository.findLatestVersionAtDate("hmrc-mongo", artefact, Instant.parse("2022-01-10T17:46:18.588Z"), majorVersion = Some(1)))
         .thenReturn(Future.successful(Some(metaArtefact)))
 
-      val result = boot.controller.latestVersionAtDate(group, artefact, Instant.parse("2022-01-10T17:46:18.588Z"), majorVersion = Some(1)).apply(FakeRequest())
+      val result = boot.controller.hmrcLatestVersionAtDate(group, artefact, Instant.parse("2022-01-10T17:46:18.588Z"), majorVersion = Some(1)).apply(FakeRequest())
 
-      contentAsJson(result) shouldBe Json.parse(s"""{"group":"$group","artefact":"$artefact","version":"1.0.0"}""")
+      contentAsJson(result) shouldBe Json.parse(s"""{"group":"$group","artefact":"$artefact","version":"1.0.0","gitUrl":"https://github.com/hmrc/hmrc-mongo.git"}""")
     }
 
     "return Not Found when no repo is found for the given module" in {
@@ -152,7 +152,7 @@ class ServiceDependenciesControllerSpec
       when(boot.mockDerivedModuleRepository.findNameByModule(group, artefact))
         .thenReturn(Future.successful(None))
 
-      val result = boot.controller.latestVersionAtDate(group, artefact, Instant.parse("2022-03-10T17:46:18.588Z"), None).apply(FakeRequest())
+      val result = boot.controller.hmrcLatestVersionAtDate(group, artefact, Instant.parse("2022-03-10T17:46:18.588Z"), None).apply(FakeRequest())
 
       status(result) shouldBe NOT_FOUND
     }

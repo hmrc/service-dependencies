@@ -1,13 +1,13 @@
 {
   "sbtPlugins": [
     { "group": "com.typesafe.play", "name": "sbt-plugin", "latestVersion": "2.9.6" },
-    { "group": "org.playframework", "name": "sbt-plugin", "latestVersion": "3.0.7" }
+    { "group": "org.playframework", "name": "sbt-plugin", "latestVersion": "3.0.8" }
   ],
   "libraries": [
     { "group": "org.scala-lang"   , "name": "scala-library"  , "latestVersion": "2.13.16" },
     { "group": "org.scala-lang"   , "name": "scala3-library" , "latestVersion": "3.3.6"   },
     { "group": "com.typesafe.play", "name": "play"           , "latestVersion": "2.9.6"   },
-    { "group": "org.playframework", "name": "play"           , "latestVersion": "3.0.7"   }
+    { "group": "org.playframework", "name": "play"           , "latestVersion": "3.0.8"   }
   ],
   "others": [
     { "group": "org.scala-sbt", "name": "sbt"   , "latestVersion": "1.10.10" },

@@ -191,12 +191,14 @@ class ServiceDependenciesController @Inject()(
         given Writes[CuratedLibrariesService.Repository] = CuratedLibrariesService.Repository.writes
         Ok(Json.toJson(repositories))
 
+  // for all dependencies
   def latestVersion(group: String, artefact: String): Action[AnyContent] =
     Action.async:
       latestVersionRepository.find(group, artefact)
         .map(_.fold(NotFound(""))(res => Ok(Json.toJson(res)(LatestVersion.apiWrites))))
 
-  def latestVersionAtDate(
+  // only for hmrc created dependencies
+  def hmrcLatestVersionAtDate(
     group       : String,
     artefact    : String,
     date        : Instant,
@@ -205,8 +207,10 @@ class ServiceDependenciesController @Inject()(
     Action.async:
       derivedModuleRepository.findNameByModule(group, artefact).flatMap:
         case Some(repository) =>
-          metaArtefactRepository.findLatestVersionAtDate(repository, moduleName = artefact, date, majorVersion).map:
-            _.fold(NotFound(""))( res => Ok(Json.toJson(LatestVersion(artefact, group, res.version))(LatestVersion.apiWrites)))
+          metaArtefactRepository
+            .findLatestVersionAtDate(repository, moduleName = artefact, date, majorVersion)
+            .map:
+              _.fold(NotFound(""))( res => Ok(Json.toJson(HmrcLatestVersion(artefact, group, res.version, res.gitUrl))(HmrcLatestVersion.apiWrites)))
         case None =>
           Future.successful(NotFound(""))
 
@@ -274,3 +278,18 @@ object SlugInfoExtra:
     ~ (__ \ "applicationConfig"         ).write[String]
     ~ (__ \ "slugConfig"                ).write[String]
     )(sie => Tuple.fromProductTyped(sie))
+
+case class HmrcLatestVersion(
+  name        : String
+, group       : String
+, version     : Version
+, gitUrl      : Option[String]
+)
+
+object HmrcLatestVersion:
+  val apiWrites: Writes[HmrcLatestVersion] =
+    ( (__ \ "artefact").write[String]
+    ~ (__ \ "group"   ).write[String]
+    ~ (__ \ "version" ).write[Version](Version.format)
+    ~ (__ \ "gitUrl"  ).writeNullable[String]
+    )(pt => Tuple.fromProductTyped(pt))
