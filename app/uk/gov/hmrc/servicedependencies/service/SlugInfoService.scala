@@ -73,13 +73,13 @@ class SlugInfoService @Inject()(
                            for
                              repos <- teamsAndRepositoriesConnector.getAllRepositories(archived = Some(false), teamName = teamName, digitalService = digitalService)
                              xs    <- jdkVersionRepository.findJDKUsage(flag)
-                           yield xs.filter(x => repos.exists(_.name == x.name))
+                           yield xs.filter(x => repos.exists(_.name == x.repoName))
 
   def findSBTVersions(teamName: Option[String], digitalService: Option[String], flag: SlugInfoFlag)(using hc: HeaderCarrier): Future[Seq[SBTVersion]] =
     (teamName, digitalService) match
-      case (None, None) => sbtVersionRepository.findSBTUsage(flag)
+      case (None, None) => sbtVersionRepository.findSBTUsage(flag) // for Latest, we could get the data from MetaArtefact to support non-services
       case _            =>
                            for
                              repos <- teamsAndRepositoriesConnector.getAllRepositories(archived = Some(false), teamName = teamName, digitalService = digitalService)
                              xs    <- sbtVersionRepository.findSBTUsage(flag)
-                           yield xs.filter(x => repos.exists(_.name == x.serviceName))
+                           yield xs.filter(x => repos.exists(_.name == x.repoName))
