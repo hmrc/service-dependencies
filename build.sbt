@@ -1,18 +1,19 @@
 import play.sbt.PlayImport.PlayKeys
 import play.sbt.routes.RoutesKeys
 
+ThisBuild / scalacOptions += "-Wconf:msg=Flag.*repeatedly:s"
+
 lazy val microservice = Project("service-dependencies", file("."))
   .enablePlugins(play.sbt.PlayScala, SbtDistributablesPlugin)
   .disablePlugins(JUnitXmlReportPlugin) //Required to prevent https://github.com/scalatest/scalatest/issues/1427
-  .settings(majorVersion := 2)
-  .settings(PlayKeys.playDefaultPort := 8459)
-  .settings(libraryDependencies ++= AppDependencies.compile ++ AppDependencies.test)
-  .settings(scalaVersion := "3.3.6")
-  .settings(javaOptions += "-Xmx2G")
-  .settings(scalacOptions ++= Seq(
-    "-Wconf:src=routes/.*:s"
-  , "-Wconf:msg=Flag.*repeatedly:s"
-  ))
+  .settings(
+    majorVersion := 2,
+    scalaVersion := "3.3.6",
+    PlayKeys.playDefaultPort := 8459,
+    libraryDependencies ++= AppDependencies.compile ++ AppDependencies.test,
+    Compile / javaOptions += "-Xmx2G", // without `Compile` it breaks sbt start/runProd (Universal scope)
+    scalacOptions += "-Wconf:src=routes/.*:s"
+  )
   .settings(
     Test / resources := (Test / resources).value ++ Seq(baseDirectory.value / "conf" / "application.conf")
   )

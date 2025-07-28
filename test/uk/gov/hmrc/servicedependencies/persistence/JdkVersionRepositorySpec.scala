@@ -28,9 +28,9 @@ import scala.concurrent.ExecutionContext.Implicits.global
 
 class JdkVersionRepositorySpec
   extends AnyWordSpec
-    with Matchers
-    with MockitoSugar
-    with DefaultPlayMongoRepositorySupport[JDKVersion] {
+     with Matchers
+     with MockitoSugar
+     with DefaultPlayMongoRepositorySupport[JDKVersion]:
 
   lazy val deploymentRepository = DeploymentRepository(mongoComponent)
 
@@ -39,27 +39,25 @@ class JdkVersionRepositorySpec
 
   lazy val slugInfoRepo = SlugInfoRepository(mongoComponent, deploymentRepository)
 
-  override protected def beforeEach(): Unit = {
+  override protected def beforeEach(): Unit =
     super.beforeEach()
     MongoUtils.ensureIndexes(deploymentRepository.collection, deploymentRepository.indexes, replaceIndexes = false)
       .futureValue
-  }
 
-  "JdkVersionRepository.findJDKUsage" should {
-    "find all the jdk version for a given environment" in {
+  "JdkVersionRepository.findJDKUsage" should:
+    "find all the jdk version for a given environment" in:
       slugInfoRepo.add(TestSlugInfos.slugInfo).futureValue
       deploymentRepository.markLatest(TestSlugInfos.slugInfo.name, TestSlugInfos.slugInfo.version).futureValue
 
       val result = repository.findJDKUsage(Latest).futureValue
 
-      result.length       shouldBe 1
-      result.head.name    shouldBe TestSlugInfos.slugInfo.name
-      result.head.version shouldBe TestSlugInfos.slugInfo.java.version
-      result.head.vendor  shouldBe TestSlugInfos.slugInfo.java.vendor
-      result.head.kind    shouldBe TestSlugInfos.slugInfo.java.kind
-    }
+      result.length        shouldBe 1
+      result.head.name     shouldBe TestSlugInfos.slugInfo.name
+      result.head.version  shouldBe TestSlugInfos.slugInfo.java.version
+      result.head.vendor   shouldBe TestSlugInfos.slugInfo.java.vendor
+      result.head.kind     shouldBe TestSlugInfos.slugInfo.java.kind
 
-    "ignore non-java slugs" in {
+    "ignore non-java slugs" in:
       slugInfoRepo.add(TestSlugInfos.slugInfo).futureValue
       slugInfoRepo.add(TestSlugInfos.nonJavaSlugInfo).futureValue
       deploymentRepository.markLatest(TestSlugInfos.slugInfo.name, TestSlugInfos.slugInfo.version).futureValue
@@ -67,9 +65,5 @@ class JdkVersionRepositorySpec
 
       val result = repository.findJDKUsage(Latest).futureValue
 
-      result.length shouldBe 1
+      result.length    shouldBe 1
       result.head.name shouldBe "my-slug"
-    }
-  }
-
-}

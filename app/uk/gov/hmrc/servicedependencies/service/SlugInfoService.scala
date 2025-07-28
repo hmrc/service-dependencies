@@ -77,7 +77,7 @@ class SlugInfoService @Inject()(
 
   def findSBTVersions(teamName: Option[String], digitalService: Option[String], flag: SlugInfoFlag)(using hc: HeaderCarrier): Future[Seq[SBTVersion]] =
     (teamName, digitalService) match
-      case (None, None) => sbtVersionRepository.findSBTUsage(flag)
+      case (None, None) => sbtVersionRepository.findSBTUsage(flag) // for Latest, we could get the data from MetaArtefact to support non-services
       case _            =>
                            for
                              repos <- teamsAndRepositoriesConnector.getAllRepositories(archived = Some(false), teamName = teamName, digitalService = digitalService)
