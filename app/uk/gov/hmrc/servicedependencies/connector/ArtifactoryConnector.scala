@@ -18,7 +18,7 @@ package uk.gov.hmrc.servicedependencies.connector
 
 import cats.implicits._
 import javax.inject.{Inject, Singleton}
-import uk.gov.hmrc.http.{Authorization, HeaderCarrier, HttpReads, HttpResponse, StringContextOps}
+import uk.gov.hmrc.http.{HeaderCarrier, HttpReads, HttpResponse, StringContextOps}
 import uk.gov.hmrc.http.client.HttpClientV2
 import uk.gov.hmrc.servicedependencies.config.ServiceDependenciesConfig
 import uk.gov.hmrc.servicedependencies.model.{ScalaVersion, Version}
@@ -33,17 +33,13 @@ class ArtifactoryConnector @Inject()(
 ):
   import HttpReads.Implicits._
 
-  private lazy val authorization: Option[Authorization] =
-    for
-      token <- config.artifactoryToken
-    yield Authorization(s"Bearer $token")
+  private given HeaderCarrier = HeaderCarrier()
 
   def findLatestVersion(
     group       : String
   , artefact    : String
   , scalaVersion: ScalaVersion
   ): Future[Option[Version]] =
-    given HeaderCarrier = HeaderCarrier(authorization = authorization)
     httpClientV2
       .get(url"${config.artifactoryBase}/api/search/latestVersion?g=$group&a=$artefact${scalaVersion.asClassifier}")
       .execute[Option[HttpResponse]]
@@ -53,7 +49,9 @@ class ArtifactoryConnector @Inject()(
     group       : String
   , artefact    : String
   ): Future[Map[ScalaVersion, Version]] =
-    ScalaVersion.values.toList
+    ScalaVersion
+      .values
+      .toList
       .foldLeftM(Map.empty[ScalaVersion, Version]): (acc, scalaVersion) =>
         findLatestVersion(group, artefact, scalaVersion)
           .map:
