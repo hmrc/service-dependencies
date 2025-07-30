@@ -22,7 +22,7 @@ import com.google.inject.{Inject, Singleton}
 import play.api.Logging
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.servicedependencies.connector.{ReleasesApiConnector, TeamsAndRepositoriesConnector, ServiceConfigsConnector}
-import uk.gov.hmrc.servicedependencies.model.{BobbyReport, BobbyRule, MetaArtefactDependency, RepoType, SlugInfoFlag}
+import uk.gov.hmrc.servicedependencies.model.{BobbyReport, BobbyRule, MetaArtefactDependency, RepoType, SlugInfoFlag, Version}
 import uk.gov.hmrc.servicedependencies.persistence.{Deployment, DeploymentRepository, MetaArtefactRepository, SlugInfoRepository, SlugVersionRepository}
 import uk.gov.hmrc.servicedependencies.persistence.derived.{DerivedBobbyReportRepository, DerivedDeployedDependencyRepository, DerivedGroupArtefactRepository, DerivedLatestDependencyRepository, DerivedModuleRepository}
 import uk.gov.hmrc.servicedependencies.util.DependencyGraphParser
@@ -112,10 +112,11 @@ class DerivedViewsService @Inject()(
       oActiveRepo     <- teamsAndRepositoriesConnector.getRepository(repoName).map(_.filterNot(_.isArchived))
       oDecommissioned <- teamsAndRepositoriesConnector.getDecommissionedRepositories().map(_.find(_.name == repoName))
       oLatestMeta     <- metaArtefactRepository.find(repoName)
+      oLatestMetaTup  =  oLatestMeta.map(meta => (meta.name, meta.version))
       deployments     <- deploymentRepository.findDeployed(Some(repoName))
-      _               <- updateDerivedDependencyViews(oActiveRepo.toSeq, oDecommissioned.toSeq, oLatestMeta.toSeq, deployments)
+      _               <- updateDerivedDependencyViews(oActiveRepo.toSeq, oDecommissioned.toSeq, oLatestMetaTup.toSeq, deployments)
       bobbyRules      <- serviceConfigsConnector.getBobbyRules().map(_.asMap.values.flatten.toSeq)
-      _               <- updateRepoBobbyRules(bobbyRules, oActiveRepo.toSeq, oDecommissioned.toSeq, oLatestMeta.toSeq, deployments)
+      _               <- updateRepoBobbyRules(bobbyRules, oActiveRepo.toSeq, oDecommissioned.toSeq, oLatestMetaTup.toSeq, deployments)
       _               =  logger.info(s"Running DerivedModuleRepository.update")
       _               <- oLatestMeta.fold(Future.unit)(meta => derivedModuleRepository.update(meta))
       _               =  logger.info(s"Finished running DerivedModuleRepository.update")
@@ -145,24 +146,30 @@ class DerivedViewsService @Inject()(
   private def updateDerivedDependencyViews(
     activeRepos   : Seq[TeamsAndRepositoriesConnector.Repository],
     decommissioned: Seq[TeamsAndRepositoriesConnector.DecommissionedRepository],
-    latestMeta    : Seq[MetaArtefact],
+    latestMeta    : Seq[(String, Version)],
     deployments   : Seq[Deployment]
   ): Future[Unit] =
     for
       _ <- Future.unit
       _ =  logger.info(s"Running DerivedLatestDependencyRepository changes")
       _ <- latestMeta
-             .flatMap: m =>
-               activeRepos.find(_.name == m.name).map(r => (m, r.repoType))
+             .flatMap: (name, version) =>
+               activeRepos.find(_.name == name).map(r => (name, version, r.repoType))
              .foldLeftM(()):
-               case (_, (meta, repoType)) =>
+               case (_, (name, version, repoType)) =>
                  for
-                   ds <- derivedLatestDependencyRepository.find(repoName = Some(meta.name), repoVersion = Some(meta.version))
+                   ds <- derivedLatestDependencyRepository.find(repoName = Some(name), repoVersion = Some(version))
                    _  <-
                          if ds.isEmpty || repoType == RepoType.Test then
-                           val deps = toDependencies(meta, repoType)
-                           logger.info(s"DerivedLatestDependencyRepository repoName: ${meta.name}, repoVersion: ${meta.version} - storing ${deps.size} dependencies")
-                           derivedLatestDependencyRepository.update(meta.name, deps)
+                           metaArtefactRepository
+                             .find(repositoryName = name, version = version)
+                             .flatMap:
+                              case None       =>
+                                Future.unit
+                              case Some(meta) =>
+                                val deps = toDependencies(meta, repoType)
+                                logger.info(s"DerivedLatestDependencyRepository repoName: ${meta.name}, repoVersion: ${meta.version} - storing ${deps.size} dependencies")
+                                derivedLatestDependencyRepository.update(meta.name, deps)
                          else
                            Future.unit
                  yield ()
@@ -207,13 +214,11 @@ class DerivedViewsService @Inject()(
     bobbyRules    : Seq[BobbyRule],
     activeRepos   : Seq[TeamsAndRepositoriesConnector.Repository],
     decommissioned: Seq[TeamsAndRepositoriesConnector.DecommissionedRepository],
-    latestMeta    : Seq[MetaArtefact],
+    latestMeta    : Seq[(String, Version)],
     deployments   : Seq[Deployment]
   ): Future[Unit] =
     for
-      _ <- (  latestMeta.map(m =>  (m.name    , m.version    ))
-           ++ deployments.map(d => (d.slugName, d.slugVersion))
-           )
+      _ <- (latestMeta ++ deployments.map(d => (d.slugName, d.slugVersion)))
            .distinct
            .flatMap: (repoName, repoVersion) =>
              activeRepos.collect:
@@ -254,13 +259,13 @@ class DerivedViewsService @Inject()(
                                                  , exempt      = bobby.exemptProjects.contains(d.repoName)
                                                  )
                        , lastUpdated  = java.time.Instant.now()
-                       , latest       = latestMeta .exists(lm => lm.name    == repoName && lm.version    == repoVersion)
-                       , production   = deployments.exists(d  => d.slugName == repoName && d.slugVersion == repoVersion && d.production)
-                       , qa           = deployments.exists(d  => d.slugName == repoName && d.slugVersion == repoVersion && d.qa)
-                       , staging      = deployments.exists(d  => d.slugName == repoName && d.slugVersion == repoVersion && d.staging)
-                       , development  = deployments.exists(d  => d.slugName == repoName && d.slugVersion == repoVersion && d.development)
-                       , externalTest = deployments.exists(d  => d.slugName == repoName && d.slugVersion == repoVersion && d.externalTest)
-                       , integration  = deployments.exists(d  => d.slugName == repoName && d.slugVersion == repoVersion && d.integration)
+                       , latest       = latestMeta .exists((n,v) => n          == repoName && v             == repoVersion)
+                       , production   = deployments.exists(d     => d.slugName == repoName && d.slugVersion == repoVersion && d.production)
+                       , qa           = deployments.exists(d     => d.slugName == repoName && d.slugVersion == repoVersion && d.qa)
+                       , staging      = deployments.exists(d     => d.slugName == repoName && d.slugVersion == repoVersion && d.staging)
+                       , development  = deployments.exists(d     => d.slugName == repoName && d.slugVersion == repoVersion && d.development)
+                       , externalTest = deployments.exists(d     => d.slugName == repoName && d.slugVersion == repoVersion && d.externalTest)
+                       , integration  = deployments.exists(d     => d.slugName == repoName && d.slugVersion == repoVersion && d.integration)
                        )
                  .flatMap: bobbyReports =>
                    derivedBobbyReportRepository.update(repoName, bobbyReports)

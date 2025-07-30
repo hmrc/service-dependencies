@@ -169,8 +169,15 @@ class MetaArtefactRepository @Inject()(
       .sort(Sorts.descending("created"))
       .headOption()
 
-  def findLatest(): Future[Seq[MetaArtefact]] =
+  // Saves memory by excluding dependency graphs and other fields
+  def findLatest(): Future[Seq[(String, Version)]] =
     collection
-      .find(Filters.equal("latest", true))
+      .find[BsonDocument](Filters.equal("latest", true))
+      .projection(Projections.include("name", "version"))
       .sort(Sorts.ascending("name"))
       .toFuture()
+      .map:
+        _.map: bson =>
+          ( bson.getString("name").getValue
+          , Version(bson.getString("version").getValue)
+          )
