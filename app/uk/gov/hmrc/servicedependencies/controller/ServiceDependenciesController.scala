@@ -191,6 +191,14 @@ class ServiceDependenciesController @Inject()(
         given Writes[CuratedLibrariesService.Repository] = CuratedLibrariesService.Repository.writes
         Ok(Json.toJson(repositories))
 
+  def latestRepositoryVersion(repositoryName: String): Action[AnyContent] =
+    Action.async: request =>
+      metaArtefactRepository
+        .find(repositoryName)
+        .map:
+          case Some(meta) => Ok(Json.toJson(meta.version))
+          case None       => NotFound
+
   // for all dependencies
   def latestVersion(group: String, artefact: String): Action[AnyContent] =
     Action.async:
