@@ -48,7 +48,6 @@ class TeamsAndRepositoriesConnectorSpec
       .configure(
         "microservice.services.teams-and-repositories.host" -> wireMockHost,
         "microservice.services.teams-and-repositories.port" -> wireMockPort,
-        "internal-auth.token" -> "token"
       ).build()
 
   private val connector = app.injector.instanceOf[TeamsAndRepositoriesConnector]

@@ -56,7 +56,6 @@ class ServiceConfigsConnectorSpec
       .configure(
         "microservice.services.service-configs.host" -> wireMockHost,
         "microservice.services.service-configs.port" -> wireMockPort,
-        "internal-auth.token" -> "token"
       )
       .build()
 
