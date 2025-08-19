@@ -42,10 +42,9 @@ class Module extends play.api.inject.Module:
 
   override def bindings(environment: Environment, configuration: Configuration): Seq[Binding[?]] =
     Seq(
-      bind[BobbyRulesSummaryScheduler     ].toSelf.eagerly()
-    , bind[DerivedViewsScheduler          ].toSelf.eagerly()
-    , bind[LatestVersionScheduler         ].toSelf.eagerly()
-    , bind[ProductionNotificationScheduler].toSelf.eagerly()
-    , bind[Materializer                   ].toProvider(classOf[MaterializerProvider])
+      bind[BobbyRulesSummaryScheduler].toSelf.eagerly()
+    , bind[DerivedViewsScheduler     ].toSelf.eagerly()
+    , bind[LatestVersionScheduler    ].toSelf.eagerly()
+    , bind[Materializer              ].toProvider(classOf[MaterializerProvider])
     ) ++
     ecsDeploymentsBindings(configuration)
