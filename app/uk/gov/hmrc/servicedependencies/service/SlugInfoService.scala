@@ -45,7 +45,7 @@ class SlugInfoService @Inject()(
       isLatest <- slugVersionRepository.getMaxVersion(name = slug.name)
                     .map:
                       case None             => true
-                      case Some(maxVersion) => val isLatest = maxVersion == slug.version
+                      case Some(maxVersion) => val isLatest = maxVersion <= slug.version
                                                logger.info(s"Slug ${slug.name} ${slug.version} isLatest=$isLatest (latest is: ${maxVersion})")
                                                isLatest
       _        <- if isLatest then deploymentRepository.markLatest(slug.name, slug.version) else Future.unit

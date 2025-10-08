@@ -93,18 +93,14 @@ class DerivedViewsService @Inject()(
                                   .map(_.map(_.name))
       _                      <- deploymentRepository.clearFlags(SlugInfoFlag.values.toList, decommissionedServices.toList)
 
-      missingLatestFlag      =  slugNames.intersect(activeRepos).diff(decommissionedServices).diff(latestServices)
-      _                      <-
-                                if missingLatestFlag.nonEmpty then
-                                  logger.warn(s"The following services are missing Latest flag - and will be added: ${missingLatestFlag.mkString(",")}")
-                                  missingLatestFlag.foldLeftM(()): (_, serviceName) =>
-                                    for
-                                      optVersion <- slugVersionRepository.getMaxVersion(serviceName)
-                                      _          <- optVersion match
-                                                      case Some(version) => deploymentRepository.setFlag(SlugInfoFlag.Latest, serviceName, version)
-                                                      case None          => logger.warn(s"No max version found for $serviceName"); Future.unit
-                                    yield ()
-                                else Future.unit
+      allActiveServices      =  slugNames.intersect(activeRepos).diff(decommissionedServices)
+      _                      <- allActiveServices.foldLeftM(()): (_, serviceName) =>
+                                  for
+                                    optVersion <- slugVersionRepository.getMaxVersion(serviceName)
+                                    _          <- optVersion match
+                                                    case Some(version) => deploymentRepository.setFlag(SlugInfoFlag.Latest, serviceName, version)
+                                                    case None          => logger.warn(s"No max version found for $serviceName"); Future.unit
+                                  yield ()
     yield ()
 
   def updateDerivedViews(repoName: String)(using hc: HeaderCarrier): Future[Unit] =

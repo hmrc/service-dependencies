@@ -130,6 +130,9 @@ class DerivedViewsServiceSpec
       when(mockedDeploymentRepository.clearFlags(any[List[SlugInfoFlag]], any[List[String]]))
         .thenReturn(Future.unit)
 
+      when(mockedSlugVersionRepository.getMaxVersion(any[String]))
+        .thenReturn(Future.successful(None))
+
       underTest.updateDeploymentDataForAllServices().futureValue
 
       verify(mockedDeploymentRepository).clearFlags(List(SlugInfoFlag.Latest), servicesToBeCleared)

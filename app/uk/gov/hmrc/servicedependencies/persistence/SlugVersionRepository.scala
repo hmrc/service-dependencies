@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.servicedependencies.persistence
 
-import org.mongodb.scala.SingleObservableFuture
+import org.mongodb.scala.{ReadPreference, SingleObservableFuture}
 import org.mongodb.scala.model.Filters.equal
 import org.mongodb.scala.model.Projections.include
 import uk.gov.hmrc.mongo.MongoComponent
@@ -36,6 +36,7 @@ class SlugVersionRepository @Inject()(
 ):
   def getMaxVersion(name: String): Future[Option[Version]] =
     collection
+      .withReadPreference(ReadPreference.primaryPreferred())
       .find(equal("name", name))
       .projection(include("version"))
       .foldLeft(Option.empty[Version]):
