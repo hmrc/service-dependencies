@@ -148,6 +148,8 @@ class DerivedViewsService @Inject()(
     for
       _ <- Future.unit
       _ =  logger.info(s"Running DerivedLatestDependencyRepository changes")
+      latestMetaSet = latestMeta.map(_._1).toSet
+      // Process repositories from latestMeta (existing logic)
       _ <- latestMeta
              .flatMap: (name, version) =>
                activeRepos.find(_.name == name).map(r => (name, version, r.repoType))
@@ -168,6 +170,34 @@ class DerivedViewsService @Inject()(
                                 derivedLatestDependencyRepository.update(meta.name, deps)
                          else
                            Future.unit
+                 yield ()
+      // Process test repositories that are not in latestMeta
+      _ <- activeRepos
+             .filter: repo =>
+               repo.repoType == RepoType.Test && !latestMetaSet.contains(repo.name)
+             .foldLeftM(()):
+               case (_, repo) =>
+                 for
+                   optMeta <- metaArtefactRepository.find(repo.name)
+                   meta    <- optMeta match
+                               case Some(m) => Future.successful(Some(m))
+                               case None    =>
+                                 // If no latest: true flag, try to find all versions and get the latest one
+                                 for
+                                   allVersions <- metaArtefactRepository.findAllVersions(repo.name)
+                                   result      <-
+                                         if allVersions.nonEmpty then
+                                           val latest = allVersions.maxBy(_.version)
+                                           Future.successful(Some(latest))
+                                         else
+                                           Future.successful(None)
+                                 yield result
+                   _       <- meta match
+                               case None       =>
+                                 logger.debug(s"Skipping test repository ${repo.name} - no meta artefact found")
+                                 Future.unit
+                               case Some(meta) =>
+                                 processTestRepository(repo, meta)
                  yield ()
       _ <- derivedLatestDependencyRepository.deleteMany(decommissioned)
       _ =  logger.info(s"Finished running DerivedLatestDependencyRepository changes")
@@ -196,6 +226,18 @@ class DerivedViewsService @Inject()(
                  yield ()
       _ <- derivedDeployedDependencyRepository.deleteMany(decommissioned)
       _ =  logger.info(s"Finished running DerivedDeployedDependencyRepository changes")
+    yield ()
+
+  private def processTestRepository(repo: TeamsAndRepositoriesConnector.Repository, meta: MetaArtefact): Future[Unit] =
+    for
+      ds <- derivedLatestDependencyRepository.find(repoName = Some(repo.name), repoVersion = Some(meta.version))
+      _  <-
+            if ds.isEmpty then
+              val deps = toDependencies(meta, repo.repoType)
+              logger.info(s"DerivedLatestDependencyRepository repoName: ${meta.name}, repoVersion: ${meta.version} (test repo not in latestMeta) - storing ${deps.size} dependencies")
+              derivedLatestDependencyRepository.update(meta.name, deps)
+            else
+              Future.unit
     yield ()
 
   private def toDependencies(meta: MetaArtefact, repoType: RepoType): List[MetaArtefactDependency] =
