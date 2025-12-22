@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.servicedependencies.service
 
-import org.mockito.ArgumentMatchers.any
+import org.mockito.ArgumentMatchers.{any, eq => eqTo}
 import org.mockito.Mockito.{verify, when}
 import org.scalatest.concurrent.{IntegrationPatience, ScalaFutures}
 import org.scalatest.matchers.should.Matchers
@@ -136,6 +136,96 @@ class DerivedViewsServiceSpec
       underTest.updateDeploymentDataForAllServices().futureValue
 
       verify(mockedDeploymentRepository).clearFlags(List(SlugInfoFlag.Latest), servicesToBeCleared)
+    }
+  }
+
+  "DerivedViewsService.updateDerivedViewsForAllRepos" should {
+    "process test repositories that are not in latestMeta" in {
+      val testRepo = TeamsAndRepositoriesConnector.Repository(
+        name           = "test-repo"
+      , teamNames      = Seq("PlatOps")
+      , digitalService = None
+      , repoType       = RepoType.Test
+      , isArchived     = false
+      )
+
+      val latestMeta = Seq(("service1", Version("1.0.0"))) // test-repo is NOT in latestMeta
+      val testMetaArtefact = MetaArtefact(
+        name     = "test-repo"
+      , version  = Version("2.0.0")
+      , uri      = "https://artefacts/metadata/test-repo-v2.0.0.meta.tgz"
+      , gitUrl   = Some("https://github.com/hmrc/test-repo")
+      , modules  = Seq.empty
+      , created  = java.time.Instant.now()
+      , latest   = false // No latest flag
+      )
+
+      when(mockedTeamsAndRepositoriesConnector.getAllRepositories(Some(false)))
+        .thenReturn(Future.successful(Seq(testRepo)))
+
+      when(mockedTeamsAndRepositoriesConnector.getDecommissionedRepositories())
+        .thenReturn(Future.successful(Seq.empty))
+
+      when(mockedMetaArtefactRepository.findLatest())
+        .thenReturn(Future.successful(latestMeta))
+
+      when(mockedDeploymentRepository.findDeployed())
+        .thenReturn(Future.successful(Seq.empty))
+
+      when(mockedMetaArtefactRepository.find("test-repo"))
+        .thenReturn(Future.successful(None)) // No latest: true flag
+
+      when(mockedMetaArtefactRepository.findAllVersions("test-repo"))
+        .thenReturn(Future.successful(Seq(testMetaArtefact)))
+
+      // Mock for find - use ArgumentMatchers.any() for all parameters
+      // Note: Mockito requires all parameters to use matchers when any() is used
+      when(mockedDerivedLatestDependencyRepository.find(
+        group = any[Option[String]],
+        artefact = any[Option[String]],
+        repoType = any[Option[Seq[RepoType]]],
+        scopes = any[Option[Seq[DependencyScope]]],
+        repoName = any[Option[String]],
+        repoVersion = any[Option[Version]]
+      ))
+        .thenReturn(Future.successful(Seq.empty)) // Not in collection yet
+
+      when(mockedDerivedLatestDependencyRepository.update(any[String], any[List[uk.gov.hmrc.servicedependencies.model.MetaArtefactDependency]]))
+        .thenReturn(Future.unit)
+
+      when(mockedDerivedLatestDependencyRepository.deleteMany(any[Seq[TeamsAndRepositoriesConnector.DecommissionedRepository]]))
+        .thenReturn(Future.unit)
+
+      when(mockedDerivedDeployedDependencyRepository.find(any[String], any[Version]))
+        .thenReturn(Future.successful(Seq.empty))
+
+      when(mockedDerivedDeployedDependencyRepository.delete(any[String], any[Option[Version]], any[Seq[Version]]))
+        .thenReturn(Future.unit)
+
+      when(mockedDerivedDeployedDependencyRepository.deleteMany(any[Seq[TeamsAndRepositoriesConnector.DecommissionedRepository]]))
+        .thenReturn(Future.unit)
+
+      when(mockedServiceConfigsConnector.getBobbyRules())
+        .thenReturn(Future.successful(BobbyRules(Map.empty[(String, String), List[BobbyRule]])))
+
+      when(mockedDerivedBobbyReportRepository.update(any[String], any[Seq[BobbyReport]]))
+        .thenReturn(Future.unit)
+
+      when(mockedDerivedBobbyReportRepository.deleteMany(any[Seq[TeamsAndRepositoriesConnector.DecommissionedRepository]]))
+        .thenReturn(Future.unit)
+
+      when(mockedDerivedModuleRepository.populateAll())
+        .thenReturn(Future.unit)
+
+      when(mockedDerivedGroupArtefactRepository.populateAll())
+        .thenReturn(Future.unit)
+
+      underTest.updateDerivedViewsForAllRepos().futureValue
+
+      // Verify that test repository was processed
+      verify(mockedMetaArtefactRepository).find("test-repo")
+      verify(mockedMetaArtefactRepository).findAllVersions("test-repo")
+      verify(mockedDerivedLatestDependencyRepository).update(eqTo("test-repo"), any[List[uk.gov.hmrc.servicedependencies.model.MetaArtefactDependency]])
     }
   }
 }
