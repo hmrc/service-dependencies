@@ -3,8 +3,8 @@ import sbt._
 private object AppDependencies {
   import play.sbt.PlayImport.caffeine
 
-  val bootstrapPlayVersion = "10.2.0"
-  val hmrcMongoVersion     = "2.9.0"
+  val bootstrapPlayVersion = "10.4.0"
+  val hmrcMongoVersion     = "2.11.0"
 
   val compile = Seq(
     caffeine,
