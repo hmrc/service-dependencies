@@ -16,13 +16,13 @@
 
 package uk.gov.hmrc.servicedependencies.persistence
 
-import play.api.Logging
-import org.mongodb.scala.{ClientSession, ObservableFuture, SingleObservableFuture}
+import org.mongodb.scala.ClientSession
 import org.mongodb.scala.bson.BsonDocument
-import org.mongodb.scala.model.{Aggregates, Filters, IndexModel, IndexOptions, Indexes, Projections, ReplaceOptions, Sorts, UpdateOptions, Updates}
+import org.mongodb.scala.model.*
+import play.api.Logging
 import uk.gov.hmrc.mongo.MongoComponent
-import uk.gov.hmrc.mongo.transaction.{TransactionConfiguration, Transactions}
 import uk.gov.hmrc.mongo.play.json.PlayMongoRepository
+import uk.gov.hmrc.mongo.transaction.{TransactionConfiguration, Transactions}
 import uk.gov.hmrc.servicedependencies.model.{MetaArtefact, Version}
 
 import java.time.Instant

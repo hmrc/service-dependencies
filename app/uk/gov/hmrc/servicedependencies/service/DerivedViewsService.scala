@@ -218,7 +218,7 @@ class DerivedViewsService @Inject()(
                  for
                    ds <- derivedDeployedDependencyRepository.find(slugName = slugName, slugVersion = slugVersion)
                    ms <- metaArtefactRepository.find(repositoryName = slugName, version = slugVersion)
-                   _  <- (ds.isEmpty, ms.headOption) match
+                   _  <- (ds.isEmpty, ms) match
                            case (true, Some(meta)) => val deps = toDependencies(meta, RepoType.Service)
                                                       logger.info(s"DerivedDeployedDependencyRepository repoName: ${meta.name}, repoVersion: ${meta.version} - storing ${deps.size} dependencies")
                                                       derivedDeployedDependencyRepository.update(meta.name, meta.version, deps)
@@ -244,7 +244,7 @@ class DerivedViewsService @Inject()(
     DependencyGraphParser
       .parseMetaArtefact(meta)
       .groupBy { case (node, _) => node.group + node.artefact }                             // Unique index does not consider Scala version
-      .flatMap { case (_, xs) => xs.headOption.map(x => (x._1 -> xs.flatMap(_._2).toSet)) } // Merge scopes with the same node minus scala version
+      .flatMap { case (_, xs) => xs.headOption.map(x => x._1 -> xs.flatMap(_._2).toSet) } // Merge scopes with the same node minus scala version
       .map { case (node, scopes) => MetaArtefactDependency.apply(meta, repoType, node, scopes) }
       .toList
 
@@ -255,57 +255,77 @@ class DerivedViewsService @Inject()(
     latestMeta    : Seq[(String, Version)],
     deployments   : Seq[Deployment]
   ): Future[Unit] =
+    // Get all repositories from latestMeta and deployments
+    val reposFromLatestMetaAndDeployments = (latestMeta ++ deployments.map(d => (d.slugName, d.slugVersion)))
+                                             .distinct
+                                             .flatMap: (repoName, repoVersion) =>
+                                               activeRepos.collect:
+                                                 case x if x.name == repoName => (repoName, repoVersion, x.repoType)
+    // Get test repositories that are in DERIVED-latest-dependencies but not in latestMeta
+    // We query DERIVED-latest-dependencies directly to get test repos with their versions
+    val latestMetaSet = latestMeta.map(_._1).toSet
+    val testReposInActive = activeRepos.filter: repo =>
+                               repo.repoType == RepoType.Test && !latestMetaSet.contains(repo.name)
     for
-      _ <- (latestMeta ++ deployments.map(d => (d.slugName, d.slugVersion)))
-           .distinct
-           .flatMap: (repoName, repoVersion) =>
-             activeRepos.collect:
-               case x if x.name == repoName => (repoName, repoVersion, x.repoType)
-           .groupBy(_._1)
-           .toSeq
-           .foldLeftM(()):
-             case (_, (repoName, groupedData)) =>
-               groupedData
-                 .distinct
-                 .foldLeftM(Seq.empty[BobbyReport]):
-                   case (acc, (repoName, repoVersion, repoType)) =>
-                     for
-                       xs   <- derivedLatestDependencyRepository.find(repoName = Some(repoName), repoVersion = Some(repoVersion))
-                       deps <- if   xs.isEmpty
-                               then derivedDeployedDependencyRepository.find(slugName = repoName, slugVersion = repoVersion)
-                               else Future.successful(xs)
-                     yield
-                       acc :+ BobbyReport(
-                         repoName    = repoName
-                       , repoVersion = repoVersion
-                       , repoType    = repoType
-                       , violations  = bobbyRules
-                                         .flatMap: bobby =>
-                                           deps.collect:
-                                             case d
-                                               if bobby.organisation == d.depGroup
-                                               && bobby.name         == d.depArtefact
-                                               && bobby.range.includes(d.depVersion) =>
-                                                 BobbyReport.Violation(
-                                                   depGroup    = d.depGroup
-                                                 , depArtefact = d.depArtefact
-                                                 , depVersion  = d.depVersion
-                                                 , depScopes   = d.depScopes
-                                                 , range       = bobby.range
-                                                 , reason      = bobby.reason
-                                                 , from        = bobby.from
-                                                 , exempt      = bobby.exemptProjects.contains(d.repoName)
-                                                 )
-                       , lastUpdated  = java.time.Instant.now()
-                       , latest       = latestMeta .exists((n,v) => n          == repoName && v             == repoVersion)
-                       , production   = deployments.exists(d     => d.slugName == repoName && d.slugVersion == repoVersion && d.production)
-                       , qa           = deployments.exists(d     => d.slugName == repoName && d.slugVersion == repoVersion && d.qa)
-                       , staging      = deployments.exists(d     => d.slugName == repoName && d.slugVersion == repoVersion && d.staging)
-                       , development  = deployments.exists(d     => d.slugName == repoName && d.slugVersion == repoVersion && d.development)
-                       , externalTest = deployments.exists(d     => d.slugName == repoName && d.slugVersion == repoVersion && d.externalTest)
-                       , integration  = deployments.exists(d     => d.slugName == repoName && d.slugVersion == repoVersion && d.integration)
-                       )
-                 .flatMap: bobbyReports =>
-                   derivedBobbyReportRepository.update(repoName, bobbyReports)
+      testDeps <- derivedLatestDependencyRepository.find(
+                    repoType = Some(Seq(RepoType.Test))
+                  )
+      // Extract unique (repoName, repoVersion) pairs from test dependencies
+      testReposWithVersions = testDeps
+                                .map(dep => (dep.repoName, dep.repoVersion))
+                                .distinct
+                                .flatMap: (repoName, repoVersion) =>
+                                  testReposInActive.find(_.name == repoName).map(repo => (repoName, repoVersion, repo.repoType))
+      // Combine all repositories to process
+      allReposToProcess = (reposFromLatestMetaAndDeployments ++ testReposWithVersions).distinct
+      _                 <- Future.successful(allReposToProcess)
+                           .flatMap: allRepos =>
+                             allRepos
+                               .groupBy(_._1)
+                               .toSeq
+                               .foldLeftM(()):
+                                 case (_, (repoName, groupedData)) =>
+                                   groupedData
+                                     .distinct
+                                     .foldLeftM(Seq.empty[BobbyReport]):
+                                       case (acc, (repoName, repoVersion, repoType)) =>
+                                         for
+                                           xs   <- derivedLatestDependencyRepository.find(repoName = Some(repoName), repoVersion = Some(repoVersion))
+                                           deps <- if   xs.isEmpty
+                                                   then derivedDeployedDependencyRepository.find(slugName = repoName, slugVersion = repoVersion)
+                                                   else Future.successful(xs)
+                                         yield
+                                           acc :+ BobbyReport(
+                                             repoName    = repoName
+                                           , repoVersion = repoVersion
+                                           , repoType    = repoType
+                                           , violations  = bobbyRules
+                                                             .flatMap: bobby =>
+                                                               deps.collect:
+                                                                 case d
+                                                                   if bobby.organisation == d.depGroup
+                                                                   && bobby.name         == d.depArtefact
+                                                                   && bobby.range.includes(d.depVersion) =>
+                                                                     BobbyReport.Violation(
+                                                                       depGroup    = d.depGroup
+                                                                     , depArtefact = d.depArtefact
+                                                                     , depVersion  = d.depVersion
+                                                                     , depScopes   = d.depScopes
+                                                                     , range       = bobby.range
+                                                                     , reason      = bobby.reason
+                                                                     , from        = bobby.from
+                                                                     , exempt      = bobby.exemptProjects.contains(d.repoName)
+                                                                     )
+                                           , lastUpdated  = java.time.Instant.now()
+                                           , latest       = latestMeta .exists((n,v) => n          == repoName && v             == repoVersion)
+                                           , production   = deployments.exists(d     => d.slugName == repoName && d.slugVersion == repoVersion && d.production)
+                                           , qa           = deployments.exists(d     => d.slugName == repoName && d.slugVersion == repoVersion && d.qa)
+                                           , staging      = deployments.exists(d     => d.slugName == repoName && d.slugVersion == repoVersion && d.staging)
+                                           , development  = deployments.exists(d     => d.slugName == repoName && d.slugVersion == repoVersion && d.development)
+                                           , externalTest = deployments.exists(d     => d.slugName == repoName && d.slugVersion == repoVersion && d.externalTest)
+                                           , integration  = deployments.exists(d     => d.slugName == repoName && d.slugVersion == repoVersion && d.integration)
+                                           )
+                                     .flatMap: bobbyReports =>
+                                       derivedBobbyReportRepository.update(repoName, bobbyReports)
       _ <- derivedBobbyReportRepository.deleteMany(decommissioned)
     yield ()
