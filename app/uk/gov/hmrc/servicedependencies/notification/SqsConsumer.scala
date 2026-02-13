@@ -41,8 +41,6 @@ case class SqsConfig(
   lazy val queueUrl           : URL = URL(configuration.get[String](s"$keyPrefix.queueUrl"))
   lazy val maxNumberOfMessages: Int = configuration.get[Int](s"$keyPrefix.maxNumberOfMessages")
   lazy val waitTimeSeconds    : Int = configuration.get[Int](s"$keyPrefix.waitTimeSeconds")
-  lazy val throttleNumberOfMessages    : Int = configuration.get[Int](s"$keyPrefix.throttle.messages")
-  lazy val throttlePerSecond    : Int = configuration.get[Int](s"$keyPrefix.throttle.perSeconds")
   lazy val watchdogTimeout    : FiniteDuration = configuration.get[FiniteDuration]("aws.sqs.watchdogTimeout")
 
 abstract class SqsConsumer(
@@ -100,7 +98,7 @@ abstract class SqsConsumer(
           .maxNumberOfMessages(config.maxNumberOfMessages)
           .waitTimeSeconds(config.waitTimeSeconds)
           .build()
-      .throttle(config.throttleNumberOfMessages, config.throttlePerSecond.second)
+      .throttle(1, 1.second)
       .mapAsync(parallelism = 1): request =>
         getMessages(request)
           .map:
