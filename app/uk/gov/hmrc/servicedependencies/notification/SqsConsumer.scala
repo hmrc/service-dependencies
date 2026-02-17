@@ -101,7 +101,7 @@ abstract class SqsConsumer(
     )
       .mapAsync(parallelism = 1): request =>
         getMessages(request)
-          .flatMap:
+          .map:
             _.foldLeftM[Future, Unit](()): (_, message) =>
               processMessage(message)
                 .flatMap:
