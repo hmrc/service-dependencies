@@ -92,15 +92,16 @@ abstract class SqsConsumer(
 
   private def runQueue(): Future[Done] =
     Source
-      .repeat:
+    .tick(0.seconds, 1.second,
         ReceiveMessageRequest.builder()
           .queueUrl(config.queueUrl.toString)
           .maxNumberOfMessages(config.maxNumberOfMessages)
           .waitTimeSeconds(config.waitTimeSeconds)
           .build()
+    )
       .mapAsync(parallelism = 1): request =>
         getMessages(request)
-          .flatMap:
+          .map:
             _.foldLeftM[Future, Unit](()): (_, message) =>
               processMessage(message)
                 .flatMap:
