@@ -27,8 +27,8 @@ import software.amazon.awssdk.services.sqs.model.{DeleteMessageRequest, Message,
 
 import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.duration.{DurationLong, FiniteDuration}
-import scala.jdk.CollectionConverters._
-import scala.jdk.FutureConverters._
+import scala.jdk.CollectionConverters.*
+import scala.jdk.FutureConverters.*
 import scala.util.control.NonFatal
 import java.net.URL
 import java.util.concurrent.atomic.AtomicReference
@@ -98,21 +98,23 @@ abstract class SqsConsumer(
           .maxNumberOfMessages(config.maxNumberOfMessages)
           .waitTimeSeconds(config.waitTimeSeconds)
           .build()
-      .mapAsync(parallelism = 1): request =>
+      .mapAsync(parallelism = 1): request => // single poll request to SQS and receive maxNumberOfMessages
         getMessages(request)
-          .map:
-            _.foldLeftM[Future, Unit](()): (_, message) =>
-              processMessage(message)
-                .flatMap:
-                  case MessageAction.Delete(msg) => deleteMessage(msg)
-                  case MessageAction.Ignore(_)   => Future.unit
-                .recover:
-                  case NonFatal(e) => logger.error(s"Failed to process $name messages", e)
-    .withAttributes(ActorAttributes.supervisionStrategy(decider))
-    .run()
-    .andThen: res =>
-      logger.warn(s"Queue $name terminated: $res - restarting")
-      actorSystem.scheduler.scheduleOnce(10.seconds)(runQueue())
+      .mapConcat(identity)                   // emits List(msg1, msg2, msg3) => msg1, msg2, msg3 (as separate elements downstream)
+      .mapAsync(parallelism = 1): message => // process one message at a time, only pulls more elements when downstream Future has completed
+        processMessage(message)
+          .flatMap:
+            case MessageAction.Delete(msg) => deleteMessage(msg)
+            case MessageAction.Ignore(_)   => Future.unit
+          .recover:
+            case NonFatal(e) =>
+              logger.error(s"Failed to process message $message", e)
+              ()
+      .withAttributes(ActorAttributes.supervisionStrategy(decider))
+      .run()
+      .andThen: res =>
+        logger.warn(s"Queue $name terminated: $res - restarting")
+        actorSystem.scheduler.scheduleOnce(10.seconds)(runQueue())
 
   runQueue()
 
