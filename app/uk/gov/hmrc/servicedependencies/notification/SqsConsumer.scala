@@ -98,18 +98,16 @@ abstract class SqsConsumer(
           .maxNumberOfMessages(config.maxNumberOfMessages)
           .waitTimeSeconds(config.waitTimeSeconds)
           .build()
-      .mapAsync(parallelism = 1): request => // single poll request to SQS and receive maxNumberOfMessages
+      .mapAsync(parallelism = 1): request =>
         getMessages(request)
-      .mapConcat(identity)                   // emits List(msg1, msg2, msg3) => msg1, msg2, msg3 (as separate elements downstream)
-      .mapAsync(parallelism = 1): message => // process one message at a time, only pulls more elements when downstream Future has completed
-        processMessage(message)
-          .flatMap:
-            case MessageAction.Delete(msg) => deleteMessage(msg)
-            case MessageAction.Ignore(_)   => Future.unit
-          .recover:
-            case NonFatal(e) =>
-              logger.error(s"Failed to process message $message", e)
-              ()
+          .map:
+            _.foldLeftM[Future, Unit](()): (_, message) =>
+              processMessage(message)
+                .flatMap:
+                  case MessageAction.Delete(msg) => deleteMessage(msg)
+                  case MessageAction.Ignore(_)   => Future.unit
+                .recover:
+                  case NonFatal(e) => logger.error(s"Failed to process $name messages", e)
       .withAttributes(ActorAttributes.supervisionStrategy(decider))
       .run()
       .andThen: res =>
