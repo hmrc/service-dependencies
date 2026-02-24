@@ -63,7 +63,7 @@ class DeploymentHandler @Inject()(
                     case "deployment-complete"   => EitherT.right[String](deploymentRepository.setFlag  (payload.environment, payload.serviceName, payload.version))
                     case "undeployment-complete" => EitherT.right[String](deploymentRepository.clearFlag(payload.environment, payload.serviceName                 ))
                     case _                       => EitherT.right[String](Future.unit)
-       _       <- EitherT.right[String](derivedViewsService.updateDerivedViews(repoName = payload.serviceName))
+       //_       <- EitherT.right[String](derivedViewsService.updateDerivedViews(repoName = payload.serviceName))
        _       =  logger.info(s"${prefix(payload)} with ID '${message.messageId()}' successfully processed.")
      yield
       MessageAction.Delete(message)
