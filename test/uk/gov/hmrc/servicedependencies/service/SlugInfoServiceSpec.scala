@@ -24,6 +24,7 @@ import org.scalatest.wordspec.AnyWordSpec
 import org.scalatestplus.mockito.MockitoSugar
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.servicedependencies.connector.TeamsAndRepositoriesConnector
+import uk.gov.hmrc.servicedependencies.connector.TeamsAndRepositoriesConnector.Repository
 import uk.gov.hmrc.servicedependencies.model._
 import uk.gov.hmrc.servicedependencies.persistence.{DeploymentRepository, JdkVersionRepository, SbtVersionRepository, SlugInfoRepository, SlugVersionRepository}
 import uk.gov.hmrc.servicedependencies.persistence.derived.DerivedGroupArtefactRepository
@@ -152,6 +153,39 @@ class SlugInfoServiceSpec
       boot.service.addSlugInfo(slugv1).futureValue
 
       verifyNoMoreInteractions(boot.mockedDeploymentRepository)
+    }
+  }
+
+  "SlugInfoService.findJDKVersions" should {
+    "return only JDK versions for active repositories" in new GetSlugInfoFixture {
+      val teamName       = Some("team-a")
+      val digitalService = Some("digital-service-a")
+      val flag           = SlugInfoFlag.Latest
+      val repos = Seq(
+        Repository("service-1", Seq("team-a"), Some("digital-service-a"), RepoType.Service, isArchived = false),
+        Repository("service-3", Seq("team-a"), Some("digital-service-a"), RepoType.Service, isArchived = false),
+        Repository("service-4", Seq("team-a"), Some("digital-service-a"), RepoType.Service, isArchived = true)
+      )
+      val jdkVersions = Seq(
+        JDKVersion(name = "service-1", version = "17.0.12", vendor = "Temurin", kind = "jdk"),
+        JDKVersion(name = "service-2", version = "21.0.4", vendor = "Temurin", kind = "jdk"),
+        JDKVersion(name = "service-3", version = "17.0.25", vendor = "Temurin", kind = "jdk"),
+        JDKVersion(name = "service-4", version = "21.0.4", vendor = "Temurin", kind = "jdk")
+      )
+
+      when(boot.mockedTeamsAndRepositoriesConnector.getAllRepositories(archived = Some(false), teamName = teamName, digitalService = digitalService))
+        .thenReturn(Future.successful(repos.filter(_.isArchived == false)))
+      when(boot.mockedJdkVersionRepository.findJDKUsage(flag))
+        .thenReturn(Future.successful(jdkVersions))
+
+      boot.service.findJDKVersions(teamName, digitalService, flag).futureValue shouldBe(
+        Seq(
+          JDKVersion(name = "service-1", version = "17.0.12", vendor = "Temurin", kind = "jdk"),
+          JDKVersion(name = "service-3", version = "17.0.25", vendor = "Temurin", kind = "jdk")
+        )
+      )
+
+      verify(boot.mockedJdkVersionRepository).findJDKUsage(flag)
     }
   }
 

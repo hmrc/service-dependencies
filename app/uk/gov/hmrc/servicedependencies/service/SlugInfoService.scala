@@ -67,14 +67,10 @@ class SlugInfoService @Inject()(
     derivedGroupArtefactRepository.findGroupsArtefacts()
 
   def findJDKVersions(teamName: Option[String], digitalService: Option[String], flag: SlugInfoFlag)(using hc: HeaderCarrier): Future[Seq[JDKVersion]] =
-    (teamName, digitalService) match
-      case (None, None) => jdkVersionRepository.findJDKUsage(flag)
-      case _            =>
-                           for
-                             repos <- teamsAndRepositoriesConnector.getAllRepositories(archived = Some(false), teamName = teamName, digitalService = digitalService)
-                             xs    <- jdkVersionRepository.findJDKUsage(flag)
-                           yield xs.filter(x => repos.exists(_.name == x.name))
-
+     for
+       repos <- teamsAndRepositoriesConnector.getAllRepositories(archived = Some(false), teamName = teamName, digitalService = digitalService)
+       xs    <- jdkVersionRepository.findJDKUsage(flag)
+     yield xs.filter(x => repos.exists(_.name == x.name))
   def findSBTVersions(teamName: Option[String], digitalService: Option[String], flag: SlugInfoFlag)(using hc: HeaderCarrier): Future[Seq[SBTVersion]] =
     (teamName, digitalService) match
       case (None, None) => sbtVersionRepository.findSBTUsage(flag) // for Latest, we could get the data from MetaArtefact to support non-services
