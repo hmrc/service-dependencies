@@ -26,7 +26,7 @@ import software.amazon.awssdk.services.sqs.SqsAsyncClient
 import software.amazon.awssdk.services.sqs.model.{DeleteMessageRequest, Message, ReceiveMessageRequest}
 
 import scala.concurrent.{ExecutionContext, Future}
-import scala.concurrent.duration.{DurationLong, FiniteDuration}
+import scala.concurrent.duration.{Duration, DurationLong, FiniteDuration}
 import scala.jdk.CollectionConverters.*
 import scala.jdk.FutureConverters.*
 import scala.util.control.NonFatal
@@ -38,10 +38,11 @@ case class SqsConfig(
   keyPrefix    : String,
   configuration: Configuration
 ):
-  lazy val queueUrl           : URL = URL(configuration.get[String](s"$keyPrefix.queueUrl"))
-  lazy val maxNumberOfMessages: Int = configuration.get[Int](s"$keyPrefix.maxNumberOfMessages")
-  lazy val waitTimeSeconds    : Int = configuration.get[Int](s"$keyPrefix.waitTimeSeconds")
+  lazy val queueUrl           : URL            = URL(configuration.get[String](s"$keyPrefix.queueUrl"))
+  lazy val maxNumberOfMessages: Int            = configuration.get[Int](s"$keyPrefix.maxNumberOfMessages")
+  lazy val waitTimeSeconds    : Int            = configuration.get[Int](s"$keyPrefix.waitTimeSeconds")
   lazy val watchdogTimeout    : FiniteDuration = configuration.get[FiniteDuration]("aws.sqs.watchdogTimeout")
+  lazy val pollInterval       : FiniteDuration = configuration.getOptional[FiniteDuration](s"$keyPrefix.pollInterval").getOrElse(Duration.Zero)
 
 abstract class SqsConsumer(
   name       : String
@@ -51,8 +52,11 @@ abstract class SqsConsumer(
   ec         : ExecutionContext
 ) extends Logging:
 
-  private val awsSqsClient: SqsAsyncClient =
-    val client = SqsAsyncClient.builder().build()
+  protected def buildSqsClient(): SqsAsyncClient =
+    SqsAsyncClient.builder().build()
+
+  private lazy val awsSqsClient: SqsAsyncClient =
+    val client = buildSqsClient()
     actorSystem.registerOnTermination(client.close())
     client
 
@@ -91,13 +95,21 @@ abstract class SqsConsumer(
     .map(_ => ())
 
   private def runQueue(): Future[Done] =
-    Source
+    val source = Source
       .repeat:
         ReceiveMessageRequest.builder()
           .queueUrl(config.queueUrl.toString)
           .maxNumberOfMessages(config.maxNumberOfMessages)
           .waitTimeSeconds(config.waitTimeSeconds)
           .build()
+
+    val throttledSource =
+      if config.pollInterval > Duration.Zero then
+        source.throttle(1, config.pollInterval)
+      else
+        source
+
+    throttledSource
       .mapAsync(parallelism = 1): request =>
         getMessages(request)
           .map:
