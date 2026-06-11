@@ -17,6 +17,7 @@
 package uk.gov.hmrc.servicedependencies.notification
 
 import cats.data.EitherT
+import com.mongodb.MongoException
 import org.apache.pekko.actor.ActorSystem
 import play.api.Configuration
 import play.api.libs.json.Json
@@ -25,6 +26,7 @@ import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.servicedependencies.connector.ArtefactProcessorConnector
 import uk.gov.hmrc.servicedependencies.persistence.MetaArtefactRepository
 import uk.gov.hmrc.servicedependencies.service.DerivedViewsService
+import uk.gov.hmrc.servicedependencies.util.RetryStrategy
 
 import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
@@ -62,7 +64,7 @@ class MetaArtefactUpdateHandler @Inject()(
                                 , s"MetaArtefact for name: ${available.name}, version: ${available.version} was not found"
                                 )
                         _    <- recoverFutureInEitherT(
-                                  metaArtefactRepository.put(meta)
+                                  retryTransientMongo(metaArtefactRepository.put(meta))
                                 , errorMessage = s"Could not store MetaArtefact for message with ID '${message.messageId()}' (${meta.name} ${meta.version})"
                                 )
                         _    <- EitherT.right[String](derivedViewsService.updateDerivedViews(meta.name))
@@ -73,7 +75,7 @@ class MetaArtefactUpdateHandler @Inject()(
                       for
                         _ <- EitherT.cond[Future](deleted.jobType == "meta", (), s"${deleted.jobType} was not 'meta'")
                         _ <- recoverFutureInEitherT(
-                               metaArtefactRepository.delete(deleted.name, deleted.version)
+                               retryTransientMongo(metaArtefactRepository.delete(deleted.name, deleted.version))
                              , errorMessage = s"Could not delete MetaArtefact for message with ID '${message.messageId()}' (${deleted.name} ${deleted.version})"
                              )
                         _ <- EitherT.right[String](derivedViewsService.updateDerivedViews(deleted.name))
@@ -94,3 +96,14 @@ class MetaArtefactUpdateHandler @Inject()(
        .recover: e =>
          logger.error(errorMessage, e)
          Left(s"$errorMessage ${e.getMessage}")
+
+  private def retryTransientMongo[A](f: => Future[A]): Future[A] =
+    RetryStrategy.exponentialRetryWhen(times = 3, duration = 50)(isTransientMongo)(f)
+
+  private def isTransientMongo(e: Throwable): Boolean =
+    e match
+      case e: MongoException =>
+        e.hasErrorLabel(MongoException.TRANSIENT_TRANSACTION_ERROR_LABEL) ||
+          e.getCode == 112
+      case _ =>
+        false
