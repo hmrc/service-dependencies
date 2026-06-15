@@ -114,6 +114,7 @@ abstract class SqsConsumer(
         getMessages(request)
           .flatMap:
             _.foldLeftM[Future, Unit](()): (_, message) =>
+              resetWatchdog()
               processMessage(message)
                 .flatMap:
                   case MessageAction.Delete(msg) => deleteMessage(msg)
