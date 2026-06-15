@@ -42,19 +42,9 @@ object RetryStrategy extends Logging:
   )(using
     ec: ExecutionContext
   ): Future[T] =
-    exponentialRetryWhen(times, duration)(_ => true)(f)
-
-  def exponentialRetryWhen[T](
-    times   : Int,
-    duration: Double = 10
-  )(shouldRetry: Throwable => Boolean
-  )(f: => Future[T]
-  )(using
-    ec: ExecutionContext
-  ): Future[T] =
     f.recoverWith:
-      case e if times > 0 && shouldRetry(e) =>
+      case e if times > 0 =>
         logger.error(s"error making request Retrying: ${e.getMessage}", e)
         logger.debug(s"Retrying with delay $duration attempts remaining: ${times - 1}")
         delay(duration):
-          exponentialRetryWhen(times - 1, duration * 2)(shouldRetry)(f)
+          exponentialRetry(times - 1, duration * 2)(f)
