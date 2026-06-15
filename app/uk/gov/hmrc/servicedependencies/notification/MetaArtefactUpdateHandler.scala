@@ -93,9 +93,13 @@ class MetaArtefactUpdateHandler @Inject()(
         action
 
   private def timed[A](label: String)(f: => Future[A]): Future[A] =
-    val start = System.currentTimeMillis()
+    val start    = System.currentTimeMillis()
+    val warning  = actorSystem.scheduler.scheduleOnce(scala.concurrent.duration.Duration(30, "seconds")):
+                     logger.warn(s"[$label] still running after ${System.currentTimeMillis() - start}ms - may be hung")
     f.andThen:
-      case _ => logger.info(s"[$label] completed in ${System.currentTimeMillis() - start}ms")
+      case _ =>
+        warning.cancel()
+        logger.info(s"[$label] completed in ${System.currentTimeMillis() - start}ms")
 
   private def recoverFutureInEitherT[A](f: Future[A], errorMessage: String) =
     EitherT:
