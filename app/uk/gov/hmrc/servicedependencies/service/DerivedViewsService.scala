@@ -263,6 +263,9 @@ class DerivedViewsService @Inject()(
     latestMeta    : Seq[(String, Version)],
     deployments   : Seq[Deployment]
   ): Future[Unit] =
+    val start = System.currentTimeMillis()
+    def elapsed = System.currentTimeMillis() - start
+
     // Get all repositories from latestMeta and deployments
     val reposFromLatestMetaAndDeployments = (latestMeta ++ deployments.map(d => (d.slugName, d.slugVersion)))
                                              .distinct
@@ -274,10 +277,23 @@ class DerivedViewsService @Inject()(
     val latestMetaSet = latestMeta.map(_._1).toSet
     val testReposInActive = activeRepos.filter: repo =>
                                repo.repoType == RepoType.Test && !latestMetaSet.contains(repo.name)
+
+    val testDepsStart = System.currentTimeMillis()
+    logger.info(
+      s"updateRepoBobbyRules querying DERIVED-latest-dependencies for RepoType.Test; " +
+        s"bobbyRules=${bobbyRules.size}, activeRepos=${activeRepos.size}, latestMeta=${latestMeta.size}, " +
+        s"deployments=${deployments.size}, testReposInActive=${testReposInActive.size} after ${elapsed}ms"
+    )
+
     for
       testDeps <- derivedLatestDependencyRepository.find(
                     repoType = Some(Seq(RepoType.Test))
-                  )
+                  ).map: deps =>
+                    logger.info(
+                      s"updateRepoBobbyRules DERIVED-latest-dependencies RepoType.Test returned ${deps.size} dependencies " +
+                        s"in ${System.currentTimeMillis() - testDepsStart}ms (total ${elapsed}ms)"
+                    )
+                    deps
       // Extract unique (repoName, repoVersion) pairs from test dependencies
       testReposWithVersions = testDeps
                                 .map(dep => (dep.repoName, dep.repoVersion))
@@ -286,6 +302,10 @@ class DerivedViewsService @Inject()(
                                   testReposInActive.find(_.name == repoName).map(repo => (repoName, repoVersion, repo.repoType))
       // Combine all repositories to process
       allReposToProcess = (reposFromLatestMetaAndDeployments ++ testReposWithVersions).distinct
+      _                 =  logger.info(
+                             s"updateRepoBobbyRules processing ${allReposToProcess.size} repo/version entries " +
+                               s"after ${elapsed}ms"
+                           )
       _                 <- Future.successful(allReposToProcess)
                            .flatMap: allRepos =>
                              allRepos
@@ -334,6 +354,15 @@ class DerivedViewsService @Inject()(
                                            , integration  = deployments.exists(d     => d.slugName == repoName && d.slugVersion == repoVersion && d.integration)
                                            )
                                      .flatMap: bobbyReports =>
-                                       derivedBobbyReportRepository.update(repoName, bobbyReports)
+                                       val updateStart = System.currentTimeMillis()
+                                       logger.info(
+                                         s"updateRepoBobbyRules updating Bobby reports for $repoName: " +
+                                           s"reports=${bobbyReports.size} after ${elapsed}ms"
+                                       )
+                                       derivedBobbyReportRepository.update(repoName, bobbyReports).map: _ =>
+                                         logger.info(
+                                           s"updateRepoBobbyRules updated Bobby reports for $repoName " +
+                                           s"in ${System.currentTimeMillis() - updateStart}ms (total ${elapsed}ms)"
+                                         )
       _ <- derivedBobbyReportRepository.deleteMany(decommissioned)
     yield ()
