@@ -59,14 +59,14 @@ class MetaArtefactUpdateHandler @Inject()(
                       for
                         _    <- EitherT.cond[Future](available.jobType == "meta", (), s"${available.jobType} was not 'meta'")
                         meta <- EitherT.fromOptionF(
-                                  timed("getMetaArtefact")(artefactProcessorConnector.getMetaArtefact(available.name, available.version))
+                                  timed(s"${message.messageId()} getMetaArtefact(${available.name} ${available.version})")(artefactProcessorConnector.getMetaArtefact(available.name, available.version))
                                 , s"MetaArtefact for name: ${available.name}, version: ${available.version} was not found"
                                 )
                         _    <- recoverFutureInEitherT(
-                                  timed("metaArtefactRepository.put")(metaArtefactRepository.put(meta))
+                                  timed(s"${message.messageId()} metaArtefactRepository.put(${meta.name} ${meta.version})")(metaArtefactRepository.put(meta))
                                 , errorMessage = s"Could not store MetaArtefact for message with ID '${message.messageId()}' (${meta.name} ${meta.version})"
                                 )
-                        _    <- EitherT.right[String](timed("updateDerivedViews")(derivedViewsService.updateDerivedViews(meta.name)))
+                        _    <- EitherT.right[String](timed(s"${message.messageId()} updateDerivedViews(${meta.name})")(derivedViewsService.updateDerivedViews(meta.name)))
                       yield
                         val duration = System.currentTimeMillis() - start
                         logger.info(s"MetaArtefact available message with ID '${message.messageId()}' (${meta.name} ${meta.version}) successfully processed in ${duration}ms.")
@@ -75,10 +75,10 @@ class MetaArtefactUpdateHandler @Inject()(
                       for
                         _ <- EitherT.cond[Future](deleted.jobType == "meta", (), s"${deleted.jobType} was not 'meta'")
                         _ <- recoverFutureInEitherT(
-                               timed("metaArtefactRepository.delete")(metaArtefactRepository.delete(deleted.name, deleted.version))
+                               timed(s"${message.messageId()} metaArtefactRepository.delete(${deleted.name} ${deleted.version})")(metaArtefactRepository.delete(deleted.name, deleted.version))
                              , errorMessage = s"Could not delete MetaArtefact for message with ID '${message.messageId()}' (${deleted.name} ${deleted.version})"
                              )
-                        _ <- EitherT.right[String](timed("updateDerivedViews")(derivedViewsService.updateDerivedViews(deleted.name)))
+                        _ <- EitherT.right[String](timed(s"${message.messageId()} updateDerivedViews(${deleted.name})")(derivedViewsService.updateDerivedViews(deleted.name)))
                       yield
                         val duration = System.currentTimeMillis() - start
                         logger.info(s"MetaArtefact deleted message with ID '${message.messageId()}' (${deleted.name} ${deleted.version}) successfully processed in ${duration}ms.")
