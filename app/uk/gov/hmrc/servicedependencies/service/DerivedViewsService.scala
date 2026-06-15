@@ -104,18 +104,26 @@ class DerivedViewsService @Inject()(
     yield ()
 
   def updateDerivedViews(repoName: String)(using hc: HeaderCarrier): Future[Unit] =
+    val start = System.currentTimeMillis()
+    def elapsed = System.currentTimeMillis() - start
     for
       oActiveRepo     <- teamsAndRepositoriesConnector.getRepository(repoName).map(_.filterNot(_.isArchived))
+      _               =  logger.info(s"[$repoName] getRepository took ${elapsed}ms")
       oDecommissioned <- teamsAndRepositoriesConnector.getDecommissionedRepositories().map(_.find(_.name == repoName))
+      _               =  logger.info(s"[$repoName] getDecommissionedRepositories took ${elapsed}ms")
       oLatestMeta     <- metaArtefactRepository.find(repoName)
+      _               =  logger.info(s"[$repoName] metaArtefactRepository.find took ${elapsed}ms")
       oLatestMetaTup  =  oLatestMeta.map(meta => (meta.name, meta.version))
       deployments     <- deploymentRepository.findDeployed(Some(repoName))
+      _               =  logger.info(s"[$repoName] findDeployed took ${elapsed}ms")
       _               <- updateDerivedDependencyViews(oActiveRepo.toSeq, oDecommissioned.toSeq, oLatestMetaTup.toSeq, deployments)
+      _               =  logger.info(s"[$repoName] updateDerivedDependencyViews took ${elapsed}ms")
       bobbyRules      <- serviceConfigsConnector.getBobbyRules().map(_.asMap.values.flatten.toSeq)
+      _               =  logger.info(s"[$repoName] getBobbyRules took ${elapsed}ms")
       _               <- updateRepoBobbyRules(bobbyRules, oActiveRepo.toSeq, oDecommissioned.toSeq, oLatestMetaTup.toSeq, deployments)
-      _               =  logger.info(s"Running DerivedModuleRepository.update")
+      _               =  logger.info(s"[$repoName] updateRepoBobbyRules took ${elapsed}ms")
       _               <- oLatestMeta.fold(Future.unit)(meta => derivedModuleRepository.update(meta))
-      _               =  logger.info(s"Finished running DerivedModuleRepository.update")
+      _               =  logger.info(s"[$repoName] DerivedModuleRepository.update took ${elapsed}ms (total)")
     yield ()
 
   def updateDerivedViewsForAllRepos()(using hc: HeaderCarrier): Future[Unit] =

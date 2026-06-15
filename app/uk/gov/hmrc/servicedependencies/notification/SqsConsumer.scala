@@ -112,9 +112,8 @@ abstract class SqsConsumer(
     throttledSource
       .mapAsync(parallelism = 1): request =>
         getMessages(request)
-          .flatMap:
+          .map:
             _.foldLeftM[Future, Unit](()): (_, message) =>
-              resetWatchdog()
               processMessage(message)
                 .flatMap:
                   case MessageAction.Delete(msg) => deleteMessage(msg)
