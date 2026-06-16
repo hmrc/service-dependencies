@@ -280,20 +280,23 @@ class DerivedViewsService @Inject()(
 
     val testDepsStart = System.currentTimeMillis()
     logger.info(
-      s"updateRepoBobbyRules querying DERIVED-latest-dependencies for RepoType.Test; " +
+      s"updateRepoBobbyRules querying DERIVED-latest-dependencies for active RepoType.Test repos; " +
         s"bobbyRules=${bobbyRules.size}, activeRepos=${activeRepos.size}, latestMeta=${latestMeta.size}, " +
         s"deployments=${deployments.size}, testReposInActive=${testReposInActive.size} after ${elapsed}ms"
     )
 
     for
-      testDeps <- derivedLatestDependencyRepository.find(
-                    repoType = Some(Seq(RepoType.Test))
-                  ).map: deps =>
-                    logger.info(
-                      s"updateRepoBobbyRules DERIVED-latest-dependencies RepoType.Test returned ${deps.size} dependencies " +
-                        s"in ${System.currentTimeMillis() - testDepsStart}ms (total ${elapsed}ms)"
-                    )
-                    deps
+      testDeps <- testReposInActive
+                    .foldLeftM(Seq.empty[MetaArtefactDependency]): (acc, repo) =>
+                      derivedLatestDependencyRepository
+                        .find(repoType = Some(Seq(RepoType.Test)), repoName = Some(repo.name))
+                        .map(acc ++ _)
+                    .map: deps =>
+                      logger.info(
+                        s"updateRepoBobbyRules DERIVED-latest-dependencies active RepoType.Test repos returned ${deps.size} dependencies " +
+                          s"in ${System.currentTimeMillis() - testDepsStart}ms (total ${elapsed}ms)"
+                      )
+                      deps
       // Extract unique (repoName, repoVersion) pairs from test dependencies
       testReposWithVersions = testDeps
                                 .map(dep => (dep.repoName, dep.repoVersion))
