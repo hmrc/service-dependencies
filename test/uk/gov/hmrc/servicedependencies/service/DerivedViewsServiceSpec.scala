@@ -17,7 +17,7 @@
 package uk.gov.hmrc.servicedependencies.service
 
 import org.mockito.ArgumentMatchers.{any, eq => eqTo}
-import org.mockito.Mockito.{verify, when}
+import org.mockito.Mockito.{never, verify, when}
 import org.scalatest.concurrent.{IntegrationPatience, ScalaFutures}
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
@@ -140,6 +140,114 @@ class DerivedViewsServiceSpec
   }
 
   "DerivedViewsService.updateDerivedViewsForAllRepos" should {
+    "only process test dependency rows for active test repositories missing from latestMeta" in {
+      val activeTestRepo = TeamsAndRepositoriesConnector.Repository(
+        name           = "active-test-repo"
+      , teamNames      = Seq("PlatOps")
+      , digitalService = None
+      , repoType       = RepoType.Test
+      , isArchived     = false
+      )
+
+      val activeMetaArtefact = MetaArtefact(
+        name     = activeTestRepo.name
+      , version  = Version("1.0.0")
+      , uri      = "https://artefacts/metadata/active-test-repo-v1.0.0.meta.tgz"
+      , gitUrl   = Some("https://github.com/hmrc/active-test-repo")
+      , modules  = Seq.empty
+      , created  = java.time.Instant.now()
+      , latest   = false
+      )
+
+      def dependency(repoName: String, repoVersion: Version): MetaArtefactDependency =
+        MetaArtefactDependency(
+          repoName       = repoName
+        , repoVersion    = repoVersion
+        , repoType       = RepoType.Test
+        , teams          = List.empty
+        , digitalService = None
+        , depGroup       = "uk.gov.hmrc"
+        , depArtefact    = s"$repoName-lib"
+        , depVersion     = Version("1.0.0")
+        , compileFlag    = true
+        , providedFlag   = false
+        , testFlag       = false
+        , itFlag         = false
+        , buildFlag      = false
+        )
+
+      val activeDependency   = dependency(activeTestRepo.name, activeMetaArtefact.version)
+      val inactiveDependency = dependency("inactive-test-repo", Version("9.9.9"))
+
+      when(mockedTeamsAndRepositoriesConnector.getAllRepositories(Some(false)))
+        .thenReturn(Future.successful(Seq(activeTestRepo)))
+
+      when(mockedTeamsAndRepositoriesConnector.getDecommissionedRepositories())
+        .thenReturn(Future.successful(Seq.empty))
+
+      when(mockedMetaArtefactRepository.findLatest())
+        .thenReturn(Future.successful(Seq.empty))
+
+      when(mockedDeploymentRepository.findDeployed())
+        .thenReturn(Future.successful(Seq.empty))
+
+      when(mockedMetaArtefactRepository.find(activeTestRepo.name))
+        .thenReturn(Future.successful(None))
+
+      when(mockedMetaArtefactRepository.findAllVersions(activeTestRepo.name))
+        .thenReturn(Future.successful(Seq(activeMetaArtefact)))
+
+      when(mockedDerivedLatestDependencyRepository.find(
+        group       = any[Option[String]],
+        artefact    = any[Option[String]],
+        repoType    = any[Option[Seq[RepoType]]],
+        scopes      = any[Option[Seq[DependencyScope]]],
+        repoName    = any[Option[String]],
+        repoVersion = any[Option[Version]]
+      ))
+        .thenReturn(Future.successful(Seq(activeDependency, inactiveDependency)))
+
+      when(mockedDerivedLatestDependencyRepository.update(any[String], any[List[MetaArtefactDependency]]))
+        .thenReturn(Future.unit)
+
+      when(mockedDerivedLatestDependencyRepository.deleteMany(any[Seq[TeamsAndRepositoriesConnector.DecommissionedRepository]]))
+        .thenReturn(Future.unit)
+
+      when(mockedDerivedDeployedDependencyRepository.find(any[String], any[Version]))
+        .thenReturn(Future.successful(Seq.empty))
+
+      when(mockedDerivedDeployedDependencyRepository.deleteMany(any[Seq[TeamsAndRepositoriesConnector.DecommissionedRepository]]))
+        .thenReturn(Future.unit)
+
+      when(mockedServiceConfigsConnector.getBobbyRules())
+        .thenReturn(Future.successful(BobbyRules(Map.empty[(String, String), List[BobbyRule]])))
+
+      when(mockedDerivedBobbyReportRepository.update(any[String], any[Seq[BobbyReport]]))
+        .thenReturn(Future.unit)
+
+      when(mockedDerivedBobbyReportRepository.deleteMany(any[Seq[TeamsAndRepositoriesConnector.DecommissionedRepository]]))
+        .thenReturn(Future.unit)
+
+      when(mockedDerivedModuleRepository.populateAll())
+        .thenReturn(Future.unit)
+
+      when(mockedDerivedGroupArtefactRepository.populateAll())
+        .thenReturn(Future.unit)
+
+      underTest.updateDerivedViewsForAllRepos().futureValue
+
+      verify(mockedDerivedBobbyReportRepository).update(eqTo(activeTestRepo.name), any[Seq[BobbyReport]])
+      verify(mockedDerivedBobbyReportRepository, never()).update(eqTo("inactive-test-repo"), any[Seq[BobbyReport]])
+      verify(mockedDerivedLatestDependencyRepository, never()).find(
+        group       = eqTo(Option.empty[String]),
+        artefact    = eqTo(Option.empty[String]),
+        repoType    = eqTo(Option.empty[Seq[RepoType]]),
+        scopes      = eqTo(Option.empty[Seq[DependencyScope]]),
+        repoName    = eqTo(Some("inactive-test-repo")),
+        repoVersion = eqTo(Some(inactiveDependency.repoVersion))
+      )
+    }
+
     "process test repositories that are not in latestMeta" in {
       val testRepo = TeamsAndRepositoriesConnector.Repository(
         name           = "test-repo"
