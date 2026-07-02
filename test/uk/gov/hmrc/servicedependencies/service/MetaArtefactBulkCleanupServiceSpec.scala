@@ -122,6 +122,57 @@ class MetaArtefactBulkCleanupServiceSpec
       verify(boot.metaArtefactRepository, never())
         .deleteMany(eqTo("slug"), eqTo(Seq(Version("0.65.0-SNAPSHOT"))))
     }
+
+    "leave all messages for a failed repository group on SQS and continue with other groups" in {
+      val boot = Boot.init(
+        Seq(
+          deletionMessage("message-1", "affinity-group", "0.65.0-SNAPSHOT"),
+          deletionMessage("message-2", "affinity-group", "0.66.0-SNAPSHOT"),
+          deletionMessage("message-3", "another-service", "1.2.3")
+        )
+      )
+
+      when(boot.metaArtefactRepository.deleteMany(eqTo("affinity-group"), eqTo(Seq(Version("0.65.0-SNAPSHOT"), Version("0.66.0-SNAPSHOT")))))
+        .thenReturn(Future.failed(RuntimeException("mongo write failed")))
+      when(boot.metaArtefactRepository.deleteMany(eqTo("another-service"), eqTo(Seq(Version("1.2.3")))))
+        .thenReturn(Future.unit)
+      when(boot.derivedViewsService.updateDerivedViews(eqTo("another-service"))(using eqTo(boot.headerCarrier)))
+        .thenReturn(Future.unit)
+
+      val result = boot.service.cleanupDeletions(maxMessages = 1000, dryRun = false).futureValue
+
+      result.inspected            shouldBe 3
+      result.matched              shouldBe 3
+      result.failed               shouldBe 2
+      result.deletedMetaArtefacts shouldBe 1
+      result.deletedSqsMessages   shouldBe 1
+      result.failureSamples       should contain("Could not clean affinity-group: mongo write failed")
+      boot.deletedMessages.map(_.messageId) shouldBe Seq("message-3")
+      verify(boot.derivedViewsService, never()).updateDerivedViews(eqTo("affinity-group"))(using eqTo(boot.headerCarrier))
+    }
+
+    "report individual SQS delete failures without treating the whole group as consumed" in {
+      val boot = Boot.init(
+        messages = Seq(
+          deletionMessage("message-1", "affinity-group", "0.65.0-SNAPSHOT"),
+          deletionMessage("message-2", "affinity-group", "0.66.0-SNAPSHOT")
+        ),
+        deleteFailureIds = Set("message-1")
+      )
+
+      when(boot.metaArtefactRepository.deleteMany(eqTo("affinity-group"), eqTo(Seq(Version("0.65.0-SNAPSHOT"), Version("0.66.0-SNAPSHOT")))))
+        .thenReturn(Future.unit)
+      when(boot.derivedViewsService.updateDerivedViews(eqTo("affinity-group"))(using eqTo(boot.headerCarrier)))
+        .thenReturn(Future.unit)
+
+      val result = boot.service.cleanupDeletions(maxMessages = 1000, dryRun = false).futureValue
+
+      result.failed               shouldBe 1
+      result.deletedMetaArtefacts shouldBe 2
+      result.deletedSqsMessages   shouldBe 1
+      result.failureSamples.head  should include("Could not delete SQS message message-1")
+      boot.deletedMessages.map(_.messageId) shouldBe Seq("message-2")
+    }
   }
 
   private def deletionMessage(messageId: String, name: String, version: String): Message =
@@ -156,7 +207,7 @@ class MetaArtefactBulkCleanupServiceSpec
   )
 
   object Boot {
-    def init(messages: Seq[Message]): Boot = {
+    def init(messages: Seq[Message], deleteFailureIds: Set[String] = Set.empty): Boot = {
       val metaArtefactRepository = mock[MetaArtefactRepository]
       val derivedViewsService    = mock[DerivedViewsService]
       val deletedMessages        = ListBuffer.empty[Message]
@@ -164,6 +215,7 @@ class MetaArtefactBulkCleanupServiceSpec
       val service                = TestMetaArtefactBulkCleanupService(
         messages,
         deletedMessages,
+        deleteFailureIds,
         headerCarrier,
         metaArtefactRepository,
         derivedViewsService
@@ -176,6 +228,7 @@ class MetaArtefactBulkCleanupServiceSpec
   class TestMetaArtefactBulkCleanupService(
     messages              : Seq[Message],
     deletedMessages       : ListBuffer[Message],
+    deleteFailureIds      : Set[String],
     override val headerCarrier: uk.gov.hmrc.http.HeaderCarrier,
     metaArtefactRepository: MetaArtefactRepository,
     derivedViewsService   : DerivedViewsService
@@ -194,8 +247,11 @@ class MetaArtefactBulkCleanupServiceSpec
     }
 
     override protected def deleteMessage(message: Message): Future[Unit] = {
-      deletedMessages += message
-      Future.unit
+      if deleteFailureIds.contains(message.messageId) then
+        Future.failed(RuntimeException("SQS delete failed"))
+      else
+        deletedMessages += message
+        Future.unit
     }
   }
 }
