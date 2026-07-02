@@ -88,6 +88,28 @@ class MetaArtefactRepository @Inject()(
         _    <- oMax.fold(Future.unit)(v => markLatest(repositoryName, v, session))
       yield ()
 
+  def deleteMany(repositoryName: String, versions: Seq[Version]): Future[Unit] =
+    if versions.isEmpty then
+      Future.unit
+    else
+      withSessionAndTransaction: session =>
+        for
+          _    <- collection
+                    .bulkWrite(
+                      session,
+                      versions.distinct.map: version =>
+                        DeleteOneModel(
+                          Filters.and(
+                            Filters.equal("name"   , repositoryName),
+                            Filters.equal("version", version.toString)
+                          )
+                        )
+                    )
+                    .toFuture()
+          oMax <- maxVersion(repositoryName, session)
+          _    <- oMax.fold(Future.unit)(v => markLatest(repositoryName, v, session))
+        yield ()
+
   private def maxVersion(repositoryName: String, session: ClientSession): Future[Option[Version]] =
     collection
       .aggregate[BsonDocument](

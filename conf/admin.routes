@@ -1,1 +1,2 @@
 POST    /reload-latest-versions             @uk.gov.hmrc.servicedependencies.controller.admin.AdministrationController.reloadLatestVersions
+POST    /meta-artefact-queue/cleanup        @uk.gov.hmrc.servicedependencies.controller.admin.AdministrationController.cleanupMetaArtefactQueue

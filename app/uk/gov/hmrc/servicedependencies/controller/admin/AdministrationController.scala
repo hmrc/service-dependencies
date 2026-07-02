@@ -17,15 +17,18 @@
 package uk.gov.hmrc.servicedependencies.controller.admin
 
 import javax.inject.{Inject, Singleton}
+import play.api.libs.json.Json
 import play.api.mvc.ControllerComponents
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
-import uk.gov.hmrc.servicedependencies.service.LatestVersionService
+import uk.gov.hmrc.servicedependencies.service.{LatestVersionService, MetaArtefactBulkCleanupService}
+import uk.gov.hmrc.servicedependencies.service.MetaArtefactBulkCleanupService.BulkCleanupResult
 
 import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
 class AdministrationController @Inject()(
     latestVersionService: LatestVersionService
+  , metaArtefactBulkCleanupService: MetaArtefactBulkCleanupService
   , cc                  : ControllerComponents
   )(using
     ec: ExecutionContext
@@ -38,3 +41,22 @@ class AdministrationController @Inject()(
         .recoverWith: ex =>
           Future.failed(RuntimeException("reload of dependency versions failed", ex))
       Accepted("reload started")
+
+  def cleanupMetaArtefactQueue =
+    Action.async(parse.json): request =>
+      val messageType = (request.body \ "type").asOpt[String]
+      val maxMessages = (request.body \ "maxMessages").asOpt[Int].getOrElse(1000)
+      val dryRun      = (request.body \ "dryRun").asOpt[Boolean].getOrElse(true)
+
+      messageType match
+        case Some("deletion") if maxMessages >= 1 && maxMessages <= 1000 =>
+          given play.api.libs.json.Writes[BulkCleanupResult] = BulkCleanupResult.writes
+          metaArtefactBulkCleanupService
+            .cleanupDeletions(maxMessages, dryRun)
+            .map(result => Ok(Json.toJson(result)))
+
+        case Some("deletion") =>
+          Future.successful(BadRequest("maxMessages must be between 1 and 1000"))
+
+        case _ =>
+          Future.successful(BadRequest("type must be deletion"))
