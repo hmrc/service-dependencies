@@ -17,8 +17,8 @@
 package uk.gov.hmrc.servicedependencies.controller.admin
 
 import javax.inject.{Inject, Singleton}
-import play.api.libs.json.Json
-import play.api.mvc.ControllerComponents
+import play.api.libs.json.{JsValue, Json}
+import play.api.mvc.{Action, AnyContent, ControllerComponents}
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 import uk.gov.hmrc.servicedependencies.service.{LatestVersionService, MetaArtefactBulkCleanupService}
 import uk.gov.hmrc.servicedependencies.service.MetaArtefactBulkCleanupService.BulkCleanupResult
@@ -34,7 +34,7 @@ class AdministrationController @Inject()(
     ec: ExecutionContext
   ) extends BackendController(cc):
 
-  def reloadLatestVersions =
+  def reloadLatestVersions: Action[AnyContent] =
     Action:
       latestVersionService
         .reloadLatestVersions()
@@ -42,7 +42,7 @@ class AdministrationController @Inject()(
           Future.failed(RuntimeException("reload of dependency versions failed", ex))
       Accepted("reload started")
 
-  def cleanupMetaArtefactQueue =
+  def cleanupMetaArtefactQueue: Action[JsValue] =
     Action.async(parse.json): request =>
       val messageType = (request.body \ "type").asOpt[String]
       val maxMessages = (request.body \ "maxMessages").asOpt[Int].getOrElse(1000)
