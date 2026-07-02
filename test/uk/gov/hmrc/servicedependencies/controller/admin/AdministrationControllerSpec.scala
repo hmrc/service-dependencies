@@ -16,15 +16,17 @@
 
 package uk.gov.hmrc.servicedependencies.controller.admin
 
-import org.mockito.Mockito.{verify, when}
+import org.mockito.Mockito.{never, verify, when}
 import org.scalatest.concurrent.{IntegrationPatience, ScalaFutures}
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 import org.scalatestplus.mockito.MockitoSugar
+import play.api.libs.json.Json
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
 import uk.gov.hmrc.servicedependencies.model.LatestVersion
-import uk.gov.hmrc.servicedependencies.service.LatestVersionService
+import uk.gov.hmrc.servicedependencies.service.{LatestVersionService, MetaArtefactBulkCleanupService}
+import uk.gov.hmrc.servicedependencies.service.MetaArtefactBulkCleanupService.BulkCleanupResult
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
@@ -50,22 +52,85 @@ class AdministrationControllerSpec
     }
   }
 
+  "cleanupMetaArtefactQueue" should {
+    "require deletion type" in {
+      val boot = Boot.init
+
+      val result =
+        boot.controller.cleanupMetaArtefactQueue.apply(
+          FakeRequest().withBody(Json.obj("type" -> "creation"))
+        )
+
+      status(result) shouldBe BAD_REQUEST
+      contentAsString(result) should include("type must be deletion")
+      verify(boot.mockMetaArtefactBulkCleanupService, never())
+        .cleanupDeletions(maxMessages = 1000, dryRun = true)
+    }
+
+    "default to dry run and delegate max messages" in {
+      val boot = Boot.init
+      val cleanupResult = BulkCleanupResult(
+        dryRun               = true,
+        inspected            = 2,
+        matched              = 2,
+        skipped              = 0,
+        failed               = 0,
+        deletedMetaArtefacts = 0,
+        deletedSqsMessages   = 0,
+        affectedRepositories = Seq("affinity-group"),
+        skippedSamples       = Seq.empty,
+        failureSamples       = Seq.empty
+      )
+
+      when(boot.mockMetaArtefactBulkCleanupService.cleanupDeletions(maxMessages = 250, dryRun = true))
+        .thenReturn(Future.successful(cleanupResult))
+
+      val result =
+        boot.controller.cleanupMetaArtefactQueue.apply(
+          FakeRequest().withBody(Json.obj("type" -> "deletion", "maxMessages" -> 250))
+        )
+
+      status(result)        shouldBe OK
+      contentAsJson(result) shouldBe Json.toJson(cleanupResult)(using BulkCleanupResult.writes)
+      verify(boot.mockMetaArtefactBulkCleanupService)
+        .cleanupDeletions(maxMessages = 250, dryRun = true)
+    }
+
+    "reject max messages above the safety cap" in {
+      val boot = Boot.init
+
+      val result =
+        boot.controller.cleanupMetaArtefactQueue.apply(
+          FakeRequest().withBody(Json.obj("type" -> "deletion", "maxMessages" -> 1001, "dryRun" -> false))
+        )
+
+      status(result) shouldBe BAD_REQUEST
+      contentAsString(result) should include("maxMessages must be between 1 and 1000")
+      verify(boot.mockMetaArtefactBulkCleanupService, never())
+        .cleanupDeletions(maxMessages = 1001, dryRun = false)
+    }
+  }
+
   case class Boot(
     mockLatestVersionService: LatestVersionService
+  , mockMetaArtefactBulkCleanupService: MetaArtefactBulkCleanupService
   , controller              : AdministrationController
   )
 
   object Boot {
     def init: Boot = {
       val mockLatestVersionService = mock[LatestVersionService]
+      val mockMetaArtefactBulkCleanupService = mock[MetaArtefactBulkCleanupService]
 
       val controller = AdministrationController(
           mockLatestVersionService
+        , mockMetaArtefactBulkCleanupService
         , stubControllerComponents()
         )
 
       Boot(
           mockLatestVersionService
+        , mockMetaArtefactBulkCleanupService
         , controller
         )
     }

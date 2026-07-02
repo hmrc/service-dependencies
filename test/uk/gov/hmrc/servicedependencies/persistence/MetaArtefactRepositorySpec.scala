@@ -112,6 +112,20 @@ class MetaArtefactRepositorySpec
        yield ()
       ).futureValue
 
+  "deleteMany" should:
+    "delete the requested versions and recalculate latest once for the repository" in:
+      (for
+         _         <- repository.put(metaArtefact.copy(version = Version("0.1.0")))
+         _         <- repository.put(metaArtefact.copy(version = Version("0.2.0")))
+         _         <- repository.put(metaArtefact.copy(version = Version("0.3.0")))
+         _         <- repository.deleteMany(metaArtefact.name, Seq(Version("0.2.0"), Version("0.3.0")))
+         latest    <- repository.find(metaArtefact.name)
+         remaining <- repository.findAllVersions(metaArtefact.name)
+         _         =  latest shouldBe Some(metaArtefact.copy(version = Version("0.1.0"), latest = true))
+         _         =  remaining should contain theSameElementsAs Seq(metaArtefact.copy(version = Version("0.1.0"), latest = true))
+       yield ()
+      ).futureValue
+
   "findLatestVersionAtDate" should:
     "return the latest version at a given date" in:
       (for
