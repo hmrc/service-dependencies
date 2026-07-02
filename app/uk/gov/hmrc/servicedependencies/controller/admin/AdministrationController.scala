@@ -27,9 +27,9 @@ import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
 class AdministrationController @Inject()(
-    latestVersionService: LatestVersionService
+    latestVersionService          : LatestVersionService
   , metaArtefactBulkCleanupService: MetaArtefactBulkCleanupService
-  , cc                  : ControllerComponents
+  , cc                            : ControllerComponents
   )(using
     ec: ExecutionContext
   ) extends BackendController(cc):

@@ -87,11 +87,11 @@ class MetaArtefactBulkCleanupService @Inject()(
 
   def cleanupDeletions(maxMessages: Int, dryRun: Boolean): Future[BulkCleanupResult] =
     for
-      messages <- receiveUpTo(maxMessages)
+      messages         <- receiveUpTo(maxMessages)
       eventsAndSkipped = messages.map(toMetaDeletionEvent)
       events           = eventsAndSkipped.collect { case Right(event) => event }
       skipped          = eventsAndSkipped.collect { case Left(reason) => reason }
-      result  <- {
+      result           <- {
                    if dryRun then
                      Future.successful(
                        BulkCleanupResult(
