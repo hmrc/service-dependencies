@@ -69,7 +69,7 @@ class IntegrationTestController @Inject()(
       Json.using[Json.WithDefaultValues].reads[LatestVersion]
 
     validateJson[Seq[LatestVersion]](json)
-      .traverse(_.traverse_(latestVersionRepository.update))
+      .traverse(_.filter(_.version.isValidVersion).traverse_(latestVersionRepository.update))
 
   private def addBobbyRulesSummaries(json: JsValue): Future[Either[JsObject, Unit]] =
     given Format[BobbyRulesSummary] = BobbyRulesSummary.apiFormat

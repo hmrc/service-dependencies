@@ -65,7 +65,7 @@ class LatestVersionService @Inject()(
                                           .fold(
                                             artifactoryConnector
                                               .findLatestVersion(config.group, config.name)
-                                              .map(vs => Max.maxOf(vs.values))
+                                              .map(vs => Max.maxOf(vs.values.filter(_.isValidVersion)))
                                           )(v => Future.successful(Some(v)))
                           _           <- optVersion.traverse: version =>
                                           val dbVersion =
