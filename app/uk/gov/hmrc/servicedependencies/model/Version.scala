@@ -47,6 +47,8 @@ case class Version(
   def isReleaseCandidate: Boolean =
     original.endsWith("-RC")
 
+  def isValidVersion: Boolean =
+  !original.contains("{")
 
 object Version:
   given format: Format[Version] =
