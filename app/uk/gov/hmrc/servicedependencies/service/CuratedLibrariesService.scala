@@ -177,9 +177,18 @@ class CuratedLibrariesService @Inject()(
     buildInfo      : Map[String, String]
   ): List[Dependency] =
     val graph = DependencyGraphParser.parse(dotFile)
+    def itProjectNode: Set[String] = 
+      graph.arrows
+      .filter(a => a.to.artefact == moduleName)
+      .map(_.from.artefact)
+      
     val dependencies = graph
       .dependencies
-      .filterNot(x => x.artefact == moduleName || scope == DependencyScope.It && subModuleNames.contains(x.artefact)) // remove root or any submodules (for integration tests)
+      .filterNot(x => 
+        x.artefact == moduleName || 
+        scope == DependencyScope.It && (subModuleNames.contains(x.artefact) || itProjectNode.contains(x.artefact))
+      ) // remove root or any submodules (for integration tests)
+
       .map: graphDependency =>
         val latestVersion =
           latestVersions
